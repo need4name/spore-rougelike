@@ -325,7 +325,8 @@ window.G = window.G || {};
   const ROLE_BONUS = { predator: { str: 2, spd: 1 }, prey: { spd: 2, cun: 1 }, rival: { str: 1, tou: 1 }, neighbor: { cha: 2 } };
   G.speciesStat = (s, key) => {
     let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + ((key === 'str' || key === 'tou') ? Math.round((s.size - 1) * 2) : 0);
-    Object.values(s.parts || {}).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
+    const off = G.speciesBody(s).off;
+    Object.entries(s.parts || {}).filter(([k]) => !off.includes(k)).map(([, slot]) => slot).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
     return Math.max(0, v);
   };
   G.speciesBody = (s) => {

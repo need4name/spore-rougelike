@@ -37,7 +37,7 @@ window.G = window.G || {};
     const p = {}; let accent = null; const H = new Set(); const E = {};
     const add = (id) => { if (!id || H.has(id)) return; H.add(id); const part = G.PART[id]; if (part && part.from) part.from.forEach(add); };
     Object.entries(b.parts || {}).forEach(([slot, s]) => {
-      if (!s) return;
+      if (!s || (b.off && b.off.includes(slot))) return;
       const part = G.PART[s.id];
       p[slot] = part.looks || s.id;
       add(s.id); add(s.merged);
@@ -194,14 +194,17 @@ window.G = window.G || {};
   function drawLand(b, cx, ground, S, t) {
     const hue = b.hue;
     const { p, accent, L, H, E } = look(b);
-    const biped = b.look ? L.posture === 'two' : H.has('upright_legs');
+    const nSeg = b.segments != null ? b.segments : 2;
+    const biped = nSeg === 1 || (nSeg === 2 && (b.look ? L.posture === 'two' : H.has('upright_legs')));
     // Long bones and evolved limbs make taller creatures; stubby legs make squat ones.
     const longLegs = (H.has('long_bones_h') ? 1.15 : 1) * (E.hindLimbs ? 1.18 + 0.12 * (E.hindLimbs - 1) : 1) * (p.hindLimbs === 'stubby_hindlegs' && !E.hindLimbs ? 0.75 : 1);
     const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs;
     const flying = H.has('feathered_wings') || H.has('true_wings');
-    const shapeX = L.shape === 'slim' ? 0.9 : L.shape === 'long' ? 1.25 : 1;
-    const shapeY = L.shape === 'slim' ? 0.82 : L.shape === 'long' ? 0.92 : 1;
-    const rx = S * (biped ? 0.17 : 0.27) * shapeX; const ry = S * (biped ? 0.24 : 0.15) * shapeY;
+    const SHAPES = { slim: [0.9, 0.82], long: [1.25, 0.92], flat: [1.12, 0.72], tall: [0.88, 1.28], pear: [1, 1.05], hunched: [0.95, 1.1] };
+    const [shapeX, shapeY] = SHAPES[L.shape] || [1, 1];
+    // Extra leg pairs stretch the body into a segmented crawler.
+    const segLen = nSeg >= 3 ? 1 + 0.2 * (nSeg - 2) : 1;
+    const rx = S * (biped ? 0.17 : 0.27) * shapeX * segLen / Math.sqrt(segLen); const ry = S * (biped ? 0.24 : 0.15) * shapeY / Math.sqrt(segLen);
     const cy = ground - legLen - ry * 0.8 + Math.sin(t * 1.6) * 1.5;
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 70);
     const longNeck = L.neck === 'long';
@@ -301,13 +304,24 @@ window.G = window.G || {};
       else dot(x + 2, y - 1, 4, col);
     }
     const backCol = hsl(hue, 35, 25);
-    const hindX = biped ? [cx] : [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
-    const frontX = biped ? [] : [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
+    let hindX; let frontX;
+    if (biped) { hindX = [cx]; frontX = []; }
+    else if (nSeg >= 3) {
+      // One pair of legs per segment, spread along the body.
+      const xs = Array.from({ length: nSeg }, (_, i) => cx - rx * 0.72 + (i / (nSeg - 1)) * rx * 1.4);
+      frontX = p.frontLimbs ? [xs[xs.length - 1]] : [];
+      hindX = p.frontLimbs ? xs.slice(0, -1) : xs;
+    } else {
+      hindX = [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
+      frontX = [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
+    }
     // far side
     hindX.forEach((x, i) => p.hindLimbs && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, backCol, Math.sin(t * 2 + i) * 3, false));
     frontX.forEach((x) => p.frontLimbs && !H.has('wing_membranes') && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, backCol, Math.sin(t * 2 + 1) * 3, true));
 
     // Body
+    if (L.shape === 'pear') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.45, cy + ry * 0.15, rx * 0.6, ry * 1.05, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (L.shape === 'hunched') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.55, rx * 0.6, ry * 0.75, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     ctx.save(); ctx.translate(cx, cy); if (biped) ctx.rotate(-0.15);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(1, body);
@@ -315,6 +329,7 @@ window.G = window.G || {};
     ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     pattern(L, rx, ry, S, hue, t);
+    if (nSeg >= 4) for (let i = 1; i < nSeg; i++) { const x = -rx + (i / nSeg) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.06, 0, x, ry); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); }
     if (H.has('scales') || H.has('swift_scales')) {
       for (let y = -ry; y < ry; y += S * 0.03) for (let x = -rx; x < rx; x += S * 0.04) {
         const off = (Math.round(y / (S * 0.03)) % 2) * S * 0.02;
@@ -368,7 +383,11 @@ window.G = window.G || {};
     L = L || {};
     const H = p.__H; const E = p.__E;
     if (H.has('great_ears')) [-0.5, -0.1].forEach((dx) => tri(hx + dx * hr - 6, hy - hr * 0.6, hx + dx * hr - 14, hy - hr * 2, hx + dx * hr + 8, hy - hr * 0.7, dark));
-    dot(hx, hy, hr, body);
+    if (L.head === 'snout') { ctx.beginPath(); ctx.ellipse(hx + hr * 0.7, hy + hr * 0.15, hr * 0.95, hr * 0.5, 0.1, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (L.head === 'big') dot(hx - hr * 0.15, hy - hr * 0.45, hr * 0.95, body);
+    if (L.head === 'crest') tri(hx - hr * 0.9, hy - hr * 0.2, hx - hr * 0.3, hy - hr * 2, hx + hr * 0.3, hy - hr * 0.6, dark);
+    if (L.head === 'flat') { ctx.beginPath(); ctx.ellipse(hx, hy + hr * 0.15, hr * 1.3, hr * 0.7, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    else dot(hx, hy, hr, body);
     if (H.has('horned_brow')) [0.1, -0.3].forEach((dx) => { ctx.beginPath(); ctx.moveTo(hx + dx * hr - 5, hy - hr * 0.7); ctx.quadraticCurveTo(hx + dx * hr - 10, hy - hr * 2, hx + dx * hr + 12, hy - hr * 2.1); ctx.lineTo(hx + dx * hr + 5, hy - hr * 0.8); ctx.fillStyle = BONE; ctx.fill(); });
     if (H.has('antennae')) { wavy(hx - hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.6, 4, t, dark, 2); wavy(hx + hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.35, 4, t, dark, 2, 1.5); }
     const mx = hx + hr * 0.9; const my = hy + hr * 0.25;
@@ -456,6 +475,8 @@ window.G = window.G || {};
       else if (kind === 'fore_tentacles') { ctx.restore(); wavy(x, y, len * 1.3, Math.PI / 2 - 0.3, 6, t, dark, S * 0.02); return; }
       ctx.restore();
     };
+    const nSegSea = b.segments != null ? b.segments : 2;
+    for (let i = 2; i < nSegSea; i++) if (p.hindLimbs || p.frontLimbs) fin(cx + rx * (0.25 - (i - 1) * (0.7 / Math.max(1, nSegSea - 1))), y0 + ry * 0.6, p.frontLimbs || p.hindLimbs, S * 0.1);
     if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1));
     if (p.hindLimbs && !H.has('sea_tentacles')) fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.1 * (E.hindLimbs ? 1.4 : 1));
     if (E.frontLimbs >= 2) fin(cx + rx * 0.05, y0 + ry * 0.7, p.frontLimbs, S * 0.12);
@@ -485,11 +506,122 @@ window.G = window.G || {};
     if (H.has('horned_brow')) tri(hx - 6, hy - er, hx + 2, hy - ry * 1.6, hx + 6, hy - er, BONE);
   }
 
+  // ======================= OTHER BODY PLANS =======================
+  // Radial: a starfish on land, a jellyfish at sea. Arms = segments.
+  function drawRadial(b, cx, cy, S, t) {
+    const { p, accent, L, H, E } = look(b);
+    const hue = b.hue; const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
+    const n = b.segments || 5;
+    const R = S * (b.habitat === 'sea' ? 0.13 : 0.1);
+    const armLen = S * (b.habitat === 'sea' ? 0.24 : 0.36) * (H.has('long_bones_f') || E.frontLimbs ? 1.25 : 1) * (H.has('stubby_forelegs') && !E.frontLimbs ? 0.85 : 1);
+    if (b.habitat === 'sea') {
+      // Jellyfish: a pulsing bell with trailing tentacles.
+      const pulse = 1 + Math.sin(t * 3) * 0.06;
+      const by = cy - S * 0.08;
+      for (let i = 0; i < n * 2; i++) { const x = cx - R * 1.1 + (i / (n * 2 - 1)) * R * 2.2; wavy(x, by + R * 0.3, armLen * (1.1 + (i % 3) * 0.25), Math.PI / 2, S * 0.025, t, i % 2 ? dark : (accent || light), S * 0.012, i); }
+      ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.closePath();
+      const g = ctx.createRadialGradient(cx, by - R * 0.6, R * 0.2, cx, by, R * 1.5); g.addColorStop(0, light); g.addColorStop(1, hsl(hue, 55, 50, 0.85));
+      ctx.fillStyle = g; ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.clip(); ctx.translate(cx, by - R * 0.5); pattern(L, R * 1.4, R, S, hue, t); ctx.restore();
+      if (H.has('back_spines') || E.back) for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * (Math.PI / 7); tri(cx + Math.cos(a) * R * 1.35 - 4, by + Math.sin(a) * R * 1.05, cx + Math.cos(a) * R * 1.75, by + Math.sin(a) * R * 1.45, cx + Math.cos(a) * R * 1.35 + 4, by + Math.sin(a) * R * 1.05, accent || BONE); }
+      if (H.has('biolume_skin') || H.has('glow_eyes') || accent) glow(accent || GLOW, 12, () => { for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.15, S * 0.008, accent || GLOW); });
+      const eyes = 2 + (E.senses ? 2 : 0);
+      for (let i = 0; i < eyes; i++) { const ex = cx - R * 0.45 + i * (R * 0.9 / Math.max(1, eyes - 1)); dot(ex, by - R * 0.45, R * 0.13, '#fff'); dot(ex + 1, by - R * 0.45, R * 0.07, '#1c1414'); }
+      FACE = { x: cx + R * 0.15, y: by - R * 0.45, r: R * 0.13, mx: cx, my: by - R * 0.1, top: by - R * 1.2, skin: body, s: S * 0.5 };
+      return;
+    }
+    // Starfish: arms radiating from a raised center, seen at an angle.
+    const tilt = 0.62;
+    const spin = t * 0.15;
+    const ground = cy + S * 0.3;
+    const ccy = ground - R * 0.6;
+    ctx.beginPath(); ctx.ellipse(cx, ground, R * 2.4, R * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    const arms = Array.from({ length: n }, (_, i) => spin + (i / n) * Math.PI * 2).sort((a1, a2) => Math.sin(a1) - Math.sin(a2));
+    arms.forEach((a, i) => {
+      const curl = Math.sin(t * 2 + i) * 0.08;
+      const ex = cx + Math.cos(a + curl) * armLen; const ey = ccy + Math.sin(a + curl) * armLen * tilt + R * 0.3;
+      const wd = R * Math.min(0.75, 2.6 / n);
+      const nx = -Math.sin(a) * wd; const ny = Math.cos(a) * wd * tilt;
+      ctx.beginPath(); ctx.moveTo(cx + nx, ccy + ny); ctx.quadraticCurveTo((cx + ex) / 2 + nx * 0.7, (ccy + ey) / 2 + ny * 0.7 - R * 0.15, ex, ey);
+      ctx.quadraticCurveTo((cx + ex) / 2 - nx * 0.7, (ccy + ey) / 2 - ny * 0.7 - R * 0.15, cx - nx, ccy - ny); ctx.closePath();
+      ctx.fillStyle = Math.sin(a) < 0 ? hsl(hue, 45, 45) : body; ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke();
+      for (let k = 1; k <= 3; k++) dot(cx + (ex - cx) * (0.3 + k * 0.17), ccy + (ey - ccy) * (0.3 + k * 0.17), wd * 0.18, light);
+      if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let k = 1; k <= 3; k++) { const x = cx + (ex - cx) * k / 4; const y = ccy + (ey - ccy) * k / 4; tri(x - 3, y, x, y - R * 0.35, x + 3, y, H.has('venom_quills') ? VENOM : (accent || BONE)); }
+      if (H.has('bony_plates_f') || H.has('scales') || H.has('carapace')) for (let k = 1; k <= 2; k++) dot(cx + (ex - cx) * k / 3, ccy + (ey - ccy) * k / 3 - 2, R * 0.12, SHELL);
+      if (p.hands) for (let k = -1; k <= 1; k++) line(ex, ey, ex + Math.cos(a + k * 0.5) * R * 0.3, ey + Math.sin(a + k * 0.5) * R * 0.3 * tilt, BONE, 2);
+      if (H.has('fore_tentacles') || H.has('boneless_f')) wavy(ex, ey, R * 0.8, a, 4, t, dark, 2, i);
+    });
+    ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(cx - R * 0.3, ccy - R * 0.3, 1, cx, ccy, R * 1.2); g.addColorStop(0, light); g.addColorStop(1, body);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, ccy); pattern(L, R, R * 0.75, S, hue, t); ctx.restore();
+    if (E.skin || H.has('biolume_skin')) glow(accent || GLOW, 12, () => { ctx.beginPath(); ctx.ellipse(cx, ccy, R * 1.05, R * 0.8, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 2; ctx.stroke(); });
+    const eyes = Math.min(8, 2 + (E.senses ? 3 : 0) + (H.has('big_eyes') ? 1 : 0));
+    for (let i = 0; i < eyes; i++) { const a = Math.PI * 1.1 + (i / Math.max(1, eyes - 1)) * Math.PI * 0.8; const ex = cx + Math.cos(a) * R * 0.55; const ey = ccy + Math.sin(a) * R * 0.4; dot(ex, ey, R * 0.14, '#fff'); dot(ex + 1, ey, R * 0.07, '#1c1414'); }
+    if (H.has('fangs') || H.has('venom_fangs') || H.has('crushing_jaws') || H.has('mandibles')) for (let k = -2; k <= 2; k++) tri(cx + k * 5 - 2, ccy + R * 0.3, cx + k * 5, ccy + R * 0.55, cx + k * 5 + 2, ccy + R * 0.3, H.has('venom_fangs') ? VENOM : BONE);
+    FACE = { x: cx + R * 0.1, y: ccy - R * 0.3, r: R * 0.14, mx: cx, my: ccy + R * 0.25, top: ccy - R * 0.9, skin: body, s: S * 0.5 };
+  }
+
+  // No symmetry: an oozing colony on pseudopods.
+  function drawColonial(b, cx, cy, S, t) {
+    const { p, accent, L, H, E } = look(b);
+    const hue = b.hue; const body = hsl(hue, 45, 52); const dark = hsl(hue, 40, 30); const light = hsl(hue, 55, 68);
+    const n = b.segments || 3;
+    const ground = cy + S * 0.3;
+    const R = S * 0.17;
+    const by = ground - R * 0.85;
+    ctx.beginPath(); ctx.ellipse(cx, ground, R * 1.8, R * 0.3, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    for (let i = 0; i < n; i++) { const x = cx - R * 1.1 + (i / Math.max(1, n - 1)) * R * 2.2; const reach = Math.sin(t * 2.5 + i * 1.3) * R * 0.15; ctx.beginPath(); ctx.ellipse(x + reach, ground - R * 0.18, R * 0.3, R * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
+    const lumps = [[0, 0, 1], [-0.65, 0.15, 0.6], [0.6, 0.2, 0.62], [-0.25, -0.55, 0.55], [0.35, -0.45, 0.5], [0.85, -0.2, 0.38], [-0.85, -0.25, 0.4]];
+    lumps.forEach(([dx, dy, r], i) => { const wob = 1 + Math.sin(t * 2 + i * 1.7) * 0.05; dot(cx + dx * R, by + dy * R, r * R * wob, i % 2 ? body : light); });
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.2, R * 0.9, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, by); pattern(L, R * 1.2, R * 0.9, S, hue, t); ctx.restore();
+    if (H.has('moss_garden') || H.has('lichen_hide') || H.has('kelp_garden')) for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.7 + (i % 2) * 6, S * 0.02, PLANT);
+    if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let i = 0; i < 6; i++) { const x = cx - R * 0.8 + i * R * 0.32; tri(x - 4, by - R * 0.6, x, by - R * 1.05, x + 4, by - R * 0.6, H.has('venom_quills') ? VENOM : (accent || BONE)); }
+    if (E.skin || accent) glow(accent || GLOW, 10, () => { for (let i = 0; i < 8; i++) dot(cx - R + (i * 37 % 20) / 10 * R, by - R * 0.4 + ((i * 53) % 10) / 10 * R * 0.8, S * 0.008, accent || GLOW); });
+    const eyes = 3 + (E.senses ? 3 : 0);
+    const spots = [[0.3, -0.35], [-0.35, -0.2], [0.65, 0], [-0.7, 0.05], [0.05, -0.65], [0.45, 0.3]];
+    for (let i = 0; i < Math.min(eyes, spots.length); i++) { const [dx, dy] = spots[i]; dot(cx + dx * R, by + dy * R, R * 0.11, '#fff'); dot(cx + dx * R + 1, by + dy * R, R * 0.06, '#1c1414'); }
+    if (p.mouth) { ctx.beginPath(); ctx.ellipse(cx + R * 0.35, by + R * 0.25, R * 0.2, R * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); }
+    FACE = { x: cx + R * 0.3, y: by - R * 0.35, r: R * 0.11, mx: cx + R * 0.35, my: by + R * 0.25, top: by - R, skin: body, s: S * 0.5 };
+  }
+
+  // No legs: a snake on land, an eel at sea.
+  function drawSerpent(b, cx, cy, S, t) {
+    const { p, accent, L, H, E } = look(b);
+    const hue = b.hue; const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30);
+    const sea = b.habitat === 'sea';
+    const ground = sea ? cy + S * 0.05 : cy + S * 0.3;
+    const len = S * 0.62; const thick = S * 0.065;
+    const pts = [];
+    for (let i = 0; i <= 30; i++) { const u = i / 30; pts.push([cx - len / 2 + u * len, ground - thick * 0.6 - Math.sin(u * Math.PI * 2.4 - t * 3) * S * 0.06 * (0.4 + u * 0.6) * (sea ? 1.4 : 1)]); }
+    if (!sea) { ctx.beginPath(); ctx.ellipse(cx, ground, len * 0.55, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
+    for (let i = 0; i < pts.length; i++) {
+      const u = i / (pts.length - 1); const w = thick * (0.35 + 0.65 * Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.5));
+      dot(pts[i][0], pts[i][1], w, i % 2 ? body : hsl(hue, 52, 58));
+      if (L.pattern === 'stripes' && i % 3 === 0) line(pts[i][0], pts[i][1] - w, pts[i][0], pts[i][1] + w, hsl(L.accent != null ? L.accent : hue + 40, 55, 40), 3);
+      if ((L.pattern === 'spots' || H.has('warning_skin')) && i % 4 === 2) dot(pts[i][0], pts[i][1] - w * 0.3, w * 0.35, H.has('warning_skin') ? '#f2c14e' : hsl(L.accent != null ? L.accent : hue + 40, 55, 40));
+      if ((H.has('back_spines') || H.has('venom_quills') || E.back) && i % 3 === 1 && u > 0.15 && u < 0.9) tri(pts[i][0] - 4, pts[i][1] - w * 0.8, pts[i][0], pts[i][1] - w * 1.9, pts[i][0] + 4, pts[i][1] - w * 0.8, H.has('venom_quills') ? VENOM : (accent || BONE));
+      if ((H.has('scales') || H.has('swift_scales')) && i % 2 === 0) { ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], w * 0.6, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
+    }
+    if (E.skin) glow(accent || GLOW, 12, () => { for (let i = 0; i < pts.length; i += 3) dot(pts[i][0], pts[i][1], 2, accent || GLOW); });
+    const tail = pts[0];
+    if (H.has('stinger_tail')) tri(tail[0], tail[1], tail[0] - 14, tail[1] - 6, tail[0] - 4, tail[1] + 8, VENOM);
+    if (H.has('club_tail')) dot(tail[0], tail[1], thick * 0.9, SHELL);
+    if (H.has('fluke')) { tri(tail[0], tail[1], tail[0] - S * 0.1, tail[1] - S * 0.07, tail[0] - S * 0.06, tail[1], dark); tri(tail[0], tail[1], tail[0] - S * 0.1, tail[1] + S * 0.07, tail[0] - S * 0.06, tail[1], dark); }
+    if (sea && p.back) for (let i = 6; i < 26; i++) tri(pts[i][0] - 3, pts[i][1] - thick * 0.8, pts[i][0], pts[i][1] - thick * 1.6, pts[i][0] + 3, pts[i][1] - thick * 0.8, hsl(hue, 40, 38, 0.85));
+    const head = pts[pts.length - 1];
+    drawHead(p, head[0] + thick * 0.4, head[1] - thick * 0.2, S * 0.085, hue, body, dark, t, S, L);
+  }
+
   // ======================= BODIES =======================
   // Draw a body (yours or another species') centered at (cx, cy) inside a box of size S.
   function drawBody(b, cx, cy, S, t) {
     FACE = null;
+    const sym = b.stage === 'creature' ? (b.symmetry || 'bilateral') : null;
     if (b.stage === 'cell') drawCell(b, cx, cy, S * 0.24, t);
+    else if (sym === 'radial') drawRadial(b, cx, cy, S * sizeScale(b), t);
+    else if (sym === 'colonial') drawColonial(b, cx, cy, S * sizeScale(b), t);
+    else if (b.segments === 0) drawSerpent(b, cx, cy, S * sizeScale(b), t);
     else if (b.habitat === 'sea') drawSea(b, cx, cy, S * sizeScale(b), t);
     else drawLand(b, cx, cy + S * 0.36, S * sizeScale(b), t);
   }
@@ -979,7 +1111,7 @@ window.G = window.G || {};
   // Bodies drawn once to an offscreen canvas, so the world map can show many creatures cheaply.
   const spriteCache = new Map();
   function spriteFor(b) {
-    const key = JSON.stringify([b.stage, b.habitat, b.multicellular, b.parts, b.hue, b.traits, b.look]);
+    const key = JSON.stringify([b.stage, b.habitat, b.multicellular, b.parts, b.hue, b.traits, b.look, b.symmetry, b.segments, b.off]);
     let c = spriteCache.get(key);
     if (c) return c;
     c = document.createElement('canvas');
@@ -1001,10 +1133,10 @@ window.G = window.G || {};
   let mapFrame = null;
   let mapHits = [];
 
+  // Sprites scale with real body size, so giants tower over small herds.
+  const realSize = (run, s) => (s ? s.size : G.bodySize(run));
   function herdScale(run, s) {
-    if (!s) return { small: 0.75, mid: 1, giant: 1.45 }[G.sizeOf(run)];
-    if (s.size >= 2) return 1.6;
-    return s.size;
+    return Math.max(0.45, Math.min(2.1, Math.pow(realSize(run, s), 0.6)));
   }
 
   // Each herd has a home territory spread across the map, and wanders around it.
@@ -1152,7 +1284,7 @@ window.G = window.G || {};
             ctx.drawImage(spr, -size / 2, -size / 2, size, size);
             ctx.restore();
           }
-          const label = `${l.key === 'you' ? 'You' : l.key} · ${pop}`;
+          const label = `${l.key === 'you' ? 'You' : l.key} · ${pop} · ${G.sizeLabel(realSize(run, l.s), run.stage)}`;
           ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
           const ly = hy - spread * 0.35 - size * 0.55;

@@ -495,11 +495,12 @@ window.G = window.G || {};
     const slots = G.SLOTS[run.plan];
     return `
       <div class="stats">${G.STATS.map((s) => `<div class="stat" title="${s.name}"><span>${s.short}</span><b>${G.stat(run, s.id)}</b></div>`).join('')}</div>
-      <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${G.SIZES[G.sizeOf(run)].eatDiv} members${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
+      <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> (${G.sizeLabel(G.bodySize(run), run.stage)}) · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${G.SIZES[G.sizeOf(run)].eatDiv} members${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
       <ul class="parts">${slots.map((slot) => {
         const locked = slot.multi && !run.multicellular;
         const s = run.parts[slot.id];
         if (locked) return `<li class="locked-slot"><span class="slot">${slot.name}</span><span class="pname muted">Opens when multicellular</span></li>`;
+        if (G.offSlots(run).includes(slot.id)) return `<li class="locked-slot"><span class="slot">${slot.name}</span><span class="pname muted">Not part of your body plan (${esc(G.segmentPlan(run).name)}, ${esc(G.SYMMETRY[G.symmetry(run)].name)})</span></li>`;
         if (!s) return `<li><span class="slot">${slot.name}</span><span class="pname muted">Empty</span></li>`;
         const ids = [s.id].concat(s.merged ? [s.merged] : []);
         const mods = {};
@@ -511,6 +512,38 @@ window.G = window.G || {};
         const kw = G.KEYWORDS[k]; const n = counts[k];
         return `<li class="syn ${n >= 2 ? 'on' : ''}" style="--kw:${kw.color}"><span class="syn-name">${kw.name} <b>${n}</b></span><span class="syn-tier ${n >= 2 ? 'on' : ''}">2: ${esc(kw.tiers[2].desc)}</span><span class="syn-tier ${n >= 3 ? 'on' : ''}">3: ${esc(kw.tiers[3].desc)}</span></li>`;
       }).join('')}</ul>` : '<p class="empty">No keywords yet. Collect parts with matching keywords (Venom, Armor, Swift, Glow, Symbiont) to unlock bonuses.</p>'}`;
+  }
+
+  // Symmetry (fixed when multicellular) and segments (legs, arms or pseudopods, changed for DNA).
+  function planTab(run) {
+    const symId = G.symmetry(run);
+    const sym = G.SYMMETRY[symId];
+    const chosen = run.multicellular;
+    const symCard = `<div class="plan-sym"><h3>Symmetry: ${chosen ? esc(sym.name) : 'not yet chosen'}</h3><p>${chosen ? esc(sym.desc) : 'You choose your symmetry when your cells become one body. It shapes the creature you grow into and cannot be changed afterwards.'}</p>${chosen && Object.keys(sym.mods).length ? `<p class="pmods">${esc(G.describeMods(sym.mods))}</p>` : ''}</div>`;
+    if (run.stage !== 'creature') {
+      return `${symCard}<p class="note">${Object.values(G.SYMMETRY).map((x) => `${x.name}: ${x.desc}`).map(esc).join('<br>')}</p>`;
+    }
+    const n = G.segments(run);
+    const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k));
+    const cur = planFor(n);
+    const canDown = n > sym.min && run.dna >= G.RESHAPE_COST;
+    const canUp = n < sym.max && run.dna >= G.RESHAPE_COST;
+    const off = G.offSlots(run);
+    const ladder = [];
+    for (let k = sym.min; k <= sym.max; k++) {
+      const pl = planFor(k);
+      ladder.push(`<li class="${k === n ? 'on' : ''}"><b>${k}</b><span><strong>${esc(pl.name)}</strong> ${esc(G.describeMods(pl.mods) || 'No bonus, no cost')}</span></li>`);
+    }
+    return `${symCard}
+      <div class="plan-now">
+        <button class="btn small" ${canDown ? 'data-act="reshape" data-arg="-1"' : 'disabled'} aria-label="Fewer ${esc(sym.unit)}">−</button>
+        <div><b>${n} ${esc(sym.unit)}</b>${cur.name !== `${n} ${sym.unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
+        <button class="btn small" ${canUp ? 'data-act="reshape" data-arg="1"' : 'disabled'} aria-label="More ${esc(sym.unit)}">+</button>
+      </div>
+      <p class="plan-desc">${esc(cur.desc)}${Object.keys(cur.mods).length ? ` <span class="pmods">${esc(G.describeMods(cur.mods))}</span>` : ''}</p>
+      <p class="note">Each change costs ${G.RESHAPE_COST} DNA (you have ${run.dna}).${off.length ? ` This body has no use for: ${off.map((id) => esc(G.slotName(run, id))).join(', ')}. Parts there are kept but do nothing.` : ''}</p>
+      <ol class="plan-ladder">${ladder.join('')}</ol>
+      <p class="size-line">Size: <b>${G.SIZES[G.sizeOf(run)].name}</b> · about ${G.sizeLabel(G.bodySize(run), run.stage)}</p>`;
   }
 
   function traitsTab(run) {
@@ -546,11 +579,18 @@ window.G = window.G || {};
       return `<li><button class="rival ${st}" data-act="species" data-arg="${i}">
         <canvas class="portrait mini" data-species="${i}"></canvas>
         <span class="rival-info">
-          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${Math.round(s.pop)}</small></span>
+          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${G.sizeLabel(s.size, run.stage)} · ${Math.round(s.pop)}</small></span>
           <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
         </span>
       </button></li>`;
     }).join('')}</ul><p class="note">Tap a species to see it up close. Allied species (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>`;
+  }
+
+  function speciesPlan(s) {
+    if (s.stage !== 'creature') return '';
+    const sym = s.symmetry || 'bilateral'; const n = s.segments != null ? s.segments : 2;
+    const pl = sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n);
+    return ` · ${G.SYMMETRY[sym].name}, ${pl.name.toLowerCase()}`;
   }
 
   // Another species' sheet, like inspecting another ruler in CK3.
@@ -565,12 +605,13 @@ window.G = window.G || {};
       hostile: 'They want you gone and will attack when they can.',
     }[st];
     const roleText = { predator: 'They hunt creatures like you.', prey: 'They are what others eat.', rival: 'They want the same food and ground as you.', neighbor: 'They share your world and could become friends.' }[s.role];
-    const slots = G.SLOTS[s.plan].filter((sl) => s.parts[sl.id]);
+    const off = G.speciesBody(s).off;
+    const slots = G.SLOTS[s.plan].filter((sl) => s.parts[sl.id] && !off.includes(sl.id));
     return `
       <button class="btn ghost small" data-act="species-back">← All species</button>
       <div class="species-head">
         <button class="portrait-zoom" data-act="view" data-arg="${i}" aria-label="See the ${esc(s.name)} full screen"><canvas class="portrait big" data-species="${i}"></canvas><i>${ICON.expand}</i></button>
-        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}${s.size >= 2 ? ' · Giant' : ''} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop)}`}</p></div>
+        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${s.size >= 2 ? 'Giant, ' : s.size < 0.6 ? 'Tiny, ' : ''}${G.sizeLabel(s.size, run.stage)}${speciesPlan(s)} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop)}`}</p></div>
       </div>
       <p>${esc(roleText)} ${esc(attitude)}</p>
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
@@ -593,8 +634,8 @@ window.G = window.G || {};
   function sheet(run) {
     const tab = G.ui.sheet;
     if (!tab) return '';
-    const tabs = [['body', 'Body'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, look: lookTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
+    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
+    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
@@ -629,7 +670,7 @@ window.G = window.G || {};
       <div class="look-preview"><canvas class="portrait huge"></canvas></div>
       <div class="look-group"><h3>Body color</h3><input id="look-hue" type="range" min="0" max="359" value="${hue}" data-look="hue" style="--h:${hue}" class="hue-slider" aria-label="Body color"></div>
       <div class="look-group"><h3>Pattern color</h3><input id="look-accent" type="range" min="0" max="359" value="${acc}" data-look="accent" style="--h:${acc}" class="hue-slider" aria-label="Pattern color"></div>
-      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${run.habitat === 'land' ? group('neck', 'Neck') + group('posture', 'Posture') : ''}${group('eyes', 'Eyes')}
+      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${group('head', 'Head')}${run.habitat === 'land' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('neck', 'Neck') + (G.segments(run) === 2 ? group('posture', 'Posture') : '') : ''}${group('eyes', 'Eyes')}
       <p class="note">Looks are just looks: they never change your stats.</p>`;
   }
 
@@ -759,6 +800,7 @@ window.G = window.G || {};
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
       case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; break;
       case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;
