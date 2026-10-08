@@ -66,9 +66,10 @@ G.TRAITS = {
   fertile: { name: 'Fertile', mods: { growthCost: -1 }, desc: 'Young come easily.' },
   territorial: { name: 'Territorial', mods: { str: 1, tou: 1, cha: -1 }, desc: 'This is yours. Everyone knows it.' },
   // Multicellular body plans
-  radial_plan: { name: 'Radial Colony', mods: { tou: 1, maxPop: 2 }, desc: 'A ring of cells that faces every direction at once.' },
-  streamlined_plan: { name: 'Streamlined Body', mods: { spd: 2 }, desc: 'A head end and a tail end. Built to go forward.' },
-  sessile_plan: { name: 'Anchored Colony', mods: { foodPerTurn: 1, spd: -1 }, desc: 'Grows in place and lets the food come to it.' },
+  // Symmetry, chosen when you become multicellular. It decides your body plan for good.
+  radial_plan: { name: 'Radial Symmetry', mods: { tou: 1, maxPop: 2 }, desc: 'A body built around a center, like a starfish or jellyfish.' },
+  streamlined_plan: { name: 'Bilateral Symmetry', mods: { spd: 2 }, desc: 'A left and a right, a head and a tail. Built to go forward.' },
+  sessile_plan: { name: 'No Symmetry', mods: { foodPerTurn: 1, spd: -1 }, desc: 'A shapeless colony, like a sponge or slime mold.' },
   // Heritage traits, gained when leaving the Cell stage (like Spore's consequence traits).
   predator_lineage: { name: 'Predator Lineage', mods: { str: 1, huntBonus: 1 }, desc: 'Descended from hunters.', heritage: true },
   grazer_lineage: { name: 'Grazer Lineage', mods: { tou: 1, forageBonus: 1 }, desc: 'Descended from grazers.', heritage: true },
@@ -282,6 +283,28 @@ G.STAGES = {
 // Eras of the Creature stage, shown in the top bar.
 G.ERAS = { 1: 'First Steps', 2: 'Age of Giants', 3: 'Dawn of Mind' };
 
+// Body plans for the Creature stage. Symmetry is fixed; segments (leg pairs, arms or
+// pseudopods) can be changed in the Body Plan tab for DNA.
+//   off   slots this plan has no use for (parts there do nothing and are not drafted)
+G.SYMMETRY = {
+  bilateral: { name: 'Bilateral', desc: 'Head and tail, left and right. Legs come in pairs.', unit: 'leg pairs', min: 0, max: 8, start: 2, mods: {} },
+  radial: { name: 'Radial', desc: 'Arms around a center, like a starfish or jellyfish. Sees in every direction and regrows lost arms, but slow and awkward.', unit: 'arms', min: 3, max: 8, start: 5, off: ['hindLimbs', 'feet', 'tail'], mods: { cun: 1, damageReduce: 1, spd: -1, popPerTurn: 1 } },
+  colonial: { name: 'No symmetry', desc: 'A shapeless colony that oozes along on pseudopods. Huge, hardy colonies, but clumsy and dim.', unit: 'pseudopods', min: 2, max: 8, start: 3, off: ['hands', 'feet', 'tail'], mods: { maxPop: 4, popPerTurn: 1, cun: -1, cha: -1 } },
+};
+G.RESHAPE_COST = 4; // DNA per step in the Body Plan tab
+
+// What each segment count does for bilateral creatures (leg pairs).
+G.legPlan = (n) => {
+  if (n === 0) return { name: 'Serpent', desc: 'No legs at all. Slithers, hides in burrows and strikes from cover, but has no limb slots.', mods: { cun: 2, spd: 1, huntBonus: 1, str: -1 }, off: ['frontLimbs', 'hindLimbs', 'hands', 'feet'] };
+  if (n === 1) return { name: 'Two legs', desc: 'Stands on its hind legs; the front pair is gone.', mods: { cun: 1, insightPerTurn: 1, tou: -1 }, off: ['frontLimbs', 'hands'] };
+  if (n === 2) return { name: 'Four legs', desc: 'The classic body. No bonus, no cost.', mods: {} };
+  if (n === 3) return { name: 'Six legs', desc: 'Stable and quick, but every leg needs feeding.', mods: { tou: 1, spd: 1, upkeep: 1 } };
+  if (n <= 5) return { name: 'Many legs', desc: 'A long, segmented crawler. Fast and hard to topple, but hungry.', mods: { tou: 1, spd: 2, upkeep: 2, cha: -1 } };
+  return { name: 'Centipede', desc: 'Dozens of legs. Terrifyingly fast and tough, but always hungry and hard to love.', mods: { tou: 2, spd: 3, upkeep: 3, cha: -2 } };
+};
+G.armPlan = (n) => (n <= 4 ? { name: `${n} arms`, desc: 'Light and nimble for a radial creature.', mods: { spd: 1 } } : n === 5 ? { name: '5 arms', desc: 'The classic starfish.', mods: {} } : { name: `${n} arms`, desc: 'More arms to grab and hold, more mouths to feed.', mods: { str: 1, tou: 1, upkeep: n - 5 } });
+G.podPlan = (n) => (n <= 3 ? { name: `${n} pseudopods`, desc: 'Slow and steady.', mods: {} } : { name: `${n} pseudopods`, desc: 'Oozes faster, eats more.', mods: { spd: Math.floor((n - 2) / 2), upkeep: Math.floor((n - 2) / 2) } });
+
 // The appearance editor (Creature stage). Options with `need` unlock with progress.
 G.APPEARANCE = {
   pattern: [
@@ -294,7 +317,18 @@ G.APPEARANCE = {
   shape: [
     { id: 'round', name: 'Round' },
     { id: 'slim', name: 'Slim' },
+    { id: 'flat', name: 'Flat' },
+    { id: 'pear', name: 'Pear' },
+    { id: 'tall', name: 'Tall' },
+    { id: 'hunched', name: 'Hunched', need: { stat: ['str', 5] }, why: 'Needs Strength 5' },
     { id: 'long', name: 'Long', need: { era: 2 }, why: 'Opens in the Age of Giants' },
+  ],
+  head: [
+    { id: 'round', name: 'Round' },
+    { id: 'snout', name: 'Long snout' },
+    { id: 'flat', name: 'Flat' },
+    { id: 'big', name: 'Big brain', need: { stat: ['cun', 6] }, why: 'Needs Cunning 6' },
+    { id: 'crest', name: 'Crest', need: { keyword: 'armor' }, why: 'Needs an Armor part' },
   ],
   neck: [
     { id: 'short', name: 'Short' },

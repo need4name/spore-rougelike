@@ -70,14 +70,50 @@ window.G = window.G || {};
   function addUnique(list, id) { if (!list.includes(id)) { list.push(id); return true; } return false; }
 
   // ---------- Body ----------
+  // ---------- Body plan: symmetry and segments ----------
+  G.symmetry = (run) => (run.traits.includes('radial_plan') ? 'radial' : run.traits.includes('sessile_plan') ? 'colonial' : 'bilateral');
+  G.segments = (run) => (run.segments != null ? run.segments : G.SYMMETRY[G.symmetry(run)].start);
+  G.segmentPlan = (run) => {
+    const sym = G.symmetry(run); const n = G.segments(run);
+    return sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n);
+  };
+  // Slots this body plan has no use for (creature stage only).
+  G.offSlots = (run) => {
+    if (run.stage !== 'creature') return [];
+    const off = (G.SYMMETRY[G.symmetry(run)].off || []).slice();
+    (G.segmentPlan(run).off || []).forEach((x) => { if (!off.includes(x)) off.push(x); });
+    return off;
+  };
+  G.reshape = function (delta) {
+    const run = G.run;
+    if (!run || run.stage !== 'creature') return;
+    const sym = G.SYMMETRY[G.symmetry(run)];
+    const n = G.segments(run) + delta;
+    if (n < sym.min || n > sym.max || run.dna < G.RESHAPE_COST) return;
+    run.dna -= G.RESHAPE_COST;
+    run.segments = n;
+    run.pop = Math.min(run.pop, G.maxPop(run));
+    log(run, `Your body plan changed: ${G.segmentPlan(run).name}.`);
+    G.saveRun();
+  };
+
+  // Relative body size (1 = an ordinary creature), and how it reads in real units.
+  G.bodySize = (run) => {
+    if (run.stage === 'cell') return run.multicellular ? 1.4 : 1;
+    const base = { small: 0.45, mid: run.era >= 2 ? 1.25 : 1, giant: 2.8 }[G.sizeOf(run)];
+    return base * (G.segments(run) >= 5 && G.symmetry(run) === 'bilateral' ? 1.2 : 1) * (G.symmetry(run) === 'colonial' ? 1.3 : 1);
+  };
+  G.sizeLabel = (size, stage) => (stage === 'cell' ? `${Math.round(size * 30)} µm` : size * 1.2 >= 1 ? `${(size * 1.2).toFixed(1)} m` : `${Math.round(size * 120)} cm`);
+
   // Slots available right now (cell slots marked `multi` wait for multicellularity).
-  G.slotsFor = (run) => G.SLOTS[run.plan].filter((s) => !s.multi || run.multicellular);
+  G.slotsFor = (run) => { const off = G.offSlots(run); return G.SLOTS[run.plan].filter((s) => (!s.multi || run.multicellular) && !off.includes(s.id)); };
   G.slotName = (run, slotId) => (G.SLOTS[run.plan].find((s) => s.id === slotId) || { name: slotId }).name;
 
   // Every part id on the body, merged halves included.
   G.partIds = (run) => {
     const out = [];
-    Object.values(run.parts).forEach((s) => { if (s) { out.push(s.id); if (s.merged) out.push(s.merged); } });
+    const off = G.offSlots(run);
+    Object.entries(run.parts).forEach(([slot, s]) => { if (s && !off.includes(slot)) { out.push(s.id); if (s.merged) out.push(s.merged); } });
     return out;
   };
 
@@ -92,7 +128,7 @@ window.G = window.G || {};
   };
 
   // What the renderer needs to draw a body. Other species have the same shape.
-  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
+  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, symmetry: G.symmetry(run), segments: G.segments(run), off: G.offSlots(run), hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
 
   // ---------- Appearance ----------
   G.lookOptionState = (run, opt) => {
@@ -171,6 +207,7 @@ window.G = window.G || {};
     const allies = run.species.filter((s) => !s.extinct && G.speciesStatus(s) === 'allied').length;
     if (allies) list.push({ foodPerTurn: allies });
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
+    if (run.stage === 'creature') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
     if (run.hostility >= 2) list.push({ upkeep: 1 });
     if (run.hostility >= 4) list.push({ maxPop: -2 });
     return list;
@@ -260,7 +297,10 @@ window.G = window.G || {};
     });
     // Some land species have wings.
     if (world === 'land' && rand() < 0.22) parts.frontLimbs = { id: 'feathered_wings', merged: null };
-    return { plan, stage, multicellular, parts };
+    const r = rand();
+    const symmetry = r < 0.14 ? 'radial' : r < 0.26 ? 'colonial' : 'bilateral';
+    const segments = symmetry === 'radial' ? 4 + Math.floor(rand() * 4) : symmetry === 'colonial' ? 2 + Math.floor(rand() * 4) : pick([0, 1, 2, 2, 2, 2, 3, 4, 6]);
+    return { plan, stage, multicellular, parts, symmetry, segments };
   }
 
   // How big each kind of species' population can grow.
@@ -277,17 +317,23 @@ window.G = window.G || {};
       const diet = role === 'predator' ? 'carn' : role === 'prey' ? 'herb' : pick(['herb', 'carn', 'omni']);
       const body = makeBody(world, diet);
       const cap = Math.round(SPECIES_CAP[role] * (world === 'cell' ? 1.5 : 1));
-      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: role === 'predator' ? 1.4 : role === 'prey' ? 0.7 : 1, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), ...body };
+      const sizeBase = { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (world === 'cell' ? 1 : 0.6 + rand() * 0.9);
+      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(sizeBase * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), ...body };
     });
   }
 
   const ROLE_BONUS = { predator: { str: 2, spd: 1 }, prey: { spd: 2, cun: 1 }, rival: { str: 1, tou: 1 }, neighbor: { cha: 2 } };
   G.speciesStat = (s, key) => {
-    let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + (s.size >= 2 && (key === 'str' || key === 'tou') ? 3 : 0);
+    let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + ((key === 'str' || key === 'tou') ? Math.round((s.size - 1) * 2) : 0);
     Object.values(s.parts || {}).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
     return Math.max(0, v);
   };
-  G.speciesBody = (s) => ({ stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2 ? ['giant'] : [] });
+  G.speciesBody = (s) => {
+    const sym = s.symmetry || 'bilateral';
+    const n = s.segments != null ? s.segments : 2;
+    const off = s.stage === 'creature' ? (G.SYMMETRY[sym].off || []).concat(sym === 'bilateral' ? (G.legPlan(n).off || []) : []) : [];
+    return { stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2.5 ? ['giant'] : [], symmetry: sym, segments: n, off };
+  };
 
   // ---------- Starting and ending runs ----------
   G.newRun = function (archetypeId, originId, hostility) {
@@ -587,6 +633,10 @@ window.G = window.G || {};
     else if (req.tag === 'grasp' && !G.hasTag(run, 'grasp')) reason = 'Needs a part that can grasp (hands, arms, tentacles, trunk)';
     else if (req.tag === 'flight' && !G.hasTag(run, 'flight')) reason = 'Needs wings that can fly';
     else if (req.innovation && !run.innovations.includes(req.innovation)) reason = `Needs the ${G.INNOVATION[req.innovation].name} innovation`;
+    else if (req.symmetry && G.symmetry(run) !== req.symmetry) reason = `Needs ${G.SYMMETRY[req.symmetry].name.toLowerCase()} symmetry`;
+    else if (req.serpent && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) === 0)) reason = 'Needs a legless, serpent body';
+    else if (req.manyLegs && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) >= 4)) reason = 'Needs 4 or more pairs of legs';
+    else if (req.size && G.sizeOf(run) !== req.size) reason = `Only for ${req.size} creatures`;
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
     const out = { ok: !reason, reason };
     if (opt.check) out.chance = G.chance(run, opt.check.stat, opt.check.diff);
@@ -674,7 +724,7 @@ window.G = window.G || {};
     if (id === 'age_of_giants') {
       run.era = 2; run.eraTurn = 1;
       const apex = makeSpecies(run.habitat, ['predator'])[0];
-      apex.size = 2; apex.opinion = -45; apex.cap = 4; apex.pop = 3;
+      apex.size = 3.2; apex.opinion = -45; apex.cap = 4; apex.pop = 3;
       run.species.push(apex);
       run.notices.push(`The Age of Giants begins. A huge new predator, the ${apex.name}, has arrived.`);
     }
@@ -904,6 +954,7 @@ window.G = window.G || {};
     run.habitat = habitat || 'land';
     run.plan = run.habitat;
     run.era = 1; run.eraTurn = 1; run.stageTurn = 1;
+    run.segments = G.SYMMETRY[G.symmetry(run)].start;
     run.dna = 3 * (G.meta.boons.memory || 0);
     run.draftsTaken = 0;
     run.finaleRetryAt = 0;
