@@ -2,7 +2,7 @@
 
 *(working title)*
 
-An evolution roguelike for phone, tablet and computer, played in the browser. Guide one lineage from a single cell to the first spark of fire through event cards (in the style of Crusader Kings 3), mutation drafts and synergies. Every run earns Genetic Memory that unlocks new archetypes, home worlds, part packs and permanent boosts.
+An evolution roguelike for phone, tablet and computer, played in the browser. Guide one lineage from a single cell to the dawn of a thinking people, on land or in the sea, through event cards (in the style of Crusader Kings 3), mutation drafts, merged body parts and a Mind tree. Every run earns Genetic Memory that unlocks new archetypes, home worlds, part packs and permanent boosts.
 
 **Prototype scope:** the Cell and Creature stages. Tribe, Civilization and Space are planned (see [docs/DESIGN.md](docs/DESIGN.md)).
 
@@ -34,14 +34,15 @@ There is no build step. Every file is plain HTML, CSS or JavaScript.
 | `js/ui.js` | The screens and buttons. |
 | `css/style.css` | The look. |
 
-### Modifier keys (used by parts, traits, synergies, archetypes and worlds)
+### Modifier keys (used by parts, traits, synergies, innovations, archetypes and worlds)
 
-`str` `tou` `spd` `cun` `cha` (the five stats), `maxHealth`, `foodPerTurn`, `healthPerTurn`, `dnaPerTurn`, `forageBonus`, `huntBonus`, `exploreBonus`, `upkeep` (extra food eaten per turn), `damageReduce`.
+`str` `tou` `spd` `cun` `cha` (the five stats), `maxPop`, `foodPerTurn`, `popPerTurn`, `dnaPerTurn`, `insightPerTurn`, `forageBonus`, `huntBonus`, `exploreBonus`, `upkeep` (extra Food eaten per turn), `damageReduce`, `foodCap`, `growthCost`.
 
 ### Balance knobs
 
 - Check odds: `G.chance` in `js/game.js`, which is 50% + 12% for each point your stat is above the difficulty, between 5% and 95%.
-- Difficulty creep: `G.difficulty`, which adds +1 every 4 turns in a stage, up to +3, plus Hostility.
-- Stage length, draft points and food eaten per turn: `G.STAGES` in `js/data/world.js`.
+- Difficulty: `G.difficulty`, which adds +1 per era, +1 for every 6 turns spent in an era (up to +2), and the Hostility level.
+- Food: `G.income`, `G.upkeep` (half your Population, rounded up), `G.GROWTH_COST` and `G.FOOD_CAP` in `js/data/world.js`.
+- Stage length, draft points and milestones: `G.STAGES` in `js/data/world.js`.
 
-In a simulation of 300 runs by a careful bot, a run lasted about 22 turns. With starting unlocks the bot won about 90% of runs, about 60% at Hostility 1 and about 25% at Hostility 2.
+In a simulation of 150 runs by a careful bot, a run lasted about 50 turns (about 15 in the Cell stage). With starting unlocks the bot won about 90% of runs, and about 60% at Hostility 2. Players who take risks will lose more often.
