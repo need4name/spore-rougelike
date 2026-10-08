@@ -31,17 +31,29 @@ window.G = window.G || {};
   function tri(x1, y1, x2, y2, x3, y3, fill) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); }
 
   // Which base part is in each slot, plus the accent color from merged parts.
+  // Evolved parts are drawn like their first ingredient, tinted by the second.
   function look(b) {
     const p = {}; let accent = null;
     Object.entries(b.parts || {}).forEach(([slot, s]) => {
       if (!s) return;
-      p[slot] = s.id;
-      if (s.merged) {
-        const kw = (G.PART[s.merged].keywords || [])[0];
-        if (!accent) accent = kw ? G.KEYWORDS[kw].color : hsl(40, 80, 65);
+      const part = G.PART[s.id];
+      p[slot] = part.looks || s.id;
+      const tint = s.merged || (part.evolved && part.from[1]);
+      if (tint && !accent) {
+        const kw = (G.PART[tint].keywords || [])[0];
+        accent = kw ? G.KEYWORDS[kw].color : hsl(40, 80, 65);
       }
     });
-    return { p, accent };
+    return { p, accent, L: b.look || {} };
+  }
+
+  // Body patterns from the appearance editor, drawn inside a clipped body shape.
+  function pattern(L, rx, ry, S, hue, t) {
+    const col = hsl(L.accent != null ? L.accent : hue + 40, 55, 40, 0.55);
+    if (L.pattern === 'spots') [[-0.55, -0.35], [-0.1, -0.55], [0.35, -0.25], [-0.3, 0.2], [0.15, 0.25], [0.6, 0.05]].forEach(([dx, dy], i) => dot(dx * rx, dy * ry, S * (0.025 + (i % 3) * 0.008), col));
+    if (L.pattern === 'stripes') for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * rx * 0.3, -ry); ctx.quadraticCurveTo(i * rx * 0.3 + rx * 0.12, 0, i * rx * 0.3, ry); ctx.strokeStyle = col; ctx.lineWidth = S * 0.025; ctx.stroke(); }
+    if (L.pattern === 'bands') for (let i = -2; i <= 2; i++) { ctx.fillStyle = col; ctx.fillRect(i * rx * 0.4 - S * 0.02, -ry, S * 0.04, ry * 2); }
+    if (L.pattern === 'glowspots') glow(GLOW, 8, () => { for (let i = 0; i < 7; i++) dot(-rx * 0.7 + i * rx * 0.23, -ry * 0.3 + (i % 2) * ry * 0.35, S * (0.012 + 0.004 * Math.sin(t * 3 + i)), GLOW); });
   }
 
   function sizeScale(b) {
@@ -170,14 +182,17 @@ window.G = window.G || {};
   // ======================= LAND CREATURE =======================
   function drawLand(b, cx, ground, S, t) {
     const hue = b.hue;
-    const { p, accent } = look(b);
-    const biped = p.hindLimbs === 'upright_legs';
+    const { p, accent, L } = look(b);
+    const biped = b.look ? L.posture === 'two' : p.hindLimbs === 'upright_legs';
     const legLen = S * (p.hindLimbs === 'pillar_legs' ? 0.17 : biped ? 0.26 : 0.21);
-    const rx = S * (biped ? 0.17 : 0.27); const ry = S * (biped ? 0.24 : 0.15);
+    const shapeX = L.shape === 'slim' ? 0.9 : L.shape === 'long' ? 1.25 : 1;
+    const shapeY = L.shape === 'slim' ? 0.82 : L.shape === 'long' ? 0.92 : 1;
+    const rx = S * (biped ? 0.17 : 0.27) * shapeX; const ry = S * (biped ? 0.24 : 0.15) * shapeY;
     const cy = ground - legLen - ry * 0.8 + Math.sin(t * 1.6) * 1.5;
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 70);
-    const hx = biped ? cx + rx * 0.4 : cx + rx * 0.95;
-    const hy = biped ? cy - ry * 1.15 : cy - ry * 0.6;
+    const longNeck = L.neck === 'long';
+    const hx = biped ? cx + rx * 0.4 : cx + rx * 0.95 + (longNeck ? S * 0.06 : 0);
+    const hy = biped ? cy - ry * 1.15 : cy - ry * 0.6 - (longNeck ? S * 0.16 : 0);
     const hr = S * 0.1;
 
     ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
@@ -252,6 +267,7 @@ window.G = window.G || {};
     ctx.fillStyle = grad; ctx.fill();
     ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
+    pattern(L, rx, ry, S, hue, t);
     if (p.skin === 'scales' || p.skin === 'swift_scales') {
       for (let y = -ry; y < ry; y += S * 0.03) for (let x = -rx; x < rx; x += S * 0.04) {
         const off = (Math.round(y / (S * 0.03)) % 2) * S * 0.02;
@@ -290,11 +306,12 @@ window.G = window.G || {};
 
     // Neck and head
     ctx.beginPath(); ctx.moveTo(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4); ctx.lineTo(hx, hy);
-    ctx.strokeStyle = body; ctx.lineWidth = S * 0.09; ctx.lineCap = 'round'; ctx.stroke();
-    drawHead(p, hx, hy, hr, hue, body, dark, t, S);
+    ctx.strokeStyle = body; ctx.lineWidth = S * (longNeck ? 0.075 : 0.09); ctx.lineCap = 'round'; ctx.stroke();
+    drawHead(p, hx, hy, hr, hue, body, dark, t, S, L);
   }
 
-  function drawHead(p, hx, hy, hr, hue, body, dark, t, S) {
+  function drawHead(p, hx, hy, hr, hue, body, dark, t, S, L) {
+    L = L || {};
     if (p.senses === 'great_ears') [-0.5, -0.1].forEach((dx) => tri(hx + dx * hr - 6, hy - hr * 0.6, hx + dx * hr - 14, hy - hr * 2, hx + dx * hr + 8, hy - hr * 0.7, dark));
     dot(hx, hy, hr, body);
     if (p.senses === 'horned_brow') [0.1, -0.3].forEach((dx) => { ctx.beginPath(); ctx.moveTo(hx + dx * hr - 5, hy - hr * 0.7); ctx.quadraticCurveTo(hx + dx * hr - 10, hy - hr * 2, hx + dx * hr + 12, hy - hr * 2.1); ctx.lineTo(hx + dx * hr + 5, hy - hr * 0.8); ctx.fillStyle = BONE; ctx.fill(); });
@@ -312,19 +329,23 @@ window.G = window.G || {};
     if (m === 'trunk') { ctx.beginPath(); ctx.moveTo(mx - 4, my - 2); ctx.quadraticCurveTo(mx + hr * 1.1, my + hr * 0.3, mx + hr * 0.6 + Math.sin(t * 1.5) * 4, my + hr * 1.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.lineCap = 'round'; ctx.stroke(); }
     if (m === 'baleen') for (let k = 0; k < 5; k++) line(mx - hr * 0.5 + k * 4, my - 2, mx - hr * 0.5 + k * 4, my + hr * 0.4, BONE, 1.5);
     const ex = hx + hr * 0.25; const ey = hy - hr * 0.25;
-    FACE = { x: ex, y: ey, r: hr * (p.senses === 'big_eyes' ? 0.42 : 0.22), mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
-    if (p.senses === 'big_eyes') { dot(ex, ey, hr * 0.42, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22, '#1c1414'); }
+    const huge = p.senses === 'big_eyes' || L.eyes === 'huge';
+    FACE = { x: ex, y: ey, r: hr * (huge ? 0.42 : 0.22), mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
+    if (huge) { dot(ex, ey, hr * 0.42, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07, '#fff'); }
     else if (p.senses === 'glow_eyes') glow(GLOW, 14, () => dot(ex, ey, hr * 0.25, GLOW));
     else { dot(ex, ey, hr * 0.2, '#fff'); dot(ex + hr * 0.06, ey, hr * 0.11, '#1c1414'); }
     if (p.senses === 'tremor_whiskers' || p.senses === 'electroreceptors') for (let k = -1; k <= 1; k++) line(mx - 4, my - 4, mx + hr * 0.9, my - 4 + k * hr * 0.35, BONE, 1.2);
+    const er = FACE.r;
+    if (L.eyes === 'sleepy') { ctx.beginPath(); ctx.arc(ex, ey, er * 1.05, Math.PI, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (L.eyes === 'fierce') line(ex - er * 1.3, ey - er * 1.5, ex + er * 1.2, ey - er * 0.6, dark, Math.max(2, er * 0.45));
   }
 
   // ======================= SEA CREATURE =======================
   function drawSea(b, cx, cy, S, t) {
     const hue = b.hue;
-    const { p, accent } = look(b);
+    const { p, accent, L } = look(b);
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
-    const rx = S * 0.33; const ry = S * 0.13;
+    const rx = S * 0.33 * (L.shape === 'long' ? 1.2 : L.shape === 'slim' ? 0.95 : 1); const ry = S * 0.13 * (L.shape === 'slim' ? 0.8 : L.shape === 'round' && b.look ? 1.12 : 1);
     const y0 = cy + Math.sin(t * 1.4) * 3;
     const tailX = cx - rx * 0.95;
     const sw = Math.sin(t * 3) * 0.25;
@@ -358,6 +379,7 @@ window.G = window.G || {};
     const grad = ctx.createLinearGradient(cx, y0 - ry, cx, y0 + ry); grad.addColorStop(0, body); grad.addColorStop(1, light);
     ctx.fillStyle = grad; ctx.fill(); ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
+    ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
     if (p.skin === 'scales' || p.skin === 'swift_scales') for (let y = y0 - ry; y < y0 + ry; y += S * 0.03) for (let x = cx - rx; x < cx + rx; x += S * 0.04) { ctx.beginPath(); ctx.arc(x + ((Math.round((y - y0) / (S * 0.03)) % 2) * S * 0.02), y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
     if (p.skin === 'warning_skin') [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
     if (p.skin === 'biolume_skin') glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
@@ -723,8 +745,87 @@ window.G = window.G || {};
 
   let sceneFrame = null;
   function hash(str) { let x = 0; for (let i = 0; i < str.length; i++) x = (x * 31 + str.charCodeAt(i)) | 0; return Math.abs(x); }
+  const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x));
 
-  // An animated scene: your herd, the species around you, the event's props and your reaction.
+  function ghost(x, y, r, alpha) {
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(x, y, r, Math.PI, 0); ctx.lineTo(x + r, y + r * 1.2);
+    for (let i = 0; i < 4; i++) ctx.lineTo(x + r - (i + 0.5) * (r / 2), y + r * (i % 2 ? 1.2 : 0.9));
+    ctx.lineTo(x - r, y + r * 1.2); ctx.closePath(); ctx.fillStyle = '#eef6ff'; ctx.fill();
+    dot(x - r * 0.35, y - r * 0.1, r * 0.15, '#1c1414'); dot(x + r * 0.35, y - r * 0.1, r * 0.15, '#1c1414');
+    ctx.restore();
+  }
+  function foodIcon(x, y, r, meat, alpha) {
+    ctx.save(); ctx.globalAlpha = alpha;
+    if (meat) { line(x - r, y + r, x + r * 0.2, y - r * 0.2, '#efe6d2', r * 0.5); dot(x + r * 0.3, y - r * 0.3, r * 0.8, '#c0533f'); }
+    else { ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, -0.6, 0, Math.PI * 2); ctx.fillStyle = '#93d46e'; ctx.fill(); line(x - r * 0.8, y + r * 0.5, x + r * 0.6, y - r * 0.4, '#4f8a35', 1.5); }
+    ctx.restore();
+  }
+
+  // Story choreography: where you and the other species move, and how they feel.
+  function storyFrame(story, k, w, S) {
+    const p = Math.min(1, k);
+    const you = { dx: 0, dy: 0, rot: 0, sx: 1, sy: 1 };
+    const them = { dx: 0, dy: 0, rot: 0, sx: 1, sy: 1, alpha: 1, turn: false };
+    let youMood = null; let themMood = 'surprised'; let word = null; let wordAt = null;
+    const gap = w * 0.38;
+    switch (story) {
+      case 'chase': {
+        them.dx = Math.min(p, 0.72) * w * 0.2; them.dy = -Math.abs(Math.sin(p * Math.PI * 6)) * 10;
+        you.dx = ease(p / 0.72) * (gap * 0.75 + w * 0.14);
+        if (p > 0.72) { const q = (p - 0.72) / 0.28; them.sx = them.sy = Math.max(0, 1 - q); you.sy = 1 + Math.sin(q * 20) * 0.08; }
+        if (k > 1.1) you.dx *= Math.max(0, 1 - (k - 1.1) * 1.2);
+        youMood = p > 0.72 ? 'happy' : 'angry'; themMood = 'scared';
+        word = 'CHOMP!'; wordAt = 0.72; break;
+      }
+      case 'brawl_win': {
+        const hit = 0.4;
+        you.dx = p < hit ? ease(p / hit) * gap * 0.55 : gap * 0.55 * (1 - ease((p - hit) / 0.6));
+        if (p > hit) { const q = (p - hit) / (1 - hit); them.dx = q * w * 0.35; them.rot = q * 4; them.dy = -Math.sin(q * Math.PI) * 50; }
+        if (k > 1.2) them.alpha = Math.max(0, 1 - (k - 1.2) * 2);
+        youMood = p > hit ? 'proud' : 'angry'; themMood = p > hit ? 'dizzy' : 'angry';
+        word = 'POW!'; wordAt = hit; break;
+      }
+      case 'brawl_lose': {
+        const hit = 0.4;
+        them.dx = p < hit ? -ease(p / hit) * gap * 0.55 : -gap * 0.55 * (1 - ease((p - hit) / 0.6));
+        if (p > hit) { const q = Math.min(1, (p - hit) / 0.3); you.dx = -q * w * 0.08; you.sy = 1 - 0.4 * Math.max(0, 1 - (p - hit) * 1.4); you.sx = 1 + 0.3 * Math.max(0, 1 - (p - hit) * 1.4); }
+        youMood = p > hit ? 'dizzy' : 'worried'; themMood = p > hit ? 'proud' : 'angry';
+        word = 'WHAM!'; wordAt = hit; break;
+      }
+      case 'mauled': {
+        const hit = 0.45;
+        const q = p < hit ? ease(p / hit) : 1 - ease((p - hit) / 0.55);
+        them.dx = -q * gap * 0.75; them.dy = -Math.sin(Math.min(1, p / hit) * Math.PI) * 60 * (p < hit ? 1 : 0);
+        if (p > hit) you.dx = Math.sin(k * 50) * 8 * Math.max(0, 1 - (p - hit) * 2);
+        youMood = p > hit ? 'sad' : 'scared'; themMood = 'angry';
+        word = 'CHOMP!'; wordAt = hit; break;
+      }
+      case 'escape': {
+        you.dx = p < 0.35 ? -ease(p / 0.35) * w * 0.7 : p < 0.75 ? -w * 0.7 : -w * 0.7 * (1 - ease((p - 0.75) / 0.25));
+        them.dx = -ease(Math.min(1, p / 0.5)) * gap * 0.75;
+        youMood = p < 0.75 ? 'scared' : 'proud'; themMood = 'surprised';
+        word = '?'; wordAt = 0.5; break;
+      }
+      case 'befriend': {
+        you.dx = ease(p) * gap * 0.25; them.dx = -ease(p) * gap * 0.25;
+        you.dy = -Math.abs(Math.sin(k * 10)) * 12; them.dy = -Math.abs(Math.sin(k * 10 + 1)) * 12;
+        youMood = 'love'; themMood = 'love'; word = 'YAY!'; wordAt = 0.6; break;
+      }
+      case 'rebuffed': {
+        you.dx = (p < 0.5 ? ease(p / 0.5) : 1 - ease((p - 0.5) / 0.5)) * gap * 0.3;
+        them.turn = p > 0.35;
+        youMood = p > 0.4 ? 'sad' : 'happy'; themMood = 'angry'; word = 'HMPH!'; wordAt = 0.4; break;
+      }
+      default: {
+        you.rot = Math.sin(k * 3) * 0.03; them.rot = -Math.sin(k * 3) * 0.03;
+        youMood = 'worried'; themMood = 'angry'; word = '...'; wordAt = 0.3; break;
+      }
+    }
+    return { you, them, youMood, themMood, word, wordAt };
+  }
+
+  // An animated scene: your herd, the species around you, the event's props and what happened.
   G.playScene = function (canvas, run, sc) {
     if (sceneFrame) cancelAnimationFrame(sceneFrame);
     if (!canvas || !run) return;
@@ -732,6 +833,11 @@ window.G = window.G || {};
     const v = hash(`${sc.title || ''}${sc.label || ''}${run.turn}`) % (VARIANTS[anim] || 1);
     const start = performance.now();
     const me = G.bodyOf(run);
+    const sp = sc.species != null && sc.species >= 0 ? run.species[sc.species] : null;
+    const story = sp ? sc.story : null;
+    const babies = Math.min(5, Math.max(0, sc.popDelta || 0));
+    const ghosts = Math.min(5, Math.max(0, -(sc.popDelta || 0)));
+    const food = sc.foodDelta || 0;
     function frame(now) {
       if (!canvas.isConnected) { sceneFrame = null; return; }
       const { w, h } = fit(canvas);
@@ -740,40 +846,230 @@ window.G = window.G || {};
       ctx.clearRect(0, 0, w, h);
       drawBackground(run, w, h, t);
       const S = Math.min(w * 0.72, h * 1.05);
-      const cx = w * 0.45; const cy = h * 0.5;
+      const cx = w * (story ? 0.36 : 0.45); const cy = h * 0.5;
       const land = run.stage === 'creature' && run.habitat === 'land';
       const ground = land ? cy + S * 0.36 : null;
       const P = { w, h, cx, cy, S, k, t, success: sc.success, anim, ground };
-      P_SKIP_WORDS = (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
+      P_SKIP_WORDS = !!story || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
       if (sc.prop) drawProp(sc.prop, 'back', P);
       drawAmbient(run, w, h, t, S, sc.species);
       drawHerd(run, cx, cy, S, t, w, h);
-      // The species this event is about stands opposite you, with its own reaction.
-      const sp = sc.species != null && sc.species >= 0 ? run.species[sc.species] : null;
+      const st = story ? storyFrame(story, k, w, S) : null;
+      // The other species, acting out its side of the story.
       if (sp) {
-        const kick = anim === 'attack' && sc.success ? Math.max(0, Math.sin(Math.min(1, k) * Math.PI)) * 40 : 0;
         const ks = S * (land ? 0.5 : 0.55) * Math.min(1.5, sp.size);
+        const baseX = w * (story ? 0.8 : 0.86);
         const sy = land ? ground - ks * 0.36 : cy;
-        ctx.save(); ctx.translate(w * 0.86 + kick, sy); ctx.scale(-1, 1);
-        if (anim === 'attack' && sc.success && k < 1) ctx.rotate(-0.3 * Math.sin(Math.min(1, k) * Math.PI));
-        drawBody(G.speciesBody(sp), 0, 0, ks, t);
-        drawFace(anim === 'attack' && sc.success ? 'dizzy' : anim === 'social' ? 'love' : anim === 'hurt' || sc.success === false ? 'angry' : 'surprised', t);
-        ctx.restore();
+        const T = st ? st.them : { dx: anim === 'attack' && sc.success ? Math.max(0, Math.sin(Math.min(1, k) * Math.PI)) * 40 : 0, dy: 0, rot: 0, sx: 1, sy: 1, alpha: 1 };
+        if (T.alpha > 0.02 && T.sx > 0.02) {
+          ctx.save(); ctx.globalAlpha = T.alpha;
+          const pivot = land ? ground : sy;
+          ctx.translate(baseX + T.dx, pivot + T.dy); ctx.rotate(T.rot); ctx.scale((T.turn ? 1 : -1) * T.sx, T.sy); ctx.translate(0, sy - pivot);
+          drawBody(G.speciesBody(sp), 0, 0, ks, t);
+          drawFace(st ? st.themMood : (anim === 'attack' && sc.success ? 'dizzy' : anim === 'social' ? 'love' : sc.success === false ? 'angry' : 'surprised'), t);
+          ctx.restore();
+        }
+        if (story === 'chase' && k > 0.95) drawProp('bones', 'back', { ...P, ground: land ? ground : cy + S * 0.25, w: (baseX + w * 0.2) / 0.78 });
       }
-      const T = animTransform(anim, v, k, w);
+      // You.
+      const T = st ? st.you : animTransform(anim, v, k, w);
       const sink = sc.prop === 'tar' && (sc.success === false || anim === 'hurt') ? Math.min(1, k) * S * 0.12 : 0;
       const spin = sc.prop === 'whirlpool' && anim === 'hurt' && k < 1 ? k * Math.PI * 4 : 0;
       const pivotY = land ? ground : cy;
       ctx.save();
       ctx.translate(cx + T.dx, pivotY + T.dy + sink); ctx.rotate(T.rot + spin); ctx.scale(T.sx, T.sy); ctx.translate(-cx, -pivotY);
       drawBody(me, cx, cy, S, t);
-      drawFace(sc.mood, t);
+      drawFace((st && st.youMood) || sc.mood, t);
       ctx.restore();
       if (sc.prop) drawProp(sc.prop, 'front', P);
-      drawEffects(anim, v, k, cx, cy, S, w, h, !!sp, ground);
+      if (st && st.word && k > st.wordAt && k < st.wordAt + 0.9) {
+        const q = Math.min(1, (k - st.wordAt) * 6);
+        const wx = story === 'escape' || story === 'rebuffed' ? w * 0.8 : cx + (story === 'mauled' || story === 'brawl_lose' ? 0 : S * 0.45);
+        comic(st.word, wx, cy - S * 0.42, S * 0.1 * (0.6 + q * 0.5), Math.min(1, (st.wordAt + 0.9 - k) * 3), story === 'mauled' || story === 'brawl_lose' ? '#ef7d6b' : '#f2c14e', -0.12);
+      }
+      if (!st) drawEffects(anim, v, k, cx, cy, S, w, h, !!sp, ground);
+      // Your herd grows or shrinks.
+      for (let i = 0; i < babies; i++) { const q = Math.min(1, Math.max(0, k * 1.5 - 0.3 - i * 0.12)); if (q <= 0) continue; const bx = cx - S * 0.35 - i * S * 0.12; const by = (land ? ground - S * 0.08 : cy + S * 0.25); ctx.save(); ctx.translate(bx, by); const sc2 = Math.min(1, q * 1.3) * (1 + 0.15 * Math.sin(q * 12) * (1 - q)); ctx.scale(sc2, sc2); drawBody(me, 0, -S * 0.05, S * 0.28, t + i); ctx.restore(); if (q < 1) star(bx, by - S * 0.18, 5 * (1 - q) + 2, '#f2c14e'); }
+      if (babies && k > 0.4 && k < 2) comic(`+${sc.popDelta}`, cx - S * 0.45, (land ? ground : cy) - S * 0.35, S * 0.08, Math.min(1, (2 - k)), '#8fd16a');
+      for (let i = 0; i < ghosts; i++) { const q = Math.max(0, k - 0.4 - i * 0.1); if (q <= 0 || q > 1.6) continue; ghost(cx - S * 0.3 + i * S * 0.15 + Math.sin(q * 6 + i) * 6, cy - q * S * 0.45, S * 0.045, Math.max(0, 1 - q / 1.6)); }
+      if (ghosts && k > 0.5 && k < 2.2) comic(`${sc.popDelta}`, cx - S * 0.45, cy - S * 0.42, S * 0.08, Math.min(1, (2.2 - k)), '#ef7d6b');
+      // Food flies in, or away.
+      if (food) for (let i = 0; i < Math.min(5, Math.abs(food)); i++) {
+        const q = Math.min(1, Math.max(0, k * 1.3 - 0.35 - i * 0.08)); if (q <= 0 || q >= 1) continue;
+        const fx = food > 0 ? w * 0.9 + (cx + S * 0.25 - w * 0.9) * q : cx + S * 0.2 + q * w * 0.3;
+        const fy = food > 0 ? cy - S * 0.1 - Math.sin(q * Math.PI) * S * 0.3 : cy - q * S * 0.5;
+        foodIcon(fx, fy, 7, G.diet(run) === 'carn', food > 0 ? 1 : 1 - q);
+      }
+      // A new evolution gets a big moment.
+      if (sc.evolved && k < 2.5) {
+        const q = Math.min(1, k / 0.6);
+        for (let i = 0; i < 16; i++) { const a2 = i * Math.PI / 8 + k; line(cx + Math.cos(a2) * S * 0.2 * q, cy + Math.sin(a2) * S * 0.2 * q, cx + Math.cos(a2) * S * 0.55 * q, cy + Math.sin(a2) * S * 0.55 * q, hsl((i * 40 + k * 200) % 360, 90, 70, Math.max(0, 0.6 - k * 0.2)), 3); }
+        comic('EVOLVED!', w * 0.5, h * 0.14, S * 0.11 * (0.7 + 0.3 * q), Math.min(1, (2.5 - k) * 1.5), '#f2c14e', -0.06);
+      }
       sceneFrame = reduceMotion ? null : requestAnimationFrame(frame);
     }
     sceneFrame = requestAnimationFrame(frame);
+  };
+
+  // ======================= SPRITES =======================
+  // Bodies drawn once to an offscreen canvas, so the world map can show many creatures cheaply.
+  const spriteCache = new Map();
+  function spriteFor(b) {
+    const key = JSON.stringify([b.stage, b.habitat, b.multicellular, b.parts, b.hue, b.traits, b.look]);
+    let c = spriteCache.get(key);
+    if (c) return c;
+    c = document.createElement('canvas');
+    const size = 160;
+    c.width = size; c.height = size;
+    const prev = ctx;
+    ctx = c.getContext('2d');
+    const land = b.stage === 'creature' && b.habitat !== 'sea';
+    drawBody(b, size * (land ? 0.44 : 0.5), size * (land ? 0.4 : 0.5), (size * 0.9) / sizeScale(b), 0.6);
+    ctx = prev;
+    spriteCache.set(key, c);
+    if (spriteCache.size > 60) spriteCache.delete(spriteCache.keys().next().value);
+    return c;
+  }
+
+  // ======================= WORLD MAP =======================
+  // Herds roam a side-on diorama. Each herd shows its population as a crowd, scaled by body size.
+  const herds = new Map();
+  let mapFrame = null;
+  let mapHits = [];
+
+  function herdScale(run, s) {
+    if (!s) return { small: 0.75, mid: 1, giant: 1.45 }[G.sizeOf(run)];
+    if (s.size >= 2) return 1.6;
+    return s.size;
+  }
+
+  function behaviour(run, key, s, h) {
+    const you = herds.get('you');
+    const others = [...herds.entries()].filter(([k]) => k !== key);
+    let tx = 0.1 + Math.random() * 0.8; let ty = Math.random();
+    if (s) {
+      const st = G.speciesStatus(s);
+      if (st === 'hostile' && you) { tx = you.x + 0.08; ty = you.y; }
+      else if (st === 'allied' && you) { tx = you.x + (Math.random() - 0.5) * 0.3; ty = you.y + (Math.random() - 0.5) * 0.3; }
+      else if (s.role === 'predator') {
+        const prey = others.filter(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'prey' && !t2.extinct; });
+        if (prey.length) { const target = prey[Math.floor(Math.random() * prey.length)][1]; tx = target.x; ty = target.y; }
+      } else if (s.role === 'prey') {
+        const pred = others.find(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'predator' && !t2.extinct; });
+        if (pred && Math.abs(pred[1].x - h.x) < 0.3) { tx = h.x + (h.x > pred[1].x ? 0.35 : -0.35); }
+      }
+    } else { tx = 0.25 + Math.random() * 0.4; }
+    h.tx = Math.max(0.06, Math.min(0.94, tx)); h.ty = Math.max(0, Math.min(1, ty));
+  }
+
+  function drawMapBackground(run, w, h, t) {
+    drawBackground(run, w, h, t);
+    const o = run.origin;
+    if (o === 'vents') drawProp('vent', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
+    if (o === 'frozen') drawProp('snow', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
+    if (o === 'toxic') drawProp('plume', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
+    if (run.stage === 'creature' && run.habitat === 'land') { ctx.fillStyle = hsl(95, 22, 17); ctx.fillRect(0, h * 0.5, w, h * 0.5); for (let i = 0; i < 40; i++) { const x = (i * 97) % w; const y = h * 0.52 + ((i * 53) % (h * 0.46)); line(x, y, x + Math.sin(t + i) * 2, y - 6, hsl(95, 30, 28), 2); } }
+  }
+
+  G.startMap = function (canvas, onTap) {
+    if (mapFrame) cancelAnimationFrame(mapFrame);
+    let last = performance.now();
+    canvas.onclick = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX - r.left; const y = e.clientY - r.top;
+      let best = null; let bd = 1e9;
+      mapHits.forEach((hit) => { const d = Math.hypot(hit.x - x, hit.y - y); if (d < hit.r && d < bd) { bd = d; best = hit; } });
+      if (best && onTap) onTap(best.key);
+    };
+    function frame(now) {
+      const run = G.run;
+      if (!canvas.isConnected || !run) { mapFrame = null; return; }
+      const dt = Math.min(0.1, (now - last) / 1000); last = now;
+      const { w, h } = fit(canvas);
+      const t = reduceMotion ? 0 : now / 1000;
+      ctx.clearRect(0, 0, w, h);
+      drawMapBackground(run, w, h, t);
+      const wet = run.stage === 'cell' || run.habitat === 'sea';
+      const top = wet ? h * 0.12 : h * 0.5; const bottom = h * 0.93;
+      const base = Math.min(w, h) * 0.13;
+      // Keep the herd list in sync with the world.
+      const live = [{ key: 'you', s: null, pop: run.pop, body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
+      [...herds.keys()].forEach((k) => { if (!live.find((l) => l.key === k)) herds.delete(k); });
+      live.forEach((l) => {
+        let hd = herds.get(l.key);
+        if (!hd) { hd = { x: l.key === 'you' ? 0.4 : 0.1 + Math.random() * 0.8, y: Math.random(), dir: 1, members: [] }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        const speed = (l.s ? 0.03 + G.speciesStat(l.s, 'spd') * 0.004 : 0.035 + G.stat(run, 'spd') * 0.003) * (reduceMotion ? 0 : 1);
+        const dx = hd.tx - hd.x; const dy = hd.ty - hd.y;
+        const d = Math.hypot(dx, dy * 0.5);
+        if (d < 0.02) behaviour(run, l.key, l.s, hd);
+        else { hd.x += (dx / d) * speed * dt; hd.y += (dy / d) * speed * dt * 0.5; if (Math.abs(dx) > 0.01) hd.dir = dx > 0 ? 1 : -1; }
+      });
+      // Draw from far to near.
+      mapHits = [];
+      live.sort((a, b2) => herds.get(a.key).y - herds.get(b2.key).y).forEach((l) => {
+        const hd = herds.get(l.key);
+        const depth = 0.6 + 0.4 * hd.y;
+        const size = base * depth * herdScale(run, l.s);
+        const pop = Math.max(0, Math.round(l.pop));
+        const icons = Math.max(1, Math.min(12, pop <= 12 ? pop : Math.round(12 * Math.min(1, pop / 40) + 4)));
+        const hx = hd.x * w; const hy = top + hd.y * (bottom - top);
+        const spr = spriteFor(l.body);
+        const spread = size * (0.35 + Math.sqrt(icons) * 0.32);
+        for (let i = 0; i < icons; i++) {
+          const ang = i * 2.399; const rad = spread * Math.sqrt((i + 0.5) / icons);
+          const bob = Math.sin(t * 6 + i * 1.7) * size * 0.03;
+          const mx = hx + Math.cos(ang) * rad + Math.sin(t * 0.8 + i) * size * 0.08;
+          const my = hy + Math.sin(ang) * rad * 0.35 + bob;
+          ctx.save(); ctx.translate(mx, my); if (hd.dir < 0) ctx.scale(-1, 1);
+          ctx.drawImage(spr, -size / 2, -size / 2, size, size);
+          ctx.restore();
+        }
+        // Label
+        const label = `${l.key === 'you' ? 'You' : l.key} · ${pop}`;
+        ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
+        const tw = ctx.measureText(label).width + 12;
+        const ly = hy - spread * 0.35 - size * 0.55;
+        const st = l.s ? G.speciesStatus(l.s) : 'you';
+        ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(hx - tw / 2, ly - 9, tw, 18, 9) : ctx.rect(hx - tw / 2, ly - 9, tw, 18); ctx.fill();
+        ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, hx, ly + 1);
+        mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
+      });
+      mapFrame = requestAnimationFrame(frame);
+    }
+    mapFrame = requestAnimationFrame(frame);
+  };
+  G.resetMap = function () { herds.clear(); };
+
+  // ======================= FULL-SCREEN VIEWER =======================
+  let viewFrame = null;
+  G.playViewer = function (canvas, b, run) {
+    if (viewFrame) cancelAnimationFrame(viewFrame);
+    const start = performance.now();
+    const moods = ['happy', 'proud', 'love', 'surprised', 'sleepy', 'angry'];
+    const anims = ['social', 'grow', 'eat', 'mutate', 'rest', 'attack'];
+    function frame(now) {
+      if (!canvas.isConnected) { viewFrame = null; return; }
+      const { w, h } = fit(canvas);
+      const t = reduceMotion ? 0 : now / 1000;
+      const el = (now - start) / 1000;
+      const cycle = Math.floor(el / 3) % anims.length;
+      const k = (el % 3) / DUR;
+      ctx.clearRect(0, 0, w, h);
+      if (run) drawBackground(Object.assign({}, run, { stage: b.stage, habitat: b.habitat }), w, h, t);
+      const land = b.stage === 'creature' && b.habitat !== 'sea';
+      const S = Math.min(w * 0.85, h * 0.95) / sizeScale(b);
+      const cx = w * (land ? 0.45 : 0.5); const cy = h * (land ? 0.4 : 0.5);
+      const T = animTransform(anims[cycle], 0, k, w * 0.2);
+      const pivotY = land ? cy + S * sizeScale(b) * 0.36 : cy;
+      ctx.save(); ctx.translate(cx + T.dx * 0.4, pivotY + T.dy); ctx.rotate(T.rot); ctx.scale(T.sx, T.sy); ctx.translate(-cx, -pivotY);
+      drawBody(b, cx, cy, S, t);
+      drawFace(moods[cycle], t);
+      ctx.restore();
+      viewFrame = reduceMotion ? null : requestAnimationFrame(frame);
+    }
+    viewFrame = requestAnimationFrame(frame);
   };
 
   G.stopScene = function () { if (sceneFrame) cancelAnimationFrame(sceneFrame); sceneFrame = null; };

@@ -95,33 +95,33 @@ G.SIZES = {
   giant: { name: 'Giant', popMult: 0.65, eatDiv: 1.5, damageMult: 1 },
 };
 
-// The Mind tree: like CK3 cultural innovations. After the Spark of Mind your lineage
-// earns Insight every turn, which goes into the innovation it is fascinated by.
-// A tier opens once you have 2 innovations from the tier before it.
-//   req       { diet: [...], stat: ['cha', 6], trait: [any of], innovation: [any of], tag: 'grasp' }
-//   excludes  innovations that can never be learned alongside this one
+// The Mind tree: a skill tree, like CK3 cultural innovations. After the Spark of Mind your
+// lineage earns Insight every turn, which goes into the idea it is fascinated by.
+//   col       column in the tree (0-5), for drawing branches
+//   req       { innovation: [any of], diet, stat: ['cha', 6], trait: [any of], tag: 'grasp', tier3: 2 }
+//   excludes  ideas that can never be learned alongside this one
 G.INNOVATIONS = [
-  { id: 'keen_memory', tier: 1, name: 'Keen Memory', cost: 4, mods: { cun: 1, exploreBonus: 1 }, desc: 'Remember where food was, and where danger was.' },
-  { id: 'alarm_calls', tier: 1, name: 'Alarm Calls', cost: 4, mods: { tou: 1, cha: 1 }, req: { stat: ['cha', 5] }, desc: 'A shout that means "run".' },
-  { id: 'ambush_instinct', tier: 1, name: 'Ambush Instinct', cost: 4, mods: { str: 1, huntBonus: 1 }, req: { diet: ['carn', 'omni'] }, excludes: ['gentle_grazing'], desc: 'Wait, watch, pounce. The mind of a hunter.' },
-  { id: 'gentle_grazing', tier: 1, name: 'Gentle Grazing', cost: 4, mods: { forageBonus: 1, cha: 1 }, req: { diet: ['herb', 'omni'] }, excludes: ['ambush_instinct'], desc: 'Patient minds, shaped by plants and peace.' },
-  { id: 'problem_solving', tier: 1, name: 'Problem Solving', cost: 4, mods: { cun: 2 }, req: { stat: ['cun', 6] }, desc: 'Figure out how to get the fruit down.' },
+  { id: 'ambush_instinct', tier: 1, col: 0, name: 'Ambush Instinct', cost: 4, mods: { str: 1, huntBonus: 1 }, req: { diet: ['carn', 'omni'] }, excludes: ['gentle_grazing'], desc: 'Wait, watch, pounce. The mind of a hunter.' },
+  { id: 'keen_memory', tier: 1, col: 1, name: 'Keen Memory', cost: 4, mods: { cun: 1, exploreBonus: 1 }, desc: 'Remember where food was, and where danger was.' },
+  { id: 'problem_solving', tier: 1, col: 2, name: 'Problem Solving', cost: 4, mods: { cun: 2 }, req: { stat: ['cun', 6] }, desc: 'Figure out how to get the fruit down.' },
+  { id: 'alarm_calls', tier: 1, col: 4, name: 'Alarm Calls', cost: 4, mods: { tou: 1, cha: 1 }, req: { stat: ['cha', 5] }, desc: 'A shout that means "run".' },
+  { id: 'gentle_grazing', tier: 1, col: 5, name: 'Gentle Grazing', cost: 4, mods: { forageBonus: 1, cha: 1 }, req: { diet: ['herb', 'omni'] }, excludes: ['ambush_instinct'], desc: 'Patient minds, shaped by plants and peace.' },
 
-  { id: 'pack_tactics', tier: 2, name: 'Pack Tactics', cost: 7, mods: { str: 1, huntBonus: 2 }, req: { innovation: ['ambush_instinct'] }, excludes: ['herd_defense'], desc: 'Flank, chase, ambush, together.' },
-  { id: 'herd_defense', tier: 2, name: 'Herd Defense', cost: 7, mods: { tou: 2, damageReduce: 1 }, req: { innovation: ['gentle_grazing', 'alarm_calls'] }, excludes: ['pack_tactics'], desc: 'Young in the middle, horns facing out.' },
-  { id: 'grooming', tier: 2, name: 'Social Grooming', cost: 7, mods: { cha: 1, growthCost: -1 }, req: { stat: ['cha', 6] }, excludes: ['lone_wanderers'], desc: 'Bonds that hold a group together.' },
-  { id: 'lone_wanderers', tier: 2, name: 'Lone Wanderers', cost: 7, mods: { spd: 2, exploreBonus: 2 }, excludes: ['grooming', 'vocal_language'], desc: 'Your kind keeps to itself and roams far.' },
-  { id: 'teaching', tier: 2, name: 'Teaching the Young', cost: 7, mods: { insightPerTurn: 1 }, req: { innovation: ['keen_memory', 'problem_solving'] }, desc: 'Each generation starts where the last one stopped.' },
-  { id: 'food_caching', tier: 2, name: 'Food Caching', cost: 7, mods: { foodCap: 5, foodPerTurn: 1 }, req: { stat: ['cun', 7] }, desc: 'Bury it now, eat it in winter.' },
+  { id: 'pack_tactics', tier: 2, col: 0, name: 'Pack Tactics', cost: 7, mods: { str: 1, huntBonus: 2 }, req: { innovation: ['ambush_instinct'] }, excludes: ['herd_defense'], desc: 'Flank, chase, ambush, together.' },
+  { id: 'teaching', tier: 2, col: 1, name: 'Teaching the Young', cost: 7, mods: { insightPerTurn: 1 }, req: { innovation: ['keen_memory'] }, desc: 'Each generation starts where the last one stopped.' },
+  { id: 'food_caching', tier: 2, col: 2, name: 'Food Caching', cost: 7, mods: { foodCap: 5, foodPerTurn: 1 }, req: { innovation: ['problem_solving'] }, desc: 'Bury it now, eat it in winter.' },
+  { id: 'lone_wanderers', tier: 2, col: 3, name: 'Lone Wanderers', cost: 7, mods: { spd: 2, exploreBonus: 2 }, req: { innovation: ['keen_memory', 'problem_solving'] }, excludes: ['grooming', 'vocal_language'], desc: 'Your kind keeps to itself and roams far.' },
+  { id: 'grooming', tier: 2, col: 4, name: 'Social Grooming', cost: 7, mods: { cha: 1, growthCost: -1 }, req: { innovation: ['alarm_calls', 'gentle_grazing'] }, excludes: ['lone_wanderers'], desc: 'Bonds that hold a group together.' },
+  { id: 'herd_defense', tier: 2, col: 5, name: 'Herd Defense', cost: 7, mods: { tou: 2, damageReduce: 1 }, req: { innovation: ['gentle_grazing', 'alarm_calls'] }, excludes: ['pack_tactics'], desc: 'Young in the middle, horns facing out.' },
 
-  { id: 'vocal_language', tier: 3, name: 'Vocal Language', cost: 10, mods: { cha: 2 }, req: { innovation: ['grooming', 'alarm_calls'] }, excludes: ['lone_wanderers'], desc: 'Sounds with meanings. Lets you speak with other species.' },
-  { id: 'stone_tools', tier: 3, name: 'Tools', cost: 10, mods: { str: 2, forageBonus: 1 }, req: { tag: 'grasp' }, desc: 'A sharp edge changes everything.' },
-  { id: 'shelters', tier: 3, name: 'Shelters', cost: 10, mods: { tou: 2, maxPop: 3 }, req: { innovation: ['herd_defense', 'food_caching', 'pack_tactics'] }, desc: 'Nests, dens and walls against the world.' },
-  { id: 'war_bands', tier: 3, name: 'War Bands', cost: 10, mods: { str: 3 }, req: { innovation: ['pack_tactics'], trait: ['aggressive', 'feared', 'territorial'] }, excludes: ['shared_ritual'], desc: 'Organized violence. Rivals learn to fear you.' },
-  { id: 'shared_ritual', tier: 3, name: 'Shared Ritual', cost: 10, mods: { cha: 2, dnaPerTurn: 1 }, req: { stat: ['cha', 8] }, excludes: ['war_bands'], desc: 'Dances and songs that everyone knows.' },
-  { id: 'symbolic_thought', tier: 3, name: 'Symbolic Thought', cost: 10, mods: { cun: 2, insightPerTurn: 1 }, req: { innovation: ['teaching'] }, desc: 'This mark means that thing.' },
+  { id: 'war_bands', tier: 3, col: 0, name: 'War Bands', cost: 10, mods: { str: 3 }, req: { innovation: ['pack_tactics'], trait: ['aggressive', 'feared', 'territorial'] }, excludes: ['shared_ritual'], desc: 'Organized violence. Rivals learn to fear you.' },
+  { id: 'symbolic_thought', tier: 3, col: 1, name: 'Symbolic Thought', cost: 10, mods: { cun: 2, insightPerTurn: 1 }, req: { innovation: ['teaching'] }, desc: 'This mark means that thing.' },
+  { id: 'shelters', tier: 3, col: 2, name: 'Shelters', cost: 10, mods: { tou: 2, maxPop: 3 }, req: { innovation: ['food_caching', 'herd_defense', 'pack_tactics'] }, desc: 'Nests, dens and walls against the world.' },
+  { id: 'stone_tools', tier: 3, col: 3, name: 'Tools', cost: 10, mods: { str: 2, forageBonus: 1 }, req: { innovation: ['food_caching', 'teaching', 'lone_wanderers'], tag: 'grasp' }, desc: 'A sharp edge changes everything.' },
+  { id: 'vocal_language', tier: 3, col: 4, name: 'Vocal Language', cost: 10, mods: { cha: 2 }, req: { innovation: ['grooming'] }, excludes: ['lone_wanderers'], desc: 'Sounds with meanings. Lets you speak with other species.' },
+  { id: 'shared_ritual', tier: 3, col: 5, name: 'Shared Ritual', cost: 10, mods: { cha: 2, dnaPerTurn: 1 }, req: { innovation: ['herd_defense', 'grooming'] }, excludes: ['war_bands'], desc: 'Dances and songs that everyone knows.' },
 
-  { id: 'sapience', tier: 4, name: 'Self-Awareness', cost: 14, mods: { cun: 1, cha: 1 }, desc: 'You know that you are. This leads to the end of the Creature stage.' },
+  { id: 'sapience', tier: 4, col: 2.5, name: 'Self-Awareness', cost: 14, mods: { cun: 1, cha: 1 }, req: { tier3: 2 }, desc: 'You know that you are. This leads to the end of the Creature stage.' },
 ];
 
 // What each cell part grows into when your lineage leaves the Cell stage.
@@ -158,6 +158,30 @@ G.CARRY = {
   toxin_gland: { land: 'venom_quills', sea: 'venom_quills' },
   photocyte_cluster: { land: 'lumen_sail', sea: 'lumen_sail' },
   calcium_core: { land: 'pillar_legs', sea: 'armored_fins' },
+  // Evolved cell parts
+  devourer_maw: { land: 'crushing_jaws', sea: 'crushing_jaws' },
+  sun_sieve: { land: 'grinding_beak', sea: 'baleen' },
+  venom_siphon: { land: 'venom_fangs', sea: 'venom_fangs' },
+  abyssal_maw: { land: 'lure_jaw', sea: 'lure_jaw' },
+  leviathan_maw: { land: 'sabre_venom_fangs', sea: 'sabre_venom_fangs' },
+  twin_drive: { land: 'runner_legs', sea: 'fluke' },
+  torpedo_drive: { land: 'hopping_legs', sea: 'fluke' },
+  tide_walker: { land: 'digging_forelegs', sea: 'front_flippers' },
+  aurora_tail: { land: 'glow_tail', sea: 'glow_tail' },
+  hyperdrive: { land: 'sprinter_legs', sea: 'comet_fluke' },
+  venom_spines: { land: 'venom_quills', sea: 'venom_quills' },
+  glass_hedgehog: { land: 'back_spines', sea: 'back_spines' },
+  glow_slime: { land: 'biolume_skin', sea: 'biolume_skin' },
+  fortress_wall: { land: 'carapace', sea: 'carapace' },
+  urchin_armor: { land: 'porcupine_back', sea: 'porcupine_back' },
+  compound_sense: { land: 'antennae', sea: 'electroreceptors' },
+  lantern_eye: { land: 'glow_eyes', sea: 'glow_eyes' },
+  tracker_sense: { land: 'great_ears', sea: 'echolocation' },
+  reserve_gut: { land: 'fat_hump', sea: 'blubber' },
+  brain_seed: { land: 'grasping_fingers', sea: 'sea_tentacles' },
+  dreaming_brain: { land: 'clever_claws', sea: 'echolocation' },
+  sun_heart: { land: 'moss_garden', sea: 'kelp_garden' },
+  venom_bone: { land: 'venom_spurs', sea: 'stinger_tail' },
 };
 
 // Starting kits. Each archetype sets the parts you begin each body plan with.
@@ -193,7 +217,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'symbiote', name: 'Symbiote', cost: 50, color: 150,
+    id: 'symbiote', name: 'Symbiote', cost: 50, needsEvo: 2, color: 150,
     desc: 'Lives alongside helpers that feed it. Slow but rarely starves.',
     mods: { cha: 1 },
     start: {
@@ -203,7 +227,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'parasite', name: 'Parasite', cost: 70, color: 280,
+    id: 'parasite', name: 'Parasite', cost: 70, needsEvo: 5, color: 280,
     desc: 'Fragile, venomous and sneaky. High risk, high reward.',
     mods: { cun: 1, maxPop: -2 },
     start: {
@@ -219,14 +243,14 @@ G.ORIGINS = [
   { id: 'tidal', name: 'Tidal Pools', cost: 0, hue: 185, desc: 'Warm, shallow and forgiving. No modifiers.', mods: {}, dnaMult: 1 },
   { id: 'vents', name: 'Volcanic Vents', cost: 40, hue: 18, desc: 'Mutations come fast here: +25% DNA. Food is scarce: eat 1 more per turn.', mods: { upkeep: 1 }, dnaMult: 1.25 },
   { id: 'frozen', name: 'Frozen Sea', cost: 40, hue: 210, desc: 'Cold makes life tough and slow: +3 max Population, −1 Speed.', mods: { maxPop: 3, spd: -1 }, dnaMult: 1 },
-  { id: 'toxic', name: 'Toxic Bloom', cost: 60, hue: 290, desc: 'Poisoned water: −2 max Population, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
+  { id: 'toxic', name: 'Toxic Bloom', cost: 60, needsEvo: 4, hue: 290, desc: 'Poisoned water: −2 max Population, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
 ];
 
 // Mutation packs add parts to the draft pool.
 G.PACKS = [
   { id: 'deep', name: 'Abyssal Light', cost: 35, desc: 'Adds 10 Glow parts: lures, photophores and living light.' },
   { id: 'armored', name: 'Ironclad', cost: 35, desc: 'Adds 6 Armor parts: plates, carapaces and horned brows.' },
-  { id: 'venom', name: 'Venom Glands', cost: 45, desc: 'Adds 7 Venom parts: stylets, barbs, spurs and stingers.' },
+  { id: 'venom', name: 'Venom Glands', cost: 45, needsEvo: 1, desc: 'Adds 7 Venom parts: stylets, barbs, spurs and stingers.' },
 ];
 
 // Permanent upgrades bought with Genetic Memory. Each level costs the next price.
@@ -243,20 +267,53 @@ G.BOONS = [
 G.STAGES = {
   cell: {
     name: 'Cell Stage', turnName: 'Epoch',
-    drafts: [4, 8, 13, 17],
-    milestones: [{ at: 10, event: 'multicellularity' }],
-    evolveAt: 21, finale: 'cell_finale',
+    drafts: [4, 8, 12, 19, 24, 29, 34, 39],
+    milestones: [{ at: 15, event: 'multicellularity' }],
+    evolveAt: 44, finale: 'cell_finale',
   },
   creature: {
     name: 'Creature Stage', turnName: 'Generation',
-    drafts: [5, 10, 15, 25, 30, 35, 46, 52, 58],
-    milestones: [{ at: 20, event: 'age_of_giants' }, { at: 41, event: 'spark_of_mind' }],
+    drafts: [5, 10, 15, 20, 28, 34, 40, 50, 56, 62, 70],
+    milestones: [{ at: 24, event: 'age_of_giants' }, { at: 46, event: 'spark_of_mind' }],
     evolveAt: null, finale: 'creature_finale',
   },
 };
 
 // Eras of the Creature stage, shown in the top bar.
 G.ERAS = { 1: 'First Steps', 2: 'Age of Giants', 3: 'Dawn of Mind' };
+
+// The appearance editor (Creature stage). Options with `need` unlock with progress.
+G.APPEARANCE = {
+  pattern: [
+    { id: 'plain', name: 'Plain' },
+    { id: 'spots', name: 'Spots' },
+    { id: 'stripes', name: 'Stripes', need: { keyword: 'swift' }, why: 'Needs a Swift part' },
+    { id: 'bands', name: 'Armor bands', need: { keyword: 'armor' }, why: 'Needs an Armor part' },
+    { id: 'glowspots', name: 'Glow spots', need: { keyword: 'glow' }, why: 'Needs a Glow part' },
+  ],
+  shape: [
+    { id: 'round', name: 'Round' },
+    { id: 'slim', name: 'Slim' },
+    { id: 'long', name: 'Long', need: { era: 2 }, why: 'Opens in the Age of Giants' },
+  ],
+  neck: [
+    { id: 'short', name: 'Short' },
+    { id: 'long', name: 'Long', need: { era: 2, habitat: 'land' }, why: 'Land creatures, Age of Giants' },
+  ],
+  eyes: [
+    { id: 'round', name: 'Round' },
+    { id: 'sleepy', name: 'Sleepy' },
+    { id: 'fierce', name: 'Fierce', need: { diet: 'carn' }, why: 'Carnivores only' },
+    { id: 'huge', name: 'Huge', need: { stat: ['cun', 7] }, why: 'Needs Cunning 7' },
+  ],
+  posture: [
+    { id: 'four', name: 'On all fours' },
+    { id: 'two', name: 'On two legs', need: { tag: 'biped' }, why: 'Needs Upright or Striding Legs' },
+  ],
+};
+
+// Real time: seconds per turn at each speed.
+G.SPEEDS = [0, 2.4, 1.2, 0.6];
 
 G.BASE_POP = 8;      // max Population
 G.START_POP = 5;

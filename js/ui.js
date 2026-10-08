@@ -1,9 +1,10 @@
-// Screens and buttons. Everything is redrawn from the current state after each tap.
+// Screens and buttons. Menus are redrawn from the current state after each tap. In a game,
+// the world map stays mounted and only the parts that changed are redrawn.
 window.G = window.G || {};
 
 (function () {
   const app = document.getElementById('app');
-  G.ui = { screen: 'title', setup: null, confirmAbandon: false, confirmReset: false, sheet: null };
+  G.ui = { screen: 'title', setup: null, confirmAbandon: false, confirmReset: false, sheet: null, speed: 1, viewer: null };
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const listJoin = (a) => (a.length > 1 ? `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}` : a.join(''));
@@ -16,37 +17,86 @@ window.G = window.G || {};
     insight: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.5a4.6 4.6 0 0 0-2.7 8.3c.5.4.7.9.7 1.4v.3h4v-.3c0-.5.2-1 .7-1.4A4.6 4.6 0 0 0 8 1.5zM6 12.5h4v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/></svg>',
     gene: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.2 13.8 8 8 14.8 2.2 8z"/><path fill="var(--bg)" opacity=".35" d="M8 1.2 13.8 8H2.2z"/></svg>',
     close: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    pause: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 3h3v10H4zM9 3h3v10H9z"/></svg>',
+    play: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5 13 8l-9 5.5z"/></svg>',
+    expand: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   };
 
-  function render() {
+  // parts: redraw only these pieces of a mounted game ('top', 'hud', 'modal', 'sheet', 'viewer').
+  function render(parts) {
     const s = G.ui.screen;
+    const run = G.run;
+    if (s === 'game' && run && parts && app.querySelector('.game')) { renderParts(run, parts); return; }
     let html = '';
     if (s === 'title') html = titleScreen();
     else if (s === 'setup') html = setupScreen();
     else if (s === 'unlocks') html = unlocksScreen();
     else if (s === 'codex') html = codexScreen();
-    else if (s === 'game') html = G.run ? gameScreen(G.run) : titleScreen();
+    else if (s === 'game') html = run ? gameScreen(run) : titleScreen();
     if (G.stopScene) G.stopScene();
     app.innerHTML = html;
     app.dataset.screen = s;
-    if (s === 'game' && G.run) paintCanvases(G.run);
+    if (s === 'game' && run) {
+      renderParts(run, ['top', 'hud', 'modal', 'sheet', 'viewer']);
+      G.startMap(app.querySelector('canvas.map'), onMapTap);
+    }
   }
   G.render = render;
 
-  function paintCanvases(run) {
-    app.querySelectorAll('canvas.portrait').forEach((c) => {
+  function renderParts(run, parts) {
+    const put = (sel, html) => { const el = app.querySelector(sel); if (el) el.innerHTML = html; return el; };
+    if (parts.includes('top')) paintPortraits(put('#tb', topBar(run)), run);
+    if (parts.includes('hud')) put('#hud', mapHud(run));
+    if (parts.includes('modal')) {
+      if (G.stopScene) G.stopScene();
+      const el = put('#modal', modal(run));
+      paintPortraits(el, run);
+      paintScene(el, run);
+      if (el && el.firstElementChild) { const m = el.querySelector('.modal'); if (m) m.scrollTop = 0; }
+    }
+    if (parts.includes('sheet')) {
+      const old = app.querySelector('.sheet-body');
+      const scroll = old ? old.scrollTop : 0;
+      const el = put('#sheet', sheet(run));
+      paintPortraits(el, run);
+      const nb = app.querySelector('.sheet-body');
+      if (nb && G.ui.keepScroll) nb.scrollTop = scroll;
+      G.ui.keepScroll = false;
+    }
+    if (parts.includes('viewer')) {
+      const el = put('#viewer', viewer(run));
+      const c = el && el.querySelector('canvas.viewer-canvas');
+      if (c) G.playViewer(c, viewerBody(run), run);
+    }
+  }
+
+  function paintPortraits(root, run) {
+    if (!root) return;
+    root.querySelectorAll('canvas.portrait').forEach((c) => {
       const idx = c.dataset.species;
       G.drawPortrait(c, idx != null ? G.speciesBody(run.species[Number(idx)]) : run);
     });
-    const scene = app.querySelector('canvas.scene');
+  }
+
+  function paintScene(root, run) {
+    const scene = root && root.querySelector('canvas.scene');
     if (!scene) return;
     let info;
     if (run.phase === 'scene') info = run.scene;
-    else if (run.phase === 'mutated') info = { anim: 'mutate', mood: 'surprised', title: run.scene.label };
+    else if (run.phase === 'mutated') info = { anim: 'mutate', mood: run.scene.mood || 'surprised', title: run.scene.label, evolved: run.scene.evolved };
     else if (run.phase === 'evolved') info = { anim: 'grow', mood: 'proud', title: 'evolved', prop: run.habitat === 'sea' ? 'bubbles' : null };
     else if (run.phase === 'end') info = run.result && run.result.victory ? { anim: 'social', mood: 'proud', title: 'win', prop: run.habitat === 'sea' ? 'notes' : 'sparks' } : { anim: 'rest', mood: 'sad', title: 'end' };
     else info = { anim: 'rest', mood: 'happy' };
     G.playScene(scene, run, info);
+  }
+
+  // Tapping a herd on the world map opens its sheet.
+  function onMapTap(key) {
+    const run = G.run;
+    if (!run || run.phase !== 'map') return;
+    if (key === 'you') { G.ui.sheet = 'body'; G.ui.speciesView = null; }
+    else { const i = run.species.findIndex((s) => s.name === key); if (i < 0) return; G.ui.sheet = 'world'; G.ui.speciesView = i; }
+    render(['sheet', 'hud']);
   }
 
   function go(screen) {
@@ -83,11 +133,11 @@ window.G = window.G || {};
         <details class="howto">
           <summary>How to play</summary>
           <ol>
-            <li>Every turn, something happens to your lineage. Choose how to respond. Buttons show your chance of success, and some choices need the right parts or traits.</li>
-            <li>Tap your creature's portrait (top left) to see its body, traits, the species around you and more.</li>
+            <li>Time flows on the world map. Use pause and the speed buttons, like in CK3. Events pop up at random and pause the game; choose how to respond. Buttons show your chance of success.</li>
+            <li>Watch every species roam the map. Herd size shows population. Tap any herd, or your portrait (top left), to inspect it.</li>
             <li>Your <b>Instinct</b> (top right) decides how you find food and which events find you.</li>
             <li>Each turn your Population eats Food. Spare Food grows your Population. Run out and you starve.</li>
-            <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot instead of replacing it.</li>
+            <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts, which are recorded in the Codex and unlock new archetypes and worlds.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
           </ol>
@@ -135,7 +185,7 @@ window.G = window.G || {};
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
         <div class="tb-main">
-          <div class="tb-title"><strong>${esc(st.name)}</strong><span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span></div>
+          <div class="tb-title"><strong>${esc(st.name)}</strong><span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
             <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="Population. At 0 your lineage is extinct.">${ICON.pop}<b>${run.pop}</b>/${max}</span>
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
@@ -198,7 +248,6 @@ window.G = window.G || {};
     const s = sp != null ? run.species[sp] : null;
     const kind = ev.finale ? 'Finale' : ev.milestone ? 'Milestone' : 'Event';
     return `
-      ${recap(run)}
       <article class="card event ${ev.finale || ev.milestone ? 'finale' : ''}">
         <p class="eyebrow">${kind}${s ? ` · <span class="sp-tag" style="--h:${s.hue}">${esc(s.name)}, ${G.ROLES[s.role].toLowerCase()}</span>` : ''}</p>
         <h2>${esc(G.sub(ev.title, run, sp))}</h2>
@@ -238,8 +287,9 @@ window.G = window.G || {};
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
       <article class="card outcome">
-        <p class="eyebrow">Mutation</p>
+        <p class="eyebrow">${run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
         <h2>${esc(run.scene.label)}</h2>
+        ${run.scene.evolved ? `<div class="callout"><strong>${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
         <button class="btn primary wide" data-act="continue-mutation">Continue</button>
       </article>`;
   }
@@ -249,11 +299,10 @@ window.G = window.G || {};
     const counts = G.keywordCounts(run);
     const merging = G.canMerge(run);
     return `
-      ${recap(run)}
       <article class="card draft">
         <p class="eyebrow">Mutation</p>
         <h2>Choose a new part</h2>
-        <p class="note">${merging ? 'Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part.' : 'It goes into its slot, replacing whatever is there. Once you are multicellular, parts can merge instead.'}</p>
+        <p class="note">${merging ? 'Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part. The right pairs evolve into something new.' : 'It goes into its slot, replacing whatever is there. Once you are multicellular, parts can merge, and the right pairs evolve.'}</p>
         <div class="draft-list">
           ${d.options.map((pid) => {
             const p = G.PART[pid];
@@ -264,13 +313,23 @@ window.G = window.G || {};
               const have = (counts[k] || 0) + 1;
               return have >= 2 ? `<span class="syn-hint" style="--kw:${G.KEYWORDS[k].color}">${G.KEYWORDS[k].name} ${have}: ${esc(G.KEYWORDS[k].tiers[Math.min(3, have)].desc)}</span>` : '';
             }).join('');
+            // Merging the right pair evolves it. Known recipes are named; unknown ones are a mystery.
+            const evoHint = (other) => {
+              const evo = G.evolutionOf(other, pid);
+              if (!evo) return '';
+              return G.evolutionKnown(evo) ? ` → EVOLVES: ${G.PART[evo].name}` : ' → ✨ something new?';
+            };
             let buttons;
             if (!slot) buttons = `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="grow">Grow it</button>`;
             else if (slot.merged) {
               // A merged slot stays merged: choose which half the new part replaces.
-              buttons = `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="swapBase">Swap out ${esc(G.PART[slot.id].name)}: ${esc(G.PART[slot.merged].adj)} ${esc(p.name)}</button>`
-                + `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="swapMerged">Swap out ${esc(G.PART[slot.merged].name)}: ${esc(p.adj)} ${esc(G.PART[slot.id].name)}</button>`;
-            } else buttons = `${canMergeHere ? `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="merge">Merge: ${esc(p.adj)} ${esc(G.PART[slot.id].name)}</button>` : ''}<button class="btn small ${canMergeHere ? '' : 'primary'}" data-act="draft" data-arg="${pid}" data-mode="replace">Replace ${esc(G.slotLabel(slot))}</button>`;
+              const h1 = evoHint(slot.merged); const h2 = evoHint(slot.id);
+              buttons = `<button class="btn small primary ${h1 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapBase">Swap out ${esc(G.PART[slot.id].name)}${esc(h1)}</button>`
+                + `<button class="btn small primary ${h2 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapMerged">Swap out ${esc(G.PART[slot.merged].name)}${esc(h2)}</button>`;
+            } else {
+              const h = evoHint(slot.id);
+              buttons = `${canMergeHere ? `<button class="btn small primary ${h ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="merge">Merge with ${esc(G.PART[slot.id].name)}${esc(h)}</button>` : ''}<button class="btn small ${canMergeHere ? '' : 'primary'}" data-act="draft" data-arg="${pid}" data-mode="replace">Replace ${esc(G.slotLabel(slot))}</button>`;
+            }
             return `
             <div class="part-card">
               <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}</span>
@@ -291,7 +350,6 @@ window.G = window.G || {};
 
   function mindCard(run) {
     return `
-      ${recap(run)}
       <article class="card finale">
         <p class="eyebrow">The Mind</p>
         <h2>What fascinates your kind?</h2>
@@ -300,7 +358,7 @@ window.G = window.G || {};
       </article>`;
   }
 
-  // Compact Mind tree: a grid of tiles by tier, with the selected one explained below.
+  // The Mind as a skill tree: rows are tiers, lines show which idea leads to which.
   function mindTree(run) {
     const sel = G.INNOVATION[G.ui.mindSel] || G.INNOVATION[run.fascination] || G.INNOVATIONS.find((i) => G.innovationAvailable(run, i).ok) || G.INNOVATIONS[0];
     const state = (inv) => {
@@ -309,15 +367,31 @@ window.G = window.G || {};
       const av = G.innovationAvailable(run, inv);
       return av.ok ? 'open' : av.blocked ? 'blocked' : 'locked';
     };
-    const icon = { done: '✓', current: '…', open: '', blocked: '✕', locked: '' };
-    const tiles = [1, 2, 3, 4].map((tier) => `
-      <div class="tier-row"><span class="tier-label">${['', 'I', 'II', 'III', 'IV'][tier]}</span><div class="tier-tiles">
-        ${G.INNOVATIONS.filter((i) => i.tier === tier).map((inv) => {
+    const X = (inv) => 9 + inv.col * 16.4;
+    const Y = (inv) => 11 + (inv.tier - 1) * 26;
+    const edges = [];
+    G.INNOVATIONS.forEach((inv) => {
+      const r = inv.req || {};
+      const parents = r.tier3 ? G.INNOVATIONS.filter((i) => i.tier === 3) : (r.innovation || []).map((id) => G.INNOVATION[id]);
+      parents.forEach((par) => {
+        const known = run.innovations.includes(par.id);
+        const cls = known && run.innovations.includes(inv.id) ? 'done' : known ? 'lit' : 'dim';
+        edges.push(`<path class="edge ${cls}" d="M${X(par)} ${Y(par) + 5} C ${X(par)} ${Y(par) + 15}, ${X(inv)} ${Y(inv) - 15}, ${X(inv)} ${Y(inv) - 5}" vector-effect="non-scaling-stroke"/>`);
+      });
+    });
+    const icon = { done: '✓', current: '◔', open: '', blocked: '✕', locked: '🔒' };
+    return `
+      <div class="skill-tree">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
+        ${G.INNOVATIONS.map((inv) => {
           const st = state(inv);
-          return `<button class="tile ${st} ${sel.id === inv.id ? 'sel' : ''}" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel.id === inv.id}"><span>${esc(inv.name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
+          return `<button class="node ${st} ${sel.id === inv.id ? 'sel' : ''} ${inv.tier === 4 ? 'apex' : ''}" style="left:${X(inv)}%;top:${Y(inv)}%" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel.id === inv.id}" aria-label="${esc(inv.name)}"><span>${esc(inv.name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
         }).join('')}
-      </div></div>`).join('');
-    const st = state(sel);
+      </div>
+      ${mindDetail(run, sel, state(sel))}`;
+  }
+
+  function mindDetail(run, sel, st) {
     const av = G.innovationAvailable(run, sel);
     const excl = (sel.excludes || []).map((id) => G.INNOVATION[id].name);
     let action = '';
@@ -325,7 +399,6 @@ window.G = window.G || {};
     if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${sel.cost} Insight</span>`;
     if (st === 'done') action = '<span class="note good-text">Known</span>';
     return `
-      <div class="mind-grid">${tiles}</div>
       <div class="inv-detail">
         <div class="inv-head"><strong>${esc(sel.name)}</strong><span>${ICON.insight} ${sel.cost}</span></div>
         <span class="inv-mods">${esc(G.describeMods(sel.mods))}</span>
@@ -345,9 +418,9 @@ window.G = window.G || {};
       <article class="card finale">
         <p class="eyebrow">Creature Stage · ${sea ? 'Sea' : 'Land'}</p>
         <h2>${sea ? 'Your lineage rules the open sea' : 'Your lineage walks on land'}</h2>
-        <p class="event-text">Generations pass. Your ancestors' ${esc(listJoin(e.cellParts).toLowerCase())} become something new. ${sea ? 'Your pod swims into waters' : 'Your herd steps into a valley'} already full of life: ${esc(listJoin(run.species.map((s) => `the ${s.name}`)))}.</p>
+        <p class="event-text">Generations pass. ${sea ? 'Your pod swims into waters' : 'Your herd steps into a valley'} already full of life: ${esc(listJoin(run.species.map((s) => `the ${s.name}`)))}.</p>
         <div class="callout"><strong>Heritage: ${esc(tr.name)}</strong><span>${esc(G.describeMods(tr.mods))}. ${esc(tr.desc)}</span></div>
-        ${e.carried && e.carried.length ? `<div class="carried"><h3>What your cells became</h3><ul>${e.carried.map((c) => `<li><span>${esc(c.from)}</span><span class="arrow" aria-hidden="true">→</span><b>${esc(c.to)}</b></li>`).join('')}</ul></div>` : ''}
+        ${e.carried && e.carried.length ? `<div class="carried"><h3>What your cells became</h3><ul>${e.carried.map((c) => `<li><span>${esc(c.from)}</span><span class="arrow" aria-hidden="true">→</span><b>${esc(c.to)}</b></li>`).join('')}</ul><p class="note">Only your mouth and your evolved parts carry over.${e.left && e.left.length ? ` Left behind: ${esc(listJoin(e.left))}.` : ''}</p></div>` : ''}
         <p class="note">Your traits came with you. Your new body has ${G.slotsFor(run).length} slots, from ${sea ? 'fins to tail' : 'front limbs and hands to hind legs and feet'}, and mutations can merge from the start.</p>
         <button class="btn primary wide" data-act="continue-evolved">${sea ? 'Swim on' : 'Enter the valley'}</button>
       </article>`;
@@ -372,6 +445,23 @@ window.G = window.G || {};
           <button class="btn" data-act="go" data-arg="unlocks">Spend memory</button>
         </div>
       </article>`;
+  }
+
+  function modal(run) {
+    if (run.phase === 'map') return '';
+    return `<div class="modal-backdrop"></div><div class="modal" role="dialog" aria-modal="true">${mainPanel(run)}</div>`;
+  }
+
+  // Over the world map: notices, what happened last turn, and the time controls.
+  function mapHud(run) {
+    const speeds = [['0', ICON.pause, 'Pause'], ['1', `${ICON.play}`, 'Normal speed'], ['2', `${ICON.play}${ICON.play}`, 'Fast'], ['3', `${ICON.play}${ICON.play}${ICON.play}`, 'Fastest']];
+    const last = run.lastTurn ? run.lastTurn.lines.map((l) => `<span class="${l.bad ? 'bad' : l.good ? 'good' : ''}">${esc(l.t)}</span>`).join('') : '';
+    return `
+      <div class="toasts">${(run.notices || []).slice(-3).map((n, i) => `<button class="toast" data-act="dismiss" data-arg="${i}">${esc(n)}</button>`).join('')}</div>
+      <div class="hud-bottom">
+        ${last ? `<div class="ledger">${last}</div>` : '<div class="ledger hint">Tap any herd to look closer.</div>'}
+        <div class="speeds" role="group" aria-label="Game speed">${speeds.map(([v, ic, label]) => `<button class="speed ${String(G.ui.speed) === v ? 'on' : ''}" data-act="speed" data-arg="${v}" aria-label="${label}" aria-pressed="${String(G.ui.speed) === v}">${ic}</button>`).join('')}</div>
+      </div>`;
   }
 
   function mainPanel(run) {
@@ -442,12 +532,13 @@ window.G = window.G || {};
   function worldTab(run) {
     if (G.ui.speciesView != null && run.species[G.ui.speciesView]) return speciesSheet(run, G.ui.speciesView);
     return `<ul class="rivals">${run.species.map((s, i) => {
+      if (s.extinct) return `<li class="extinct-row"><span>The ${esc(s.name)}</span><small>Extinct</small></li>`;
       const st = G.speciesStatus(s);
       const pct = (s.opinion + 100) / 2;
       return `<li><button class="rival ${st}" data-act="species" data-arg="${i}">
         <canvas class="portrait mini" data-species="${i}"></canvas>
         <span class="rival-info">
-          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}</small></span>
+          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${Math.round(s.pop)}</small></span>
           <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
         </span>
       </button></li>`;
@@ -470,8 +561,8 @@ window.G = window.G || {};
     return `
       <button class="btn ghost small" data-act="species-back">← All species</button>
       <div class="species-head">
-        <canvas class="portrait big" data-species="${i}"></canvas>
-        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}${s.size >= 2 ? ' · Giant' : ''}</p></div>
+        <button class="portrait-zoom" data-act="view" data-arg="${i}" aria-label="See the ${esc(s.name)} full screen"><canvas class="portrait big" data-species="${i}"></canvas><i>${ICON.expand}</i></button>
+        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}${s.size >= 2 ? ' · Giant' : ''} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop)}`}</p></div>
       </div>
       <p>${esc(roleText)} ${esc(attitude)}</p>
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
@@ -494,15 +585,15 @@ window.G = window.G || {};
   function sheet(run) {
     const tab = G.ui.sheet;
     if (!tab) return '';
-    const tabs = [['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
+    const tabs = [['body', 'Body'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
+    const panel = { body: bodyTab, look: lookTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
       <div class="sheet-backdrop" data-act="close-sheet"></div>
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
-          <canvas class="portrait big"></canvas>
+          <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
           <div><h2>${esc(arch.name)} lineage</h2><p class="note">${G.DIET_NAMES[G.diet(run)]} · ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
@@ -515,12 +606,49 @@ window.G = window.G || {};
       </aside>`;
   }
 
-  function gameScreen(run) {
+  // The appearance editor. Some looks unlock with progress.
+  function lookTab(run) {
+    const L = G.effectiveLook(run);
+    const hue = G.bodyOf(run).hue;
+    const acc = run.look && run.look.accent != null ? run.look.accent : (hue + 40) % 360;
+    const group = (key, title) => `
+      <div class="look-group"><h3>${title}</h3><div class="chips">${G.APPEARANCE[key].map((o) => {
+        const st = G.lookOptionState(run, o);
+        const on = L[key] === o.id;
+        return `<button class="chip ${on ? 'on' : ''}" ${st.ok ? `data-act="look" data-kind="${key}" data-arg="${o.id}"` : 'disabled'} aria-pressed="${on}" title="${esc(st.ok ? o.name : o.why)}">${esc(o.name)}${st.ok ? '' : ' 🔒'}</button>`;
+      }).join('')}</div>${G.APPEARANCE[key].some((o) => !G.lookOptionState(run, o).ok) ? `<p class="note">${esc(G.APPEARANCE[key].filter((o) => !G.lookOptionState(run, o).ok).map((o) => `${o.name}: ${o.why}`).join(' · '))}</p>` : ''}</div>`;
+    return `
+      <div class="look-preview"><canvas class="portrait huge"></canvas></div>
+      <div class="look-group"><h3>Body color</h3><input id="look-hue" type="range" min="0" max="359" value="${hue}" data-look="hue" style="--h:${hue}" class="hue-slider" aria-label="Body color"></div>
+      <div class="look-group"><h3>Pattern color</h3><input id="look-accent" type="range" min="0" max="359" value="${acc}" data-look="accent" style="--h:${acc}" class="hue-slider" aria-label="Pattern color"></div>
+      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${run.habitat === 'land' ? group('neck', 'Neck') + group('posture', 'Posture') : ''}${group('eyes', 'Eyes')}
+      <p class="note">Looks are just looks: they never change your stats.</p>`;
+  }
+
+  function viewerBody(run) {
+    const v = G.ui.viewer;
+    if (v == null) return null;
+    return v === 'you' ? G.bodyOf(run) : G.speciesBody(run.species[Number(v)]);
+  }
+
+  function viewer(run) {
+    const v = G.ui.viewer;
+    if (v == null) return '';
+    const name = v === 'you' ? `Your ${G.ARCHETYPE[run.archetype].name} lineage` : `The ${run.species[Number(v)].name}`;
+    return `<div class="viewer" role="dialog" aria-modal="true" aria-label="${esc(name)}">
+      <canvas class="viewer-canvas"></canvas>
+      <div class="viewer-bar"><strong>${esc(name)}</strong><button class="btn small" data-act="close-view">${ICON.close} Close</button></div>
+    </div>`;
+  }
+
+  function gameScreen() {
     return `
       <div class="game">
-        ${topBar(run)}
-        <main class="main-panel">${mainPanel(run)}</main>
-        ${sheet(run)}
+        <div id="tb"></div>
+        <div class="world"><canvas class="map" aria-label="World map"></canvas><div id="hud" class="map-hud"></div></div>
+        <div id="modal"></div>
+        <div id="sheet"></div>
+        <div id="viewer"></div>
       </div>`;
   }
 
@@ -529,9 +657,10 @@ window.G = window.G || {};
     const m = G.meta;
     const item = (kind, it) => {
       const owned = m.unlocked[kind].includes(it.id);
-      const afford = m.genes >= it.cost;
+      const gated = it.needsEvo && m.codex.evolutions.length < it.needsEvo;
+      const afford = m.genes >= it.cost && !gated;
       return `<li class="shop-item ${owned ? 'owned' : ''}">
-        <div><strong>${esc(it.name)}</strong><p>${esc(it.desc)}</p></div>
+        <div><strong>${esc(it.name)}</strong><p>${esc(it.desc)}</p>${gated ? `<p class="gate">Discover ${it.needsEvo} evolutions to unlock (you have ${m.codex.evolutions.length}).</p>` : ''}</div>
         ${owned ? '<span class="owned-tag">Unlocked</span>' : `<button class="btn small ${afford ? 'primary' : ''}" ${afford ? `data-act="buy" data-kind="${kind}" data-arg="${it.id}"` : 'disabled'}>${ICON.gene} ${it.cost}</button>`}
       </li>`;
     };
@@ -566,7 +695,11 @@ window.G = window.G || {};
     const seenEvents = events.filter((e) => c.events.includes(e.id)).length;
     const seenParts = G.PARTS.filter((p) => c.parts.includes(p.id)).length;
     const legacies = Object.keys(G.LEGACIES);
-    const group = (filter) => `<ul class="codex-grid">${G.PARTS.filter(filter).map((p) => (c.parts.includes(p.id)
+    const evos = G.EVOLUTIONS;
+    const evoCard = (e) => (c.evolutions.includes(e.id)
+      ? `<li class="evo-known"><strong>${esc(e.name)}${e.evolved === 2 ? ' ★' : ''}</strong><span>${esc(G.PART[e.from[0]].name)} + ${esc(G.PART[e.from[1]].name)}</span><span>${esc(G.describeMods(e.mods))}</span></li>`
+      : `<li class="unknown"><strong>???</strong><span>${e.evolved === 2 ? 'Legendary · ' : ''}${e.stage === 'cell' ? 'Cell' : 'Creature'} ${esc(G.SLOTS[e.stage === 'cell' ? 'cell' : (e.habitat || 'land')].find((sl) => sl.id === e.slot).name.toLowerCase())}</span></li>`);
+    const group = (filter) => `<ul class="codex-grid">${G.PARTS.filter((p) => !p.evolved && filter(p)).map((p) => (c.parts.includes(p.id)
       ? `<li><strong>${esc(p.name)}</strong>${kwTags(p)}<span>${esc(G.describeMods(p.mods))}</span></li>`
       : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>`;
     return `
@@ -574,6 +707,10 @@ window.G = window.G || {};
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Codex of Life</h1></header>
         <section><h2>Endings <span class="count">${c.legacies.length} / ${legacies.length}</span></h2>
           <ul class="codex-grid">${legacies.map((id) => (c.legacies.includes(id) ? `<li><strong>${esc(G.LEGACIES[id].name)}</strong><span>${esc(G.LEGACIES[id].desc)}</span></li>` : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>
+        </section>
+        <section><h2>Evolutions <span class="count">${c.evolutions.length} / ${evos.length}</span></h2>
+          <p class="note">Merge the right two parts to evolve them. Discoveries unlock new archetypes and worlds.</p>
+          <ul class="codex-grid">${evos.map(evoCard).join('')}</ul>
         </section>
         <section><h2>Events <span class="count">${seenEvents} / ${events.length}</span></h2>
           <ul class="codex-grid">${events.map((e) => (c.events.includes(e.id) ? `<li><strong>${esc(e.title.replace(/\{them\}/g, 'Others'))}</strong><span>${e.stage === 'any' ? 'Any stage' : G.STAGES[e.stage].name}${e.habitat ? ` · ${e.habitat === 'sea' ? 'Sea' : 'Land'}` : ''}</span></li>` : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>
@@ -590,10 +727,11 @@ window.G = window.G || {};
     if (!el || el.disabled) return;
     const act = el.dataset.act;
     const arg = el.dataset.arg;
-    let toTop = false;
+    const run = G.run;
+    let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
-      case 'continue': go('game'); return;
+      case 'continue': G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
       case 'setup':
         G.ui.setup = G.ui.setup || { archetype: 'drifter', origin: 'tidal', hostility: 0 };
         if (!G.meta.unlocked.archetypes.includes(G.ui.setup.archetype)) G.ui.setup.archetype = 'drifter';
@@ -603,38 +741,78 @@ window.G = window.G || {};
       case 'pick-archetype': G.ui.setup.archetype = arg; break;
       case 'pick-origin': G.ui.setup.origin = arg; break;
       case 'pick-hostility': G.ui.setup.hostility = Number(arg); break;
-      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility); go('game'); return;
-      case 'option': G.chooseOption(Number(arg)); toTop = true; break;
-      case 'continue-scene': G.continueScene(); toTop = true; break;
-      case 'continue-mutation': G.continueMutation(); toTop = true; break;
-      case 'draft': G.pickDraft(arg, el.dataset.mode); toTop = true; break;
-      case 'reroll': G.rerollDraft(); break;
-      case 'skip-draft': G.skipDraft(); toTop = true; break;
-      case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; toTop = !G.ui.sheet; break;
-      case 'continue-evolved': G.continueEvolved(); toTop = true; break;
-      case 'instinct': G.setInstinct(arg); break;
-      case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; break;
-      case 'species': G.ui.speciesView = Number(arg); break;
-      case 'species-back': G.ui.speciesView = null; break;
-      case 'mind-sel': G.ui.mindSel = arg; break;
-      case 'close-sheet': G.ui.sheet = null; G.ui.speciesView = null; break;
-      case 'abandon': G.ui.confirmAbandon = true; break;
-      case 'abandon-no': G.ui.confirmAbandon = false; break;
-      case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; toTop = true; break;
+      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility); if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
+      case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
+      case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; break;
+      case 'continue-mutation': G.continueMutation(); parts = ['top', 'hud', 'modal']; break;
+      case 'draft': G.pickDraft(arg, el.dataset.mode); parts = ['top', 'hud', 'modal']; break;
+      case 'reroll': G.rerollDraft(); parts = ['modal']; break;
+      case 'skip-draft': G.skipDraft(); parts = ['top', 'hud', 'modal']; break;
+      case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
+      case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
+      case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; break;
+      case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
+      case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;
+      case 'species-back': G.ui.speciesView = null; parts = ['sheet']; break;
+      case 'close-sheet': G.ui.sheet = null; G.ui.speciesView = null; parts = ['sheet']; break;
+      case 'view': G.ui.viewer = arg; parts = ['viewer']; break;
+      case 'close-view': G.ui.viewer = null; parts = ['viewer']; break;
+      case 'speed': G.ui.speed = Number(arg); parts = ['hud']; break;
+      case 'dismiss': if (run) run.notices.splice(Math.max(0, run.notices.length - 3) + Number(arg), 1); parts = ['hud']; break;
+      case 'abandon': G.ui.confirmAbandon = true; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'abandon-no': G.ui.confirmAbandon = false; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'buy': G.buy(el.dataset.kind, arg); break;
       case 'reset': G.ui.confirmReset = true; break;
       case 'reset-no': G.ui.confirmReset = false; break;
       case 'reset-yes': G.resetAll(); go('title'); return;
       default: return;
     }
-    const sheetScroll = app.querySelector('.sheet-body') ? app.querySelector('.sheet-body').scrollTop : 0;
-    render();
-    if (toTop) window.scrollTo(0, 0);
-    else if (G.ui.sheet && act !== 'sheet') { const sb = app.querySelector('.sheet-body'); if (sb) sb.scrollTop = sheetScroll; }
+    render(parts);
   });
 
+  // Color sliders update the look live.
+  app.addEventListener('input', (e) => {
+    const el = e.target.closest('[data-look]');
+    if (!el) return;
+    G.setLook(el.dataset.look, el.value);
+    el.style.setProperty('--h', el.value);
+    const prev = app.querySelector('.look-preview canvas');
+    if (prev) G.drawPortrait(prev, G.run);
+    const top = app.querySelector('#tb canvas.portrait');
+    if (top) G.drawPortrait(top, G.run);
+  });
+
+  // ---------- Time ----------
+  // Like CK3: time runs on the map, events pause it, and the speed buttons control it.
+  let acc = 0;
+  let lastT = performance.now();
+  function clock(now) {
+    const dt = Math.min(0.25, (now - lastT) / 1000);
+    lastT = now;
+    const run = G.run;
+    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && G.ui.speed > 0;
+    const per = G.SPEEDS[G.ui.speed] || 1;
+    if (running) {
+      acc += dt;
+      if (acc >= per) {
+        acc = 0;
+        G.tick();
+        render(G.run.phase === 'map' ? ['top', 'hud'] : ['top', 'hud', 'modal']);
+      }
+    }
+    const fill = app.querySelector('.tick-fill');
+    if (fill) fill.style.width = `${running ? Math.min(100, (acc / per) * 100) : 0}%`;
+    requestAnimationFrame(clock);
+  }
+  requestAnimationFrame(clock);
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && G.ui.sheet) { G.ui.sheet = null; render(); }
+    if (e.key === 'Escape' && G.ui.viewer != null) { G.ui.viewer = null; render(['viewer']); return; }
+    if (e.key === 'Escape' && G.ui.sheet) { G.ui.sheet = null; render(['sheet']); return; }
+    if (e.key === ' ' && G.ui.screen === 'game' && G.run && G.run.phase === 'map' && !e.target.closest('input')) { e.preventDefault(); G.ui.speed = G.ui.speed ? 0 : 1; render(['hud']); }
   });
 
   render();

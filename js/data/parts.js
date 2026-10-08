@@ -181,3 +181,88 @@ G.PARTS = [
 
 G.PART = {};
 G.PARTS.forEach((p) => { G.PART[p.id] = p; });
+
+// ======================= EVOLVED MUTATIONS =======================
+// Merging the right two parts in one slot creates an evolved part (like Ball x Pit evolutions).
+// Evolved parts never show up in drafts. They can merge again, and some tier 1 evolutions
+// evolve a second time into tier 2 legendaries. Discovered recipes are kept in the Codex.
+//   from   the two parts that combine (order does not matter)
+//   tier   1 or 2
+G.EVOLUTIONS = [
+  // ----- Cell -----
+  { id: 'devourer_maw', name: 'Devourer Maw', adj: 'Devouring', from: ['tiny_jaw', 'engulfing_maw'], stage: 'cell', slot: 'mouth', diet: 'carn', mods: { str: 4, huntBonus: 2 }, desc: 'A mouth that never stops. Carnivore.' },
+  { id: 'sun_sieve', name: 'Sun Sieve', adj: 'Sunlit', from: ['filter_mouth', 'chloroplasts'], stage: 'cell', slot: 'mouth', diet: 'herb', keywords: ['symbiont'], mods: { foodPerTurn: 2, forageBonus: 1 }, desc: 'Strains food and makes it from light at once. Herbivore.' },
+  { id: 'venom_siphon', name: 'Venom Siphon', adj: 'Siphoning', from: ['proboscis', 'venom_stylet'], stage: 'cell', slot: 'mouth', diet: 'omni', keywords: ['venom'], mods: { str: 2, cun: 2 }, desc: 'Inject, dissolve, drink. Omnivore.' },
+  { id: 'abyssal_maw', name: 'Abyssal Maw', adj: 'Abyssal', from: ['tiny_jaw', 'lure_mouth'], stage: 'cell', slot: 'mouth', diet: 'carn', keywords: ['glow'], mods: { str: 2, huntBonus: 3 }, desc: 'A glowing trap with teeth. Carnivore.' },
+  { id: 'twin_drive', name: 'Twin Drive', adj: 'Twin-driven', from: ['flagellum', 'cilia'], stage: 'cell', slot: 'motion', keywords: ['swift'], mods: { spd: 4, cun: 1 }, desc: 'Whip and oars working together.' },
+  { id: 'torpedo_drive', name: 'Torpedo Drive', adj: 'Torpedo', from: ['flagellum', 'jet_vacuole'], stage: 'cell', slot: 'motion', keywords: ['swift'], mods: { spd: 6, tou: -1 }, desc: 'Nothing in the sea is faster.' },
+  { id: 'tide_walker', name: 'Tide Walker', adj: 'Tide-walking', from: ['pseudopods', 'drift_sail'], stage: 'cell', slot: 'motion', keywords: ['symbiont'], mods: { str: 1, tou: 1, foodPerTurn: 1, forageBonus: 1 }, desc: 'Crawls the seafloor and sails the currents.' },
+  { id: 'aurora_tail', name: 'Aurora Tail', adj: 'Aurora', from: ['cilia', 'lumen_flagellum'], stage: 'cell', slot: 'motion', keywords: ['swift', 'glow'], mods: { spd: 2, cha: 3 }, desc: 'A shimmering curtain of light.' },
+  { id: 'venom_spines', name: 'Venom Spines', adj: 'Venom-spined', from: ['spikes', 'toxin_sac'], stage: 'cell', slot: 'membrane', keywords: ['venom', 'armor'], mods: { str: 2, tou: 2 }, desc: 'Every spike carries poison.' },
+  { id: 'glass_hedgehog', name: 'Glass Hedgehog', adj: 'Glassy', from: ['spikes', 'silica_shell'], stage: 'cell', slot: 'membrane', keywords: ['armor'], mods: { str: 2, tou: 4, spd: -1 }, desc: 'A ball of glass needles.' },
+  { id: 'glow_slime', name: 'Glow Slime', adj: 'Glowing', from: ['slime_coat', 'photophores'], stage: 'cell', slot: 'membrane', keywords: ['glow', 'symbiont'], mods: { tou: 1, cha: 4 }, desc: 'A coat of shining bacteria.' },
+  { id: 'fortress_wall', name: 'Fortress Wall', adj: 'Fortified', from: ['silica_shell', 'plated_wall'], stage: 'cell', slot: 'membrane', keywords: ['armor'], mods: { tou: 6, spd: -2 }, desc: 'Layers on layers on layers.' },
+  { id: 'compound_sense', name: 'Compound Sense', adj: 'Keen', from: ['eyespot', 'chemoreceptor'], stage: 'cell', slot: 'senses', mods: { cun: 3, huntBonus: 1 }, desc: 'See it and taste it at the same time.' },
+  { id: 'lantern_eye', name: 'Lantern Eye', adj: 'Lantern-eyed', from: ['eyespot', 'glow_lure'], stage: 'cell', slot: 'senses', keywords: ['glow'], mods: { cun: 2, cha: 2, huntBonus: 1 }, desc: 'An eye that brings its own light.' },
+  { id: 'tracker_sense', name: 'Tracker Sense', adj: 'Tracking', from: ['chemoreceptor', 'magnetosome'], stage: 'cell', slot: 'senses', mods: { cun: 3, exploreBonus: 2 }, desc: 'Follows any trail, anywhere.' },
+  { id: 'reserve_gut', name: 'Reserve Gut', adj: 'Well-fed', from: ['fat_vacuole', 'stomach_chamber'], stage: 'cell', slot: 'organ', mods: { maxPop: 3, foodCap: 6 }, desc: 'Stores enough for the worst of times.' },
+  { id: 'brain_seed', name: 'Brain Seed', adj: 'Thinking', from: ['neuron_cluster', 'fat_vacuole'], stage: 'cell', slot: 'organ', mods: { cun: 4, maxPop: 1 }, desc: 'Nerves wrapped in fat. The first brain.' },
+  { id: 'sun_heart', name: 'Sun Heart', adj: 'Sun-hearted', from: ['algae_chamber', 'photocyte_cluster'], stage: 'cell', slot: 'organ', keywords: ['symbiont', 'glow'], mods: { foodPerTurn: 2, cha: 2 }, desc: 'Captured light at your core.' },
+  { id: 'venom_bone', name: 'Venom Bone', adj: 'Venom-boned', from: ['toxin_gland', 'calcium_core'], stage: 'cell', slot: 'organ', keywords: ['venom', 'armor'], mods: { str: 2, tou: 3 }, desc: 'A poisoned skeleton.' },
+  { id: 'urchin_armor', name: 'Urchin Armor', adj: 'Urchin', tier: 2, from: ['glass_hedgehog', 'toxin_sac'], stage: 'cell', slot: 'membrane', keywords: ['venom', 'armor'], mods: { str: 3, tou: 5, damageReduce: 1 }, desc: 'Legendary. Nothing dares to touch you.' },
+  { id: 'leviathan_maw', name: 'Leviathan Maw', adj: 'Leviathan', tier: 2, from: ['devourer_maw', 'venom_stylet'], stage: 'cell', slot: 'mouth', diet: 'carn', keywords: ['venom'], mods: { str: 6, huntBonus: 3 }, desc: 'Legendary. It eats things bigger than itself. Carnivore.' },
+  { id: 'hyperdrive', name: 'Hyperdrive', adj: 'Hyper', tier: 2, from: ['twin_drive', 'jet_vacuole'], stage: 'cell', slot: 'motion', keywords: ['swift'], mods: { spd: 7, cun: 1 }, desc: 'Legendary. A blur in the water.' },
+  { id: 'dreaming_brain', name: 'Dreaming Brain', adj: 'Dreaming', tier: 2, from: ['brain_seed', 'photocyte_cluster'], stage: 'cell', slot: 'organ', keywords: ['glow'], mods: { cun: 5, cha: 2 }, desc: 'Legendary. It flickers with something like dreams.' },
+
+  // ----- Creature -----
+  { id: 'sabre_venom_fangs', name: 'Sabre Venom Fangs', adj: 'Sabre', from: ['fangs', 'venom_fangs'], stage: 'creature', slot: 'mouth', diet: 'carn', keywords: ['venom'], mods: { str: 5 }, desc: 'Long, hollow and full of poison. Carnivore.' },
+  { id: 'bone_crusher', name: 'Bone Crusher', adj: 'Bone-crushing', from: ['fangs', 'crushing_jaws'], stage: 'creature', slot: 'mouth', diet: 'carn', mods: { str: 4, tou: 2 }, desc: 'Nothing is left behind. Carnivore.' },
+  { id: 'forager_trunk', name: 'Forager Trunk', adj: 'Foraging', from: ['grinding_beak', 'trunk'], stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'omni', tags: ['grasp'], mods: { forageBonus: 3, cun: 1 }, desc: 'Pulls up roots and cracks them. Omnivore.' },
+  { id: 'krill_sieve', name: 'Krill Sieve', adj: 'Krill-sieving', from: ['baleen', 'grinding_beak'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'herb', mods: { forageBonus: 4, maxPop: 2 }, desc: 'Swallows whole clouds of life. Herbivore.' },
+  { id: 'hunter_eyes', name: 'Hunter Eyes', adj: 'Hunting', from: ['big_eyes', 'antennae'], stage: 'creature', slot: 'senses', mods: { cun: 3, huntBonus: 2 }, desc: 'Nothing moves without you knowing.' },
+  { id: 'sentinel_ears', name: 'Sentinel Ears', adj: 'Watchful', from: ['big_eyes', 'great_ears'], stage: 'creature', slot: 'senses', habitat: 'land', mods: { cun: 3, spd: 1, damageReduce: 1 }, desc: 'Always on guard.' },
+  { id: 'sonar', name: 'Sonar', adj: 'Sonar', from: ['echolocation', 'electroreceptors'], stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 4, cha: 1, huntBonus: 1 }, desc: 'Sees the whole ocean in sound.' },
+  { id: 'workers_arms', name: "Worker's Arms", adj: 'Working', from: ['grasping_arms', 'digging_forelegs'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', tags: ['grasp'], mods: { str: 2, cun: 1, forageBonus: 2 }, desc: 'Strong, clever arms that build and dig.' },
+  { id: 'true_wings', name: 'True Wings', adj: 'Flying', from: ['slender_forelegs', 'wing_membranes'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], mods: { spd: 5, cun: 1 }, desc: 'Not gliding any more. Flying.' },
+  { id: 'octo_arms', name: 'Octo-arms', adj: 'Octo', from: ['fore_tentacles', 'grasping_arms'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', tags: ['grasp'], mods: { str: 2, cun: 3 }, desc: 'Many arms, many uses.' },
+  { id: 'wing_fins', name: 'Wing Fins', adj: 'Wing-finned', from: ['pectoral_fins', 'front_flippers'], stage: 'creature', slot: 'frontLimbs', habitat: 'sea', keywords: ['swift'], mods: { spd: 3, tou: 2 }, desc: 'You fly through the water.' },
+  { id: 'clever_claws', name: 'Clever Claws', adj: 'Clever', from: ['grasping_fingers', 'sharp_claws'], stage: 'creature', slot: 'hands', habitat: 'land', tags: ['grasp'], mods: { str: 1, cun: 2, insightPerTurn: 1 }, desc: 'Claws that can also hold a stick.' },
+  { id: 'reaper_claws', name: 'Reaper Claws', adj: 'Reaping', from: ['sharp_claws', 'hooked_talons'], stage: 'creature', slot: 'hands', habitat: 'land', mods: { str: 5 }, desc: 'Long, curved and terrible.' },
+  { id: 'nimble_hands', name: 'Nimble Hands', adj: 'Nimble', from: ['soft_pads', 'grasping_fingers'], stage: 'creature', slot: 'hands', habitat: 'land', tags: ['grasp'], mods: { cun: 2, spd: 1, insightPerTurn: 1 }, desc: 'Quick, quiet, curious fingers.' },
+  { id: 'sprinter_legs', name: 'Sprinter Legs', adj: 'Sprinting', from: ['runner_legs', 'powerful_haunches'], stage: 'creature', slot: 'hindLimbs', habitat: 'land', keywords: ['swift'], mods: { spd: 3, str: 2 }, desc: 'Explosive speed.' },
+  { id: 'striding_legs', name: 'Striding Legs', adj: 'Striding', from: ['upright_legs', 'runner_legs'], stage: 'creature', slot: 'hindLimbs', habitat: 'land', keywords: ['swift'], tags: ['biped'], mods: { spd: 2, cun: 1, insightPerTurn: 1 }, desc: 'Walk tall and walk far.' },
+  { id: 'titan_legs', name: 'Titan Legs', adj: 'Titanic', from: ['pillar_legs', 'powerful_haunches'], stage: 'creature', slot: 'hindLimbs', habitat: 'land', keywords: ['armor'], mods: { str: 2, tou: 4 }, desc: 'Legs like tree trunks.' },
+  { id: 'twin_tail_fins', name: 'Twin Rear Fins', adj: 'Twin-finned', from: ['pelvic_fins', 'rear_flippers'], stage: 'creature', slot: 'hindLimbs', habitat: 'sea', keywords: ['swift'], mods: { spd: 3, tou: 1 }, desc: 'Steady and fast.' },
+  { id: 'thunder_hooves', name: 'Thunder Hooves', adj: 'Thundering', from: ['hooves', 'heavy_feet'], stage: 'creature', slot: 'feet', habitat: 'land', keywords: ['armor'], mods: { tou: 2, str: 2, spd: 1 }, desc: 'The ground shakes for miles.' },
+  { id: 'silent_killer', name: 'Silent Killer Paws', adj: 'Silent', from: ['padded_paws', 'raptor_talons'], stage: 'creature', slot: 'feet', habitat: 'land', mods: { str: 2, cun: 2, huntBonus: 1 }, desc: 'They never hear you coming.' },
+  { id: 'fortress_shell', name: 'Fortress Shell', adj: 'Fortress', from: ['back_spines', 'carapace'], stage: 'creature', slot: 'back', keywords: ['armor'], mods: { tou: 6, str: 1, spd: -1 }, desc: 'A spiked dome nothing can break.' },
+  { id: 'aurora_sail', name: 'Aurora Sail', adj: 'Aurora', from: ['display_frill', 'lumen_sail'], stage: 'creature', slot: 'back', keywords: ['glow'], mods: { cha: 5 }, desc: 'A sail of living color.' },
+  { id: 'garden_hump', name: 'Garden Hump', adj: 'Gardened', from: ['moss_garden', 'fat_hump'], stage: 'creature', slot: 'back', habitat: 'land', keywords: ['symbiont'], mods: { foodPerTurn: 2, maxPop: 2 }, desc: 'A whole meadow on your back.' },
+  { id: 'porcupine_back', name: 'Porcupine Back', adj: 'Porcupine', from: ['back_spines', 'venom_quills'], stage: 'creature', slot: 'back', keywords: ['venom', 'armor'], mods: { str: 2, tou: 3 }, desc: 'Touch it and regret it.' },
+  { id: 'reef_back', name: 'Reef Back', adj: 'Reefed', from: ['dorsal_fin', 'kelp_garden'], stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['symbiont', 'swift'], mods: { foodPerTurn: 1, spd: 1, cha: 1 }, desc: 'A swimming reef.' },
+  { id: 'mirror_scales', name: 'Mirror Scales', adj: 'Mirrored', from: ['scales', 'swift_scales'], stage: 'creature', slot: 'skin', keywords: ['armor', 'swift'], mods: { tou: 3, spd: 2 }, desc: 'Hard, smooth and dazzling.' },
+  { id: 'living_coat', name: 'Living Coat', adj: 'Living', from: ['fur', 'lichen_hide'], stage: 'creature', slot: 'skin', habitat: 'land', keywords: ['symbiont'], mods: { tou: 2, maxPop: 2, popPerTurn: 1 }, desc: 'Fur and lichen that heal you.' },
+  { id: 'ocean_hide', name: 'Ocean Hide', adj: 'Ocean', from: ['blubber', 'cleaner_skin'], stage: 'creature', slot: 'skin', habitat: 'sea', keywords: ['symbiont'], mods: { tou: 2, maxPop: 2, cha: 1 }, desc: 'Thick, clean and full of friends.' },
+  { id: 'neon_warning', name: 'Neon Warning', adj: 'Neon', from: ['warning_skin', 'biolume_skin'], stage: 'creature', slot: 'skin', keywords: ['venom', 'glow'], mods: { tou: 1, cha: 3 }, desc: 'Glowing spots that scream "poison".' },
+  { id: 'mace_tail', name: 'Mace Tail', adj: 'Mace', from: ['club_tail', 'balancing_tail'], stage: 'creature', slot: 'tail', habitat: 'land', keywords: ['armor'], mods: { str: 3, spd: 1 }, desc: 'Swing it like a weapon.' },
+  { id: 'climber_tail', name: 'Climber Tail', adj: 'Climbing', from: ['prehensile_tail', 'balancing_tail'], stage: 'creature', slot: 'tail', habitat: 'land', tags: ['grasp'], mods: { cun: 2, spd: 1, str: 1 }, desc: 'Swing through the trees.' },
+  { id: 'comet_fluke', name: 'Comet Fluke', adj: 'Comet', from: ['fluke', 'glow_tail'], stage: 'creature', slot: 'tail', habitat: 'sea', keywords: ['swift', 'glow'], mods: { spd: 3, cha: 2 }, desc: 'You leave a trail of light.' },
+  { id: 'scorpion_mace', name: 'Scorpion Mace', adj: 'Scorpion', from: ['stinger_tail', 'club_tail'], stage: 'creature', slot: 'tail', habitat: 'land', keywords: ['venom', 'armor'], mods: { str: 4, tou: 1 }, desc: 'Crush, then sting.' },
+  { id: 'apex_jaws', name: 'Apex Jaws', adj: 'Apex', tier: 2, from: ['sabre_venom_fangs', 'crushing_jaws'], stage: 'creature', slot: 'mouth', diet: 'carn', keywords: ['venom'], mods: { str: 7, tou: 1 }, desc: 'Legendary. The top of every food chain. Carnivore.' },
+  { id: 'dragon_back', name: 'Dragon Back', adj: 'Dragon', tier: 2, from: ['fortress_shell', 'venom_quills'], stage: 'creature', slot: 'back', keywords: ['venom', 'armor'], mods: { tou: 6, str: 3, damageReduce: 1 }, desc: 'Legendary. Armor, spikes and venom.' },
+  { id: 'all_seeing_eyes', name: 'All-Seeing Eyes', adj: 'All-seeing', tier: 2, from: ['hunter_eyes', 'tremor_whiskers'], stage: 'creature', slot: 'senses', mods: { cun: 6, huntBonus: 2 }, desc: 'Legendary. Nothing escapes your notice.' },
+  { id: 'masters_hands', name: "Maker's Hands", adj: "Maker's", tier: 2, habitat: 'land', from: ['clever_claws', 'soft_pads'], stage: 'creature', slot: 'hands', tags: ['grasp'], mods: { cun: 3, str: 2, insightPerTurn: 2 }, desc: 'Legendary. Hands that will one day build cities.' },
+  { id: 'wind_legs', name: 'Wind Legs', adj: 'Wind-swift', tier: 2, habitat: 'land', from: ['sprinter_legs', 'hopping_legs'], stage: 'creature', slot: 'hindLimbs', keywords: ['swift'], mods: { spd: 6, str: 2 }, desc: 'Legendary. You outrun the wind.' },
+];
+
+G.RECIPE = {};
+G.recipeKey = (a, b) => [a, b].sort().join('+');
+G.EVOLUTIONS.forEach((e) => {
+  e.evolved = e.tier || 1;
+  e.rarity = 0;
+  // Draw it like its first ingredient, tinted by the second.
+  e.looks = (G.PART[e.from[0]] && (G.PART[e.from[0]].looks || e.from[0])) || e.from[0];
+  G.RECIPE[G.recipeKey(e.from[0], e.from[1])] = e.id;
+  G.PARTS.push(e);
+  G.PART[e.id] = e;
+});

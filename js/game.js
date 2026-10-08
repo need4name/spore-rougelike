@@ -3,7 +3,7 @@ window.G = window.G || {};
 
 (function () {
   const SAVE_META = 'primordia.meta.v1';
-  const SAVE_RUN = 'primordia.run.v2';
+  const SAVE_RUN = 'primordia.run.v3';
 
   // ---------- Saving ----------
   function store(key, value) {
@@ -26,7 +26,7 @@ window.G = window.G || {};
       unlocked: { archetypes: ['drifter', 'grazer'], origins: ['tidal'], packs: [] },
       boons: {},
       maxHostility: 0,
-      codex: { events: [], parts: [], legacies: [] },
+      codex: { events: [], parts: [], legacies: [], evolutions: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
     };
   }
@@ -40,7 +40,7 @@ window.G = window.G || {};
       const list = (saved.unlocked && saved.unlocked[k]) || [];
       list.forEach((id) => { if (!m.unlocked[k].includes(id)) m.unlocked[k].push(id); });
     });
-    ['events', 'parts', 'legacies'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
+    ['events', 'parts', 'legacies', 'evolutions'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
     Object.assign(m.stats, saved.stats || {});
     return m;
   }
@@ -92,7 +92,43 @@ window.G = window.G || {};
   };
 
   // What the renderer needs to draw a body. Other species have the same shape.
-  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, hue: G.ARCHETYPE[run.archetype].color, traits: run.traits });
+  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
+
+  // ---------- Appearance ----------
+  G.lookOptionState = (run, opt) => {
+    const n = opt.need;
+    if (!n) return { ok: true };
+    if (run.stage !== 'creature') return { ok: false, why: opt.why };
+    if (n.keyword && !(G.keywordCounts(run)[n.keyword] > 0)) return { ok: false, why: opt.why };
+    if (n.era && run.era < n.era) return { ok: false, why: opt.why };
+    if (n.habitat && run.habitat !== n.habitat) return { ok: false, why: opt.why };
+    if (n.diet && G.diet(run) !== n.diet) return { ok: false, why: opt.why };
+    if (n.stat && G.stat(run, n.stat[0]) < n.stat[1]) return { ok: false, why: opt.why };
+    if (n.tag && !G.hasTag(run, n.tag)) return { ok: false, why: opt.why };
+    return { ok: true };
+  };
+  // The look actually shown: choices that are no longer allowed fall back to the first option.
+  G.effectiveLook = (run) => {
+    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four' }, run.look || {});
+    Object.keys(G.APPEARANCE).forEach((k) => {
+      const opt = G.APPEARANCE[k].find((o) => o.id === l[k]);
+      if (!opt || !G.lookOptionState(run, opt).ok) l[k] = G.APPEARANCE[k][0].id;
+    });
+    if (G.hasTag(run, 'biped') && !(run.look && run.look.posture)) l.posture = 'two';
+    return l;
+  };
+  G.setLook = (key, value) => {
+    const run = G.run;
+    if (!run) return;
+    run.look = run.look || {};
+    if (key === 'hue' || key === 'accent') run.look[key] = Number(value);
+    else {
+      const opt = (G.APPEARANCE[key] || []).find((o) => o.id === value);
+      if (!opt || !G.lookOptionState(run, opt).ok) return;
+      run.look[key] = value;
+    }
+    G.saveRun();
+  };
 
   G.hasTag = (run, tag) => G.partIds(run).some((id) => (G.PART[id].tags || []).includes(tag));
 
@@ -132,7 +168,7 @@ window.G = window.G || {};
     run.traits.forEach((t) => { if (G.TRAITS[t]) list.push(G.TRAITS[t].mods); });
     run.innovations.forEach((i) => list.push(G.INNOVATION[i].mods));
     G.activeSynergies(run).forEach((s) => list.push(s.mods));
-    const allies = run.species.filter((s) => G.speciesStatus(s) === 'allied').length;
+    const allies = run.species.filter((s) => !s.extinct && G.speciesStatus(s) === 'allied').length;
     if (allies) list.push({ foodPerTurn: allies });
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
     if (run.hostility >= 2) list.push({ upkeep: 1 });
@@ -184,7 +220,7 @@ window.G = window.G || {};
   G.partPool = function (run) {
     const packs = G.meta.unlocked.packs;
     const slots = G.slotsFor(run).map((s) => s.id);
-    return G.PARTS.filter((p) => p.stage === run.stage
+    return G.PARTS.filter((p) => p.stage === run.stage && !p.evolved
       && slots.includes(p.slot)
       && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat)
       && (!p.pack || packs.includes(p.pack)));
@@ -214,7 +250,7 @@ window.G = window.G || {};
     G.SLOTS[plan].forEach((slot) => {
       if (slot.multi && !multicellular) return;
       if (slot.id !== 'mouth' && rand() > (stage === 'cell' ? 0.6 : 0.7)) return;
-      let pool = G.PARTS.filter((p) => p.stage === stage && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === world));
+      let pool = G.PARTS.filter((p) => p.stage === stage && !p.evolved && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === world));
       if (slot.id === 'mouth') pool = pool.filter((p) => (diet === 'omni' ? !!p.diet : p.diet === diet));
       if (!pool.length) return;
       const first = pick(pool);
@@ -223,6 +259,9 @@ window.G = window.G || {};
     });
     return { plan, stage, multicellular, parts };
   }
+
+  // How big each kind of species' population can grow.
+  const SPECIES_CAP = { prey: 30, neighbor: 18, rival: 16, predator: 8 };
 
   function makeSpecies(world, roles) {
     const names = G.SPECIES_NAMES[world];
@@ -234,7 +273,8 @@ window.G = window.G || {};
       const opinion = { predator: -35, prey: -10, rival: -5, neighbor: 10 }[role] + Math.round(rand() * 20) - 10;
       const diet = role === 'predator' ? 'carn' : role === 'prey' ? 'herb' : pick(['herb', 'carn', 'omni']);
       const body = makeBody(world, diet);
-      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: role === 'predator' ? 1.4 : role === 'prey' ? 0.7 : 1, seed: Math.floor(rand() * 1000), world, ...body };
+      const cap = Math.round(SPECIES_CAP[role] * (world === 'cell' ? 1.5 : 1));
+      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: role === 'predator' ? 1.4 : role === 'prey' ? 0.7 : 1, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), ...body };
     });
   }
 
@@ -262,7 +302,8 @@ window.G = window.G || {};
       traits: [], species: makeSpecies('cell', ['predator', 'prey', 'rival', 'neighbor']),
       seen: [], log: [], notices: [],
       draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0,
-      phase: 'event', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
+      phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
+      quietTicks: 2, look: {},
     };
     Object.entries(arch.start.cell).forEach(([slot, id]) => { run.parts[slot] = { id, merged: null }; });
     run.pop = Math.min(run.pop, G.maxPop(run));
@@ -271,7 +312,6 @@ window.G = window.G || {};
     G.meta.stats.runs += 1;
     noteParts(run);
     G.run = run;
-    drawEvent(run);
     save();
     return run;
   };
@@ -326,6 +366,25 @@ window.G = window.G || {};
     return run.pop - before;
   }
 
+  // What two parts become when merged, if anything.
+  G.evolutionOf = (a, b) => G.RECIPE[G.recipeKey(a, b)] || null;
+  G.evolutionKnown = (id) => G.meta.codex.evolutions.includes(id);
+
+  // If a slot's two halves form a recipe, it evolves into a single new part.
+  function tryEvolve(run, slotId) {
+    const slot = run.parts[slotId];
+    if (!slot || !slot.merged) return null;
+    const evo = G.evolutionOf(slot.id, slot.merged);
+    if (!evo) return null;
+    run.parts[slotId] = { id: evo, merged: null };
+    addUnique(G.meta.codex.parts, evo);
+    const first = addUnique(G.meta.codex.evolutions, evo);
+    if (first) { G.meta.genes += 5; run.notices.push(`New evolution discovered: ${G.PART[evo].name}. +5 Genetic Memory, and it is now in your Codex.`); }
+    log(run, `Evolution: ${G.PART[evo].name}!`);
+    run.lastEvolution = evo;
+    return { id: evo, first };
+  }
+
   // Put a part on the body: fill an empty slot, merge with what is there, or replace it.
   function installPart(run, part, mode) {
     const slot = run.parts[part.slot];
@@ -351,6 +410,8 @@ window.G = window.G || {};
       text = `${part.name} replaces ${before}`;
     }
     addUnique(G.meta.codex.parts, part.id);
+    const evo = tryEvolve(run, part.slot);
+    if (evo) text = `EVOLUTION! ${text}, and it becomes ${G.PART[evo.id].name}`;
     run.pop = Math.min(run.pop, G.maxPop(run));
     return text;
   }
@@ -428,6 +489,30 @@ window.G = window.G || {};
     return 'rest';
   }
 
+  // What the scene acts out, so the animation matches what happened.
+  function sceneStory(run, ev, opt, res, success, sp) {
+    const stat = opt.check && opt.check.stat;
+    const pop = (res && res.pop) || 0;
+    const food = (res && res.food) || 0;
+    const op = (res && res.opinion) || 0;
+    if (sp == null || sp < 0) return null;
+    const role = run.species[sp].role;
+    if (res && res.anim === 'social' && success !== false) return 'befriend';
+    if (success === false) {
+      if (stat === 'cha') return 'rebuffed';
+      if (stat === 'spd' || pop < 0 || role === 'predator') return 'mauled';
+      if (stat === 'str') return 'brawl_lose';
+      return 'standoff';
+    }
+    if (food > 0 && (stat === 'str' || stat === 'spd' || stat === 'cun' || !stat) && op <= 0 && role !== 'neighbor' && !(ev.tags || []).includes('social')) return 'chase';
+    if (stat === 'str' || (res && res.anim === 'attack')) return 'brawl_win';
+    if (stat === 'spd' || (res && res.anim === 'flee')) return 'escape';
+    if (op > 0 || stat === 'cha') return 'befriend';
+    if (op < 0) return 'rebuffed';
+    if (pop < 0) return 'mauled';
+    return 'standoff';
+  }
+
   // How your creature feels about what just happened, for its face.
   function sceneMood(res, opt, success) {
     if (res && res.mood) return res.mood;
@@ -442,6 +527,7 @@ window.G = window.G || {};
     if (!role) return null;
     const idx = run.species.map((s, i) => i).filter((i) => {
       const s = run.species[i];
+      if (s.extinct) return false;
       const st = G.speciesStatus(s);
       if (role === 'any') return true;
       if (role === 'hostile' || role === 'allied') return st === role;
@@ -517,7 +603,17 @@ window.G = window.G || {};
       res = success ? opt.success : opt.fail;
     }
     const sp = run.event.species;
+    const popBefore = run.pop; const foodBefore = run.food;
+    run.lastEvolution = null;
     const lines = applyEffects(run, res, sp);
+    const story = sceneStory(run, ev, opt, res, success, sp);
+    // Hunting or beating a species thins its numbers on the world map.
+    if (sp != null && sp >= 0 && (story === 'chase' || story === 'brawl_win')) {
+      const target = run.species[sp];
+      const loss = Math.max(1, Math.round(target.cap * (story === 'chase' ? 0.12 : 0.06)));
+      target.pop = Math.max(0, target.pop - loss);
+      lines.push({ t: `The ${target.name} lose ${loss} of their number` });
+    }
     run.scene = {
       title: sub(ev.title, run, sp),
       label: sub(opt.label, run, sp),
@@ -527,6 +623,7 @@ window.G = window.G || {};
       prop: ev.prop || null,
       mood: sceneMood(res, opt, success),
       species: sp,
+      story, popDelta: run.pop - popBefore, foodDelta: run.food - foodBefore, evolved: run.lastEvolution,
       finale: !!ev.finale, milestone: ev.milestone ? ev.id : null,
       habitat: res && res.habitat, won: ev.finale && success !== false,
       stat: opt.check ? opt.check.stat : null, chance: state.chance,
@@ -547,12 +644,12 @@ window.G = window.G || {};
     if (sc.milestone) {
       run.milestonesDone.push(sc.milestone);
       applyMilestone(run, sc.milestone);
-      nextStep(run);
+      nextStep(run, false);
     } else if (sc.finale && sc.won) {
       if (run.stage === 'cell') evolve(run, sc.habitat);
       else endRun(run, true);
     } else {
-      endTurn(run);
+      nextStep(run, false);
     }
     save();
   };
@@ -572,7 +669,7 @@ window.G = window.G || {};
     if (id === 'age_of_giants') {
       run.era = 2; run.eraTurn = 1;
       const apex = makeSpecies(run.habitat, ['predator'])[0];
-      apex.size = 2; apex.opinion = -45;
+      apex.size = 2; apex.opinion = -45; apex.cap = 4; apex.pop = 3;
       run.species.push(apex);
       run.notices.push(`The Age of Giants begins. A huge new predator, the ${apex.name}, has arrived.`);
     }
@@ -582,7 +679,48 @@ window.G = window.G || {};
     }
   }
 
-  // ---------- Turn end ----------
+  // ---------- Time ----------
+  // Time flows on the world map. Each tick is one Epoch or Generation: your lineage eats,
+  // grows and evolves, the other species rise and fall, and sometimes an event happens.
+  G.tick = function () {
+    const run = G.run;
+    if (!run || run.phase !== 'map') return;
+    endTurn(run);
+    if (run.phase === 'end') return;
+    worldTick(run);
+    nextStep(run, true);
+    save();
+  };
+
+  function worldTick(run) {
+    const prey = run.species.filter((s) => !s.extinct && s.role === 'prey');
+    run.species.forEach((s) => {
+      if (s.extinct) return;
+      s.pop += 0.14 * s.pop * (1 - s.pop / s.cap) + (rand() - 0.5) * s.cap * 0.04;
+      if (s.role === 'predator') {
+        const food = prey.reduce((a, p) => a + p.pop, 0);
+        if (food < 4) s.pop -= s.pop * 0.08;
+        prey.forEach((p) => { p.pop -= s.pop * 0.03; });
+      }
+      s.pop = Math.min(s.cap * 1.1, s.pop);
+      if (s.pop < 0.6) {
+        s.extinct = true; s.pop = 0;
+        run.notices.push(`The ${s.name} have died out.`);
+        log(run, `The ${s.name} went extinct.`);
+      }
+    });
+    // Newcomers drift in when the world has room.
+    const alive = run.species.filter((s) => !s.extinct).length;
+    if (alive < 4 && rand() < 0.08) {
+      const roles = ['prey', 'rival', 'neighbor', 'predator'];
+      const n = makeSpecies(run.stage === 'cell' ? 'cell' : run.habitat, [pick(roles)])[0];
+      n.pop = Math.max(2, Math.round(n.cap * 0.3));
+      run.species.push(n);
+      run.notices.push(`A new species has arrived: the ${n.name} (${G.ROLES[n.role].toLowerCase()}).`);
+      log(run, `The ${n.name} arrived.`);
+    }
+  }
+
   function endTurn(run) {
     const lines = [];
     const inc = G.income(run);
@@ -617,7 +755,6 @@ window.G = window.G || {};
     run.lastTurn = { title: `${st.turnName} ${run.stageTurn}`, lines };
     run.turn += 1; run.stageTurn += 1; run.eraTurn += 1;
     researchProgress(run);
-    nextStep(run);
   }
 
   // ---------- Mind tree ----------
@@ -625,11 +762,8 @@ window.G = window.G || {};
     if (run.innovations.includes(inv.id)) return { ok: false, reason: 'Known' };
     const blocker = run.innovations.find((id) => (inv.excludes || []).includes(id) || (G.INNOVATION[id].excludes || []).includes(inv.id));
     if (blocker) return { ok: false, blocked: true, reason: `Blocked by ${G.INNOVATION[blocker].name}` };
-    if (inv.tier > 1) {
-      const prev = run.innovations.filter((id) => G.INNOVATION[id].tier === inv.tier - 1).length;
-      if (prev < 2) return { ok: false, reason: `Needs 2 tier ${inv.tier - 1} innovations` };
-    }
     const r = inv.req || {};
+    if (r.tier3 && run.innovations.filter((id) => G.INNOVATION[id].tier === 3).length < r.tier3) return { ok: false, reason: `Needs ${r.tier3} ideas from the third row` };
     if (r.diet && !r.diet.includes(G.diet(run))) return { ok: false, reason: `Only for ${r.diet.map((d) => G.DIET_NAMES[d].toLowerCase()).join(' or ')}s` };
     if (r.stat && G.stat(run, r.stat[0]) < r.stat[1]) return { ok: false, reason: `Needs ${G.STATS.find((x) => x.id === r.stat[0]).name} ${r.stat[1]} (you have ${G.stat(run, r.stat[0])})` };
     if (r.innovation && !r.innovation.some((id) => run.innovations.includes(id))) return { ok: false, reason: `Needs ${r.innovation.map((id) => G.INNOVATION[id].name).join(' or ')}` };
@@ -657,7 +791,7 @@ window.G = window.G || {};
     if (!inv || !G.innovationAvailable(run, inv).ok) return;
     run.fascination = id;
     researchProgress(run);
-    if (run.phase === 'mind') nextStep(run);
+    if (run.phase === 'mind') nextStep(run, false);
     save();
   };
 
@@ -665,8 +799,9 @@ window.G = window.G || {};
     return run.mind && !run.fascination && G.INNOVATIONS.some((i) => G.innovationAvailable(run, i).ok);
   }
 
-  // Decide what comes next: a mutation draft, a milestone, a choice of fascination, the finale, or an event.
-  function nextStep(run) {
+  // Decide what comes next: a mutation draft, a milestone, a choice of fascination, the finale,
+  // a random event (only when time has just passed), or back to the world map.
+  function nextStep(run, allowEvent) {
     const st = G.STAGES[run.stage];
     if (run.draftsTaken < st.drafts.length && run.dna >= st.drafts[run.draftsTaken]) { startDraft(run); return; }
     const ms = st.milestones.find((m) => run.dna >= m.at && !run.milestonesDone.includes(m.event));
@@ -678,7 +813,10 @@ window.G = window.G || {};
       setEvent(run, G.EVENT[id]);
       return;
     }
-    drawEvent(run);
+    // Events pop up at random, more likely the longer it has been quiet.
+    if (allowEvent && rand() < 0.38 + 0.2 * run.quietTicks) { run.quietTicks = 0; drawEvent(run); return; }
+    if (allowEvent) run.quietTicks += 1;
+    run.phase = 'map';
   }
 
   // ---------- Mutation drafts ----------
@@ -711,7 +849,8 @@ window.G = window.G || {};
     log(run, `Mutation: ${text}.`);
     run.draftsTaken += 1;
     run.draft = null;
-    run.scene = { title: 'Mutation', label: text, text: '', lines: [], anim: 'mutate', mutation: true };
+    run.scene = { title: 'Mutation', label: text, text: '', lines: [], anim: 'mutate', mood: run.lastEvolution ? 'proud' : 'surprised', mutation: true, evolved: run.lastEvolution };
+    run.lastEvolution = null;
     run.phase = 'mutated';
     save();
   };
@@ -719,7 +858,7 @@ window.G = window.G || {};
   G.continueMutation = function () {
     const run = G.run;
     if (!run || run.phase !== 'mutated') return;
-    nextStep(run);
+    nextStep(run, false);
     save();
   };
 
@@ -730,7 +869,7 @@ window.G = window.G || {};
     run.notices.push('You skipped a mutation and gained 3 Food.');
     run.draftsTaken += 1;
     run.draft = null;
-    nextStep(run);
+    nextStep(run, false);
     save();
   };
 
@@ -763,24 +902,19 @@ window.G = window.G || {};
     run.dna = 3 * (G.meta.boons.memory || 0);
     run.draftsTaken = 0;
     run.finaleRetryAt = 0;
-    // Every cell part grows into a creature part. Matching parts merge.
-    const cellSlots = Object.values(run.parts);
+    // Only your mouth and your evolved parts grow into creature parts. Everything else is left behind.
+    const cellSlots = Object.values(run.parts).filter(Boolean);
     run.parts = {};
     const carried = [];
-    const place = (id) => {
-      const p = G.PART[id];
-      const slot = run.parts[p.slot];
-      if (!slot) { run.parts[p.slot] = { id, merged: null }; return true; }
-      if (!slot.merged && slot.id !== id) { slot.merged = id; return true; }
-      return false;
-    };
-    G.SLOTS.cell.forEach((cs) => {
-      const s = cellSlots.find((x) => x && G.PART[x.id].slot === cs.id);
-      if (!s) return;
-      [s.id, s.merged].filter(Boolean).forEach((cid) => {
-        const to = G.CARRY[cid] && G.CARRY[cid][run.habitat];
-        if (to && place(to)) carried.push({ from: G.PART[cid].name, to: G.PART[to].name });
-      });
+    const left = [];
+    cellSlots.forEach((cs) => {
+      const p = G.PART[cs.id];
+      const keep = p.slot === 'mouth' || p.evolved;
+      const to = keep && G.CARRY[cs.id] && G.CARRY[cs.id][run.habitat];
+      if (to && !run.parts[G.PART[to].slot]) {
+        run.parts[G.PART[to].slot] = { id: to, merged: null };
+        carried.push({ from: G.PART[cs.id].name, to: G.PART[to].name });
+      } else left.push(G.slotLabel(cs));
     });
     // The archetype fills in anything essential that is still missing.
     Object.entries(G.ARCHETYPE[run.archetype].start[run.habitat]).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
@@ -788,8 +922,9 @@ window.G = window.G || {};
     run.pop = G.maxPop(run);
     run.lastEvent = null;
     run.lastTurn = null;
+    run.quietTicks = 1;
     noteParts(run);
-    run.evolved = { heritage, cellParts, carried };
+    run.evolved = { heritage, cellParts, carried, left };
     run.notices = [];
     log(run, `Your lineage ${run.habitat === 'land' ? 'leaves the water for the land' : 'claims the open sea'}. It carries the ${G.TRAITS[heritage].name} trait.`);
     run.phase = 'evolved';
@@ -798,7 +933,7 @@ window.G = window.G || {};
   G.continueEvolved = function () {
     const run = G.run;
     if (!run || run.phase !== 'evolved') return;
-    nextStep(run);
+    nextStep(run, false);
     save();
   };
 
@@ -818,6 +953,7 @@ window.G = window.G || {};
       const list = { archetypes: G.ARCHETYPES, origins: G.ORIGINS, packs: G.PACKS }[kind];
       const item = list && list.find((x) => x.id === id);
       if (!item || m.unlocked[kind].includes(id) || m.genes < item.cost) return false;
+      if (item.needsEvo && m.codex.evolutions.length < item.needsEvo) return false;
       cost = item.cost;
       m.unlocked[kind].push(id);
     }
