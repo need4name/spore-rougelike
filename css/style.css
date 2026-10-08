@@ -208,20 +208,50 @@ button { font: inherit; color: inherit; }
 .part-card .btn { min-height: 42px; }
 
 /* ---------- Mind tree ---------- */
-.mind-tree { display: grid; gap: 12px; }
-.tier h3 { margin: 0 0 6px; }
-.inv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
-.inv { text-align: left; display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
-.inv:hover:not(:disabled) { border-color: var(--accent); }
-.inv:disabled { cursor: default; }
-.inv.done { border-color: var(--good); }
-.inv.done .inv-head span { color: var(--good); }
-.inv.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.inv:disabled:not(.done):not(.current) { opacity: 0.55; }
+.mind-grid { display: grid; gap: 6px; }
+.tier-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; align-items: start; }
+.tier-label { font-family: var(--font-display); color: var(--muted); font-size: 0.8rem; padding-top: 8px; text-align: center; }
+.tier-tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+.tile {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 6px 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); font-size: 0.8rem; font-weight: 700; text-align: left;
+}
+.tile i { font-style: normal; font-size: 0.75rem; }
+.tile.open { border-color: rgba(242, 181, 68, 0.6); }
+.tile.done { border-color: var(--good); color: var(--good); background: rgba(143, 209, 106, 0.08); }
+.tile.current { border-color: var(--accent); color: var(--accent); }
+.tile.locked { opacity: 0.5; }
+.tile.blocked { opacity: 0.4; text-decoration: line-through; }
+.tile.sel { box-shadow: 0 0 0 2px var(--fg); }
+.inv-detail { margin-top: 10px; display: grid; gap: 4px; padding: 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
 .inv-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.inv-head span { font-size: 0.8rem; color: var(--accent); display: inline-flex; gap: 3px; align-items: center; }
-.inv-mods { font-size: 0.8rem; color: var(--dna); }
-.inv-desc { font-size: 0.8rem; color: var(--muted); }
+.inv-head span { font-size: 0.85rem; color: var(--accent); display: inline-flex; gap: 3px; align-items: center; }
+.inv-mods { font-size: 0.85rem; color: var(--dna); }
+.inv-desc { font-size: 0.85rem; color: var(--muted); }
+.inv-excl { font-size: 0.8rem; color: var(--accent); }
+.good-text { color: var(--good); }
+.bad-text { color: var(--bad); }
+
+/* ---------- Carry-over and species ---------- */
+.carried h3 { margin-top: 0; }
+.carried ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.carried li { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; font-size: 0.9rem; align-items: baseline; }
+.carried .arrow { color: var(--accent); }
+.size-line { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+.size-line b { color: var(--fg); }
+.rivals > li { list-style: none; }
+button.rival { width: 100%; text-align: left; cursor: pointer; border: 1px solid transparent; display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
+button.rival:hover { border-color: var(--accent); }
+.rival-info { display: grid; gap: 6px; min-width: 0; }
+.portrait.mini { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #1d3a40, #0b1719); border: 1px solid var(--line); }
+.species-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; margin: 10px 0; }
+.opinion.big { margin: 10px 0; }
+.compare { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.cmp { background: var(--panel); border-radius: 10px; padding: 6px 4px; text-align: center; display: grid; }
+.cmp span { font-size: 0.7rem; letter-spacing: 0.08em; color: var(--muted); }
+.cmp b { font-family: var(--font-display); font-size: 1.2rem; }
+.cmp small { font-size: 0.72rem; color: var(--muted); }
 
 /* ---------- Character sheet ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(4, 10, 12, 0.6); z-index: 20; }

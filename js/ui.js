@@ -34,13 +34,19 @@ window.G = window.G || {};
   G.render = render;
 
   function paintCanvases(run) {
-    app.querySelectorAll('canvas.portrait').forEach((c) => G.drawPortrait(c, run));
+    app.querySelectorAll('canvas.portrait').forEach((c) => {
+      const idx = c.dataset.species;
+      G.drawPortrait(c, idx != null ? G.speciesBody(run.species[Number(idx)]) : run);
+    });
     const scene = app.querySelector('canvas.scene');
-    if (scene) {
-      const sc = run.scene || {};
-      const anim = ['scene', 'mutated'].includes(run.phase) ? sc.anim : run.phase === 'evolved' ? 'grow' : 'rest';
-      G.playScene(scene, run, anim, run.phase === 'scene' ? sc.species : null);
-    }
+    if (!scene) return;
+    let info;
+    if (run.phase === 'scene') info = run.scene;
+    else if (run.phase === 'mutated') info = { anim: 'mutate', mood: 'surprised', title: run.scene.label };
+    else if (run.phase === 'evolved') info = { anim: 'grow', mood: 'proud', title: 'evolved', prop: run.habitat === 'sea' ? 'bubbles' : null };
+    else if (run.phase === 'end') info = run.result && run.result.victory ? { anim: 'social', mood: 'proud', title: 'win', prop: run.habitat === 'sea' ? 'notes' : 'sparks' } : { anim: 'rest', mood: 'sad', title: 'end' };
+    else info = { anim: 'rest', mood: 'happy' };
+    G.playScene(scene, run, info);
   }
 
   function go(screen) {
@@ -258,9 +264,13 @@ window.G = window.G || {};
               const have = (counts[k] || 0) + 1;
               return have >= 2 ? `<span class="syn-hint" style="--kw:${G.KEYWORDS[k].color}">${G.KEYWORDS[k].name} ${have}: ${esc(G.KEYWORDS[k].tiers[Math.min(3, have)].desc)}</span>` : '';
             }).join('');
-            const buttons = !slot
-              ? `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="grow">Grow it</button>`
-              : `${canMergeHere ? `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="merge">Merge: ${esc(p.adj)} ${esc(G.PART[slot.id].name)}</button>` : ''}<button class="btn small ${canMergeHere ? '' : 'primary'}" data-act="draft" data-arg="${pid}" data-mode="replace">Replace ${esc(G.slotLabel(slot))}</button>`;
+            let buttons;
+            if (!slot) buttons = `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="grow">Grow it</button>`;
+            else if (slot.merged) {
+              // A merged slot stays merged: choose which half the new part replaces.
+              buttons = `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="swapBase">Swap out ${esc(G.PART[slot.id].name)}: ${esc(G.PART[slot.merged].adj)} ${esc(p.name)}</button>`
+                + `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="swapMerged">Swap out ${esc(G.PART[slot.merged].name)}: ${esc(p.adj)} ${esc(G.PART[slot.id].name)}</button>`;
+            } else buttons = `${canMergeHere ? `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="merge">Merge: ${esc(p.adj)} ${esc(G.PART[slot.id].name)}</button>` : ''}<button class="btn small ${canMergeHere ? '' : 'primary'}" data-act="draft" data-arg="${pid}" data-mode="replace">Replace ${esc(G.slotLabel(slot))}</button>`;
             return `
             <div class="part-card">
               <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}</span>
@@ -285,28 +295,45 @@ window.G = window.G || {};
       <article class="card finale">
         <p class="eyebrow">The Mind</p>
         <h2>What fascinates your kind?</h2>
-        <p class="note">Insight flows into this each turn (${G.insightPerTurn(run)} per turn now). Two innovations in a tier open the next tier. Self-Awareness ends the Creature stage.</p>
-        ${mindTree(run, true)}
+        <p class="note">Insight flows into it each turn (${G.insightPerTurn(run)} per turn now). Some ideas depend on your diet, your nature and what you already know, and some rule others out.</p>
+        ${mindTree(run)}
       </article>`;
   }
 
-  function mindTree(run, choosing) {
-    const tiers = [1, 2, 3, 4];
-    return `<div class="mind-tree">${tiers.map((tier) => `
-      <section class="tier"><h3>Tier ${tier}</h3><div class="inv-list">
+  // Compact Mind tree: a grid of tiles by tier, with the selected one explained below.
+  function mindTree(run) {
+    const sel = G.INNOVATION[G.ui.mindSel] || G.INNOVATION[run.fascination] || G.INNOVATIONS.find((i) => G.innovationAvailable(run, i).ok) || G.INNOVATIONS[0];
+    const state = (inv) => {
+      if (run.innovations.includes(inv.id)) return 'done';
+      if (run.fascination === inv.id) return 'current';
+      const av = G.innovationAvailable(run, inv);
+      return av.ok ? 'open' : av.blocked ? 'blocked' : 'locked';
+    };
+    const icon = { done: '✓', current: '…', open: '', blocked: '✕', locked: '' };
+    const tiles = [1, 2, 3, 4].map((tier) => `
+      <div class="tier-row"><span class="tier-label">${['', 'I', 'II', 'III', 'IV'][tier]}</span><div class="tier-tiles">
         ${G.INNOVATIONS.filter((i) => i.tier === tier).map((inv) => {
-          const done = run.innovations.includes(inv.id);
-          const av = G.innovationAvailable(run, inv);
-          const current = run.fascination === inv.id;
-          const clickable = !done && av.ok && !current;
-          return `<button class="inv ${done ? 'done' : ''} ${current ? 'current' : ''}" ${clickable ? `data-act="fascinate" data-arg="${inv.id}"` : 'disabled'}>
-            <span class="inv-head"><strong>${esc(inv.name)}</strong><span>${done ? 'Known' : current ? `Researching ${run.insight}/${inv.cost}` : `${ICON.insight} ${inv.cost}`}</span></span>
-            <span class="inv-mods">${esc(G.describeMods(inv.mods))}</span>
-            <span class="inv-desc">${esc(inv.desc)}</span>
-            ${!done && !av.ok ? `<span class="reason">${esc(av.reason)}</span>` : ''}
-          </button>`;
+          const st = state(inv);
+          return `<button class="tile ${st} ${sel.id === inv.id ? 'sel' : ''}" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel.id === inv.id}"><span>${esc(inv.name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
         }).join('')}
-      </div></section>`).join('')}</div>${choosing ? '' : ''}`;
+      </div></div>`).join('');
+    const st = state(sel);
+    const av = G.innovationAvailable(run, sel);
+    const excl = (sel.excludes || []).map((id) => G.INNOVATION[id].name);
+    let action = '';
+    if (st === 'open') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${sel.cost} Insight)</button>`;
+    if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${sel.cost} Insight</span>`;
+    if (st === 'done') action = '<span class="note good-text">Known</span>';
+    return `
+      <div class="mind-grid">${tiles}</div>
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(sel.name)}</strong><span>${ICON.insight} ${sel.cost}</span></div>
+        <span class="inv-mods">${esc(G.describeMods(sel.mods))}</span>
+        <span class="inv-desc">${esc(sel.desc)}</span>
+        ${excl.length ? `<span class="inv-excl">Rules out: ${esc(excl.join(', '))}</span>` : ''}
+        ${!av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
+        <div class="row tight">${action}</div>
+      </div>`;
   }
 
   function evolvedCard(run) {
@@ -320,7 +347,8 @@ window.G = window.G || {};
         <h2>${sea ? 'Your lineage rules the open sea' : 'Your lineage walks on land'}</h2>
         <p class="event-text">Generations pass. Your ancestors' ${esc(listJoin(e.cellParts).toLowerCase())} become something new. ${sea ? 'Your pod swims into waters' : 'Your herd steps into a valley'} already full of life: ${esc(listJoin(run.species.map((s) => `the ${s.name}`)))}.</p>
         <div class="callout"><strong>Heritage: ${esc(tr.name)}</strong><span>${esc(G.describeMods(tr.mods))}. ${esc(tr.desc)}</span></div>
-        <p class="note">Your traits came with you. Your new body has ${G.slotsFor(run).length} slots, from ${sea ? 'fins to tail' : 'front limbs and hands to hind legs and feet'}. Mutations can merge from the start.</p>
+        ${e.carried && e.carried.length ? `<div class="carried"><h3>What your cells became</h3><ul>${e.carried.map((c) => `<li><span>${esc(c.from)}</span><span class="arrow" aria-hidden="true">→</span><b>${esc(c.to)}</b></li>`).join('')}</ul></div>` : ''}
+        <p class="note">Your traits came with you. Your new body has ${G.slotsFor(run).length} slots, from ${sea ? 'fins to tail' : 'front limbs and hands to hind legs and feet'}, and mutations can merge from the start.</p>
         <button class="btn primary wide" data-act="continue-evolved">${sea ? 'Swim on' : 'Enter the valley'}</button>
       </article>`;
   }
@@ -369,6 +397,7 @@ window.G = window.G || {};
     const slots = G.SLOTS[run.plan];
     return `
       <div class="stats">${G.STATS.map((s) => `<div class="stat" title="${s.name}"><span>${s.short}</span><b>${G.stat(run, s.id)}</b></div>`).join('')}</div>
+      <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${G.SIZES[G.sizeOf(run)].eatDiv} members${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
       <ul class="parts">${slots.map((slot) => {
         const locked = slot.multi && !run.multicellular;
         const s = run.parts[slot.id];
@@ -411,14 +440,51 @@ window.G = window.G || {};
   }
 
   function worldTab(run) {
-    return `<ul class="rivals">${run.species.map((s) => {
+    if (G.ui.speciesView != null && run.species[G.ui.speciesView]) return speciesSheet(run, G.ui.speciesView);
+    return `<ul class="rivals">${run.species.map((s, i) => {
       const st = G.speciesStatus(s);
       const pct = (s.opinion + 100) / 2;
-      return `<li class="rival ${st}">
-        <span class="rival-name"><span class="swatch" style="--h:${s.hue}"></span>${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}</small></span>
-        <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
-      </li>`;
-    }).join('')}</ul><p class="note">Allied species (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>`;
+      return `<li><button class="rival ${st}" data-act="species" data-arg="${i}">
+        <canvas class="portrait mini" data-species="${i}"></canvas>
+        <span class="rival-info">
+          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}</small></span>
+          <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
+        </span>
+      </button></li>`;
+    }).join('')}</ul><p class="note">Tap a species to see it up close. Allied species (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>`;
+  }
+
+  // Another species' sheet, like inspecting another ruler in CK3.
+  function speciesSheet(run, i) {
+    const s = run.species[i];
+    const st = G.speciesStatus(s);
+    const attitude = {
+      allied: 'They count you as family. They share food and fight beside you.',
+      friendly: 'They are warming to you.',
+      neutral: 'They watch you, unsure.',
+      wary: 'They keep their distance and their young close.',
+      hostile: 'They want you gone and will attack when they can.',
+    }[st];
+    const roleText = { predator: 'They hunt creatures like you.', prey: 'They are what others eat.', rival: 'They want the same food and ground as you.', neighbor: 'They share your world and could become friends.' }[s.role];
+    const slots = G.SLOTS[s.plan].filter((sl) => s.parts[sl.id]);
+    return `
+      <button class="btn ghost small" data-act="species-back">← All species</button>
+      <div class="species-head">
+        <canvas class="portrait big" data-species="${i}"></canvas>
+        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]}${s.size >= 2 ? ' · Giant' : ''}</p></div>
+      </div>
+      <p>${esc(roleText)} ${esc(attitude)}</p>
+      <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
+      <h3>Compared with you</h3>
+      <div class="compare">${G.STATS.map((k) => {
+        const them = G.speciesStat(s, k.id); const you = G.stat(run, k.id);
+        return `<div class="cmp"><span>${k.short}</span><b>${them}</b><small class="${them > you ? 'bad-text' : them < you ? 'good-text' : ''}">you ${you}</small></div>`;
+      }).join('')}</div>
+      <h3>Body</h3>
+      <ul class="parts">${slots.map((sl) => {
+        const slot = s.parts[sl.id];
+        return `<li><span class="slot">${sl.name}</span><span class="pname">${esc(G.slotLabel(slot))}${[slot.id, slot.merged].filter(Boolean).map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.PART[slot.id].desc)}</span></li>`;
+      }).join('')}</ul>`;
   }
 
   function chronicleTab(run) {
@@ -429,7 +495,7 @@ window.G = window.G || {};
     const tab = G.ui.sheet;
     if (!tab) return '';
     const tabs = [['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => mindTree(r, false), log: chronicleTab }[tab](run);
+    const panel = { body: bodyTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
@@ -544,11 +610,14 @@ window.G = window.G || {};
       case 'draft': G.pickDraft(arg, el.dataset.mode); toTop = true; break;
       case 'reroll': G.rerollDraft(); break;
       case 'skip-draft': G.skipDraft(); toTop = true; break;
-      case 'fascinate': G.setFascination(arg); toTop = !G.ui.sheet; break;
+      case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; toTop = !G.ui.sheet; break;
       case 'continue-evolved': G.continueEvolved(); toTop = true; break;
       case 'instinct': G.setInstinct(arg); break;
-      case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; break;
-      case 'close-sheet': G.ui.sheet = null; break;
+      case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; break;
+      case 'species': G.ui.speciesView = Number(arg); break;
+      case 'species-back': G.ui.speciesView = null; break;
+      case 'mind-sel': G.ui.mindSel = arg; break;
+      case 'close-sheet': G.ui.sheet = null; G.ui.speciesView = null; break;
       case 'abandon': G.ui.confirmAbandon = true; break;
       case 'abandon-no': G.ui.confirmAbandon = false; break;
       case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; toTop = true; break;

@@ -26,7 +26,7 @@ window.G = window.G || {};
 G.EVENTS = [
   // ======================= CELL STAGE =======================
   {
-    id: 'larger_shadow', stage: 'cell', title: 'A Shadow Above', tags: ['danger'], species: 'predator',
+    id: 'larger_shadow', prop: 'shadow', stage: 'cell', title: 'A Shadow Above', tags: ['danger'], species: 'predator',
     text: 'A {them} drifts over your colony, ten times your size. Its membrane ripples as it tastes the water for you.',
     options: [
       { label: 'Dart away', check: { stat: 'spd', diff: 3 }, success: { text: 'You scatter faster than it can follow.', dna: 2 }, fail: { text: 'It catches the slowest of you.', pop: -2, dna: 1 } },
@@ -36,7 +36,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'warm_current', stage: 'cell', title: 'The Warm Current', tags: ['explore'],
+    id: 'warm_current', prop: 'current', stage: 'cell', title: 'The Warm Current', tags: ['explore'],
     text: 'A warm current sweeps you up, thick with strange molecules from somewhere far away.',
     options: [
       { label: 'Ride it', check: { stat: 'spd', diff: 2 }, success: { text: 'You travel farther than any of your ancestors.', dna: 3, anim: 'flee' }, fail: { text: 'You tumble out, dizzy and scattered.', food: -2, dna: 1, anim: 'hurt' } },
@@ -44,7 +44,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'algae_bloom', stage: 'cell', title: 'Algae Bloom', tags: ['food'], species: 'prey',
+    id: 'algae_bloom', prop: 'bloom', stage: 'cell', title: 'Algae Bloom', tags: ['food'], species: 'prey',
     text: 'The water around you turns green. An algae bloom is spreading, and swarms of {them} follow it.',
     options: [
       { label: 'Gorge on the algae', req: { diet: ['herb', 'omni'] }, result: { text: 'You eat until you can barely move.', food: 5 } },
@@ -53,7 +53,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'strange_molecule', stage: 'cell', title: 'A Strange Molecule', tags: ['explore'],
+    id: 'strange_molecule', prop: 'molecule', stage: 'cell', title: 'A Strange Molecule', tags: ['explore'],
     text: 'A glittering chain of atoms bumps against your membrane, humming with energy.',
     options: [
       { label: 'Let it in', check: { stat: 'tou', diff: 3 }, success: { text: 'It rewrites part of you. You feel more.', dna: 4, anim: 'mutate' }, fail: { text: 'It burns going in, but changes you all the same.', pop: -1, dna: 2 } },
@@ -62,7 +62,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'kin_cell', stage: 'cell', title: 'Kin', tags: ['social'], multi: false,
+    id: 'kin_cell', prop: 'bubbles', stage: 'cell', title: 'Kin', tags: ['social'], multi: false,
     text: 'A cell almost exactly like you presses against your membrane. It is not food. It might be family.',
     options: [
       { label: 'Fuse with it', result: { text: 'Two become one, and one becomes stronger.', pop: 2, anim: 'grow' } },
@@ -71,7 +71,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'viral_ghost', stage: 'cell', title: 'Viral Ghost', tags: ['danger'],
+    id: 'viral_ghost', prop: 'virus', stage: 'cell', title: 'Viral Ghost', tags: ['danger'],
     text: 'A virus has latched onto you and is slipping its code into yours.',
     options: [
       { label: 'Fight it off', check: { stat: 'tou', diff: 3 }, success: { text: 'You destroy it and remember how.', dna: 2, trait: 'resilient' }, fail: { text: 'It sickens many of you before it dies.', pop: -2 } },
@@ -79,7 +79,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'sunlit_shallows', stage: 'cell', title: 'Sunlit Shallows', tags: ['food'],
+    id: 'sunlit_shallows', prop: 'sun', stage: 'cell', title: 'Sunlit Shallows', tags: ['food'],
     text: 'An upwelling lifts you into bright, warm water. Sunlight pours through you.',
     options: [
       { label: 'Bask', req: { keyword: ['symbiont', 1] }, result: { text: 'Your passengers drink the light and feed you well.', food: 4, pop: 1 } },
@@ -88,7 +88,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'toxic_plume', stage: 'cell', title: 'Toxic Plume', origins: ['toxic', 'vents'], tags: ['danger'],
+    id: 'toxic_plume', prop: 'plume', stage: 'cell', title: 'Toxic Plume', origins: ['toxic', 'vents'], tags: ['danger'],
     text: 'A cloud of poison rolls toward you. Everything it touches stops moving.',
     options: [
       { label: 'Endure it', check: { stat: 'tou', diff: 3 }, success: { text: 'You survive what others cannot.', dna: 3 }, fail: { text: 'The poison eats at you.', pop: -2, dna: 1 } },
@@ -97,7 +97,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'thermal_vent', stage: 'cell', title: 'Thermal Vent', origins: ['vents'], tags: ['food', 'explore'],
+    id: 'thermal_vent', prop: 'vent', stage: 'cell', title: 'Thermal Vent', origins: ['vents'], tags: ['food', 'explore'],
     text: 'The seafloor cracks open beneath you. Black smoke pours out, and the water boils with chemical energy.',
     options: [
       { label: 'Feed on the chemicals', check: { stat: 'cun', diff: 2 }, success: { text: 'You learn to eat stone-breath.', food: 3, dna: 2 }, fail: { text: 'You get too close and scald yourself.', pop: -2 } },
@@ -105,7 +105,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'ice_crystal', stage: 'cell', title: 'Ice Crystal', origins: ['frozen'], tags: ['danger'],
+    id: 'ice_crystal', prop: 'ice', stage: 'cell', title: 'Ice Crystal', origins: ['frozen'], tags: ['danger'],
     text: 'The water freezes around you. An ice crystal slowly closes in.',
     options: [
       { label: 'Shelter inside it', check: { stat: 'tou', diff: 2 }, success: { text: 'The ice keeps predators away while you rest.', pop: 2, anim: 'rest' }, fail: { text: 'The cold bites deep.', pop: -1 } },
@@ -113,7 +113,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'rotifer_swarm', stage: 'cell', title: 'The Swarm', tags: ['danger', 'hunt'], species: 'predator',
+    id: 'rotifer_swarm', prop: 'swarm', stage: 'cell', title: 'The Swarm', tags: ['danger', 'hunt'], species: 'predator',
     text: 'A swarm of {them} sweeps toward you, spinning mouths open.',
     options: [
       { label: 'Fight', check: { stat: 'str', diff: 3 }, success: { text: 'You eat the ones that try to eat you.', food: 4, dna: 1, opinion: -15 }, fail: { text: 'They take their share of you.', pop: -2 } },
@@ -122,7 +122,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'dead_giant', stage: 'cell', title: 'The Dead Giant', tags: ['food'],
+    id: 'dead_giant', prop: 'carcass', stage: 'cell', title: 'The Dead Giant', tags: ['food'],
     text: 'The body of an enormous cell sinks past you toward the seafloor.',
     options: [
       { label: 'Feast', result: { text: 'Plenty for everyone, and you got here first.', food: 4, trait: 'scavenger', anim: 'eat' } },
@@ -157,7 +157,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'cell_division', stage: 'cell', title: 'Runaway Division', tags: ['social'],
+    id: 'cell_division', prop: 'bubbles', stage: 'cell', title: 'Runaway Division', tags: ['social'],
     text: 'Conditions are perfect. Your cells begin dividing faster than ever.',
     options: [
       { label: 'Let it happen', check: { stat: 'tou', diff: 2 }, success: { text: 'The colony swells.', pop: 2, anim: 'grow' }, fail: { text: 'Too fast. Many come out wrong.', pop: -1, dna: 2, anim: 'mutate' } },
@@ -165,7 +165,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'colony_split', stage: 'cell', title: 'A Split Colony', tags: ['danger'], multi: true,
+    id: 'colony_split', prop: 'current', stage: 'cell', title: 'A Split Colony', tags: ['danger'], multi: true,
     text: 'A current tears your colony in two. The halves drift apart.',
     options: [
       { label: 'Swim back together', check: { stat: 'spd', diff: 3 }, success: { text: 'You find each other again.', dna: 2 }, fail: { text: 'Half of you is lost to the current.', pop: -2 } },
@@ -182,7 +182,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'lean_tide', stage: 'cell', title: 'Lean Tide', repeat: true, weight: 0.6, tags: ['food'],
+    id: 'lean_tide', prop: 'current', stage: 'cell', title: 'Lean Tide', repeat: true, weight: 0.6, tags: ['food'],
     text: 'The tide goes out and takes the food with it.',
     options: [
       { label: 'Tighten your membrane and wait', result: { text: 'You make do with less.', food: -2, anim: 'rest' } },
@@ -201,7 +201,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'cell_finale', stage: 'cell', finale: true, title: 'The Edge of the Sea',
+    id: 'cell_finale', prop: 'shore', stage: 'cell', finale: true, title: 'The Edge of the Sea',
     text: 'Your colony has become a creature, small but complex. Above, light pours through the surface. Beyond it, the shore. Below, the open sea stretches out forever. Where will your descendants live?',
     options: [
       { label: 'Crawl onto the land', hint: 'Become a land creature', check: { stat: 'spd', diff: 2 }, success: { text: 'You drag yourself out into the air. The land is yours to claim.', habitat: 'land', trait: 'land_pioneer', anim: 'flee' }, fail: { text: 'The sun dries you out. You slide back into the water to try again another day.', pop: -2, setback: 4 } },
@@ -213,7 +213,7 @@ G.EVENTS = [
 
   // ======================= CREATURE STAGE (both habitats) =======================
   {
-    id: 'stalker', stage: 'creature', title: 'The Stalker', tags: ['danger'], species: 'predator',
+    id: 'stalker', prop: 'night', stage: 'creature', title: 'The Stalker', tags: ['danger'], species: 'predator',
     text: 'A {them} has started following your herd. Every night, one fewer of you comes home.',
     options: [
       { label: 'Turn and fight', check: { stat: 'str', diff: 4 }, success: { text: 'It flees, bleeding. Your young will remember this.', dna: 3, trait: 'aggressive', opinion: -20 }, fail: { text: 'It drags another one away.', pop: -3 } },
@@ -223,7 +223,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'mating_season', stage: 'creature', title: 'Mating Season', tags: ['social'],
+    id: 'mating_season', prop: 'hearts', stage: 'creature', title: 'Mating Season', tags: ['social'],
     text: 'The season turns. Your kind is restless, calling and displaying.',
     options: [
       { label: 'Dazzling displays', check: { stat: 'cha', diff: 3 }, success: { text: 'The most beautiful have many young.', dna: 4, pop: 2, anim: 'social' }, fail: { text: 'Nobody is impressed.', dna: 1 } },
@@ -260,7 +260,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'drought', stage: 'creature', title: 'Drought', habitat: 'land', tags: ['food', 'danger'],
+    id: 'drought', prop: 'drought', stage: 'creature', title: 'Drought', habitat: 'land', tags: ['food', 'danger'],
     text: 'The rains have not come. Your rivers shrink to puddles, and your young grow thin.',
     options: [
       { label: 'Migrate', check: { stat: 'spd', diff: 3 }, success: { text: 'You find a valley the drought has not reached.', food: 2, trait: 'migratory', anim: 'flee' }, fail: { text: 'The journey costs you.', pop: -2, food: -2 } },
@@ -269,7 +269,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'strange_fruit', stage: 'creature', title: 'Strange Fruit', habitat: 'land', tags: ['food'], species: 'neighbor',
+    id: 'strange_fruit', prop: 'fruit', stage: 'creature', title: 'Strange Fruit', habitat: 'land', tags: ['food'], species: 'neighbor',
     text: 'A tree near your nests is heavy with purple fruit. You notice that nothing else eats it.',
     options: [
       { label: 'Eat it', req: { diet: ['herb', 'omni'] }, check: { stat: 'tou', diff: 2 }, success: { text: 'Sweet, and strangely energizing.', food: 3, dna: 2 }, fail: { text: 'Now you know why nothing eats it.', pop: -2 } },
@@ -278,7 +278,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'nest_raiders', stage: 'creature', title: 'Nest Raiders', tags: ['danger'], species: 'rival',
+    id: 'nest_raiders', prop: 'nest', stage: 'creature', title: 'Nest Raiders', tags: ['danger'], species: 'rival',
     text: 'Something has been stealing from your nests at night. You find {them} tracks.',
     options: [
       { label: 'Chase them down', check: { stat: 'spd', diff: 3 }, success: { text: 'They will not be back.', food: 2, opinion: -20, anim: 'attack' }, fail: { text: 'They get away with plenty.', food: -2 } },
@@ -287,7 +287,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'ancient_bones', stage: 'creature', title: 'Ancient Bones', tags: ['explore'],
+    id: 'ancient_bones', prop: 'bones', stage: 'creature', title: 'Ancient Bones', tags: ['explore'],
     text: 'Fossils lie exposed after a storm. Something in you recognizes the shapes.',
     options: [
       { label: 'Linger and remember', result: { text: 'Your lineage remembers where it came from.', dna: 3, anim: 'rest' } },
@@ -313,7 +313,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'plague', stage: 'creature', title: 'Sickness', tags: ['danger'],
+    id: 'plague', prop: 'sickness', stage: 'creature', title: 'Sickness', tags: ['danger'],
     text: 'A sickness is spreading through your herd. Coughing, then stillness.',
     options: [
       { label: 'Keep the sick apart', check: { stat: 'cun', diff: 3 }, success: { text: 'The sickness burns out.', dna: 2 }, fail: { text: 'Too late.', pop: -3 } },
@@ -322,7 +322,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'night_hunters', stage: 'creature', title: 'Eyes in the Dark', tags: ['danger'], species: 'predator',
+    id: 'night_hunters', prop: 'night', stage: 'creature', title: 'Eyes in the Dark', tags: ['danger'], species: 'predator',
     text: 'At night, {them} circle your resting herd.',
     options: [
       { label: 'Light up the night', req: { keyword: ['glow', 2] }, result: { text: 'Your glow reveals them, and they slink away.', dna: 3, trait: 'dazzling', anim: 'mutate' } },
@@ -331,7 +331,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'trapped_neighbor', stage: 'creature', title: 'Trapped', tags: ['social'], species: 'neighbor',
+    id: 'trapped_neighbor', prop: 'tar', stage: 'creature', title: 'Trapped', tags: ['social'], species: 'neighbor',
     text: 'One of the {them} is stuck fast and crying out. Its herd watches you.',
     options: [
       { label: 'Pull it free', check: { stat: 'str', diff: 2 }, success: { text: 'The {them} will remember your kindness.', opinion: 40, trait: 'gentle', anim: 'social' }, fail: { text: 'You nearly get stuck yourself.', pop: -1, opinion: 10 } },
@@ -349,7 +349,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'hungry_winter', stage: 'creature', title: 'Hungry Season', tags: ['food'], species: 'rival', repeat: true, weight: 0.6,
+    id: 'hungry_winter', prop: 'snow', stage: 'creature', title: 'Hungry Season', tags: ['food'], species: 'rival', repeat: true, weight: 0.6,
     text: 'The cold season comes early. Food is scarce everywhere.',
     options: [
       { label: 'Tighten your belts', result: { text: 'Everyone eats a little less.', food: -3, anim: 'rest' } },
@@ -367,7 +367,7 @@ G.EVENTS = [
 
   // ----- Land only -----
   {
-    id: 'wildfire', stage: 'creature', habitat: 'land', title: 'Wildfire', tags: ['danger'],
+    id: 'wildfire', prop: 'fire', stage: 'creature', habitat: 'land', title: 'Wildfire', tags: ['danger'],
     text: 'Lightning strikes the dry grass. Within moments, flames race toward your herd.',
     options: [
       { label: 'Run', check: { stat: 'spd', diff: 3 }, success: { text: 'You outrun the flames.', dna: 1 }, fail: { text: 'Not everyone makes it out.', pop: -3 } },
@@ -376,7 +376,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'tall_trees', stage: 'creature', habitat: 'land', title: 'The Tall Forest', tags: ['explore', 'food'],
+    id: 'tall_trees', prop: 'tree', stage: 'creature', habitat: 'land', title: 'The Tall Forest', tags: ['explore', 'food'],
     text: 'Your herd reaches a forest where the best fruit hangs high above.',
     options: [
       { label: 'Climb', req: { tag: 'grasp' }, result: { text: 'You climb into a world of fruit and safety.', food: 4, dna: 2, anim: 'flee' } },
@@ -385,7 +385,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'mud_flats', stage: 'creature', habitat: 'land', title: 'Sinking Mud', tags: ['danger'], species: 'any',
+    id: 'mud_flats', prop: 'tar', stage: 'creature', habitat: 'land', title: 'Sinking Mud', tags: ['danger'], species: 'any',
     text: 'The ground gives way. Your herd is stuck in deep mud, and the {them} are watching.',
     options: [
       { label: 'Haul yourselves out', check: { stat: 'str', diff: 3 }, success: { text: 'You drag yourselves free.', dna: 2 }, fail: { text: 'Some do not get out.', pop: -2 } },
@@ -394,7 +394,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'cave', stage: 'creature', habitat: 'land', title: 'The Cave', tags: ['explore'],
+    id: 'cave', prop: 'cave', stage: 'creature', habitat: 'land', title: 'The Cave', tags: ['explore'],
     text: 'A storm drives your herd into a deep cave. Something has lived here before.',
     options: [
       { label: 'Make it home', check: { stat: 'tou', diff: 3 }, success: { text: 'Warm and safe. Your young thrive here.', pop: 2, anim: 'rest' }, fail: { text: 'Its owner comes back.', pop: -2 } },
@@ -404,7 +404,7 @@ G.EVENTS = [
 
   // ----- Sea only -----
   {
-    id: 'kelp_forest', stage: 'creature', habitat: 'sea', title: 'Kelp Forest', tags: ['food'], species: 'prey',
+    id: 'kelp_forest', prop: 'kelp', stage: 'creature', habitat: 'sea', title: 'Kelp Forest', tags: ['food'], species: 'prey',
     text: 'A swaying kelp forest rises around you, full of hiding {them}.',
     options: [
       { label: 'Graze the kelp', req: { diet: ['herb', 'omni'] }, result: { text: 'Endless food, swaying in the light.', food: 4 } },
@@ -413,7 +413,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'whirlpool', stage: 'creature', habitat: 'sea', title: 'Whirlpool', tags: ['danger'],
+    id: 'whirlpool', prop: 'whirlpool', stage: 'creature', habitat: 'sea', title: 'Whirlpool', tags: ['danger'],
     text: 'The tide turns violently and a whirlpool opens beneath your pod.',
     options: [
       { label: 'Swim against it', check: { stat: 'spd', diff: 3 }, success: { text: 'You break free.', dna: 2, anim: 'flee' }, fail: { text: 'It pulls some of you under.', pop: -2 } },
@@ -421,7 +421,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'whale_fall', stage: 'creature', habitat: 'sea', title: 'Whale Fall', tags: ['food'],
+    id: 'whale_fall', prop: 'carcass', stage: 'creature', habitat: 'sea', title: 'Whale Fall', tags: ['food'],
     text: 'Something huge has died and sunk to the seafloor near you. It will feed the deep for years.',
     options: [
       { label: 'Feast', result: { text: 'More food than you can eat.', food: 5, trait: 'scavenger', anim: 'eat' } },
@@ -429,7 +429,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'song', stage: 'creature', habitat: 'sea', title: 'A Song in the Water', tags: ['social', 'explore'], species: 'neighbor',
+    id: 'song', prop: 'notes', stage: 'creature', habitat: 'sea', title: 'A Song in the Water', tags: ['social', 'explore'], species: 'neighbor',
     text: 'Low, long sounds roll through the water. The {them} are singing to each other.',
     options: [
       { label: 'Sing back', check: { stat: 'cha', diff: 3 }, success: { text: 'They answer. Something passes between you.', opinion: 30, dna: 2, insight: 1, anim: 'social' }, fail: { text: 'Your call falls flat.', opinion: -5 } },
@@ -466,7 +466,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'great_migration', stage: 'creature', era: 2, title: 'The Great Migration', tags: ['explore', 'food'], species: 'prey',
+    id: 'great_migration', prop: 'dust', stage: 'creature', era: 2, title: 'The Great Migration', tags: ['explore', 'food'], species: 'prey',
     text: 'Countless {them} are on the move, heading across the world. Your herd watches them pass.',
     options: [
       { label: 'Join the migration', check: { stat: 'spd', diff: 4 }, success: { text: 'You travel the world and see wonders.', dna: 4, food: 3, trait: 'migratory', anim: 'flee' }, fail: { text: 'The long road takes its toll.', pop: -2 } },
@@ -486,7 +486,7 @@ G.EVENTS = [
 
   // ----- Dawn of Mind (era 3) -----
   {
-    id: 'clever_young', stage: 'creature', era: 3, title: 'A Clever Youngster', tags: ['explore'],
+    id: 'clever_young', prop: 'stick', stage: 'creature', era: 3, title: 'A Clever Youngster', tags: ['explore'],
     text: 'One of your young is solving puzzles nobody taught it: cracking shells with stones, moving logs to reach fruit.',
     options: [
       { label: 'Let the others copy it', check: { stat: 'cun', diff: 4 }, success: { text: 'Soon everyone is doing it.', insight: 4, dna: 2 }, fail: { text: 'The others do not get it.', insight: 1 } },
@@ -494,7 +494,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'stick_tool', stage: 'creature', era: 3, title: 'A Curious Stick', tags: ['explore', 'food'],
+    id: 'stick_tool', prop: 'stick', stage: 'creature', era: 3, title: 'A Curious Stick', tags: ['explore', 'food'],
     text: 'One of your kind picks up a stick and pokes it into an insect nest. It comes out covered in food.',
     options: [
       { label: 'Pass it on', req: { tag: 'grasp' }, result: { text: 'Soon everyone fishes for insects.', food: 3, insight: 3, anim: 'eat' } },
@@ -502,7 +502,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'mourning', stage: 'creature', era: 3, title: 'Mourning', tags: ['social'],
+    id: 'mourning', prop: 'bones', stage: 'creature', era: 3, title: 'Mourning', tags: ['social'],
     text: 'An old matriarch has died. The herd will not leave her body. They stand around her, silent.',
     options: [
       { label: 'Stay with her', result: { text: 'Something new is born in your kind: remembering those who are gone.', insight: 3, pop: -1, anim: 'rest' } },
@@ -510,7 +510,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'shared_signs', stage: 'creature', era: 3, title: 'Signs and Signals', tags: ['social'], species: 'neighbor',
+    id: 'shared_signs', prop: 'notes', stage: 'creature', era: 3, title: 'Signs and Signals', tags: ['social'], species: 'neighbor',
     text: 'Your kind has begun to make the same sounds for the same things. Even the {them} seem to understand some of them.',
     options: [
       { label: 'Speak to the {them}', check: { stat: 'cha', diff: 5 }, success: { text: 'You understand each other, a little.', opinion: 40, insight: 3, anim: 'social' }, fail: { text: 'Confusion, then fear.', opinion: -15 } },
@@ -518,7 +518,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'hostile_raid', stage: 'creature', title: 'The {them} Attack', tags: ['danger'], species: 'hostile', repeat: true, weight: 3,
+    id: 'hostile_raid', prop: 'dust', stage: 'creature', title: 'The {them} Attack', tags: ['danger'], species: 'hostile', repeat: true, weight: 3,
     text: 'The {them} have not forgotten. They charge into your territory at dawn.',
     options: [
       { label: 'Hold the line', check: { stat: 'tou', diff: 4 }, success: { text: 'They break against you and retreat.', dna: 2, opinion: 10 }, fail: { text: 'They trample your nests.', pop: -3 } },
@@ -547,7 +547,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'spark_of_mind', stage: 'creature', milestone: true, title: 'The Spark of Mind',
+    id: 'spark_of_mind', prop: 'sparks', stage: 'creature', milestone: true, title: 'The Spark of Mind',
     text: 'Something has changed behind your eyes. Your kind has begun to wonder. Now you will earn Insight every turn and can research the Mind tree, like culture innovations.',
     options: [
       { label: 'Wonder about the world', hint: '+1 Insight per turn', result: { text: 'Every question leads to another.', trait: 'inquisitive', anim: 'mutate' } },
@@ -556,16 +556,17 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'creature_finale', stage: 'creature', finale: true, habitat: 'land', title: 'The First Tribe',
+    id: 'creature_finale', prop: 'fire', stage: 'creature', finale: true, habitat: 'land', title: 'The First Tribe',
     text: 'Your kind knows itself now. Around you, the world waits. What you do next decides how your people begin.',
     options: [
-      { label: 'Tame the fire', check: { stat: 'cun', diff: 5 }, success: { text: 'You carry a burning branch home. You are the Firekeepers.', legacy: 'firekeepers', anim: 'mutate' }, fail: { text: 'The fire takes more than it gives. Not yet.', pop: -3, setback: 0 } },
+      { label: 'Tame the fire', req: { innovation: 'stone_tools' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You carry a burning branch home. You are the Firekeepers.', legacy: 'firekeepers', anim: 'mutate' }, fail: { text: 'The fire takes more than it gives. Not yet.', pop: -3, setback: 0 } },
       { label: 'Unite the peoples of the valley', req: { innovation: 'vocal_language' }, check: { stat: 'cha', diff: 5 }, success: { text: 'Other species gather with yours under one sky. You are the Unifiers.', legacy: 'unifiers', anim: 'social' }, fail: { text: 'The gathering ends in a stampede. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Conquer the valley with tools', req: { innovation: 'stone_tools' }, check: { stat: 'str', diff: 5 }, success: { text: 'Armed with stone, nothing can stand against you. You are the Conquerors.', legacy: 'conquerors', anim: 'attack' }, fail: { text: 'A war with no winners. Not yet.', pop: -3, setback: 0 } },
+      { label: 'Spread to every corner of the land', check: { stat: 'spd', diff: 5 }, success: { text: 'Your kind walks over every horizon and settles everywhere. You are the Wanderers.', legacy: 'wanderers', anim: 'flee' }, fail: { text: 'The far lands turn you back. Not yet.', pop: -3, setback: 0 } },
+      { label: 'Conquer the valley with war bands', req: { innovation: 'war_bands' }, check: { stat: 'str', diff: 5 }, success: { text: 'Your war bands sweep the valley. Nothing can stand against you. You are the Conquerors.', legacy: 'conquerors', anim: 'attack' }, fail: { text: 'A war with no winners. Not yet.', pop: -3, setback: 0 } },
     ],
   },
   {
-    id: 'creature_finale_sea', stage: 'creature', finale: true, habitat: 'sea', title: 'The First Pod',
+    id: 'creature_finale_sea', prop: 'notes', stage: 'creature', finale: true, habitat: 'sea', title: 'The First Pod',
     text: 'Your kind knows itself now. The ocean is vast, and it is listening. What you do next decides how your people begin.',
     options: [
       { label: 'Sing the first song', check: { stat: 'cha', diff: 5 }, success: { text: 'A song that carries across whole oceans. You are the Deep Singers.', legacy: 'deep_singers', anim: 'social' }, fail: { text: 'The song falls apart. Not yet.', pop: -3, setback: 0 } },
@@ -576,7 +577,7 @@ G.EVENTS = [
 
   // ======================= ANY STAGE =======================
   {
-    id: 'mutation_burst', stage: 'any', title: 'Mutation Burst', repeat: true, weight: 0.6, tags: ['explore'],
+    id: 'mutation_burst', prop: 'stars', stage: 'any', title: 'Mutation Burst', repeat: true, weight: 0.6, tags: ['explore'],
     text: 'Cosmic radiation scrambles part of your genetic code.',
     options: [
       { label: 'Embrace the change', hint: 'Random mutation', result: { text: 'Something new grows.', randomPart: true } },
@@ -599,6 +600,7 @@ G.LEGACIES = {
   firekeepers: { name: 'The Firekeepers', desc: 'Your tribe will begin with fire.' },
   unifiers: { name: 'The Unifiers', desc: 'Your tribe will begin with allies.' },
   conquerors: { name: 'The Conquerors', desc: 'Your tribe will begin feared and armed.' },
+  wanderers: { name: 'The Wanderers', desc: 'Your tribes will begin scattered across the whole world.' },
   deep_singers: { name: 'The Deep Singers', desc: 'Your people will begin with a language that crosses oceans.' },
   reef_builders: { name: 'The Reef Builders', desc: 'Your people will begin with a city of coral.' },
   tide_lords: { name: 'The Tide Lords', desc: 'Your people will begin as masters of the sea.' },

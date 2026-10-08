@@ -91,6 +91,9 @@ window.G = window.G || {};
     return `${G.PART[slot.merged].adj} ${base.name}`;
   };
 
+  // What the renderer needs to draw a body. Other species have the same shape.
+  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, hue: G.ARCHETYPE[run.archetype].color, traits: run.traits });
+
   G.hasTag = (run, tag) => G.partIds(run).some((id) => (G.PART[id].tags || []).includes(tag));
 
   G.keywordCounts = function (run) {
@@ -140,17 +143,28 @@ window.G = window.G || {};
   G.mod = (run, key) => modSources(run).reduce((s, m) => s + ((m && m[key]) || 0), 0);
   // Cells start a little sturdier so early checks are not hopeless.
   G.stat = (run, key) => Math.max(0, (run.stage === 'cell' ? 2 : 1) + G.mod(run, key));
-  G.maxPop = (run) => Math.max(3, run.baseMaxPop + G.mod(run, 'maxPop'));
+  // Event gains and losses are written for a herd of about 10.
+  G.popScale = (run) => Math.max(1, G.maxPop(run) / 10);
+  G.sizeOf = (run) => (run.traits.includes('giant') ? 'giant' : run.traits.includes('small_many') ? 'small' : 'mid');
+  // Max Population grows with every milestone, then scales with body size:
+  // small creatures live in big herds, giants in small ones.
+  G.maxPop = (run) => {
+    const base = run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage === 'creature' ? 3 : 0) + (run.era - 1) * 3 + G.mod(run, 'maxPop');
+    return Math.max(3, Math.round(base * G.SIZES[G.sizeOf(run)].popMult));
+  };
   G.foodCap = (run) => Math.max(4, run.baseFoodCap + G.mod(run, 'foodCap'));
-  G.upkeep = (run) => Math.max(1, Math.ceil(run.pop / 2) + G.mod(run, 'upkeep'));
+  // Every member eats a share: mid-sized creatures 1 Food per 2 members, small per 3, giants per 1.5.
+  G.upkeep = (run) => Math.max(1, Math.ceil(run.pop / G.SIZES[G.sizeOf(run)].eatDiv) + G.mod(run, 'upkeep'));
   G.growthCost = (run) => Math.max(1, G.GROWTH_COST + (run.instinct === 'breed' ? -1 : 0) + G.mod(run, 'growthCost'));
 
   // Food gathered each turn, with a breakdown for the UI.
   G.income = function (run) {
     const diet = G.diet(run);
     const parts = [{ label: 'Scraps', v: 1 }];
-    if (run.instinct === 'forage') parts.push({ label: 'Foraging', v: 2 + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0) });
-    if (run.instinct === 'hunt') parts.push({ label: 'Hunting', v: 2 + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) });
+    // More members means more mouths, but also more gatherers.
+    const crew = Math.floor(run.pop / 4);
+    if (run.instinct === 'forage') parts.push({ label: 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0) });
+    if (run.instinct === 'hunt') parts.push({ label: 'Hunting', v: 2 + crew + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) });
     if (run.instinct === 'explore' || run.instinct === 'hide') parts.push({ label: G.INSTINCT[run.instinct].name, v: -1 });
     const fpt = G.mod(run, 'foodPerTurn');
     if (fpt) parts.push({ label: 'Helpers and allies', v: fpt });
@@ -161,8 +175,8 @@ window.G = window.G || {};
   G.dnaPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0));
   G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 3) + G.mod(run, 'insightPerTurn') : 0);
 
-  // Checks get harder in later eras and the longer you linger in one (up to +2).
-  G.difficulty = (run, base) => base + (run.era - 1) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  // Checks get harder as a creature, in later eras, and the longer you linger in one (up to +2).
+  G.difficulty = (run, base) => base + (run.stage === 'creature' ? 1 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   G.chance = (run, stat, base) => clamp(50 + (G.stat(run, stat) - G.difficulty(run, base)) * 12, 5, 95);
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
@@ -191,6 +205,25 @@ window.G = window.G || {};
   function noteParts(run) { G.partIds(run).forEach((pid) => addUnique(G.meta.codex.parts, pid)); }
 
   // ---------- Species ----------
+  // Other species are built from the same parts as you, so they can be drawn and inspected.
+  function makeBody(world, diet) {
+    const plan = world === 'cell' ? 'cell' : world;
+    const stage = world === 'cell' ? 'cell' : 'creature';
+    const multicellular = world !== 'cell' || rand() < 0.4;
+    const parts = {};
+    G.SLOTS[plan].forEach((slot) => {
+      if (slot.multi && !multicellular) return;
+      if (slot.id !== 'mouth' && rand() > (stage === 'cell' ? 0.6 : 0.7)) return;
+      let pool = G.PARTS.filter((p) => p.stage === stage && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === world));
+      if (slot.id === 'mouth') pool = pool.filter((p) => (diet === 'omni' ? !!p.diet : p.diet === diet));
+      if (!pool.length) return;
+      const first = pick(pool);
+      const second = stage === 'creature' && rand() < 0.2 ? pick(pool.filter((p) => p.id !== first.id)) : null;
+      parts[slot.id] = { id: first.id, merged: second ? second.id : null };
+    });
+    return { plan, stage, multicellular, parts };
+  }
+
   function makeSpecies(world, roles) {
     const names = G.SPECIES_NAMES[world];
     const used = new Set();
@@ -200,9 +233,18 @@ window.G = window.G || {};
       used.add(name);
       const opinion = { predator: -35, prey: -10, rival: -5, neighbor: 10 }[role] + Math.round(rand() * 20) - 10;
       const diet = role === 'predator' ? 'carn' : role === 'prey' ? 'herb' : pick(['herb', 'carn', 'omni']);
-      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: role === 'predator' ? 1.4 : role === 'prey' ? 0.7 : 1, seed: Math.floor(rand() * 1000) };
+      const body = makeBody(world, diet);
+      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: role === 'predator' ? 1.4 : role === 'prey' ? 0.7 : 1, seed: Math.floor(rand() * 1000), world, ...body };
     });
   }
+
+  const ROLE_BONUS = { predator: { str: 2, spd: 1 }, prey: { spd: 2, cun: 1 }, rival: { str: 1, tou: 1 }, neighbor: { cha: 2 } };
+  G.speciesStat = (s, key) => {
+    let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + (s.size >= 2 && (key === 'str' || key === 'tou') ? 3 : 0);
+    Object.values(s.parts || {}).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
+    return Math.max(0, v);
+  };
+  G.speciesBody = (s) => ({ stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2 ? ['giant'] : [] });
 
   // ---------- Starting and ending runs ----------
   G.newRun = function (archetypeId, originId, hostility) {
@@ -270,14 +312,17 @@ window.G = window.G || {};
 
   // Later eras are more dangerous: the Age of Giants and beyond hit 1 harder.
   function damage(run, n) {
-    const dmg = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce'));
+    // Event numbers are written for a herd of about 10, so they scale with your herd size.
+    // Small creatures lose even more members to the same blow.
+    const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce'));
+    const dmg = Math.max(1, Math.ceil(n2 * G.popScale(run) * G.SIZES[G.sizeOf(run)].damageMult));
     run.pop -= dmg;
     return dmg;
   }
 
   function grow(run, n) {
     const before = run.pop;
-    run.pop = Math.min(G.maxPop(run), run.pop + n);
+    run.pop = Math.min(G.maxPop(run), run.pop + Math.ceil(n * G.popScale(run)));
     return run.pop - before;
   }
 
@@ -292,6 +337,14 @@ window.G = window.G || {};
       const before = G.slotLabel(slot);
       slot.merged = part.id;
       text = `${before} merges with ${part.name}: ${G.slotLabel(slot)}`;
+    } else if (slot.merged && mode !== 'replace') {
+      // A merged slot stays merged: the new part swaps out one half.
+      const dropBase = mode === 'swapBase' || (mode !== 'swapMerged' && rand() < 0.5);
+      const gone = G.PART[dropBase ? slot.id : slot.merged];
+      const kept = dropBase ? slot.merged : slot.id;
+      const before = G.slotLabel(slot);
+      run.parts[part.slot] = { id: kept, merged: part.id };
+      text = `${part.name} takes the place of ${gone.name}: ${before} becomes ${G.slotLabel(run.parts[part.slot])}`;
     } else {
       const before = G.slotLabel(slot);
       run.parts[part.slot] = { id: part.id, merged: null };
@@ -373,6 +426,15 @@ window.G = window.G || {};
     if (res && (res.trait || res.insight)) return 'mutate';
     if (res && res.opinion > 0) return 'social';
     return 'rest';
+  }
+
+  // How your creature feels about what just happened, for its face.
+  function sceneMood(res, opt, success) {
+    if (res && res.mood) return res.mood;
+    if (res && res.pop < 0) return success === false ? 'dizzy' : 'sad';
+    if (success === false) return 'worried';
+    const anim = sceneAnim(res, opt, success);
+    return { attack: 'angry', flee: 'scared', eat: 'happy', social: 'love', rest: 'sleepy', mutate: 'surprised', grow: 'proud' }[anim] || 'happy';
   }
 
   // ---------- Events ----------
@@ -462,6 +524,8 @@ window.G = window.G || {};
       text: sub(res && res.text, run, sp),
       lines, success,
       anim: sceneAnim(res, opt, success),
+      prop: ev.prop || null,
+      mood: sceneMood(res, opt, success),
       species: sp,
       finale: !!ev.finale, milestone: ev.milestone ? ev.id : null,
       habitat: res && res.habitat, won: ev.finale && success !== false,
@@ -494,6 +558,13 @@ window.G = window.G || {};
   };
 
   function applyMilestone(run, id) {
+    const beforeMax = G.maxPop(run);
+    applyMilestoneInner(run, id);
+    const afterMax = G.maxPop(run);
+    if (afterMax !== beforeMax) run.notices.push(`Your ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} can now grow to ${afterMax} (was ${beforeMax}).`);
+  }
+
+  function applyMilestoneInner(run, id) {
     if (id === 'multicellularity') {
       run.multicellular = true;
       run.notices.push('You are multicellular. Two new body slots are open, and new mutations can now merge with old ones instead of replacing them.');
@@ -524,11 +595,11 @@ window.G = window.G || {};
       run.pop -= starve;
       lines.push({ t: `Starving: −${starve} Population`, bad: true });
     } else {
+      // Spare Food becomes young: bigger herds can raise more at once.
       const cost = G.growthCost(run);
-      if (run.food >= cost && run.pop < G.maxPop(run)) {
-        run.food -= cost; run.pop += 1;
-        lines.push({ t: `+1 Population (used ${cost} spare Food)`, good: true });
-      }
+      let born = 0;
+      while (run.food >= cost && run.pop < G.maxPop(run) && born < Math.ceil(G.popScale(run))) { run.food -= cost; run.pop += 1; born += 1; }
+      if (born) lines.push({ t: `+${born} Population (used ${born * cost} spare Food)`, good: true });
     }
     const regrow = G.mod(run, 'popPerTurn');
     if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} Population from symbionts`, good: true }); }
@@ -551,12 +622,19 @@ window.G = window.G || {};
 
   // ---------- Mind tree ----------
   G.innovationAvailable = function (run, inv) {
-    if (run.innovations.includes(inv.id)) return { ok: false, reason: 'Done' };
+    if (run.innovations.includes(inv.id)) return { ok: false, reason: 'Known' };
+    const blocker = run.innovations.find((id) => (inv.excludes || []).includes(id) || (G.INNOVATION[id].excludes || []).includes(inv.id));
+    if (blocker) return { ok: false, blocked: true, reason: `Blocked by ${G.INNOVATION[blocker].name}` };
     if (inv.tier > 1) {
       const prev = run.innovations.filter((id) => G.INNOVATION[id].tier === inv.tier - 1).length;
       if (prev < 2) return { ok: false, reason: `Needs 2 tier ${inv.tier - 1} innovations` };
     }
-    if (inv.req === 'grasp' && !G.hasTag(run, 'grasp')) return { ok: false, reason: 'Needs a part that can grasp' };
+    const r = inv.req || {};
+    if (r.diet && !r.diet.includes(G.diet(run))) return { ok: false, reason: `Only for ${r.diet.map((d) => G.DIET_NAMES[d].toLowerCase()).join(' or ')}s` };
+    if (r.stat && G.stat(run, r.stat[0]) < r.stat[1]) return { ok: false, reason: `Needs ${G.STATS.find((x) => x.id === r.stat[0]).name} ${r.stat[1]} (you have ${G.stat(run, r.stat[0])})` };
+    if (r.innovation && !r.innovation.some((id) => run.innovations.includes(id))) return { ok: false, reason: `Needs ${r.innovation.map((id) => G.INNOVATION[id].name).join(' or ')}` };
+    if (r.trait && !r.trait.some((t) => run.traits.includes(t))) return { ok: false, reason: `Needs a ${r.trait.map((t) => G.TRAITS[t].name).join(', ')} trait` };
+    if (r.tag === 'grasp' && !G.hasTag(run, 'grasp')) return { ok: false, reason: 'Needs a part that can grasp' };
     return { ok: true };
   };
 
@@ -685,14 +763,34 @@ window.G = window.G || {};
     run.dna = 3 * (G.meta.boons.memory || 0);
     run.draftsTaken = 0;
     run.finaleRetryAt = 0;
+    // Every cell part grows into a creature part. Matching parts merge.
+    const cellSlots = Object.values(run.parts);
     run.parts = {};
-    Object.entries(G.ARCHETYPE[run.archetype].start[run.habitat]).forEach(([slot, id]) => { run.parts[slot] = { id, merged: null }; });
+    const carried = [];
+    const place = (id) => {
+      const p = G.PART[id];
+      const slot = run.parts[p.slot];
+      if (!slot) { run.parts[p.slot] = { id, merged: null }; return true; }
+      if (!slot.merged && slot.id !== id) { slot.merged = id; return true; }
+      return false;
+    };
+    G.SLOTS.cell.forEach((cs) => {
+      const s = cellSlots.find((x) => x && G.PART[x.id].slot === cs.id);
+      if (!s) return;
+      [s.id, s.merged].filter(Boolean).forEach((cid) => {
+        const to = G.CARRY[cid] && G.CARRY[cid][run.habitat];
+        if (to && place(to)) carried.push({ from: G.PART[cid].name, to: G.PART[to].name });
+      });
+    });
+    // The archetype fills in anything essential that is still missing.
+    Object.entries(G.ARCHETYPE[run.archetype].start[run.habitat]).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
     run.species = makeSpecies(run.habitat, ['predator', 'prey', 'rival', 'neighbor']);
     run.pop = G.maxPop(run);
     run.lastEvent = null;
     run.lastTurn = null;
     noteParts(run);
-    run.evolved = { heritage, cellParts };
+    run.evolved = { heritage, cellParts, carried };
+    run.notices = [];
     log(run, `Your lineage ${run.habitat === 'land' ? 'leaves the water for the land' : 'claims the open sea'}. It carries the ${G.TRAITS[heritage].name} trait.`);
     run.phase = 'evolved';
   }
