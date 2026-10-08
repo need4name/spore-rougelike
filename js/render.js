@@ -850,7 +850,7 @@ window.G = window.G || {};
       const land = run.stage === 'creature' && run.habitat === 'land';
       const ground = land ? cy + S * 0.36 : null;
       const P = { w, h, cx, cy, S, k, t, success: sc.success, anim, ground };
-      P_SKIP_WORDS = !!story || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
+      P_SKIP_WORDS = !!story || !!sc.evolved || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
       if (sc.prop) drawProp(sc.prop, 'back', P);
       drawAmbient(run, w, h, t, S, sc.species);
       drawHerd(run, cx, cy, S, t, w, h);

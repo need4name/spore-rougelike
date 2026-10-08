@@ -410,8 +410,9 @@ window.G = window.G || {};
       text = `${part.name} replaces ${before}`;
     }
     addUnique(G.meta.codex.parts, part.id);
+    const before = run.parts[part.slot] && run.parts[part.slot].merged ? [G.PART[run.parts[part.slot].id].name, G.PART[run.parts[part.slot].merged].name] : null;
     const evo = tryEvolve(run, part.slot);
-    if (evo) text = `EVOLUTION! ${text}, and it becomes ${G.PART[evo.id].name}`;
+    if (evo) text = `${before[0]} + ${before[1]} evolved into ${G.PART[evo.id].name}!`;
     run.pop = Math.min(run.pop, G.maxPop(run));
     return text;
   }
