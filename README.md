@@ -33,6 +33,7 @@ There is no build step. Every file is plain HTML, CSS or JavaScript.
 | `js/render.js` | Draws your creature from its parts. |
 | `js/ui.js` | The screens and buttons. |
 | `css/style.css` | The look. |
+| `tools/audit.js` | Counts land vs sea content so gaps stay visible (`node tools/audit.js`). |
 
 ### Modifier keys (used by parts, traits, synergies, innovations, archetypes and worlds)
 
