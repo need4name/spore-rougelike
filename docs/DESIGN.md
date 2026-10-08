@@ -62,6 +62,4 @@ After every choice, a scene acts out what happened. When another species is invo
 
 ## Next steps
 
-1. Playtest the real-time pacing: about 75 ticks per run, about 30 in the Cell stage.
-2. Event chains (85 events so far, including body-plan, size and flight events).
-3. The Tribe stage, which starts from your ending.
+See [ROADMAP.md](ROADMAP.md) for the themed updates planned from here.
