@@ -137,7 +137,8 @@ window.G = window.G || {};
             <li>Watch every species roam the map. Herd size shows population. Tap any herd, or your portrait (top left), to inspect it.</li>
             <li>Your <b>Instinct</b> (top right) decides how you find food and which events find you.</li>
             <li>Each turn your Population eats Food. Spare Food grows your Population. Run out and you starve.</li>
-            <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts, which are recorded in the Codex and unlock new archetypes and worlds.</li>
+            <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
+            <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
           </ol>
@@ -197,7 +198,15 @@ window.G = window.G || {};
           </div>
         </div>
         <button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>
+        <div class="tb-row2">${speedControls(run)}</div>
       </header>`;
+  }
+
+  // Time controls live in the top bar, well away from event buttons.
+  function speedControls(run) {
+    const speeds = [['0', ICON.pause, 'Pause'], ['1', `${ICON.play}`, 'Normal speed'], ['2', `${ICON.play}${ICON.play}`, 'Fast'], ['3', `${ICON.play}${ICON.play}${ICON.play}`, 'Fastest']];
+    const live = run.phase === 'map';
+    return `<div class="speeds ${live ? '' : 'held'}" role="group" aria-label="Game speed">${speeds.map(([v, ic, label]) => `<button class="speed ${String(G.ui.speed) === v ? 'on' : ''}" data-act="speed" data-arg="${v}" aria-label="${label}" aria-pressed="${String(G.ui.speed) === v}">${ic}</button>`).join('')}</div>`;
   }
 
   // The next thing DNA is working toward, for the progress bar.
@@ -333,7 +342,7 @@ window.G = window.G || {};
             return `
             <div class="part-card">
               <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}</span>
-              <span class="opt-label">${esc(p.name)}${kwTags(p)}</span>
+              <span class="opt-label">${esc(p.name)}${kwTags(p)}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
               ${syn}
@@ -436,6 +445,7 @@ window.G = window.G || {};
         <p class="eyebrow">${r.victory ? 'Prototype complete' : 'Extinction'}</p>
         <h2>${r.victory ? esc(leg.name) : 'Your lineage is gone'}</h2>
         <p class="event-text">${r.victory ? `${esc(leg.desc)} The Tribe stage is coming in a future update.` : `${esc(r.cause)} It lasted ${run.turn} turns and reached the ${esc(G.STAGES[run.stage].name)}${run.stage === 'creature' ? ` (${esc(G.ERAS[run.era])})` : ''}.`}</p>
+        ${(() => { const fresh = G.meta.codex.evolutions.filter((id) => !(run.knownEvos || []).includes(id)); return fresh.length ? `<div class="callout"><strong>Unlocked for future runs</strong><span>${esc(listJoin(fresh.map((id) => G.PART[id].name)))} can now appear in mutation drafts.</span></div>` : ''; })()}
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
           <span>${b.base} from DNA collected${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.mult > 1 ? ` · ×${b.mult} hostility` : ''}</span>
@@ -454,13 +464,11 @@ window.G = window.G || {};
 
   // Over the world map: notices, what happened last turn, and the time controls.
   function mapHud(run) {
-    const speeds = [['0', ICON.pause, 'Pause'], ['1', `${ICON.play}`, 'Normal speed'], ['2', `${ICON.play}${ICON.play}`, 'Fast'], ['3', `${ICON.play}${ICON.play}${ICON.play}`, 'Fastest']];
     const last = run.lastTurn ? run.lastTurn.lines.map((l) => `<span class="${l.bad ? 'bad' : l.good ? 'good' : ''}">${esc(l.t)}</span>`).join('') : '';
     return `
       <div class="toasts">${(run.notices || []).slice(-3).map((n, i) => `<button class="toast" data-act="dismiss" data-arg="${i}">${esc(n)}</button>`).join('')}</div>
       <div class="hud-bottom">
         ${last ? `<div class="ledger">${last}</div>` : '<div class="ledger hint">Tap any herd to look closer.</div>'}
-        <div class="speeds" role="group" aria-label="Game speed">${speeds.map(([v, ic, label]) => `<button class="speed ${String(G.ui.speed) === v ? 'on' : ''}" data-act="speed" data-arg="${v}" aria-label="${label}" aria-pressed="${String(G.ui.speed) === v}">${ic}</button>`).join('')}</div>
       </div>`;
   }
 
@@ -645,8 +653,7 @@ window.G = window.G || {};
     return `
       <div class="game">
         <div id="tb"></div>
-        <div class="world"><canvas class="map" aria-label="World map"></canvas><div id="hud" class="map-hud"></div></div>
-        <div id="modal"></div>
+        <div class="world"><canvas class="map" aria-label="World map"></canvas><div id="hud" class="map-hud"></div><div id="modal"></div></div>
         <div id="sheet"></div>
         <div id="viewer"></div>
       </div>`;
@@ -759,7 +766,7 @@ window.G = window.G || {};
       case 'close-sheet': G.ui.sheet = null; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'view': G.ui.viewer = arg; parts = ['viewer']; break;
       case 'close-view': G.ui.viewer = null; parts = ['viewer']; break;
-      case 'speed': G.ui.speed = Number(arg); parts = ['hud']; break;
+      case 'speed': G.ui.speed = Number(arg); parts = ['top']; break;
       case 'dismiss': if (run) run.notices.splice(Math.max(0, run.notices.length - 3) + Number(arg), 1); parts = ['hud']; break;
       case 'abandon': G.ui.confirmAbandon = true; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'abandon-no': G.ui.confirmAbandon = false; G.ui.keepScroll = true; parts = ['sheet']; break;
@@ -812,7 +819,7 @@ window.G = window.G || {};
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && G.ui.viewer != null) { G.ui.viewer = null; render(['viewer']); return; }
     if (e.key === 'Escape' && G.ui.sheet) { G.ui.sheet = null; render(['sheet']); return; }
-    if (e.key === ' ' && G.ui.screen === 'game' && G.run && G.run.phase === 'map' && !e.target.closest('input')) { e.preventDefault(); G.ui.speed = G.ui.speed ? 0 : 1; render(['hud']); }
+    if (e.key === ' ' && G.ui.screen === 'game' && G.run && G.run.phase === 'map' && !e.target.closest('input')) { e.preventDefault(); G.ui.speed = G.ui.speed ? 0 : 1; render(['top']); }
   });
 
   render();

@@ -220,6 +220,7 @@ G.EVENTS = [
       { label: 'Move to new grounds', check: { stat: 'spd', diff: 3 }, success: { text: 'You leave it behind.', dna: 2, trait: 'migratory' }, fail: { text: 'It follows you.', pop: -2 } },
       { label: 'Let it bite something poisonous', req: { keyword: ['venom', 1] }, result: { text: 'It takes one bite of your poisoned skin and staggers away, sick.', dna: 3, trait: 'feared', opinion: -30, anim: 'attack' } },
       { label: 'Lead it toward another herd', req: { trait: 'aggressive' }, result: { text: 'Someone else pays the price this time.', dna: 2, anim: 'flee' } },
+      { label: 'Take to the sky', req: { tag: 'flight' }, result: { text: 'It snaps at empty air as your herd lifts away.', dna: 2, anim: 'flee', mood: 'proud' } },
     ],
   },
   {
@@ -265,6 +266,7 @@ G.EVENTS = [
     options: [
       { label: 'Migrate', check: { stat: 'spd', diff: 3 }, success: { text: 'You find a valley the drought has not reached.', food: 2, trait: 'migratory', anim: 'flee' }, fail: { text: 'The journey costs you.', pop: -2, food: -2 } },
       { label: 'Dig for water', req: { part: 'digging_forelegs' }, result: { text: 'Your forelegs find water under the riverbed.', pop: 1, dna: 2 } },
+      { label: 'Fly to a distant lake', req: { tag: 'flight' }, result: { text: 'From the air, you spot water days away on foot.', food: 3, dna: 2, anim: 'flee' } },
       { label: 'Endure it', check: { stat: 'tou', diff: 3 }, success: { text: 'You wait it out.', dna: 2, anim: 'rest' }, fail: { text: 'Not everyone survives.', pop: -3 } },
     ],
   },
@@ -371,6 +373,7 @@ G.EVENTS = [
     text: 'Lightning strikes the dry grass. Within moments, flames race toward your herd.',
     options: [
       { label: 'Run', check: { stat: 'spd', diff: 3 }, success: { text: 'You outrun the flames.', dna: 1 }, fail: { text: 'Not everyone makes it out.', pop: -3 } },
+      { label: 'Fly above the smoke', req: { tag: 'flight' }, result: { text: 'From above, you watch the fire roll past.', dna: 2, insight: 1, anim: 'flee' } },
       { label: 'Shelter in the river', check: { stat: 'tou', diff: 2 }, success: { text: 'The water keeps you safe.', dna: 1, anim: 'rest' }, fail: { text: 'The heat is still terrible.', pop: -2 } },
       { label: 'Watch the flames', hint: 'Risky', check: { stat: 'cun', diff: 4 }, success: { text: 'You see how fire moves. One day this will matter.', dna: 3, insight: 2, trait: 'curious' }, fail: { text: 'You watched too long.', pop: -3 } },
     ],
@@ -382,6 +385,7 @@ G.EVENTS = [
       { label: 'Climb', req: { tag: 'grasp' }, result: { text: 'You climb into a world of fruit and safety.', food: 4, dna: 2, anim: 'flee' } },
       { label: 'Knock it down', check: { stat: 'str', diff: 3 }, success: { text: 'Fruit rains down.', food: 4, anim: 'attack' }, fail: { text: 'All that effort for a few bruised fruit.', food: 1 } },
       { label: 'Glide from tree to tree', req: { part: 'wing_membranes' }, result: { text: 'You soar through the canopy.', food: 3, dna: 3, anim: 'flee' } },
+      { label: 'Fly to the treetops', req: { tag: 'flight' }, result: { text: 'The best fruit is yours.', food: 5, anim: 'eat' } },
     ],
   },
   {
@@ -399,6 +403,25 @@ G.EVENTS = [
     options: [
       { label: 'Make it home', check: { stat: 'tou', diff: 3 }, success: { text: 'Warm and safe. Your young thrive here.', pop: 2, anim: 'rest' }, fail: { text: 'Its owner comes back.', pop: -2 } },
       { label: 'Explore deeper', check: { stat: 'cun', diff: 3 }, success: { text: 'You find strange crystals and an underground spring.', dna: 3, insight: 1, anim: 'flee' }, fail: { text: 'You get lost in the dark for days.', food: -3 } },
+    ],
+  },
+
+  {
+    id: 'cliff_nests', stage: 'creature', habitat: 'land', prop: 'tree', title: 'The High Cliffs', tags: ['explore', 'danger'], species: 'predator',
+    text: 'Your herd reaches tall cliffs. Ledges high above would be safe from the {them}, if you could get there.',
+    options: [
+      { label: 'Fly up and nest on the ledges', req: { tag: 'flight' }, result: { text: 'Your young hatch where nothing can reach them.', pop: 2, dna: 2, trait: 'cautious', anim: 'grow' } },
+      { label: 'Climb', req: { tag: 'grasp' }, check: { stat: 'str', diff: 3 }, success: { text: 'A hard climb, but worth it.', pop: 1, dna: 2 }, fail: { text: 'Some fall.', pop: -2 } },
+      { label: 'Shelter at the bottom', check: { stat: 'tou', diff: 3 }, success: { text: 'The cliff guards your back.', dna: 1 }, fail: { text: 'The {them} corner you.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'updraft', stage: 'creature', habitat: 'land', prop: 'dust', title: 'The Great Updraft', tags: ['explore'],
+    text: 'Hot wind roars up the valley walls, strong enough to lift anything with wings.',
+    options: [
+      { label: 'Ride the wind', req: { tag: 'flight' }, result: { text: 'You soar higher than ever and see the whole world below.', dna: 4, insight: 2, anim: 'flee', mood: 'proud' } },
+      { label: 'Spread your skin flaps', req: { part: 'wing_membranes' }, check: { stat: 'spd', diff: 3 }, success: { text: 'A long, wild glide.', dna: 3 }, fail: { text: 'A hard landing.', pop: -1 } },
+      { label: 'Hunker down', result: { text: 'The dust storm passes.', anim: 'rest' } },
     ],
   },
 

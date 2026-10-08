@@ -110,6 +110,32 @@ G.PARTS = [
   { id: 'glow_eyes', name: 'Glow Eyes', adj: 'Glowing', stage: 'creature', slot: 'senses', keywords: ['glow'], mods: { cun: 1, cha: 1 }, pack: 'deep', rarity: 2, desc: 'Eyes that shine back in the dark.' },
   { id: 'horned_brow', name: 'Horned Brow', adj: 'Horned', stage: 'creature', slot: 'senses', keywords: ['armor'], mods: { cun: 1, tou: 1 }, pack: 'armored', rarity: 2, desc: 'Eyes set deep under a bony ridge.' },
 
+  // Basic limbs. Every creature starts with these; merging them with limb mutations
+  // grows the advanced limbs below (which are locked until you first create them).
+  { id: 'stubby_forelegs', name: 'Stubby Forelegs', adj: 'Stubby', stage: 'creature', slot: 'frontLimbs', habitat: 'land', mods: { spd: 1 }, rarity: 3, desc: 'Short, simple legs. Merge them with limb mutations to grow something better.' },
+  { id: 'stubby_hindlegs', name: 'Stubby Hind Legs', adj: 'Stubby', stage: 'creature', slot: 'hindLimbs', habitat: 'land', mods: { spd: 1 }, rarity: 3, desc: 'Short, simple legs. Merge them with limb mutations to grow something better.' },
+  { id: 'stubby_front_fins', name: 'Stubby Fins', adj: 'Stubby', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', mods: { spd: 1 }, rarity: 3, desc: 'Simple fins. Merge them with fin mutations to grow something better.' },
+  { id: 'stubby_rear_fins', name: 'Stubby Rear Fins', adj: 'Stubby', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', mods: { spd: 1 }, rarity: 3, desc: 'Simple rear fins. Merge them with fin mutations to grow something better.' },
+  // Limb mutations: small on their own, but they reshape basic limbs when merged.
+  { id: 'long_bones_f', name: 'Long Bones', adj: 'Long', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'long', mods: { spd: 1 }, rarity: 3, desc: 'Longer limb bones. Merge with Stubby Forelegs.' },
+  { id: 'thick_muscle_f', name: 'Thick Muscle', adj: 'Muscled', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'muscle', mods: { str: 1 }, rarity: 3, desc: 'Bulging muscle. Merge with Stubby Forelegs.' },
+  { id: 'gripping_pads_f', name: 'Gripping Pads', adj: 'Gripping', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'grip', mods: { cun: 1 }, rarity: 3, desc: 'Grippy skin on the inside of the limb. Merge with Stubby Forelegs.' },
+  { id: 'bony_plates_f', name: 'Bony Plates', adj: 'Plated', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'plates', mods: { tou: 1 }, rarity: 3, desc: 'Armor along the limb. Merge with Stubby Forelegs.' },
+  { id: 'skin_flaps_f', name: 'Skin Flaps', adj: 'Flapped', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'flaps', mods: { spd: 1 }, rarity: 2, desc: 'Loose skin between limb and body. Merge with Stubby Forelegs.' },
+  { id: 'boneless_f', name: 'Soft Bones', adj: 'Boneless', stage: 'creature', slot: 'frontLimbs', limbMod: 'soft', mods: { cun: 1 }, rarity: 2, desc: 'Bones that bend like rope. Merge with basic front limbs.' },
+  { id: 'flight_feathers', name: 'Flight Feathers', adj: 'Feathered', stage: 'creature', slot: 'frontLimbs', habitat: 'land', limbMod: 'feathers', mods: { spd: 1, cha: 1 }, rarity: 2, desc: 'Long, stiff feathers. Merge with Wing Membranes to fly.' },
+  { id: 'long_bones_h', name: 'Long Bones', adj: 'Long', stage: 'creature', slot: 'hindLimbs', habitat: 'land', limbMod: 'long', mods: { spd: 1 }, rarity: 3, desc: 'Longer limb bones. Merge with Stubby Hind Legs.' },
+  { id: 'thick_muscle_h', name: 'Thick Muscle', adj: 'Muscled', stage: 'creature', slot: 'hindLimbs', habitat: 'land', limbMod: 'muscle', mods: { str: 1 }, rarity: 3, desc: 'Bulging muscle. Merge with Stubby Hind Legs.' },
+  { id: 'bony_plates_h', name: 'Bony Plates', adj: 'Plated', stage: 'creature', slot: 'hindLimbs', habitat: 'land', limbMod: 'plates', mods: { tou: 1 }, rarity: 3, desc: 'Armor along the limb. Merge with Stubby Hind Legs.' },
+  { id: 'springy_tendons_h', name: 'Springy Tendons', adj: 'Springy', stage: 'creature', slot: 'hindLimbs', habitat: 'land', limbMod: 'spring', mods: { spd: 1 }, rarity: 2, desc: 'Tendons like catapults. Merge with Stubby Hind Legs.' },
+  { id: 'balance_h', name: 'Balance Organ', adj: 'Balanced', stage: 'creature', slot: 'hindLimbs', habitat: 'land', limbMod: 'balance', mods: { cun: 1 }, rarity: 2, desc: 'A keen sense of balance. Merge with Stubby Hind Legs to stand upright.' },
+  { id: 'long_rays_sf', name: 'Long Fin Rays', adj: 'Long-rayed', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', limbMod: 'long', mods: { spd: 1 }, rarity: 3, desc: 'Longer fin spines. Merge with Stubby Fins.' },
+  { id: 'thick_muscle_sf', name: 'Thick Muscle', adj: 'Muscled', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', limbMod: 'muscle', mods: { str: 1 }, rarity: 3, desc: 'Bulging muscle. Merge with Stubby Fins.' },
+  { id: 'bony_plates_sf', name: 'Bony Plates', adj: 'Plated', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', limbMod: 'plates', mods: { tou: 1 }, rarity: 3, desc: 'Armor along the fin. Merge with Stubby Fins.' },
+  { id: 'long_rays_sh', name: 'Long Fin Rays', adj: 'Long-rayed', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', limbMod: 'long', mods: { spd: 1 }, rarity: 3, desc: 'Longer fin spines. Merge with Stubby Rear Fins.' },
+  { id: 'thick_muscle_sh', name: 'Thick Muscle', adj: 'Muscled', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', limbMod: 'muscle', mods: { str: 1 }, rarity: 3, desc: 'Bulging muscle. Merge with Stubby Rear Fins.' },
+  { id: 'boneless_sh', name: 'Soft Bones', adj: 'Boneless', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', limbMod: 'soft', mods: { cun: 1 }, rarity: 2, desc: 'Bones that bend like rope. Merge with Stubby Rear Fins.' },
+
   // Front limbs
   { id: 'slender_forelegs', name: 'Slender Forelegs', adj: 'Slender', stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], mods: { spd: 2 }, rarity: 3, desc: 'Long and light.' },
   { id: 'digging_forelegs', name: 'Digging Forelegs', adj: 'Burrowing', stage: 'creature', slot: 'frontLimbs', habitat: 'land', mods: { str: 1, forageBonus: 1 }, rarity: 3, desc: 'Short, strong and good at moving earth.' },
@@ -223,7 +249,8 @@ G.EVOLUTIONS = [
   { id: 'sentinel_ears', name: 'Sentinel Ears', adj: 'Watchful', from: ['big_eyes', 'great_ears'], stage: 'creature', slot: 'senses', habitat: 'land', mods: { cun: 3, spd: 1, damageReduce: 1 }, desc: 'Always on guard.' },
   { id: 'sonar', name: 'Sonar', adj: 'Sonar', from: ['echolocation', 'electroreceptors'], stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 4, cha: 1, huntBonus: 1 }, desc: 'Sees the whole ocean in sound.' },
   { id: 'workers_arms', name: "Worker's Arms", adj: 'Working', from: ['grasping_arms', 'digging_forelegs'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', tags: ['grasp'], mods: { str: 2, cun: 1, forageBonus: 2 }, desc: 'Strong, clever arms that build and dig.' },
-  { id: 'true_wings', name: 'True Wings', adj: 'Flying', from: ['slender_forelegs', 'wing_membranes'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], mods: { spd: 5, cun: 1 }, desc: 'Not gliding any more. Flying.' },
+  { id: 'true_wings', name: 'True Wings', adj: 'Flying', from: ['slender_forelegs', 'wing_membranes'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], tags: ['flight'], mods: { spd: 5, cun: 1 }, desc: 'Not gliding any more. Flying.' },
+  { id: 'feathered_wings', name: 'Feathered Wings', adj: 'Winged', from: ['wing_membranes', 'flight_feathers'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], tags: ['flight'], mods: { spd: 4, cun: 1, exploreBonus: 1 }, desc: 'Real wings. Your kind takes to the sky.' },
   { id: 'octo_arms', name: 'Octo-arms', adj: 'Octo', from: ['fore_tentacles', 'grasping_arms'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', tags: ['grasp'], mods: { str: 2, cun: 3 }, desc: 'Many arms, many uses.' },
   { id: 'wing_fins', name: 'Wing Fins', adj: 'Wing-finned', from: ['pectoral_fins', 'front_flippers'], stage: 'creature', slot: 'frontLimbs', habitat: 'sea', keywords: ['swift'], mods: { spd: 3, tou: 2 }, desc: 'You fly through the water.' },
   { id: 'clever_claws', name: 'Clever Claws', adj: 'Clever', from: ['grasping_fingers', 'sharp_claws'], stage: 'creature', slot: 'hands', habitat: 'land', tags: ['grasp'], mods: { str: 1, cun: 2, insightPerTurn: 1 }, desc: 'Claws that can also hold a stick.' },
@@ -255,9 +282,37 @@ G.EVOLUTIONS = [
   { id: 'wind_legs', name: 'Wind Legs', adj: 'Wind-swift', tier: 2, habitat: 'land', from: ['sprinter_legs', 'hopping_legs'], stage: 'creature', slot: 'hindLimbs', keywords: ['swift'], mods: { spd: 6, str: 2 }, desc: 'Legendary. You outrun the wind.' },
 ];
 
+// Advanced limbs are evolutions of basic limbs. They keep their own look.
+G.LIMB_RECIPES = [
+  ['slender_forelegs', 'stubby_forelegs', 'long_bones_f'],
+  ['digging_forelegs', 'stubby_forelegs', 'thick_muscle_f'],
+  ['grasping_arms', 'stubby_forelegs', 'gripping_pads_f'],
+  ['pillar_forelegs', 'stubby_forelegs', 'bony_plates_f'],
+  ['wing_membranes', 'stubby_forelegs', 'skin_flaps_f'],
+  ['fore_tentacles', 'stubby_forelegs', 'boneless_f'],
+  ['fore_tentacles', 'stubby_front_fins', 'boneless_f'],
+  ['runner_legs', 'stubby_hindlegs', 'long_bones_h'],
+  ['powerful_haunches', 'stubby_hindlegs', 'thick_muscle_h'],
+  ['pillar_legs', 'stubby_hindlegs', 'bony_plates_h'],
+  ['hopping_legs', 'stubby_hindlegs', 'springy_tendons_h'],
+  ['upright_legs', 'stubby_hindlegs', 'balance_h'],
+  ['pectoral_fins', 'stubby_front_fins', 'long_rays_sf'],
+  ['front_flippers', 'stubby_front_fins', 'thick_muscle_sf'],
+  ['armored_fins', 'stubby_front_fins', 'bony_plates_sf'],
+  ['pelvic_fins', 'stubby_rear_fins', 'long_rays_sh'],
+  ['rear_flippers', 'stubby_rear_fins', 'thick_muscle_sh'],
+  ['sea_tentacles', 'stubby_rear_fins', 'boneless_sh'],
+];
+
 G.RECIPE = {};
 G.recipeKey = (a, b) => [a, b].sort().join('+');
-G.EVOLUTIONS.forEach((e) => {
+G.LIMB_RECIPES.forEach(([id, a, b]) => {
+  const part = G.PART[id];
+  if (!part.from) { part.from = [a, b]; part.evolved = 1; part.limbEvo = true; part.looks = id; part.pack = undefined; G.EVOLUTIONS.push(part); }
+  G.RECIPE[[a, b].sort().join('+')] = id;
+});
+
+G.EVOLUTIONS.filter((e) => !e.limbEvo).forEach((e) => {
   e.evolved = e.tier || 1;
   e.rarity = 0;
   // Draw it like its first ingredient, tinted by the second.

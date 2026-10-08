@@ -209,10 +209,10 @@ window.G = window.G || {};
   };
 
   G.dnaPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0));
-  G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 3) + G.mod(run, 'insightPerTurn') : 0);
+  G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 5) + G.mod(run, 'insightPerTurn') : 0);
 
   // Checks get harder as a creature, in later eras, and the longer you linger in one (up to +2).
-  G.difficulty = (run, base) => base + (run.stage === 'creature' ? 1 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  G.difficulty = (run, base) => base + (run.stage === 'creature' ? 0.5 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   G.chance = (run, stat, base) => clamp(50 + (G.stat(run, stat) - G.difficulty(run, base)) * 12, 5, 95);
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
@@ -220,7 +220,8 @@ window.G = window.G || {};
   G.partPool = function (run) {
     const packs = G.meta.unlocked.packs;
     const slots = G.slotsFor(run).map((s) => s.id);
-    return G.PARTS.filter((p) => p.stage === run.stage && !p.evolved
+    const known = run.knownEvos || [];
+    return G.PARTS.filter((p) => p.stage === run.stage && (!p.evolved || known.includes(p.id))
       && slots.includes(p.slot)
       && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat)
       && (!p.pack || packs.includes(p.pack)));
@@ -250,13 +251,15 @@ window.G = window.G || {};
     G.SLOTS[plan].forEach((slot) => {
       if (slot.multi && !multicellular) return;
       if (slot.id !== 'mouth' && rand() > (stage === 'cell' ? 0.6 : 0.7)) return;
-      let pool = G.PARTS.filter((p) => p.stage === stage && !p.evolved && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === world));
+      let pool = G.PARTS.filter((p) => p.stage === stage && (!p.evolved || p.limbEvo) && !p.limbMod && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === world));
       if (slot.id === 'mouth') pool = pool.filter((p) => (diet === 'omni' ? !!p.diet : p.diet === diet));
       if (!pool.length) return;
       const first = pick(pool);
       const second = stage === 'creature' && rand() < 0.2 ? pick(pool.filter((p) => p.id !== first.id)) : null;
       parts[slot.id] = { id: first.id, merged: second ? second.id : null };
     });
+    // Some land species have wings.
+    if (world === 'land' && rand() < 0.22) parts.frontLimbs = { id: 'feathered_wings', merged: null };
     return { plan, stage, multicellular, parts };
   }
 
@@ -303,7 +306,7 @@ window.G = window.G || {};
       seen: [], log: [], notices: [],
       draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0,
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
-      quietTicks: 2, look: {},
+      quietTicks: 2, look: {}, knownEvos: G.meta.codex.evolutions.slice(),
     };
     Object.entries(arch.start.cell).forEach(([slot, id]) => { run.parts[slot] = { id, merged: null }; });
     run.pop = Math.min(run.pop, G.maxPop(run));
@@ -582,6 +585,7 @@ window.G = window.G || {};
     else if (req.trait && !run.traits.includes(req.trait)) reason = `Needs the ${G.TRAITS[req.trait].name} trait`;
     else if (req.part && !G.partIds(run).includes(req.part)) reason = `Needs ${G.PART[req.part].name}`;
     else if (req.tag === 'grasp' && !G.hasTag(run, 'grasp')) reason = 'Needs a part that can grasp (hands, arms, tentacles, trunk)';
+    else if (req.tag === 'flight' && !G.hasTag(run, 'flight')) reason = 'Needs wings that can fly';
     else if (req.innovation && !run.innovations.includes(req.innovation)) reason = `Needs the ${G.INNOVATION[req.innovation].name} innovation`;
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
     const out = { ok: !reason, reason };
@@ -829,7 +833,7 @@ window.G = window.G || {};
     let pool = G.partPool(run).filter((p) => !have.includes(p.id));
     const out = [];
     while (out.length < n && pool.length) {
-      const p = weightedPick(pool, (x) => (x.rarity || 2)
+      const p = weightedPick(pool, (x) => (x.evolved ? (x.limbEvo ? 2 : x.evolved === 2 ? 0.4 : 1) : (x.rarity || 2))
         * (boost && (x.keywords || []).includes(boost) ? 3 : 1)
         * (empty.includes(x.slot) ? 2 : 1));
       out.push(p.id);
@@ -919,6 +923,9 @@ window.G = window.G || {};
     });
     // The archetype fills in anything essential that is still missing.
     Object.entries(G.ARCHETYPE[run.archetype].start[run.habitat]).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
+    // Everyone starts with basic limbs, which grow into better ones by merging.
+    const basic = run.habitat === 'sea' ? { frontLimbs: 'stubby_front_fins', hindLimbs: 'stubby_rear_fins' } : { frontLimbs: 'stubby_forelegs', hindLimbs: 'stubby_hindlegs' };
+    Object.entries(basic).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
     run.species = makeSpecies(run.habitat, ['predator', 'prey', 'rival', 'neighbor']);
     run.pop = G.maxPop(run);
     run.lastEvent = null;

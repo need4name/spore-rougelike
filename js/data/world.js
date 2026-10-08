@@ -101,27 +101,27 @@ G.SIZES = {
 //   req       { innovation: [any of], diet, stat: ['cha', 6], trait: [any of], tag: 'grasp', tier3: 2 }
 //   excludes  ideas that can never be learned alongside this one
 G.INNOVATIONS = [
-  { id: 'ambush_instinct', tier: 1, col: 0, name: 'Ambush Instinct', cost: 4, mods: { str: 1, huntBonus: 1 }, req: { diet: ['carn', 'omni'] }, excludes: ['gentle_grazing'], desc: 'Wait, watch, pounce. The mind of a hunter.' },
-  { id: 'keen_memory', tier: 1, col: 1, name: 'Keen Memory', cost: 4, mods: { cun: 1, exploreBonus: 1 }, desc: 'Remember where food was, and where danger was.' },
-  { id: 'problem_solving', tier: 1, col: 2, name: 'Problem Solving', cost: 4, mods: { cun: 2 }, req: { stat: ['cun', 6] }, desc: 'Figure out how to get the fruit down.' },
-  { id: 'alarm_calls', tier: 1, col: 4, name: 'Alarm Calls', cost: 4, mods: { tou: 1, cha: 1 }, req: { stat: ['cha', 5] }, desc: 'A shout that means "run".' },
-  { id: 'gentle_grazing', tier: 1, col: 5, name: 'Gentle Grazing', cost: 4, mods: { forageBonus: 1, cha: 1 }, req: { diet: ['herb', 'omni'] }, excludes: ['ambush_instinct'], desc: 'Patient minds, shaped by plants and peace.' },
+  { id: 'ambush_instinct', tier: 1, col: 0, name: 'Ambush Instinct', cost: 6, mods: { str: 1, huntBonus: 1 }, req: { diet: ['carn', 'omni'] }, excludes: ['gentle_grazing'], desc: 'Wait, watch, pounce. The mind of a hunter.' },
+  { id: 'keen_memory', tier: 1, col: 1, name: 'Keen Memory', cost: 6, mods: { cun: 1, exploreBonus: 1 }, desc: 'Remember where food was, and where danger was.' },
+  { id: 'problem_solving', tier: 1, col: 2, name: 'Problem Solving', cost: 6, mods: { cun: 2 }, req: { stat: ['cun', 6] }, desc: 'Figure out how to get the fruit down.' },
+  { id: 'alarm_calls', tier: 1, col: 4, name: 'Alarm Calls', cost: 6, mods: { tou: 1, cha: 1 }, req: { stat: ['cha', 5] }, desc: 'A shout that means "run".' },
+  { id: 'gentle_grazing', tier: 1, col: 5, name: 'Gentle Grazing', cost: 6, mods: { forageBonus: 1, cha: 1 }, req: { diet: ['herb', 'omni'] }, excludes: ['ambush_instinct'], desc: 'Patient minds, shaped by plants and peace.' },
 
-  { id: 'pack_tactics', tier: 2, col: 0, name: 'Pack Tactics', cost: 7, mods: { str: 1, huntBonus: 2 }, req: { innovation: ['ambush_instinct'] }, excludes: ['herd_defense'], desc: 'Flank, chase, ambush, together.' },
-  { id: 'teaching', tier: 2, col: 1, name: 'Teaching the Young', cost: 7, mods: { insightPerTurn: 1 }, req: { innovation: ['keen_memory'] }, desc: 'Each generation starts where the last one stopped.' },
-  { id: 'food_caching', tier: 2, col: 2, name: 'Food Caching', cost: 7, mods: { foodCap: 5, foodPerTurn: 1 }, req: { innovation: ['problem_solving'] }, desc: 'Bury it now, eat it in winter.' },
-  { id: 'lone_wanderers', tier: 2, col: 3, name: 'Lone Wanderers', cost: 7, mods: { spd: 2, exploreBonus: 2 }, req: { innovation: ['keen_memory', 'problem_solving'] }, excludes: ['grooming', 'vocal_language'], desc: 'Your kind keeps to itself and roams far.' },
-  { id: 'grooming', tier: 2, col: 4, name: 'Social Grooming', cost: 7, mods: { cha: 1, growthCost: -1 }, req: { innovation: ['alarm_calls', 'gentle_grazing'] }, excludes: ['lone_wanderers'], desc: 'Bonds that hold a group together.' },
-  { id: 'herd_defense', tier: 2, col: 5, name: 'Herd Defense', cost: 7, mods: { tou: 2, damageReduce: 1 }, req: { innovation: ['gentle_grazing', 'alarm_calls'] }, excludes: ['pack_tactics'], desc: 'Young in the middle, horns facing out.' },
+  { id: 'pack_tactics', tier: 2, col: 0, name: 'Pack Tactics', cost: 10, mods: { str: 1, huntBonus: 2 }, req: { innovation: ['ambush_instinct'] }, excludes: ['herd_defense'], desc: 'Flank, chase, ambush, together.' },
+  { id: 'teaching', tier: 2, col: 1, name: 'Teaching the Young', cost: 10, mods: { insightPerTurn: 1 }, req: { innovation: ['keen_memory'] }, desc: 'Each generation starts where the last one stopped.' },
+  { id: 'food_caching', tier: 2, col: 2, name: 'Food Caching', cost: 10, mods: { foodCap: 5, foodPerTurn: 1 }, req: { innovation: ['problem_solving'] }, desc: 'Bury it now, eat it in winter.' },
+  { id: 'lone_wanderers', tier: 2, col: 3, name: 'Lone Wanderers', cost: 10, mods: { spd: 2, exploreBonus: 2 }, req: { innovation: ['keen_memory', 'problem_solving'] }, excludes: ['grooming', 'vocal_language'], desc: 'Your kind keeps to itself and roams far.' },
+  { id: 'grooming', tier: 2, col: 4, name: 'Social Grooming', cost: 10, mods: { cha: 1, growthCost: -1 }, req: { innovation: ['alarm_calls', 'gentle_grazing'] }, excludes: ['lone_wanderers'], desc: 'Bonds that hold a group together.' },
+  { id: 'herd_defense', tier: 2, col: 5, name: 'Herd Defense', cost: 10, mods: { tou: 2, damageReduce: 1 }, req: { innovation: ['gentle_grazing', 'alarm_calls'] }, excludes: ['pack_tactics'], desc: 'Young in the middle, horns facing out.' },
 
-  { id: 'war_bands', tier: 3, col: 0, name: 'War Bands', cost: 10, mods: { str: 3 }, req: { innovation: ['pack_tactics'], trait: ['aggressive', 'feared', 'territorial'] }, excludes: ['shared_ritual'], desc: 'Organized violence. Rivals learn to fear you.' },
-  { id: 'symbolic_thought', tier: 3, col: 1, name: 'Symbolic Thought', cost: 10, mods: { cun: 2, insightPerTurn: 1 }, req: { innovation: ['teaching'] }, desc: 'This mark means that thing.' },
-  { id: 'shelters', tier: 3, col: 2, name: 'Shelters', cost: 10, mods: { tou: 2, maxPop: 3 }, req: { innovation: ['food_caching', 'herd_defense', 'pack_tactics'] }, desc: 'Nests, dens and walls against the world.' },
-  { id: 'stone_tools', tier: 3, col: 3, name: 'Tools', cost: 10, mods: { str: 2, forageBonus: 1 }, req: { innovation: ['food_caching', 'teaching', 'lone_wanderers'], tag: 'grasp' }, desc: 'A sharp edge changes everything.' },
-  { id: 'vocal_language', tier: 3, col: 4, name: 'Vocal Language', cost: 10, mods: { cha: 2 }, req: { innovation: ['grooming'] }, excludes: ['lone_wanderers'], desc: 'Sounds with meanings. Lets you speak with other species.' },
-  { id: 'shared_ritual', tier: 3, col: 5, name: 'Shared Ritual', cost: 10, mods: { cha: 2, dnaPerTurn: 1 }, req: { innovation: ['herd_defense', 'grooming'] }, excludes: ['war_bands'], desc: 'Dances and songs that everyone knows.' },
+  { id: 'war_bands', tier: 3, col: 0, name: 'War Bands', cost: 14, mods: { str: 3 }, req: { innovation: ['pack_tactics'], trait: ['aggressive', 'feared', 'territorial'] }, excludes: ['shared_ritual'], desc: 'Organized violence. Rivals learn to fear you.' },
+  { id: 'symbolic_thought', tier: 3, col: 1, name: 'Symbolic Thought', cost: 14, mods: { cun: 2, insightPerTurn: 1 }, req: { innovation: ['teaching'] }, desc: 'This mark means that thing.' },
+  { id: 'shelters', tier: 3, col: 2, name: 'Shelters', cost: 14, mods: { tou: 2, maxPop: 3 }, req: { innovation: ['food_caching', 'herd_defense', 'pack_tactics'] }, desc: 'Nests, dens and walls against the world.' },
+  { id: 'stone_tools', tier: 3, col: 3, name: 'Tools', cost: 14, mods: { str: 2, forageBonus: 1 }, req: { innovation: ['food_caching', 'teaching', 'lone_wanderers'], tag: 'grasp' }, desc: 'A sharp edge changes everything.' },
+  { id: 'vocal_language', tier: 3, col: 4, name: 'Vocal Language', cost: 14, mods: { cha: 2 }, req: { innovation: ['grooming'] }, excludes: ['lone_wanderers'], desc: 'Sounds with meanings. Lets you speak with other species.' },
+  { id: 'shared_ritual', tier: 3, col: 5, name: 'Shared Ritual', cost: 14, mods: { cha: 2, dnaPerTurn: 1 }, req: { innovation: ['herd_defense', 'grooming'] }, excludes: ['war_bands'], desc: 'Dances and songs that everyone knows.' },
 
-  { id: 'sapience', tier: 4, col: 2.5, name: 'Self-Awareness', cost: 14, mods: { cun: 1, cha: 1 }, req: { tier3: 2 }, desc: 'You know that you are. This leads to the end of the Creature stage.' },
+  { id: 'sapience', tier: 4, col: 2.5, name: 'Self-Awareness', cost: 22, mods: { cun: 1, cha: 1 }, req: { tier3: 2 }, desc: 'You know that you are. This leads to the end of the Creature stage.' },
 ];
 
 // What each cell part grows into when your lineage leaves the Cell stage.
@@ -192,7 +192,7 @@ G.ARCHETYPES = [
     mods: {},
     start: {
       cell: { mouth: 'proboscis', motion: 'cilia' },
-      land: { mouth: 'mandibles', hindLimbs: 'runner_legs', senses: 'big_eyes' },
+      land: { mouth: 'mandibles', senses: 'big_eyes' },
       sea: { mouth: 'mandibles', tail: 'fluke', senses: 'big_eyes' },
     },
   },
@@ -202,8 +202,8 @@ G.ARCHETYPES = [
     mods: { maxPop: 2 },
     start: {
       cell: { mouth: 'filter_mouth', membrane: 'silica_shell' },
-      land: { mouth: 'grinding_beak', hindLimbs: 'pillar_legs', skin: 'fur' },
-      sea: { mouth: 'baleen', frontLimbs: 'front_flippers', skin: 'blubber' },
+      land: { mouth: 'grinding_beak', skin: 'fur' },
+      sea: { mouth: 'baleen', skin: 'blubber' },
     },
   },
   {
@@ -213,7 +213,7 @@ G.ARCHETYPES = [
     start: {
       cell: { mouth: 'tiny_jaw', motion: 'flagellum' },
       land: { mouth: 'fangs', hands: 'sharp_claws', senses: 'antennae' },
-      sea: { mouth: 'fangs', frontLimbs: 'pectoral_fins', senses: 'electroreceptors' },
+      sea: { mouth: 'fangs', senses: 'electroreceptors' },
     },
   },
   {
@@ -232,8 +232,8 @@ G.ARCHETYPES = [
     mods: { cun: 1, maxPop: -2 },
     start: {
       cell: { mouth: 'venom_stylet', motion: 'jet_vacuole' },
-      land: { mouth: 'venom_fangs', frontLimbs: 'fore_tentacles', skin: 'warning_skin' },
-      sea: { mouth: 'venom_fangs', hindLimbs: 'sea_tentacles', skin: 'warning_skin' },
+      land: { mouth: 'venom_fangs', skin: 'warning_skin' },
+      sea: { mouth: 'venom_fangs', skin: 'warning_skin' },
     },
   },
 ];
@@ -274,7 +274,7 @@ G.STAGES = {
   creature: {
     name: 'Creature Stage', turnName: 'Generation',
     drafts: [5, 10, 15, 20, 28, 34, 40, 50, 56, 62, 70],
-    milestones: [{ at: 24, event: 'age_of_giants' }, { at: 46, event: 'spark_of_mind' }],
+    milestones: [{ at: 18, event: 'age_of_giants' }, { at: 32, event: 'spark_of_mind' }],
     evolveAt: null, finale: 'creature_finale',
   },
 };

@@ -31,20 +31,25 @@ window.G = window.G || {};
   function tri(x1, y1, x2, y2, x3, y3, fill) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); }
 
   // Which base part is in each slot, plus the accent color from merged parts.
-  // Evolved parts are drawn like their first ingredient, tinted by the second.
+  // Which parts to draw. Merged and evolved parts draw ALL their ingredients, layered,
+  // so every combination looks different. E holds each slot's evolution tier.
   function look(b) {
-    const p = {}; let accent = null;
+    const p = {}; let accent = null; const H = new Set(); const E = {};
+    const add = (id) => { if (!id || H.has(id)) return; H.add(id); const part = G.PART[id]; if (part && part.from) part.from.forEach(add); };
     Object.entries(b.parts || {}).forEach(([slot, s]) => {
       if (!s) return;
       const part = G.PART[s.id];
       p[slot] = part.looks || s.id;
-      const tint = s.merged || (part.evolved && part.from[1]);
+      add(s.id); add(s.merged);
+      if (part.evolved || (s.merged && G.PART[s.merged].evolved)) E[slot] = Math.max(part.evolved || 0, (s.merged && G.PART[s.merged].evolved) || 0) + (part.evolved && s.merged ? 1 : 0);
+      const tint = s.merged || (part.from && part.from[1]);
       if (tint && !accent) {
-        const kw = (G.PART[tint].keywords || [])[0];
+        const kw = (G.PART[tint].keywords || part.keywords || [])[0];
         accent = kw ? G.KEYWORDS[kw].color : hsl(40, 80, 65);
       }
     });
-    return { p, accent, L: b.look || {} };
+    p.__H = H; p.__E = E;
+    return { p, accent, L: b.look || {}, H, E };
   }
 
   // Body patterns from the appearance editor, drawn inside a clipped body shape.
@@ -65,7 +70,7 @@ window.G = window.G || {};
   // ======================= CELL =======================
   function drawCell(b, cx, cy, R, t) {
     const hue = b.hue;
-    const { p, accent } = look(b);
+    const { p, accent, H, E } = look(b);
     const dark = hsl(hue, 45, 28);
     const plan = b.traits.includes('radial_plan') ? 'radial' : b.traits.includes('streamlined_plan') ? 'stream' : b.traits.includes('sessile_plan') ? 'sessile' : null;
     const sx = plan === 'stream' ? 1.35 : 1;
@@ -78,39 +83,40 @@ window.G = window.G || {};
       ctx.lineTo(cx + R * 0.15, cy + R * 2.2); ctx.quadraticCurveTo(cx, cy + R * 1.6, cx + R * 0.15, cy + R * 0.8); ctx.fillStyle = dark; ctx.fill();
     }
     // Behind the body
-    if (p.membrane === 'slime_coat') {
+    if (H.has('slime_coat')) {
       ctx.beginPath(); for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.1) { const [x, y] = at(a, 1.22); a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
       ctx.fillStyle = hsl(100, 50, 60, 0.18); ctx.fill();
     }
-    if (p.membrane === 'spikes') {
+    if (H.has('spikes')) {
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2 + 0.2;
         const [x1, y1] = at(a - 0.08); const [x2, y2] = at(a + 0.08); const [x3, y3] = at(a, 1.35);
         tri(x1, y1, x3, y3, x2, y2, BONE);
       }
     }
-    if (p.motion === 'flagellum' || p.motion === 'lumen_flagellum') {
+    if (E.motion) for (let k = 0; k < 1 + E.motion; k++) { const ang = Math.PI + (k % 2 ? 0.55 : -0.55) * (1 + Math.floor(k / 2) * 0.5); const [x, y] = at(ang); wavy(x, y, R * 1.1, ang, R * 0.2, t, accent || dark, R * 0.06, k); }
+    if (H.has('flagellum') || H.has('lumen_flagellum')) {
       const [x, y] = at(Math.PI);
       wavy(x, y, R * 1.3, Math.PI, R * 0.25, t, dark, R * 0.07);
-      if (p.motion === 'lumen_flagellum') glow(GLOW, 10, () => { for (let i = 1; i < 5; i++) dot(x - R * 0.28 * i, y + Math.sin(i * 1.3 + t * 4) * R * 0.06 * i, R * 0.045, GLOW); });
+      if (H.has('lumen_flagellum')) glow(GLOW, 10, () => { for (let i = 1; i < 5; i++) dot(x - R * 0.28 * i, y + Math.sin(i * 1.3 + t * 4) * R * 0.06 * i, R * 0.045, GLOW); });
     }
-    if (p.motion === 'jet_vacuole') { const [x, y] = at(Math.PI, 0.95); dot(x - R * 0.12, y, R * 0.24, hsl(hue, 40, 45)); dot(x - R * 0.3, y, R * 0.1, hsl(hue, 30, 20)); }
-    if (p.motion === 'drift_sail') {
+    if (H.has('jet_vacuole')) { const [x, y] = at(Math.PI, 0.95); dot(x - R * 0.12, y, R * 0.24, hsl(hue, 40, 45)); dot(x - R * 0.3, y, R * 0.1, hsl(hue, 30, 20)); }
+    if (H.has('drift_sail')) {
       ctx.beginPath(); ctx.moveTo(cx - R * 0.5, cy - R * 0.8); ctx.quadraticCurveTo(cx - R * 0.2, cy - R * 1.9, cx + R * 0.4, cy - R * 0.9);
       ctx.fillStyle = hsl(hue + 30, 60, 70, 0.55); ctx.fill();
     }
-    if (p.motion === 'pseudopods') {
+    if (H.has('pseudopods')) {
       for (let i = 0; i < 4; i++) { const a = Math.PI * 0.3 + i * 0.4; const [x, y] = at(a, 1.05); dot(x, y, R * (0.2 + 0.04 * Math.sin(t * 2 + i)), hsl(hue, 50, 52)); }
     }
-    if (p.mouth === 'proboscis') { const [x, y] = at(0); line(x - 4, y, x + R * 0.7, y + Math.sin(t * 2) * 4, dark, R * 0.1); }
-    if (p.mouth === 'venom_stylet') { const [x, y] = at(0); line(x - 4, y, x + R * 0.8, y, VENOM, R * 0.05); }
-    if (p.senses === 'glow_lure') {
+    if (H.has('proboscis')) { const [x, y] = at(0); line(x - 4, y, x + R * 0.7, y + Math.sin(t * 2) * 4, dark, R * 0.1); }
+    if (H.has('venom_stylet')) { const [x, y] = at(0); line(x - 4, y, x + R * 0.8, y, VENOM, R * 0.05); }
+    if (H.has('glow_lure')) {
       const [x, y] = at(-Math.PI / 3);
       ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + R * 0.3, y - R * 0.9, x + R * 0.8, y - R * 0.5);
       ctx.strokeStyle = dark; ctx.lineWidth = R * 0.04; ctx.stroke();
       glow(GLOW, 18, () => dot(x + R * 0.8, y - R * 0.5 + Math.sin(t * 3) * 2, R * 0.09, GLOW));
     }
-    if (p.senses === 'chemoreceptor') {
+    if (H.has('chemoreceptor')) {
       const [x1, y1] = at(-0.5); const [x2, y2] = at(-0.25);
       wavy(x1, y1, R * 0.6, -0.9, 4, t, dark, R * 0.03); wavy(x2, y2, R * 0.6, -0.4, 4, t, dark, R * 0.03, 2);
     }
@@ -126,9 +132,9 @@ window.G = window.G || {};
     const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R * 1.3);
     grad.addColorStop(0, hsl(hue, 65, 72)); grad.addColorStop(1, hsl(hue, 55, 52));
     ctx.fillStyle = grad; ctx.fill();
-    const hard = p.membrane === 'silica_shell' || p.membrane === 'plated_wall';
+    const hard = H.has('silica_shell') || H.has('plated_wall');
     ctx.lineWidth = R * (hard ? 0.11 : 0.045); ctx.strokeStyle = hard ? SHELL : (accent || dark); ctx.stroke();
-    if (p.membrane === 'plated_wall') for (let i = 0; i < 8; i++) { const [x1, y1] = at((i / 8) * Math.PI * 2, 0.88); const [x2, y2] = at((i / 8) * Math.PI * 2, 1.04); line(x1, y1, x2, y2, SHELL, R * 0.045); }
+    if (H.has('plated_wall')) for (let i = 0; i < 8; i++) { const [x1, y1] = at((i / 8) * Math.PI * 2, 0.88); const [x2, y2] = at((i / 8) * Math.PI * 2, 1.04); line(x1, y1, x2, y2, SHELL, R * 0.045); }
 
     // Inside: nucleus or a cluster of cells
     if (b.multicellular) {
@@ -139,38 +145,43 @@ window.G = window.G || {};
       dot(cx - R * 0.15, cy + R * 0.05, R * 0.3, hsl(hue, 40, 40, 0.8));
       dot(cx - R * 0.2, cy, R * 0.12, hsl(hue, 40, 25, 0.8));
     }
-    if (p.mouth === 'chloroplasts' || p.organ === 'algae_chamber') {
+    if (H.has('chloroplasts') || H.has('algae_chamber')) {
       [[0.3, -0.4], [0.45, 0.3], [-0.5, -0.35], [-0.45, 0.45], [0.1, 0.55]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.ellipse(cx + dx * R, cy + dy * R, R * 0.1, R * 0.06, dx * 3, 0, Math.PI * 2); ctx.fillStyle = PLANT; ctx.fill(); });
     }
-    if (p.membrane === 'toxin_sac' || p.organ === 'toxin_gland') { dot(cx + R * 0.2, cy + R * 0.4, R * 0.14, VENOM); dot(cx + R * 0.38, cy + R * 0.2, R * 0.09, VENOM); }
-    if (p.organ === 'fat_vacuole') dot(cx - R * 0.35, cy - R * 0.3, R * 0.22, hsl(48, 80, 70, 0.85));
-    if (p.organ === 'stomach_chamber') { ctx.beginPath(); ctx.ellipse(cx + R * 0.1, cy + R * 0.25, R * 0.35, R * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 40, 22, 0.7); ctx.fill(); }
-    if (p.organ === 'neuron_cluster') { for (let i = 0; i < 6; i++) { const a = i * 1.05; line(cx, cy - R * 0.1, cx + Math.cos(a) * R * 0.45, cy - R * 0.1 + Math.sin(a) * R * 0.45, hsl(50, 90, 75), 1.5); } dot(cx, cy - R * 0.1, R * 0.08, hsl(50, 90, 80)); }
-    if (p.organ === 'calcium_core') dot(cx, cy, R * 0.2, BONE);
-    if (p.membrane === 'photophores' || p.organ === 'photocyte_cluster') {
+    if (H.has('toxin_sac') || H.has('toxin_gland')) { dot(cx + R * 0.2, cy + R * 0.4, R * 0.14, VENOM); dot(cx + R * 0.38, cy + R * 0.2, R * 0.09, VENOM); }
+    if (H.has('fat_vacuole')) dot(cx - R * 0.35, cy - R * 0.3, R * 0.22, hsl(48, 80, 70, 0.85));
+    if (H.has('stomach_chamber')) { ctx.beginPath(); ctx.ellipse(cx + R * 0.1, cy + R * 0.25, R * 0.35, R * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 40, 22, 0.7); ctx.fill(); }
+    if (H.has('neuron_cluster')) { for (let i = 0; i < 6; i++) { const a = i * 1.05; line(cx, cy - R * 0.1, cx + Math.cos(a) * R * 0.45, cy - R * 0.1 + Math.sin(a) * R * 0.45, hsl(50, 90, 75), 1.5); } dot(cx, cy - R * 0.1, R * 0.08, hsl(50, 90, 80)); }
+    if (H.has('calcium_core')) dot(cx, cy, R * 0.2, BONE);
+    if (H.has('photophores') || H.has('photocyte_cluster')) {
       glow(GLOW, 12, () => { for (let i = 0; i < 9; i++) { const [x, y] = at((i / 9) * Math.PI * 2 + 0.3, 0.86); dot(x, y, R * 0.04 * (1 + 0.4 * Math.sin(t * 3 + i)), GLOW); } });
     }
-    if (p.senses === 'magnetosome') for (let i = 0; i < 5; i++) dot(cx - R * 0.4 + i * R * 0.12, cy + R * 0.5, R * 0.035, '#1c1414');
+    if (H.has('magnetosome')) for (let i = 0; i < 5; i++) dot(cx - R * 0.4 + i * R * 0.12, cy + R * 0.5, R * 0.035, '#1c1414');
+    // Evolved cell parts reshape the whole cell.
+    if (E.membrane) { ctx.beginPath(); for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.08) { const [x, y] = at(a, 1.14 + 0.05 * Math.sin(a * 9 + t)); a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.strokeStyle = accent || SHELL; ctx.lineWidth = R * 0.06 * E.membrane; ctx.stroke(); }
+    if (E.organ) glow(accent || GLOW, 20, () => dot(cx + R * 0.05, cy - R * 0.05, R * (0.16 + 0.04 * Math.sin(t * 3)), accent || GLOW));
+    if (E.senses) for (let k = 0; k < 2 + E.senses; k++) { const [x, y] = at(-0.9 + k * 0.35, 0.72); dot(x, y, R * 0.07, '#1c1414'); dot(x + 1, y - 1, R * 0.025, '#fff'); }
+    if (E.mouth) for (let k = -3; k <= 3; k++) { const [x1, y1] = at(k * 0.12, 0.98); const [x2, y2] = at(k * 0.12, 1.18); tri(x1 - 2, y1, x2, y2, x1 + 2, y1, BONE); }
 
     // Front
-    if (p.mouth === 'filter_mouth') { const [x, y] = at(0); for (let i = -2; i <= 2; i++) line(x - 2, y + i * R * 0.08, x + R * 0.18, y + i * R * 0.1, dark, R * 0.03); }
-    if (p.mouth === 'tiny_jaw' || p.mouth === 'engulfing_maw') {
+    if (H.has('filter_mouth')) { const [x, y] = at(0); for (let i = -2; i <= 2; i++) line(x - 2, y + i * R * 0.08, x + R * 0.18, y + i * R * 0.1, dark, R * 0.03); }
+    if (H.has('tiny_jaw') || H.has('engulfing_maw')) {
       const [x, y] = at(0);
-      const big = p.mouth === 'engulfing_maw' ? 1.8 : 1;
+      const big = H.has('engulfing_maw') ? 1.8 : 1;
       const open = (0.12 + Math.abs(Math.sin(t * 2)) * 0.08) * big;
       tri(x - R * 0.25 * big, y, x + 4, y - R * open * 1.5, x + 4, y + R * open * 1.5, hsl(hue, 40, 18));
       line(x, y - R * open * 1.4, x + R * 0.12, y - R * open * 0.4, BONE, R * 0.05);
       line(x, y + R * open * 1.4, x + R * 0.12, y + R * open * 0.4, BONE, R * 0.05);
     }
-    if (p.mouth === 'lure_mouth') { const [x, y] = at(0); glow(GLOW, 16, () => dot(x - R * 0.08, y, R * 0.14, GLOW)); }
+    if (H.has('lure_mouth')) { const [x, y] = at(0); glow(GLOW, 16, () => dot(x - R * 0.08, y, R * 0.14, GLOW)); }
     { const [fx, fy] = at(-0.45, 0.68); FACE = { x: fx, y: fy, r: R * 0.12, mx: fx + R * 0.12, my: fy + R * 0.36, top: cy - R * 1.05, skin: hsl(hue, 60, 66), s: R * 2.2 }; }
-    if (p.senses === 'eyespot' || p.senses === 'plated_eye' || !p.senses || p.senses === 'magnetosome' || p.senses === 'chemoreceptor') {
+    if (H.has('eyespot') || H.has('plated_eye') || !p.senses || H.has('magnetosome') || H.has('chemoreceptor')) {
       const [x, y] = at(-0.45, 0.68);
       dot(x, y, R * 0.12, '#1c1414'); dot(x + R * 0.03, y - R * 0.03, R * 0.04, '#fff');
-      if (p.senses === 'plated_eye') { ctx.beginPath(); ctx.arc(x, y, R * 0.17, 0, Math.PI * 2); ctx.strokeStyle = SHELL; ctx.lineWidth = R * 0.05; ctx.stroke(); }
+      if (H.has('plated_eye')) { ctx.beginPath(); ctx.arc(x, y, R * 0.17, 0, Math.PI * 2); ctx.strokeStyle = SHELL; ctx.lineWidth = R * 0.05; ctx.stroke(); }
     }
-    if (p.senses === 'stinging_cilia') for (let i = -3; i <= 3; i++) { const a = i * 0.14; const [x1, y1] = at(a); const [x2, y2] = at(a, 1.25); line(x1, y1, x2, y2, VENOM, R * 0.03); }
-    if (p.motion === 'cilia') {
+    if (H.has('stinging_cilia')) for (let i = -3; i <= 3; i++) { const a = i * 0.14; const [x1, y1] = at(a); const [x2, y2] = at(a, 1.25); line(x1, y1, x2, y2, VENOM, R * 0.03); }
+    if (H.has('cilia')) {
       for (let i = 0; i < 40; i++) {
         const a = (i / 40) * Math.PI * 2;
         const [x1, y1] = at(a); const [x2, y2] = at(a + 0.05 * Math.sin(t * 6 + i), 1.12 + 0.04 * Math.sin(t * 6 + i));
@@ -182,9 +193,12 @@ window.G = window.G || {};
   // ======================= LAND CREATURE =======================
   function drawLand(b, cx, ground, S, t) {
     const hue = b.hue;
-    const { p, accent, L } = look(b);
-    const biped = b.look ? L.posture === 'two' : p.hindLimbs === 'upright_legs';
-    const legLen = S * (p.hindLimbs === 'pillar_legs' ? 0.17 : biped ? 0.26 : 0.21);
+    const { p, accent, L, H, E } = look(b);
+    const biped = b.look ? L.posture === 'two' : H.has('upright_legs');
+    // Long bones and evolved limbs make taller creatures; stubby legs make squat ones.
+    const longLegs = (H.has('long_bones_h') ? 1.15 : 1) * (E.hindLimbs ? 1.18 + 0.12 * (E.hindLimbs - 1) : 1) * (p.hindLimbs === 'stubby_hindlegs' && !E.hindLimbs ? 0.75 : 1);
+    const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs;
+    const flying = H.has('feathered_wings') || H.has('true_wings');
     const shapeX = L.shape === 'slim' ? 0.9 : L.shape === 'long' ? 1.25 : 1;
     const shapeY = L.shape === 'slim' ? 0.82 : L.shape === 'long' ? 0.92 : 1;
     const rx = S * (biped ? 0.17 : 0.27) * shapeX; const ry = S * (biped ? 0.24 : 0.15) * shapeY;
@@ -193,25 +207,43 @@ window.G = window.G || {};
     const longNeck = L.neck === 'long';
     const hx = biped ? cx + rx * 0.4 : cx + rx * 0.95 + (longNeck ? S * 0.06 : 0);
     const hy = biped ? cy - ry * 1.15 : cy - ry * 0.6 - (longNeck ? S * 0.16 : 0);
-    const hr = S * 0.1;
+    const hr = S * 0.1 * (E.mouth ? 1.15 + 0.1 * E.mouth : 1) * (E.senses ? 1.05 : 1);
 
     ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+
+    // Wings (far side) for flyers, flapping.
+    const flap = Math.sin(t * 9) * 0.45;
+    function wing(near) {
+      const sx = cx + rx * 0.15; const sy = cy - ry * 0.6;
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(-0.5 + flap * (near ? 1 : 0.8)); if (!near) ctx.scale(0.85, 0.85);
+      const span = S * (H.has('true_wings') ? 0.62 : 0.55);
+      if (H.has('feathered_wings')) {
+        for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.ellipse(-span * (0.25 + i * 0.1), -span * 0.12 + i * 4, span * 0.24, S * 0.035, -0.25 + i * 0.06, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + (near ? 0 : 0) + i * 8, 55, near ? 62 - i * 2 : 45); ctx.fill(); }
+      }
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-span * 0.5, -span * 0.55, -span, -span * 0.2);
+      for (let i = 0; i < 4; i++) ctx.quadraticCurveTo(-span * (0.85 - i * 0.22), span * 0.02, -span * (0.75 - i * 0.22), -span * 0.12);
+      ctx.closePath(); ctx.fillStyle = H.has('feathered_wings') ? hsl(hue + 20, 50, near ? 70 : 50, 0.9) : hsl(hue, 45, near ? 62 : 42, 0.85); ctx.fill();
+      if (H.has('true_wings')) for (let i = 0; i < 4; i++) line(0, 0, -span * (0.3 + i * 0.22), -span * (0.45 - i * 0.12), dark, 2);
+      ctx.restore();
+    }
+    if (flying) wing(false);
 
     // Tail
     const tx = cx - rx * 0.85; const ty = biped ? cy + ry * 0.5 : cy - ry * 0.2;
     const tEnd = [cx - rx * (biped ? 2.2 : 1.8), ty - ry * (biped ? -0.3 : 1.0) - Math.sin(t * 2) * 5];
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx - rx * 1.5, ty - ry * 0.1, tEnd[0], tEnd[1]);
-    ctx.strokeStyle = body; ctx.lineWidth = S * (p.tail === 'club_tail' ? 0.06 : 0.045); ctx.lineCap = 'round'; ctx.stroke();
-    if (p.tail === 'club_tail') dot(tEnd[0], tEnd[1], S * 0.05, SHELL);
-    if (p.tail === 'display_tail') ['#f2c14e', '#e46a5c', '#6fd3c7'].forEach((c, i) => { ctx.beginPath(); ctx.ellipse(tEnd[0] - i * 6, tEnd[1] - i * 8, S * 0.025, S * 0.09, -0.6 + i * 0.3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); });
-    if (p.tail === 'stinger_tail') { tri(tEnd[0], tEnd[1], tEnd[0] + 12, tEnd[1] - 4, tEnd[0] + 4, tEnd[1] + 8, VENOM); }
-    if (p.tail === 'glow_tail') glow(GLOW, 16, () => dot(tEnd[0], tEnd[1], S * 0.03, GLOW));
-    if (p.tail === 'prehensile_tail') { ctx.beginPath(); ctx.arc(tEnd[0], tEnd[1] + 6, 7, Math.PI, Math.PI * 2.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.03; ctx.stroke(); }
+    ctx.strokeStyle = body; ctx.lineWidth = S * (H.has('club_tail') ? 0.06 : 0.045); ctx.lineCap = 'round'; ctx.stroke();
+    if (E.tail) for (let k = 1; k <= E.tail; k++) { const fx = tEnd[0] + 8 * k; const fy = tEnd[1] + 22 * k; ctx.beginPath(); ctx.moveTo(cx - rx * 1.2, ty - ry * 0.3); ctx.quadraticCurveTo(cx - rx * 1.5, ty + ry * 0.4 * k, fx, fy); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.stroke(); dot(fx, fy, S * 0.025, accent || body); }
+    if (H.has('club_tail')) dot(tEnd[0], tEnd[1], S * 0.05, SHELL);
+    if (H.has('display_tail')) ['#f2c14e', '#e46a5c', '#6fd3c7'].forEach((c, i) => { ctx.beginPath(); ctx.ellipse(tEnd[0] - i * 6, tEnd[1] - i * 8, S * 0.025, S * 0.09, -0.6 + i * 0.3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); });
+    if (H.has('stinger_tail')) { tri(tEnd[0], tEnd[1], tEnd[0] + 12, tEnd[1] - 4, tEnd[0] + 4, tEnd[1] + 8, VENOM); }
+    if (H.has('glow_tail')) glow(GLOW, 16, () => dot(tEnd[0], tEnd[1], S * 0.03, GLOW));
+    if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.arc(tEnd[0], tEnd[1] + 6, 7, Math.PI, Math.PI * 2.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.03; ctx.stroke(); }
 
     // Back parts behind body
     const backTopX = cx - rx * 0.1; const backTopY = cy - ry * 0.85;
-    if (p.back === 'display_frill' || p.back === 'lumen_sail') {
-      const isGlow = p.back === 'lumen_sail';
+    if (H.has('display_frill') || H.has('lumen_sail')) {
+      const isGlow = H.has('lumen_sail');
       for (let i = 0; i < 7; i++) {
         const a = -Math.PI * 0.85 + i * 0.12;
         const draw = () => {
@@ -223,8 +255,8 @@ window.G = window.G || {};
         isGlow ? glow(GLOW, 14, draw) : draw();
       }
     }
-    if (p.back === 'fat_hump') { ctx.beginPath(); ctx.ellipse(backTopX, cy - ry * 0.8, rx * 0.5, ry * 0.7, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
-    if (p.back === 'carapace') {
+    if (H.has('fat_hump')) { ctx.beginPath(); ctx.ellipse(backTopX, cy - ry * 0.8, rx * 0.5, ry * 0.7, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (H.has('carapace')) {
       ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.15, rx * 1.05, ry * 1.25, 0, Math.PI, 0); ctx.fillStyle = SHELL; ctx.fill();
       for (let i = 1; i < 5; i++) { const x = cx - rx + (i / 5) * rx * 2; line(x, cy - ry * 0.2, x - (x - cx) * 0.2, cy - ry * 1.3, '#7f8c93', S * 0.01); }
     }
@@ -232,18 +264,33 @@ window.G = window.G || {};
     // Limbs
     function leg(x, top, len, kind, foot, col, swing, front) {
       const gy = top + len;
-      if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035, top, S * 0.07, len); }
-      else if (kind === 'fore_tentacles') { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03, front ? 2 : 0); return; }
+      const ev = front ? E.frontLimbs : E.hindLimbs;
+      const muscle = H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1;
+      if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); }
+      else if (kind === 'fore_tentacles' || H.has(front ? 'boneless_f' : '__none')) { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03 * muscle, front ? 2 : 0); if (kind === 'fore_tentacles') return; }
+      else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); }
       else {
-        const thick = kind === 'digging_forelegs' || kind === 'powerful_haunches' ? 0.035 : kind === 'grasping_arms' ? 0.026 : 0.022;
+        const thick = (kind === 'digging_forelegs' || kind === 'powerful_haunches' ? 0.035 : kind === 'grasping_arms' ? 0.026 : 0.022) * muscle * (ev ? 1.35 : 1);
         const kx = x + (kind === 'runner_legs' || kind === 'hopping_legs' ? -S * 0.05 : S * 0.03) + swing;
         ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(kx, top + len * 0.5); ctx.lineTo(x + swing, gy);
         ctx.strokeStyle = col; ctx.lineWidth = S * thick; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
       }
-      drawFoot(x + swing, gy, foot, col);
+      // Limb mutations show on the limb itself.
+      if (H.has(front ? 'bony_plates_f' : 'bony_plates_h')) for (let i = 0; i < 3; i++) { ctx.fillStyle = SHELL; ctx.fillRect(x - S * 0.03 + swing * (i / 3), top + len * (0.15 + i * 0.25), S * 0.06, S * 0.025); }
+      if (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h')) dot(x + swing * 0.3, top + len * 0.25, S * 0.035, col);
+      if (front && H.has('skin_flaps_f') && !flying) tri(x, top, x - S * 0.18, top + len * 0.15, x - S * 0.02, top + len * 0.7, hsl(hue, 45, 60, 0.55));
+      if (front && H.has('flight_feathers') && !flying) for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(x - S * 0.05 - i * 6, top + len * 0.3 + i * 4, S * 0.05, S * 0.012, -0.5, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 30 + i * 15, 60, 62); ctx.fill(); }
+      if (front && H.has('gripping_pads_f')) dot(x + swing + 4, gy - 4, S * 0.018, '#f3b3a6');
+      if (!front && H.has('springy_tendons_h')) { ctx.beginPath(); for (let i = 0; i <= 6; i++) ctx.lineTo(x - 6 + (i % 2) * 10, top + len * (0.2 + i * 0.1)); ctx.strokeStyle = BONE; ctx.lineWidth = 1.5; ctx.stroke(); }
+      drawFoot(x + swing, gy, foot, col, (front ? E.hands : E.feet) ? 1.8 : 1);
     }
-    function drawFoot(x, y, foot, col) {
+    function drawFoot(x, y, foot, col, big) {
       if (!foot) return;
+      ctx.save(); ctx.translate(x, y); ctx.scale(big || 1, big || 1); ctx.translate(-x, -y);
+      drawFootInner(x, y, foot, col);
+      ctx.restore();
+    }
+    function drawFootInner(x, y, foot, col) {
       if (foot === 'hooves' || foot === 'front_hooves') { ctx.fillStyle = '#3b2f2a'; ctx.fillRect(x - 5, y - 5, 10, 6); }
       else if (foot === 'sharp_claws' || foot === 'raptor_talons' || foot === 'hooked_talons' || foot === 'venom_barbs' || foot === 'venom_spurs') {
         const c = foot.startsWith('venom') ? VENOM : BONE;
@@ -254,11 +301,11 @@ window.G = window.G || {};
       else dot(x + 2, y - 1, 4, col);
     }
     const backCol = hsl(hue, 35, 25);
-    const hindX = biped ? [cx] : [cx - rx * 0.6];
-    const frontX = biped ? [] : [cx + rx * 0.5];
+    const hindX = biped ? [cx] : [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
+    const frontX = biped ? [] : [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
     // far side
     hindX.forEach((x, i) => p.hindLimbs && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, backCol, Math.sin(t * 2 + i) * 3, false));
-    frontX.forEach((x) => p.frontLimbs && p.frontLimbs !== 'wing_membranes' && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, backCol, Math.sin(t * 2 + 1) * 3, true));
+    frontX.forEach((x) => p.frontLimbs && !H.has('wing_membranes') && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, backCol, Math.sin(t * 2 + 1) * 3, true));
 
     // Body
     ctx.save(); ctx.translate(cx, cy); if (biped) ctx.rotate(-0.15);
@@ -268,41 +315,48 @@ window.G = window.G || {};
     ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     pattern(L, rx, ry, S, hue, t);
-    if (p.skin === 'scales' || p.skin === 'swift_scales') {
+    if (H.has('scales') || H.has('swift_scales')) {
       for (let y = -ry; y < ry; y += S * 0.03) for (let x = -rx; x < rx; x += S * 0.04) {
         const off = (Math.round(y / (S * 0.03)) % 2) * S * 0.02;
         ctx.beginPath(); ctx.arc(x + off, y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke();
       }
     }
-    if (p.skin === 'lichen_hide' || p.back === 'moss_garden') [[-0.5, -0.5], [0.1, -0.7], [0.5, -0.3], [-0.2, 0.2], [-0.7, 0.1]].forEach(([dx, dy], i) => dot(dx * rx, dy * ry, S * (0.025 + (i % 2) * 0.012), PLANT));
-    if (p.skin === 'warning_skin') [[-0.5, -0.3], [0, -0.5], [0.45, -0.1], [-0.15, 0.25], [-0.75, 0.2]].forEach(([dx, dy]) => { dot(dx * rx, dy * ry, S * 0.028, '#f2c14e'); dot(dx * rx, dy * ry, S * 0.012, '#1c1414'); });
-    if (p.skin === 'biolume_skin') glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(-rx * 0.8 + i * rx * 0.2, Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
-    if (p.skin === 'bright_plumage') for (let i = 0; i < 6; i++) dot(-rx * 0.7 + i * rx * 0.28, -ry * 0.2 + (i % 2) * ry * 0.3, S * 0.03, hsl(hue + 120 + i * 30, 70, 60));
+    if (H.has('lichen_hide') || H.has('moss_garden')) [[-0.5, -0.5], [0.1, -0.7], [0.5, -0.3], [-0.2, 0.2], [-0.7, 0.1]].forEach(([dx, dy], i) => dot(dx * rx, dy * ry, S * (0.025 + (i % 2) * 0.012), PLANT));
+    if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.5], [0.45, -0.1], [-0.15, 0.25], [-0.75, 0.2]].forEach(([dx, dy]) => { dot(dx * rx, dy * ry, S * 0.028, '#f2c14e'); dot(dx * rx, dy * ry, S * 0.012, '#1c1414'); });
+    if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(-rx * 0.8 + i * rx * 0.2, Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
+    if (H.has('bright_plumage')) for (let i = 0; i < 6; i++) dot(-rx * 0.7 + i * rx * 0.28, -ry * 0.2 + (i % 2) * ry * 0.3, S * 0.03, hsl(hue + 120 + i * 30, 70, 60));
     ctx.restore();
-    if (p.skin === 'fur') for (let a = Math.PI * 1.05; a < Math.PI * 1.95; a += 0.09) { const x = cx + Math.cos(a) * rx; const y = cy + Math.sin(a) * ry; line(x, y, x + Math.cos(a) * 6, y + Math.sin(a) * 9, dark, 2); }
-    if (p.back === 'back_spines' || p.back === 'venom_quills') {
+    if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.02, ry * 1.02, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
+    if (E.back) for (let i = 0; i < 5 + E.back * 2; i++) {
+      const a = Math.PI * 1.1 + i * (0.8 / (5 + E.back * 2)); const x = cx + Math.cos(a) * rx * 1.02; const y = cy + Math.sin(a) * ry * 1.02;
+      tri(x - 7, y + 3, x - 2, y - S * (0.11 + 0.03 * E.back) * (0.7 + 0.3 * Math.sin(i * 1.7)), x + 7, y + 3, accent || BONE);
+    }
+    if (H.has('fur')) for (let a = Math.PI * 1.05; a < Math.PI * 1.95; a += 0.09) { const x = cx + Math.cos(a) * rx; const y = cy + Math.sin(a) * ry; line(x, y, x + Math.cos(a) * 6, y + Math.sin(a) * 9, dark, 2); }
+    if (H.has('back_spines') || H.has('venom_quills')) {
       for (let i = 0; i < 7; i++) {
         const a = Math.PI * 1.15 + i * 0.11; const x = cx + Math.cos(a) * rx; const y = cy + Math.sin(a) * ry;
-        if (p.back === 'venom_quills') line(x, y, x - S * 0.05, y - S * 0.11, VENOM, S * 0.008);
+        if (H.has('venom_quills')) line(x, y, x - S * 0.05, y - S * 0.11, VENOM, S * 0.008);
         else tri(x - 6, y + 2, x, y - S * 0.07, x + 6, y + 2, BONE);
       }
     }
-    if (p.back === 'moss_garden') for (let i = 0; i < 6; i++) dot(cx - rx * 0.6 + i * rx * 0.22, cy - ry * 0.95 + Math.abs(i - 2.5) * 3, S * 0.025, PLANT);
+    if (H.has('moss_garden')) for (let i = 0; i < 6; i++) dot(cx - rx * 0.6 + i * rx * 0.22, cy - ry * 0.95 + Math.abs(i - 2.5) * 3, S * 0.025, PLANT);
 
     // Near side legs
     hindX.forEach((x, i) => p.hindLimbs && leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, dark, Math.sin(t * 2 + i + 1) * 3, false));
     if (biped) {
       // Arms hang free from the shoulder
       const sx = cx + rx * 0.5; const sy = cy - ry * 0.45;
-      if (p.frontLimbs === 'wing_membranes') { tri(sx, sy, sx - S * 0.3, sy + S * 0.05, sx - S * 0.05, sy + S * 0.25, hsl(hue, 50, 65, 0.5)); }
+      if (H.has('wing_membranes')) { tri(sx, sy, sx - S * 0.3, sy + S * 0.05, sx - S * 0.05, sy + S * 0.25, hsl(hue, 50, 65, 0.5)); }
       else if (p.frontLimbs) leg(sx, sy, S * 0.2, p.frontLimbs, p.hands, dark, Math.sin(t * 1.5) * 4, true);
     } else {
       frontX.forEach((x) => {
-        if (p.frontLimbs === 'wing_membranes') { tri(x, cy - ry * 0.2, x - S * 0.35, cy - ry * 1.6, x - S * 0.1, cy + ry * 0.2, hsl(hue, 50, 65, 0.5)); leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, 'slender_forelegs', p.hands, dark, 0, true); }
+        if (H.has('wing_membranes')) { tri(x, cy - ry * 0.2, x - S * 0.35, cy - ry * 1.6, x - S * 0.1, cy + ry * 0.2, hsl(hue, 50, 65, 0.5)); leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, 'slender_forelegs', p.hands, dark, 0, true); }
         else if (p.frontLimbs) leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, dark, Math.sin(t * 2 + 2) * 3, true);
       });
     }
     if (!p.hindLimbs && !p.frontLimbs) { /* a legless slug: body rests low */ }
+
+    if (flying) wing(true);
 
     // Neck and head
     ctx.beginPath(); ctx.moveTo(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4); ctx.lineTo(hx, hy);
@@ -312,30 +366,33 @@ window.G = window.G || {};
 
   function drawHead(p, hx, hy, hr, hue, body, dark, t, S, L) {
     L = L || {};
-    if (p.senses === 'great_ears') [-0.5, -0.1].forEach((dx) => tri(hx + dx * hr - 6, hy - hr * 0.6, hx + dx * hr - 14, hy - hr * 2, hx + dx * hr + 8, hy - hr * 0.7, dark));
+    const H = p.__H; const E = p.__E;
+    if (H.has('great_ears')) [-0.5, -0.1].forEach((dx) => tri(hx + dx * hr - 6, hy - hr * 0.6, hx + dx * hr - 14, hy - hr * 2, hx + dx * hr + 8, hy - hr * 0.7, dark));
     dot(hx, hy, hr, body);
-    if (p.senses === 'horned_brow') [0.1, -0.3].forEach((dx) => { ctx.beginPath(); ctx.moveTo(hx + dx * hr - 5, hy - hr * 0.7); ctx.quadraticCurveTo(hx + dx * hr - 10, hy - hr * 2, hx + dx * hr + 12, hy - hr * 2.1); ctx.lineTo(hx + dx * hr + 5, hy - hr * 0.8); ctx.fillStyle = BONE; ctx.fill(); });
-    if (p.senses === 'antennae') { wavy(hx - hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.6, 4, t, dark, 2); wavy(hx + hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.35, 4, t, dark, 2, 1.5); }
+    if (H.has('horned_brow')) [0.1, -0.3].forEach((dx) => { ctx.beginPath(); ctx.moveTo(hx + dx * hr - 5, hy - hr * 0.7); ctx.quadraticCurveTo(hx + dx * hr - 10, hy - hr * 2, hx + dx * hr + 12, hy - hr * 2.1); ctx.lineTo(hx + dx * hr + 5, hy - hr * 0.8); ctx.fillStyle = BONE; ctx.fill(); });
+    if (H.has('antennae')) { wavy(hx - hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.6, 4, t, dark, 2); wavy(hx + hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.35, 4, t, dark, 2, 1.5); }
     const mx = hx + hr * 0.9; const my = hy + hr * 0.25;
     const m = p.mouth;
-    if (m === 'grinding_beak') tri(mx - 6, my - hr * 0.35, mx + hr * 0.7, my, mx - 6, my + hr * 0.3, '#e0b04c');
-    if (m === 'fangs' || m === 'venom_fangs' || m === 'lure_jaw' || m === 'crushing_jaws') {
+    if (H.has('grinding_beak')) tri(mx - 6, my - hr * 0.35, mx + hr * 0.7, my, mx - 6, my + hr * 0.3, '#e0b04c');
+    if (H.has('fangs') || H.has('venom_fangs') || H.has('lure_jaw') || H.has('crushing_jaws')) {
       line(mx - hr * 0.5, my, mx + 2, my, hsl(hue, 30, 15), 3);
-      const c = m === 'venom_fangs' ? VENOM : BONE;
-      [0, 1].forEach((k) => tri(mx - hr * 0.3 + k * 8, my, mx - hr * 0.25 + k * 8, my + hr * (m === 'crushing_jaws' ? 0.25 : 0.4), mx - hr * 0.15 + k * 8, my, c));
+      const c = H.has('venom_fangs') ? VENOM : BONE;
+      [0, 1].forEach((k) => tri(mx - hr * 0.3 + k * 8, my, mx - hr * 0.25 + k * 8, my + hr * (H.has('crushing_jaws') ? 0.25 : 0.4), mx - hr * 0.15 + k * 8, my, c));
     }
-    if (m === 'lure_jaw') { ctx.beginPath(); ctx.moveTo(hx, hy - hr); ctx.quadraticCurveTo(hx + hr * 1.5, hy - hr * 2.4, hx + hr * 2, hy - hr * 0.8); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + hr * 2, hy - hr * 0.8 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
-    if (m === 'mandibles') [-1, 1].forEach((s) => { ctx.beginPath(); ctx.moveTo(mx - 4, my + s * 3); ctx.quadraticCurveTo(mx + hr * 0.6, my + s * hr * 0.5, mx + hr * 0.5, my + s); ctx.strokeStyle = dark; ctx.lineWidth = 4; ctx.stroke(); });
-    if (m === 'trunk') { ctx.beginPath(); ctx.moveTo(mx - 4, my - 2); ctx.quadraticCurveTo(mx + hr * 1.1, my + hr * 0.3, mx + hr * 0.6 + Math.sin(t * 1.5) * 4, my + hr * 1.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.lineCap = 'round'; ctx.stroke(); }
-    if (m === 'baleen') for (let k = 0; k < 5; k++) line(mx - hr * 0.5 + k * 4, my - 2, mx - hr * 0.5 + k * 4, my + hr * 0.4, BONE, 1.5);
+    if (H.has('lure_jaw')) { ctx.beginPath(); ctx.moveTo(hx, hy - hr); ctx.quadraticCurveTo(hx + hr * 1.5, hy - hr * 2.4, hx + hr * 2, hy - hr * 0.8); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + hr * 2, hy - hr * 0.8 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
+    if (H.has('mandibles')) [-1, 1].forEach((s) => { ctx.beginPath(); ctx.moveTo(mx - 4, my + s * 3); ctx.quadraticCurveTo(mx + hr * 0.6, my + s * hr * 0.5, mx + hr * 0.5, my + s); ctx.strokeStyle = dark; ctx.lineWidth = 4; ctx.stroke(); });
+    if (H.has('trunk')) { ctx.beginPath(); ctx.moveTo(mx - 4, my - 2); ctx.quadraticCurveTo(mx + hr * 1.1, my + hr * 0.3, mx + hr * 0.6 + Math.sin(t * 1.5) * 4, my + hr * 1.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.lineCap = 'round'; ctx.stroke(); }
+    if (H.has('baleen')) for (let k = 0; k < 5; k++) line(mx - hr * 0.5 + k * 4, my - 2, mx - hr * 0.5 + k * 4, my + hr * 0.4, BONE, 1.5);
     const ex = hx + hr * 0.25; const ey = hy - hr * 0.25;
-    const huge = p.senses === 'big_eyes' || L.eyes === 'huge';
+    const huge = H.has('big_eyes') || L.eyes === 'huge';
     FACE = { x: ex, y: ey, r: hr * (huge ? 0.42 : 0.22), mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
     if (huge) { dot(ex, ey, hr * 0.42, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07, '#fff'); }
-    else if (p.senses === 'glow_eyes') glow(GLOW, 14, () => dot(ex, ey, hr * 0.25, GLOW));
+    else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(ex, ey, hr * 0.25, GLOW));
     else { dot(ex, ey, hr * 0.2, '#fff'); dot(ex + hr * 0.06, ey, hr * 0.11, '#1c1414'); }
-    if (p.senses === 'tremor_whiskers' || p.senses === 'electroreceptors') for (let k = -1; k <= 1; k++) line(mx - 4, my - 4, mx + hr * 0.9, my - 4 + k * hr * 0.35, BONE, 1.2);
+    if (H.has('tremor_whiskers') || H.has('electroreceptors')) for (let k = -1; k <= 1; k++) line(mx - 4, my - 4, mx + hr * 0.9, my - 4 + k * hr * 0.35, BONE, 1.2);
     const er = FACE.r;
+    if (E && E.senses) for (let k = 0; k < Math.min(3, E.senses + 1); k++) { const ax = hx - hr * 0.35 + k * hr * 0.3; const ay = hy - hr * 0.75 - (k % 2) * hr * 0.15; dot(ax, ay, hr * 0.13, '#fff'); dot(ax + 1, ay, hr * 0.07, '#1c1414'); }
+    if (E && E.mouth) for (let k = 0; k < 4; k++) tri(mx - hr * 0.55 + k * 6, my + 2, mx - hr * 0.5 + k * 6, my - hr * 0.3, mx - hr * 0.45 + k * 6, my + 2, BONE);
     if (L.eyes === 'sleepy') { ctx.beginPath(); ctx.arc(ex, ey, er * 1.05, Math.PI, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     if (L.eyes === 'fierce') line(ex - er * 1.3, ey - er * 1.5, ex + er * 1.2, ey - er * 0.6, dark, Math.max(2, er * 0.45));
   }
@@ -343,7 +400,7 @@ window.G = window.G || {};
   // ======================= SEA CREATURE =======================
   function drawSea(b, cx, cy, S, t) {
     const hue = b.hue;
-    const { p, accent, L } = look(b);
+    const { p, accent, L, H, E } = look(b);
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
     const rx = S * 0.33 * (L.shape === 'long' ? 1.2 : L.shape === 'slim' ? 0.95 : 1); const ry = S * 0.13 * (L.shape === 'slim' ? 0.8 : L.shape === 'round' && b.look ? 1.12 : 1);
     const y0 = cy + Math.sin(t * 1.4) * 3;
@@ -352,26 +409,27 @@ window.G = window.G || {};
 
     // Tail
     ctx.save(); ctx.translate(tailX, y0); ctx.rotate(sw * 0.4);
-    if (p.tail === 'fluke' || !p.tail) { tri(0, 0, -S * 0.2, -S * 0.12, -S * 0.12, 0, dark); tri(0, 0, -S * 0.2, S * 0.12, -S * 0.12, 0, dark); }
-    else if (p.tail === 'stinger_tail') { line(0, 0, -S * 0.22, -S * 0.05, body, S * 0.03); tri(-S * 0.22, -S * 0.05, -S * 0.28, -S * 0.1, -S * 0.27, 0, VENOM); }
-    else if (p.tail === 'display_tail') for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(-S * 0.12, i * 8, S * 0.12, S * 0.02, i * 0.2, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 140 + i * 20, 70, 60); ctx.fill(); }
-    else if (p.tail === 'glow_tail') { line(0, 0, -S * 0.18, 0, body, S * 0.03); glow(GLOW, 16, () => dot(-S * 0.2, 0, S * 0.03, GLOW)); }
-    else if (p.tail === 'prehensile_tail') { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
+    if (H.has('fluke') || !p.tail) { tri(0, 0, -S * 0.2, -S * 0.12, -S * 0.12, 0, dark); tri(0, 0, -S * 0.2, S * 0.12, -S * 0.12, 0, dark); }
+    if (E.tail) for (let k = 1; k <= E.tail + 1; k++) tri(0, 0, -S * (0.24 + 0.04 * k), (k % 2 ? -1 : 1) * S * (0.06 + 0.05 * k), -S * 0.14, 0, accent || dark);
+    else if (H.has('stinger_tail')) { line(0, 0, -S * 0.22, -S * 0.05, body, S * 0.03); tri(-S * 0.22, -S * 0.05, -S * 0.28, -S * 0.1, -S * 0.27, 0, VENOM); }
+    else if (H.has('display_tail')) for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(-S * 0.12, i * 8, S * 0.12, S * 0.02, i * 0.2, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 140 + i * 20, 70, 60); ctx.fill(); }
+    else if (H.has('glow_tail')) { line(0, 0, -S * 0.18, 0, body, S * 0.03); glow(GLOW, 16, () => dot(-S * 0.2, 0, S * 0.03, GLOW)); }
+    else if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
     ctx.restore();
 
     // Dorsal
-    if (p.back === 'dorsal_fin') tri(cx - rx * 0.3, y0 - ry * 0.85, cx - rx * 0.05, y0 - ry * 2.2, cx + rx * 0.25, y0 - ry * 0.85, dark);
-    if (p.back === 'display_frill' || p.back === 'lumen_sail') {
-      const isGlow = p.back === 'lumen_sail';
+    if (H.has('dorsal_fin')) tri(cx - rx * 0.3, y0 - ry * 0.85, cx - rx * 0.05, y0 - ry * 2.2, cx + rx * 0.25, y0 - ry * 0.85, dark);
+    if (H.has('display_frill') || H.has('lumen_sail')) {
+      const isGlow = H.has('lumen_sail');
       for (let i = 0; i < 6; i++) { const draw = () => tri(cx - rx * 0.5 + i * rx * 0.18, y0 - ry * 0.8, cx - rx * 0.42 + i * rx * 0.18, y0 - ry * 2, cx - rx * 0.34 + i * rx * 0.18, y0 - ry * 0.8, isGlow ? hsl(175, 80, 70, 0.5) : hsl(hue + 140 + i * 15, 70, 60)); isGlow ? glow(GLOW, 12, draw) : draw(); }
     }
-    if (p.back === 'carapace') { ctx.beginPath(); ctx.ellipse(cx, y0 - ry * 0.2, rx * 0.8, ry * 1.25, 0, Math.PI, 0); ctx.fillStyle = SHELL; ctx.fill(); }
-    if (p.back === 'fat_hump') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.1, y0 - ry * 0.8, rx * 0.4, ry * 0.6, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
-    if (p.back === 'kelp_garden') for (let i = 0; i < 5; i++) wavy(cx - rx * 0.5 + i * rx * 0.2, y0 - ry * 0.8, S * 0.12, -Math.PI / 2, 4, t, PLANT, 3, i);
-    if (p.back === 'back_spines' || p.back === 'venom_quills') for (let i = 0; i < 6; i++) { const x = cx - rx * 0.6 + i * rx * 0.22; p.back === 'venom_quills' ? line(x, y0 - ry * 0.8, x - 6, y0 - ry * 1.9, VENOM, 2) : tri(x - 5, y0 - ry * 0.8, x, y0 - ry * 1.6, x + 5, y0 - ry * 0.8, BONE); }
+    if (H.has('carapace')) { ctx.beginPath(); ctx.ellipse(cx, y0 - ry * 0.2, rx * 0.8, ry * 1.25, 0, Math.PI, 0); ctx.fillStyle = SHELL; ctx.fill(); }
+    if (H.has('fat_hump')) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.1, y0 - ry * 0.8, rx * 0.4, ry * 0.6, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (H.has('kelp_garden')) for (let i = 0; i < 5; i++) wavy(cx - rx * 0.5 + i * rx * 0.2, y0 - ry * 0.8, S * 0.12, -Math.PI / 2, 4, t, PLANT, 3, i);
+    if (H.has('back_spines') || H.has('venom_quills')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.6 + i * rx * 0.22; H.has('venom_quills') ? line(x, y0 - ry * 0.8, x - 6, y0 - ry * 1.9, VENOM, 2) : tri(x - 5, y0 - ry * 0.8, x, y0 - ry * 1.6, x + 5, y0 - ry * 0.8, BONE); }
 
     // Hind fins / tentacles (far)
-    if (p.hindLimbs === 'sea_tentacles') for (let i = 0; i < 4; i++) wavy(cx - rx * 0.2 + i * 10, y0 + ry * 0.7, S * 0.25, Math.PI / 2 + 0.3, S * 0.04, t, dark, S * 0.018, i);
+    if (H.has('sea_tentacles')) for (let i = 0; i < 4; i++) wavy(cx - rx * 0.2 + i * 10, y0 + ry * 0.7, S * 0.25, Math.PI / 2 + 0.3, S * 0.04, t, dark, S * 0.018, i);
 
     // Body
     ctx.save();
@@ -380,12 +438,12 @@ window.G = window.G || {};
     ctx.fillStyle = grad; ctx.fill(); ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
-    if (p.skin === 'scales' || p.skin === 'swift_scales') for (let y = y0 - ry; y < y0 + ry; y += S * 0.03) for (let x = cx - rx; x < cx + rx; x += S * 0.04) { ctx.beginPath(); ctx.arc(x + ((Math.round((y - y0) / (S * 0.03)) % 2) * S * 0.02), y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
-    if (p.skin === 'warning_skin') [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
-    if (p.skin === 'biolume_skin') glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
-    if (p.skin === 'cleaner_skin') for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
+    if (H.has('scales') || H.has('swift_scales')) for (let y = y0 - ry; y < y0 + ry; y += S * 0.03) for (let x = cx - rx; x < cx + rx; x += S * 0.04) { ctx.beginPath(); ctx.arc(x + ((Math.round((y - y0) / (S * 0.03)) % 2) * S * 0.02), y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
+    if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
+    if (H.has('cleaner_skin')) for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
     ctx.restore();
-    if (p.skin === 'blubber') { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.03, ry * 1.08, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 30, 80, 0.6); ctx.lineWidth = 3; ctx.stroke(); }
+    if (H.has('blubber')) { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.03, ry * 1.08, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 30, 80, 0.6); ctx.lineWidth = 3; ctx.stroke(); }
 
     // Fins (near)
     const finSwing = Math.sin(t * 2.5) * 0.3;
@@ -394,31 +452,37 @@ window.G = window.G || {};
       if (kind === 'pectoral_fins' || kind === 'pelvic_fins') tri(0, 0, -len * 0.3, len, len * 0.2, len * 0.7, dark);
       else if (kind === 'front_flippers' || kind === 'rear_flippers') { ctx.beginPath(); ctx.ellipse(0, len * 0.5, len * 0.22, len * 0.55, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
       else if (kind === 'armored_fins') { tri(0, 0, -len * 0.3, len, len * 0.2, len * 0.7, SHELL); }
+      else if (kind === 'stubby_front_fins' || kind === 'stubby_rear_fins') { ctx.beginPath(); ctx.ellipse(0, len * 0.3, len * 0.18, len * 0.32, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
       else if (kind === 'fore_tentacles') { ctx.restore(); wavy(x, y, len * 1.3, Math.PI / 2 - 0.3, 6, t, dark, S * 0.02); return; }
       ctx.restore();
     };
-    if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15);
-    if (p.hindLimbs && p.hindLimbs !== 'sea_tentacles') fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.1);
+    if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1));
+    if (p.hindLimbs && !H.has('sea_tentacles')) fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.1 * (E.hindLimbs ? 1.4 : 1));
+    if (E.frontLimbs >= 2) fin(cx + rx * 0.05, y0 + ry * 0.7, p.frontLimbs, S * 0.12);
+    if (E.back) tri(cx - rx * 0.5, y0 - ry * 0.85, cx - rx * 0.2, y0 - ry * (2.6 + 0.4 * E.back), cx + rx * 0.1, y0 - ry * 0.85, accent || dark);
+    if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.02, ry * 1.04, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
 
     // Head end
     const hx = cx + rx * 0.72; const hy = y0 - ry * 0.1;
     const m = p.mouth; const mx = cx + rx * 0.98; const my = y0 + ry * 0.15;
-    if (m === 'fangs' || m === 'venom_fangs' || m === 'crushing_jaws' || m === 'lure_jaw' || m === 'mandibles') {
+    if (H.has('fangs') || H.has('venom_fangs') || H.has('crushing_jaws') || H.has('lure_jaw') || H.has('mandibles')) {
       line(mx - rx * 0.25, my, mx, my, hsl(hue, 30, 15), 3);
-      const c = m === 'venom_fangs' ? VENOM : BONE;
+      const c = H.has('venom_fangs') ? VENOM : BONE;
       [0, 1, 2].forEach((k) => tri(mx - rx * 0.2 + k * 7, my, mx - rx * 0.18 + k * 7, my + 7, mx - rx * 0.14 + k * 7, my, c));
     }
-    if (m === 'baleen' || m === 'grinding_beak') for (let k = 0; k < 6; k++) line(mx - rx * 0.25 + k * 5, my - 2, mx - rx * 0.25 + k * 5, my + 6, BONE, 1.5);
-    if (m === 'lure_jaw') { ctx.beginPath(); ctx.moveTo(hx, y0 - ry); ctx.quadraticCurveTo(hx + rx * 0.4, y0 - ry * 3, hx + rx * 0.6, y0 - ry * 1.4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + rx * 0.6, y0 - ry * 1.4 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
+    if (H.has('baleen') || H.has('grinding_beak')) for (let k = 0; k < 6; k++) line(mx - rx * 0.25 + k * 5, my - 2, mx - rx * 0.25 + k * 5, my + 6, BONE, 1.5);
+    if (H.has('lure_jaw')) { ctx.beginPath(); ctx.moveTo(hx, y0 - ry); ctx.quadraticCurveTo(hx + rx * 0.4, y0 - ry * 3, hx + rx * 0.6, y0 - ry * 1.4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + rx * 0.6, y0 - ry * 1.4 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
     const er = S * 0.022;
-    FACE = { x: hx, y: hy, r: er * (p.senses === 'big_eyes' ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5 };
-    if (p.senses === 'big_eyes') { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
-    else if (p.senses === 'glow_eyes') glow(GLOW, 14, () => dot(hx, hy, er * 1.2, GLOW));
+    FACE = { x: hx, y: hy, r: er * (H.has('big_eyes') ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5 };
+    if (E.senses) for (let k = 0; k < 1 + E.senses; k++) { dot(hx - er * (3 + k * 2.4), hy - er * (0.6 + (k % 2)), er * 0.8, '#fff'); dot(hx - er * (3 + k * 2.4) + 1, hy - er * (0.6 + (k % 2)), er * 0.45, '#1c1414'); }
+    if (E.mouth) for (let k = 0; k < 5; k++) tri(mx - rx * 0.3 + k * 6, my - 1, mx - rx * 0.28 + k * 6, my + 9, mx - rx * 0.26 + k * 6, my - 1, BONE);
+    if (H.has('big_eyes')) { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
+    else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(hx, hy, er * 1.2, GLOW));
     else { dot(hx, hy, er, '#fff'); dot(hx + 1, hy, er * 0.55, '#1c1414'); }
-    if (p.senses === 'antennae') { wavy(hx, hy - er, S * 0.15, -Math.PI * 0.35, 4, t, dark, 2); }
-    if (p.senses === 'electroreceptors' || p.senses === 'tremor_whiskers') for (let k = 0; k < 4; k++) dot(hx + 6 + k * 5, hy + 8, 1.5, BONE);
-    if (p.senses === 'echolocation') { ctx.beginPath(); ctx.ellipse(hx - 4, hy - ry * 0.6, ry * 0.5, ry * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); }
-    if (p.senses === 'horned_brow') tri(hx - 6, hy - er, hx + 2, hy - ry * 1.6, hx + 6, hy - er, BONE);
+    if (H.has('antennae')) { wavy(hx, hy - er, S * 0.15, -Math.PI * 0.35, 4, t, dark, 2); }
+    if (H.has('electroreceptors') || H.has('tremor_whiskers')) for (let k = 0; k < 4; k++) dot(hx + 6 + k * 5, hy + 8, 1.5, BONE);
+    if (H.has('echolocation')) { ctx.beginPath(); ctx.ellipse(hx - 4, hy - ry * 0.6, ry * 0.5, ry * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); }
+    if (H.has('horned_brow')) tri(hx - 6, hy - er, hx + 2, hy - ry * 1.6, hx + 6, hy - er, BONE);
   }
 
   // ======================= BODIES =======================
@@ -943,32 +1007,88 @@ window.G = window.G || {};
     return s.size;
   }
 
+  // Each herd has a home territory spread across the map, and wanders around it.
   function behaviour(run, key, s, h) {
     const you = herds.get('you');
     const others = [...herds.entries()].filter(([k]) => k !== key);
-    let tx = 0.1 + Math.random() * 0.8; let ty = Math.random();
+    let tx = h.hx + (Math.random() - 0.5) * 0.3; let ty = h.hy + (Math.random() - 0.5) * 0.35;
     if (s) {
       const st = G.speciesStatus(s);
-      if (st === 'hostile' && you) { tx = you.x + 0.08; ty = you.y; }
-      else if (st === 'allied' && you) { tx = you.x + (Math.random() - 0.5) * 0.3; ty = you.y + (Math.random() - 0.5) * 0.3; }
-      else if (s.role === 'predator') {
+      if (st === 'hostile' && you && Math.random() < 0.6) { tx = you.x + 0.08; ty = you.y; }
+      else if (st === 'allied' && you && Math.random() < 0.5) { tx = you.x + (Math.random() - 0.5) * 0.25; ty = you.y + (Math.random() - 0.5) * 0.25; }
+      else if (s.role === 'predator' && Math.random() < 0.35) {
         const prey = others.filter(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'prey' && !t2.extinct; });
         if (prey.length) { const target = prey[Math.floor(Math.random() * prey.length)][1]; tx = target.x; ty = target.y; }
       } else if (s.role === 'prey') {
         const pred = others.find(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'predator' && !t2.extinct; });
-        if (pred && Math.abs(pred[1].x - h.x) < 0.3) { tx = h.x + (h.x > pred[1].x ? 0.35 : -0.35); }
+        if (pred && Math.hypot(pred[1].x - h.x, pred[1].y - h.y) < 0.25) { tx = h.x + (h.x > pred[1].x ? 0.3 : -0.3); }
       }
-    } else { tx = 0.25 + Math.random() * 0.4; }
+    }
     h.tx = Math.max(0.06, Math.min(0.94, tx)); h.ty = Math.max(0, Math.min(1, ty));
   }
 
+  // Home territories: spread evenly so herds never all bunch together.
+  function homeFor(i, key) {
+    if (key === 'you') return [0.45, 0.6];
+    const hx = 0.12 + ((i * 0.618 + 0.11) % 1) * 0.76;
+    const hy = 0.08 + ((i * 0.381 + 0.25) % 1) * 0.84;
+    return [hx, hy];
+  }
+
+  // Scenery for the map: trees, rocks and ponds on land; kelp, coral and rocks at sea.
+  let scenery = null; let sceneryKey = '';
+  function makeScenery(run) {
+    const key = `${run.stage}-${run.habitat}-${run.origin}-${run.archetype}`;
+    if (key === sceneryKey) return scenery;
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const items = [];
+    if (run.stage === 'cell') { for (let i = 0; i < 6; i++) items.push({ kind: 'blob', x: rnd(), y: rnd(), r: 0.5 + rnd() }); }
+    else if (run.habitat === 'sea') {
+      for (let i = 0; i < 9; i++) items.push({ kind: 'kelp', x: rnd(), y: 0.55 + rnd() * 0.45, r: 0.6 + rnd() * 0.6 });
+      for (let i = 0; i < 6; i++) items.push({ kind: 'coral', x: rnd(), y: 0.6 + rnd() * 0.4, r: 0.6 + rnd() * 0.5, hue: Math.floor(rnd() * 360) });
+      for (let i = 0; i < 4; i++) items.push({ kind: 'rock', x: rnd(), y: 0.5 + rnd() * 0.5, r: 0.6 + rnd() * 0.6 });
+    } else {
+      for (let i = 0; i < 9; i++) items.push({ kind: 'tree', x: rnd(), y: rnd(), r: 0.7 + rnd() * 0.6 });
+      for (let i = 0; i < 7; i++) items.push({ kind: 'bush', x: rnd(), y: rnd(), r: 0.6 + rnd() * 0.5 });
+      for (let i = 0; i < 5; i++) items.push({ kind: 'rock', x: rnd(), y: rnd(), r: 0.5 + rnd() * 0.7 });
+      items.push({ kind: 'pond', x: 0.2 + rnd() * 0.6, y: 0.3 + rnd() * 0.5, r: 1 });
+    }
+    scenery = items; sceneryKey = key;
+    return items;
+  }
+
+  function drawScenery(it, x, y, k, t) {
+    switch (it.kind) {
+      case 'tree': line(x, y, x, y - k * 1.1, '#4d3420', k * 0.16); dot(x, y - k * 1.25, k * 0.55, '#2f5f37'); dot(x - k * 0.3, y - k * 1.05, k * 0.38, '#36703f'); dot(x + k * 0.32, y - k * 1.1, k * 0.36, '#295533'); break;
+      case 'bush': dot(x, y - k * 0.2, k * 0.3, '#3b7a44'); dot(x + k * 0.25, y - k * 0.15, k * 0.24, '#346d3c'); dot(x - k * 0.22, y - k * 0.12, k * 0.22, '#40854a'); break;
+      case 'rock': ctx.beginPath(); ctx.ellipse(x, y - k * 0.15, k * 0.4, k * 0.25, 0, Math.PI, 0); ctx.fillStyle = '#6b6f72'; ctx.fill(); ctx.beginPath(); ctx.ellipse(x - k * 0.1, y - k * 0.25, k * 0.15, k * 0.08, 0, Math.PI, 0); ctx.fillStyle = '#878b8e'; ctx.fill(); break;
+      case 'pond': ctx.beginPath(); ctx.ellipse(x, y, k * 1.6, k * 0.45, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(80, 150, 190, 0.75)'; ctx.fill(); ctx.beginPath(); ctx.ellipse(x - k * 0.4, y - k * 0.1, k * 0.5, k * 0.08, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fill(); break;
+      case 'kelp': for (let i = 0; i < 3; i++) wavy(x + i * k * 0.2, y, k * 2, -Math.PI / 2, k * 0.15, t * 0.7, 'rgba(80, 140, 70, 0.8)', k * 0.12, i + x * 10); break;
+      case 'coral': for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + i * k * 0.2, y - k * 0.5, x + i * k * 0.35, y - k * (0.8 - Math.abs(i) * 0.12)); ctx.strokeStyle = hsl(it.hue, 65, 60); ctx.lineWidth = k * 0.1; ctx.lineCap = 'round'; ctx.stroke(); } break;
+      case 'blob': dot(x, y, k * 0.3, 'rgba(255,255,255,0.05)'); break;
+      default: break;
+    }
+  }
+
   function drawMapBackground(run, w, h, t) {
-    drawBackground(run, w, h, t);
+    const hue = G.ORIGIN[run.origin].hue;
+    if (run.stage === 'creature' && run.habitat === 'land') {
+      const g = ctx.createLinearGradient(0, 0, 0, h * 0.24);
+      g.addColorStop(0, hsl(hue + 20, 45, 34)); g.addColorStop(1, hsl(hue + 30, 40, 24));
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h * 0.24);
+      for (let i = 0; i < 3; i++) { const cx = ((i * 0.37 + 0.1) * w + t * 6) % (w + 120) - 60; dot(cx, h * (0.05 + i * 0.03), 14, 'rgba(255,255,255,0.08)'); dot(cx + 16, h * (0.05 + i * 0.03) + 3, 11, 'rgba(255,255,255,0.08)'); }
+      ctx.fillStyle = hsl(hue + 40, 22, 20);
+      ctx.beginPath(); ctx.moveTo(0, h * 0.24); for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h * 0.24 - Math.abs(Math.sin(x * 0.012 + 1)) * h * 0.07 - Math.sin(x * 0.031) * h * 0.02); ctx.lineTo(w, h * 0.26); ctx.lineTo(0, h * 0.26); ctx.fill();
+      const gg = ctx.createLinearGradient(0, h * 0.24, 0, h);
+      gg.addColorStop(0, hsl(95, 22, 19)); gg.addColorStop(1, hsl(95, 28, 26));
+      ctx.fillStyle = gg; ctx.fillRect(0, h * 0.24, w, h * 0.76);
+      for (let i = 0; i < 60; i++) { const x = (i * 97.3) % w; const y = h * 0.27 + ((i * 53.1) % (h * 0.72)); line(x, y, x + Math.sin(t + i) * 1.5, y - 5 - (y / h) * 5, hsl(95, 30, 32), 1.5); }
+    } else drawBackground(run, w, h, t);
     const o = run.origin;
-    if (o === 'vents') drawProp('vent', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
-    if (o === 'frozen') drawProp('snow', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
-    if (o === 'toxic') drawProp('plume', 'back', { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.9 });
-    if (run.stage === 'creature' && run.habitat === 'land') { ctx.fillStyle = hsl(95, 22, 17); ctx.fillRect(0, h * 0.5, w, h * 0.5); for (let i = 0; i < 40; i++) { const x = (i * 97) % w; const y = h * 0.52 + ((i * 53) % (h * 0.46)); line(x, y, x + Math.sin(t + i) * 2, y - 6, hsl(95, 30, 28), 2); } }
+    const P = { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.95 };
+    if (o === 'vents') drawProp('vent', 'back', P);
+    if (o === 'frozen') drawProp('snow', 'back', P);
+    if (o === 'toxic') drawProp('plume', 'back', P);
   }
 
   G.startMap = function (canvas, onTap) {
@@ -990,52 +1110,61 @@ window.G = window.G || {};
       ctx.clearRect(0, 0, w, h);
       drawMapBackground(run, w, h, t);
       const wet = run.stage === 'cell' || run.habitat === 'sea';
-      const top = wet ? h * 0.12 : h * 0.5; const bottom = h * 0.93;
-      const base = Math.min(w, h) * 0.13;
+      const land = !wet;
+      const top = land ? h * 0.3 : h * 0.12; const bottom = h * 0.93;
+      const base = Math.min(w, h) * 0.12;
+      const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
       // Keep the herd list in sync with the world.
       const live = [{ key: 'you', s: null, pop: run.pop, body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
       [...herds.keys()].forEach((k) => { if (!live.find((l) => l.key === k)) herds.delete(k); });
-      live.forEach((l) => {
+      live.forEach((l, i) => {
         let hd = herds.get(l.key);
-        if (!hd) { hd = { x: l.key === 'you' ? 0.4 : 0.1 + Math.random() * 0.8, y: Math.random(), dir: 1, members: [] }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
-        const speed = (l.s ? 0.03 + G.speciesStat(l.s, 'spd') * 0.004 : 0.035 + G.stat(run, 'spd') * 0.003) * (reduceMotion ? 0 : 1);
+        if (!hd) { const [hx0, hy0] = homeFor(i, l.key); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        const speed = (l.s ? 0.025 + G.speciesStat(l.s, 'spd') * 0.003 : 0.03 + G.stat(run, 'spd') * 0.0025) * (reduceMotion ? 0 : 1) * (flies(l.body) ? 1.6 : 1);
         const dx = hd.tx - hd.x; const dy = hd.ty - hd.y;
         const d = Math.hypot(dx, dy * 0.5);
         if (d < 0.02) behaviour(run, l.key, l.s, hd);
         else { hd.x += (dx / d) * speed * dt; hd.y += (dy / d) * speed * dt * 0.5; if (Math.abs(dx) > 0.01) hd.dir = dx > 0 ? 1 : -1; }
       });
-      // Draw from far to near.
+      // Draw scenery and herds together, far to near.
+      const depthOf = (y) => (land ? 0.55 + 0.45 * y : 0.7 + 0.3 * y);
+      const drawables = makeScenery(run).map((it) => ({ y: it.y, draw: () => { const k = base * depthOf(it.y) * it.r; drawScenery(it, it.x * w, top + it.y * (bottom - top), k, t); } }));
       mapHits = [];
-      live.sort((a, b2) => herds.get(a.key).y - herds.get(b2.key).y).forEach((l) => {
+      live.forEach((l) => {
         const hd = herds.get(l.key);
-        const depth = 0.6 + 0.4 * hd.y;
-        const size = base * depth * herdScale(run, l.s);
-        const pop = Math.max(0, Math.round(l.pop));
-        const icons = Math.max(1, Math.min(12, pop <= 12 ? pop : Math.round(12 * Math.min(1, pop / 40) + 4)));
-        const hx = hd.x * w; const hy = top + hd.y * (bottom - top);
-        const spr = spriteFor(l.body);
-        const spread = size * (0.35 + Math.sqrt(icons) * 0.32);
-        for (let i = 0; i < icons; i++) {
-          const ang = i * 2.399; const rad = spread * Math.sqrt((i + 0.5) / icons);
-          const bob = Math.sin(t * 6 + i * 1.7) * size * 0.03;
-          const mx = hx + Math.cos(ang) * rad + Math.sin(t * 0.8 + i) * size * 0.08;
-          const my = hy + Math.sin(ang) * rad * 0.35 + bob;
-          ctx.save(); ctx.translate(mx, my); if (hd.dir < 0) ctx.scale(-1, 1);
-          ctx.drawImage(spr, -size / 2, -size / 2, size, size);
-          ctx.restore();
-        }
-        // Label
-        const label = `${l.key === 'you' ? 'You' : l.key} · ${pop}`;
-        ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
-        const tw = ctx.measureText(label).width + 12;
-        const ly = hy - spread * 0.35 - size * 0.55;
-        const st = l.s ? G.speciesStatus(l.s) : 'you';
-        ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
-        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(hx - tw / 2, ly - 9, tw, 18, 9) : ctx.rect(hx - tw / 2, ly - 9, tw, 18); ctx.fill();
-        ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, hx, ly + 1);
-        mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
+        drawables.push({ y: hd.y, draw: () => {
+          const depth = depthOf(hd.y);
+          const size = base * depth * herdScale(run, l.s);
+          const pop = Math.max(0, Math.round(l.pop));
+          const icons = Math.max(1, Math.min(14, pop <= 14 ? pop : Math.round(14 * Math.min(1, pop / 40) + 4)));
+          const hx = hd.x * w; const groundY = top + hd.y * (bottom - top);
+          const air = flies(l.body) ? h * 0.16 + Math.sin(t * 1.3 + hd.hx * 9) * 8 : 0;
+          const hy = groundY - air;
+          const spr = spriteFor(l.body);
+          const spread = size * (0.35 + Math.sqrt(icons) * 0.32);
+          for (let i = 0; i < icons; i++) {
+            const ang = i * 2.399; const rad = spread * Math.sqrt((i + 0.5) / icons);
+            const bob = Math.sin(t * (air ? 9 : 6) + i * 1.7) * size * (air ? 0.08 : 0.03);
+            const mx = hx + Math.cos(ang) * rad + Math.sin(t * 0.8 + i) * size * 0.08;
+            const my = hy + Math.sin(ang) * rad * 0.35 + bob;
+            if (air) { ctx.beginPath(); ctx.ellipse(mx, groundY + Math.sin(ang) * rad * 0.35, size * 0.25, size * 0.06, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fill(); }
+            ctx.save(); ctx.translate(mx, my); if (hd.dir < 0) ctx.scale(-1, 1);
+            ctx.drawImage(spr, -size / 2, -size / 2, size, size);
+            ctx.restore();
+          }
+          const label = `${l.key === 'you' ? 'You' : l.key} · ${pop}`;
+          ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
+          const tw = ctx.measureText(label).width + 12;
+          const ly = hy - spread * 0.35 - size * 0.55;
+          const st = l.s ? G.speciesStatus(l.s) : 'you';
+          ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
+          ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(hx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(hx - tw / 2, ly - 9, tw, 18); ctx.fill();
+          ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, hx, ly + 1);
+          mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
+        } });
       });
+      drawables.sort((p1, p2) => p1.y - p2.y).forEach((d2) => d2.draw());
       mapFrame = requestAnimationFrame(frame);
     }
     mapFrame = requestAnimationFrame(frame);

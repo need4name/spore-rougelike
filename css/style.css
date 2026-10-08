@@ -360,10 +360,10 @@ button.rival:hover { border-color: var(--accent); }
 .tick-fill { display: block; height: 100%; width: 0; background: var(--accent); }
 
 /* ======================= Event overlay ======================= */
-.modal-backdrop { position: fixed; inset: 0; z-index: 14; background: rgba(4, 10, 12, 0.45); }
+.modal-backdrop { position: absolute; inset: 0; z-index: 14; background: rgba(4, 10, 12, 0.45); }
 .modal {
-  position: fixed; z-index: 15; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: min(680px, 100%); max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  position: absolute; z-index: 15; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: min(680px, 100%); max-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; align-content: start;
   animation: rise 0.22s ease;
 }
@@ -371,7 +371,7 @@ button.rival:hover { border-color: var(--accent); }
 .modal .scene-wrap { margin: 0; border-radius: 0 0 var(--radius) var(--radius); border: 1px solid var(--line); border-top: 0; height: min(38dvh, 320px); }
 .modal .card { box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
 .modal > .card:first-child { margin-top: 12px; }
-@media (min-width: 900px) { .modal { bottom: auto; top: 50%; transform: translate(-50%, -50%); max-height: 90dvh; animation: none; } .modal .scene-wrap { border-radius: var(--radius); border-top: 1px solid var(--line); } }
+@media (min-width: 900px) { .modal { bottom: auto; top: 50%; transform: translate(-50%, -50%); max-height: 96%; animation: none; } .modal .scene-wrap { border-radius: var(--radius); border-top: 1px solid var(--line); } }
 
 /* ======================= Full-screen viewer ======================= */
 .viewer { position: fixed; inset: 0; z-index: 30; background: var(--bg); }
@@ -421,3 +421,16 @@ button.rival:hover { border-color: var(--accent); }
 .gate { color: var(--accent); font-size: 0.85rem; }
 .extinct-row { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--panel); opacity: 0.5; text-decoration: line-through; }
 .codex-grid li.evo-known { border: 1px solid rgba(242, 181, 68, 0.5); }
+
+/* Top bar: instinct and time controls on the right */
+.tb-right { display: grid; gap: 6px; justify-items: end; }
+.topbar .speeds { margin: 0; padding: 2px; border-radius: 12px; }
+.topbar .speed { min-width: 38px; min-height: 36px; padding: 0 6px; }
+.speeds.held { opacity: 0.55; }
+.kw.unlocked { --kw: #f2c14e; }
+#modal { position: absolute; inset: 0; pointer-events: none; z-index: 14; }
+#modal > * { pointer-events: auto; }
+
+.tb-row2 { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: -2px; }
+.topbar .tb-row2 .speeds { width: 100%; justify-content: space-between; max-width: 360px; }
+.topbar .tb-row2 .speed { flex: 1; }

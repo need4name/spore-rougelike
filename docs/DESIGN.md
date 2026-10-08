@@ -21,7 +21,7 @@ Spore's arc from cell to space, rebuilt for phones: no movement, just decisions.
 - **Population**: your health. At 0 you are extinct.
 - **Food**: you gather Food every turn based on your Instinct and parts, and eat half your Population (rounded up). Spare Food grows Population by 1 (once per turn). Storage is capped, and extra Food spoils. So Food turns into Population, and a bigger Population eats more.
 - **DNA**: drives drafts, milestones and finales.
-- **Insight** (after the Spark of Mind): flows into the idea your kind is fascinated by in the Mind skill tree. Each idea branches from earlier ones, shown with lines. Innovations need the right diet, stats, traits or earlier ideas, and some rule others out (Ambush Instinct or Gentle Grazing; Pack Tactics or Herd Defense; War Bands or Shared Ritual; Lone Wanderers or a social path).
+- **Insight** (after the Spark of Mind, about halfway through the Creature stage; finishing the tree takes the other half): flows into the idea your kind is fascinated by in the Mind skill tree. Each idea branches from earlier ones, shown with lines. Innovations need the right diet, stats, traits or earlier ideas, and some rule others out (Ambush Instinct or Gentle Grazing; Pack Tactics or Herd Defense; War Bands or Shared Ritual; Lone Wanderers or a social path).
 
 ## Instinct (CK3-style focus)
 
@@ -33,6 +33,10 @@ Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and
 - **Merging.** Once multicellular (and always as a creature), a new part can merge with the one in its slot, keeping both sets of stats and keywords ("Venomous Fangs"). A slot holds at most two parts. A new part on a merged slot (from a draft or a random mutation) swaps out only one half, so a merged part stays merged.
 - **Evolutions.** 61 recipes (Ball x Pit style): merging the right two parts in a slot evolves them into one stronger part, which can merge again. Some tier 1 evolutions evolve again into tier 2 legendaries. Drafts name known recipes and hint at unknown ones. Discoveries are saved in the Codex (+5 Genetic Memory each) and gate unlocks: Venom Glands (1), Symbiote (2), Toxic Bloom (4), Parasite (5).
 - **Carry-over.** When you leave the Cell stage, only your mouth and your evolved parts grow into creature parts. Everything else is left behind; the archetype fills essential empty slots.
+- **Basic limbs.** Every creature starts with Stubby Forelegs and Hind Legs (or Stubby Fins at sea). Limb mutations (Long Bones, Thick Muscle, Gripping Pads, Bony Plates, Skin Flaps, Soft Bones, Springy Tendons, Balance Organ, Long Fin Rays) merge with them to grow every advanced limb: runner legs, haunches, pillars, hoppers, upright legs, arms, wings, tentacles, fins and flippers.
+- **Flight.** Stubby Forelegs + Skin Flaps → Wing Membranes; + Flight Feathers → Feathered Wings (or Slender Forelegs + Wing Membranes → True Wings). Flyers soar above the map and unlock flight choices in events.
+- **Roguelike unlocks.** Evolved parts (including advanced limbs) never appear in drafts until you have created them by merging. Once discovered, they can turn up in drafts in every later run (legendaries rarely). The end screen lists what a run unlocked.
+- **Visual variety.** Merged and evolved parts draw every ingredient layered together. Evolved slots reshape the body: bigger heads with extra teeth, extra eyes, longer and thicker limbs (a third pair for tier 2), bigger claws, a crest of spikes, glowing skin, forked tails.
 - **Appearance.** In the Creature stage the Look tab changes body color, pattern color, pattern, body shape, neck, posture and eyes. Some options unlock with progress (two legs need Upright or Striding Legs; long necks need the Age of Giants on land). Looks never change stats.
 - **Size.** Small creatures live in herds 1.5× bigger and eat less each, but every blow kills more of them. Giants live in small herds, eat a lot and shrug off damage. Max Population also grows with each milestone. Event gains and losses scale with herd size.
 - **Keywords:** Venom, Armor, Swift, Glow and Symbiont. Two parts give a stat bonus; three give a stronger bonus.
@@ -41,7 +45,7 @@ Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and
 
 ## The world
 
-Every stage has named species with roles (predator, prey, rival, neighbor), an opinion of you and a population. Their herds roam the world map: crowd size shows population and sprite size shows body size. Predators chase prey, hostile species drift toward you, allies stay close. Populations rise and fall each tick; species can go extinct and newcomers arrive. Tap a herd (or a species in the World tab) to see its sheet, and tap its portrait to view it full screen. Hunting or beating a species thins its numbers.
+The map gives every herd a home territory spread across it, with scenery (trees, bushes, rocks and a pond on land; kelp, coral and rocks at sea). Flyers soar above the ground with shadows beneath. Every stage has named species with roles (predator, prey, rival, neighbor), an opinion of you and a population. Their herds roam the world map: crowd size shows population and sprite size shows body size. Predators chase prey, hostile species drift toward you, allies stay close. Populations rise and fall each tick; species can go extinct and newcomers arrive. Tap a herd (or a species in the World tab) to see its sheet, and tap its portrait to view it full screen. Hunting or beating a species thins its numbers.
 
 ## Scenes
 
