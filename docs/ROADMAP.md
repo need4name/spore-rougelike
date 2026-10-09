@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep) is out.** The sea now has more parts, evolutions and events than land; Update 7 brings land back level.
 
 ---
 
@@ -87,7 +87,7 @@ Updates 6–8 are new. They come first because everything later is built on them
 
 ---
 
-## Update 6: The Deep
+## Update 6: The Deep ✅
 
 *The sea catches up with land.*
 

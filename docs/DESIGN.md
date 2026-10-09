@@ -29,9 +29,9 @@ Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and
 
 ## Builds
 
-- **Slots.** Cell has Mouth, Motion and Membrane, plus Senses and Organ once multicellular. Land creatures have Mouth, Senses, Front limbs, Hands, Hind limbs, Feet, Back, Skin and Tail. Sea creatures have Mouth, Senses, Front fins, Rear fins, Dorsal, Skin and Tail.
+- **Slots.** Cell has Mouth, Motion and Membrane, plus Senses and Organ once multicellular. Land creatures have Mouth, Senses, Front limbs, Hands, Hind limbs, Feet, Back, Skin and Tail. Sea creatures have Mouth, Senses, Front fins, Arms (pincers, tentacles, clubs: the sea's hands), Rear fins, Underside (walking legs, suckers, belly lights), Dorsal, Skin and Tail.
 - **Merging.** Once multicellular (and always as a creature), a new part can merge with the one in its slot, keeping both sets of stats and keywords ("Venomous Fangs"). A slot holds at most two parts. A new part on a merged slot (from a draft or a random mutation) swaps out only one half, so a merged part stays merged.
-- **Evolutions.** 61 recipes (Ball x Pit style): merging the right two parts in a slot evolves them into one stronger part, which can merge again. Some tier 1 evolutions evolve again into tier 2 legendaries. Drafts name known recipes and hint at unknown ones. Discoveries are saved in the Codex (+5 Genetic Memory each) and gate unlocks: Venom Glands (1), Symbiote (2), Toxic Bloom (4), Parasite (5).
+- **Evolutions.** 87 recipes (Ball x Pit style): merging the right two parts in a slot evolves them into one stronger part, which can merge again. Some tier 1 evolutions evolve again into tier 2 legendaries. Drafts name known recipes and hint at unknown ones. Discoveries are saved in the Codex (+5 Genetic Memory each) and gate unlocks: Venom Glands (1), Symbiote (2), Toxic Bloom (4), Parasite (5).
 - **Carry-over.** When you leave the Cell stage, only your mouth and your evolved parts grow into creature parts. Everything else is left behind; the archetype fills essential empty slots.
 - **Basic limbs.** Every creature starts with Stubby Forelegs and Hind Legs (or Stubby Fins at sea). Limb mutations (Long Bones, Thick Muscle, Gripping Pads, Bony Plates, Skin Flaps, Soft Bones, Springy Tendons, Balance Organ, Long Fin Rays) merge with them to grow every advanced limb: runner legs, haunches, pillars, hoppers, upright legs, arms, wings, tentacles, fins and flippers.
 - **Flight.** Stubby Forelegs + Skin Flaps → Wing Membranes; + Flight Feathers → Feathered Wings (or Slender Forelegs + Wing Membranes → True Wings). Flyers soar above the map and unlock flight choices in events.
@@ -39,13 +39,16 @@ Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and
 - **Visual variety.** Merged and evolved parts draw every ingredient layered together. Evolved slots reshape the body: bigger heads with extra teeth, extra eyes, longer and thicker limbs (a third pair for tier 2), bigger claws, a crest of spikes, glowing skin, forked tails.
 - **Symmetry.** Becoming multicellular means choosing a symmetry for good. **Bilateral** (head and tail, legs in pairs, +2 Speed). **Radial** (starfish on land, jellyfish at sea): +Cunning and Toughness but slow and weak, with no hind limbs, feet or tail. **No symmetry** (an oozing colony on pseudopods): big colonies and Food, but dim, clumsy and charmless, with no hands, feet or tail.
 - **Body plan.** In the Creature stage the Body plan tab changes your number of leg pairs, arms or pseudopods for 4 DNA a step. Bilateral: 0 pairs is a **Serpent** (snake or eel; stealthy hunter, but loses every limb slot), 1 pair stands on two legs (+Insight), 2 is the classic four legs, 3 is six legs, and up to 8 pairs makes a **Centipede** (very fast and tough, but always hungry and unloved). Radial: 3 to 8 arms; Colonial: 2 to 8 pseudopods. More segments mean more Food eaten each turn. Slots a body plan doesn't use are greyed out; parts there are kept but do nothing, and drafts skip them. Some events need a body plan (serpents slither into burrows, radial creatures regrow lost arms, colonies bud).
-- **Appearance.** In the Creature stage the Look tab changes body color, pattern color, pattern, body shape (round, slim, flat, pear, tall, hunched, long), head (round, snout, flat, big, crest), neck, posture and eyes. Some options unlock with progress (two legs need Upright or Striding Legs; long necks need the Age of Giants on land). Looks never change stats.
+- **Appearance.** In the Creature stage the Look tab changes body color, pattern color, pattern, body shape (land: flat, pear, tall, hunched; sea: torpedo, deep-bodied, ray, puffer; both: round, slim, long), head (round, snout, flat, big, crest; sea: hammerhead, sword nose), fins (sea), neck, posture and eyes. Some options unlock with progress (two legs need Upright or Striding Legs; long necks need the Age of Giants on land). Looks never change stats.
 - **Size.** Every creature has a real size (centimeters to meters) shown on its map label, its sheet and the Body tab. Small creatures live in herds 1.5× bigger and eat less each, but every blow kills more of them. Giants live in small herds, eat a lot and shrug off damage. Max Population also grows with each milestone. Event gains and losses scale with herd size.
 - **Keywords:** Venom, Armor, Swift, Glow and Symbiont. Two parts give a stat bonus; three give a stronger bonus.
 - **Tags:** grasping parts (hands, arms, tentacles, trunk, prehensile tail) unlock tool events and the Tools innovation. Upright legs free the hands and boost Insight.
 - **Traits** come from events and milestones and last the whole run. Your diet when leaving the Cell stage gives a heritage trait.
 
 ## The world
+
+**The sea has depth.** Sea creatures choose a home depth in the Instinct tab (3 DNA to move): Sunlit Shallows (lots of food, nowhere to hide), The Reef (friends and shelter, slow), Open Water (fast hunters), the Twilight Zone (sharp senses; needs a Glow part, sharp senses or Pressure Skin) and The Abyss (safe but hungry; needs a Glow part or Pressure Skin). The sea map is a side-on slice of ocean with every herd at its home depth, and some events only happen at certain depths.
+
 
 The map gives every herd a home territory spread across it, with scenery (trees, bushes, rocks and a pond on land; kelp, coral and rocks at sea). Flyers soar above the ground with shadows beneath. Every stage has named species with roles (predator, prey, rival, neighbor), an opinion of you and a population. Other species have their own symmetry and body plan too (starfish, jellyfish, snakes, centipedes, colonies). Their herds roam the world map: crowd size shows population, sprite size scales with real body size, and each label reads name · population · size. Predators chase prey, hostile species drift toward you, allies stay close. Populations rise and fall each tick; species can go extinct and newcomers arrive. Tap a herd (or a species in the World tab) to see its sheet, and tap its portrait to view it full screen. Hunting or beating a species thins its numbers.
 
@@ -58,7 +61,8 @@ After every choice, a scene acts out what happened. When another species is invo
 - **Genetic Memory** = DNA ÷ 3 + milestone bonuses + 40 for winning, × Hostility bonus.
 - **Unlocks:** archetypes, home worlds, mutation packs, ancestral boons and Hostility 1–5.
 - **Codex of Life:** every event, part and ending found.
-- **Endings:** Firekeepers, Unifiers, Conquerors and Wanderers (land); Deep Singers, Reef Builders and Tide Lords (sea).
+- **Endings:** Firekeepers, Unifiers, Conquerors and Wanderers (land); Deep Singers, Reef Builders, Tide Lords, Shell Smiths (tools) and Vent Keepers (the sea's fire) (sea).
+- **Shared words:** events use {herd}, {nests}, {cover}, {home}, {move} and {depth}, which change with your body, so one event reads right on land and at sea.
 
 ## Next steps
 
