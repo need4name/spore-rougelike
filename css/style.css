@@ -507,3 +507,14 @@ button.rival:hover { border-color: var(--accent); }
 .act-card.open { outline: 1px solid rgba(242,181,68,0.5); }
 .act-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .act-card .chips { margin-top: 8px; }
+
+/* World map */
+.world-map { position: relative; height: 300px; margin: 8px 0 12px; border-radius: var(--radius); background: radial-gradient(circle at 50% 40%, rgba(143,209,106,0.12), rgba(255,255,255,0.03)); overflow: hidden; }
+.world-map .routes { position: absolute; inset: 0; width: 100%; height: 100%; }
+.world-map .route { stroke: rgba(232,239,228,0.45); stroke-width: 2; stroke-dasharray: 4 4; }
+.world-map .route.fog { stroke: rgba(232,239,228,0.08); }
+.biome-node { position: absolute; transform: translate(-50%, -50%); min-width: 72px; min-height: 44px; padding: 6px 8px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.2); background: var(--panel); color: var(--fg); font: inherit; font-size: 0.8rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+.biome-node.fog { background: rgba(255,255,255,0.04); color: var(--muted); border-style: dashed; cursor: default; }
+.biome-node.here { outline: 2px solid var(--accent); }
+.biome-node.dest { outline: 2px dashed var(--accent); }
+.biome-node i { font-style: normal; font-size: 0.7rem; color: var(--accent); }

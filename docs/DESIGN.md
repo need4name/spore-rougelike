@@ -72,6 +72,26 @@ Each archetype has a status chip in the top bar (Hunger, Host, Partner, Current,
 
 The map gives every herd a home territory spread across it, with scenery (trees, bushes, rocks and a pond on land; kelp, coral and rocks at sea). Flyers soar above the ground with shadows beneath. Every stage has named species with roles (predator, prey, rival, neighbor), an opinion of you and a population. Other species have their own symmetry and body plan too (starfish, jellyfish, snakes, centipedes, colonies). Their herds roam the world map: crowd size shows population, sprite size scales with real body size, and each label reads name · population · size. Predators chase prey, hostile species drift toward you, allies stay close. Populations rise and fall each tick; species can go extinct and newcomers arrive. Tap a herd (or a species in the World tab) to see its sheet, and tap its portrait to view it full screen. Hunting or beating a species thins its numbers.
 
+## The World Map
+
+- **Biomes** (`G.BIOMES`):
+  - **Cell:** Thermal Vent (home), Sunlit Surface, Mud Flats.
+  - **Land:** Open Plains (home), Jungle, Desert, Tundra, Swamp, Shore.
+  - **Sea:** Warm Seas (home), Kelp Forest, Polar Sea, Vent Fields, Coast. Your home depth still applies within each sea region.
+
+  Each biome has stat effects, its own scenery and ground colour, events (`biome:` in events.js) and parts (`biome:` in parts.js, drafted only there, 3× as often). Biomes only matter once you are multicellular.
+- **Vision and travel** (`G.vision`):
+
+  | Vision | When | What you see | How you move |
+  |---|---|---|---|
+  | 0 | Cell stage | Your own biome | Only by events (rising bubbles, falling silt, the warm current) |
+  | 0 | Early creature | Your own biome | Migrate to a random neighbour |
+  | 1 | Cunning 6 or the Spark of Mind | Neighbours too | Choose your destination on the Map tab |
+  | 2 | Keen Memory, Lone Wanderers or Symbolic Thought | The whole world | Choose your destination |
+
+  Arriving somewhere new replaces most of your neighbours. Partners, hosts, offshoots and nemeses follow you.
+- **Crossing over.** The Shore (land) and the Coast (sea) allow the Cross over activity: 5 turns and a quarter of your kind. Parts that only work in the old habitat are lost, basic limbs and a mouth are filled in, the world is new, and the editor opens.
+
 ## The Living World
 
 - **Niches.** Every species fills a niche (`G.NICHES`: apex predator, small hunter, big grazer, small grazer, scavenger, forager, browser, gentle giant). The cell stage starts with 6 species and the creature stage with 9. Species in the same niche share its room to grow.

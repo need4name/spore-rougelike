@@ -24,6 +24,7 @@
 //     living world: chain + chainIn (a follow-up event, marked chained: true), endActivity, warScore, nemesis
 //   activity   only while that Activity is under way ('war', 'court', ...)
 //   season     only in that season ('winter', 'bloom', ...)
+//   biome      only in that biome (an id or a list of ids, see G.BIOMES); result `biome` moves you there
 //   species    also 'target' (the Activity's target), 'nemesis', 'sworn', 'migrant'
 //   zones      sea events only: list of home depths where it can happen (see G.SEA_ZONES)
 //   Words in braces change with your body: {herd} {Herd} {nests} {cover} {home} {move} {depth}
@@ -1264,6 +1265,151 @@ G.EVENTS = [
     options: [
       { label: 'Accept their gifts', result: { text: 'Food, and friendship.', food: 6, opinion: 20, anim: 'social', mood: 'love' } },
       { label: 'Ask them to stand with you', result: { text: 'They swear to fight beside you.', opinion: 60, anim: 'social' } },
+    ],
+  },
+  // ======================= THE WORLD MAP (biome events) =======================
+  // ---- Cell stage: currents move multicellular cells between biomes ----
+  {
+    id: 'rising_bubbles', stage: 'cell', multi: true, title: 'Rising Bubbles', tags: ['explore'],
+    when: (run) => G.biome(run).id !== 'surface',
+    text: 'A stream of bubbles rises from the vent, carrying everything nearby up toward the light.',
+    options: [
+      { label: 'Ride them to the surface', result: { text: 'Sunlight! Food everywhere, and eyes everywhere too.', biome: 'surface', dna: 2, anim: 'flee' } },
+      { label: 'Cling on and stay', check: { stat: 'tou', diff: 2 }, success: { text: 'You hold fast.', dna: 1, anim: 'rest' }, fail: { text: 'Some of you are swept away anyway.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'sinking_silt', stage: 'cell', multi: true, title: 'Falling Silt', tags: ['explore', 'danger'],
+    when: (run) => G.biome(run).id !== 'mud',
+    text: 'A cloud of silt drifts down and buries you. Below is thick, quiet mud.',
+    options: [
+      { label: 'Settle into the mud', result: { text: 'Safe, slow and soft.', biome: 'mud', dna: 1, anim: 'rest' } },
+      { label: 'Swim up out of it', check: { stat: 'spd', diff: 2 }, success: { text: 'Clear water again.', dna: 1 }, fail: { text: 'The silt smothers some of you.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'back_to_the_vent', stage: 'cell', multi: true, title: 'The Warm Current', tags: ['explore'],
+    when: (run) => G.biome(run).id !== 'vent',
+    text: 'A warm current flows past, smelling of the vent you came from.',
+    options: [
+      { label: 'Follow it home', result: { text: 'Back to the warm, steady dark.', biome: 'vent', anim: 'rest' } },
+      { label: 'Stay here', result: { text: 'This is home now.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'sunburn', stage: 'cell', biome: 'surface', title: 'Too Much Sun', tags: ['danger'],
+    text: 'The light that feeds you is burning you too.',
+    options: [
+      { label: 'Grow darker membranes', check: { stat: 'tou', diff: 2 }, success: { text: 'You darken and harden.', trait: 'resilient' }, fail: { text: 'The light kills the outer cells.', pop: -2 } },
+      { label: 'Dive in the heat of the day', result: { text: 'You go down at noon and up at dusk.', food: -1, dna: 2 } },
+    ],
+  },
+  // ---- Land ----
+  {
+    id: 'jungle_canopy', stage: 'creature', habitat: 'land', biome: 'jungle', title: 'The Canopy', tags: ['explore', 'food'],
+    text: 'High above, the treetops are heavy with fruit, and something is moving between them.',
+    options: [
+      { label: 'Climb up', req: { tag: 'grasp' }, result: { text: 'A whole world in the treetops.', food: 5, dna: 2, anim: 'grow' } },
+      { label: 'Wait for fruit to fall', result: { text: 'Patience, and bruised fruit.', food: 2, anim: 'rest' } },
+      { label: 'Investigate the movement', check: { stat: 'cun', diff: 3 }, success: { text: 'A shy new species. You learn its ways.', dna: 3 }, fail: { text: 'It was a snake.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'jungle_fever', stage: 'creature', habitat: 'land', biome: ['jungle', 'swamp'], prop: 'sickness', title: 'Swamp Fever', tags: ['danger'],
+    text: 'Biting insects bring a fever that spreads through your kind.',
+    options: [
+      { label: 'Roll in mud', check: { stat: 'cun', diff: 3 }, success: { text: 'The insects cannot bite through it.', dna: 2 }, fail: { text: 'Too late for some.', pop: -2 } },
+      { label: 'Tough it out', check: { stat: 'tou', diff: 4 }, success: { text: 'The survivors are stronger.', trait: 'resilient' }, fail: { text: 'The fever runs through you.', pop: -3 } },
+      { label: 'Move to higher ground', result: { text: 'You leave the worst of it behind.', food: -2, anim: 'flee' } },
+    ],
+  },
+  {
+    id: 'desert_oasis', stage: 'creature', habitat: 'land', biome: 'desert', prop: 'pond', title: 'The Oasis', tags: ['food', 'social'], species: 'any',
+    text: 'A pool of water among the dunes. Every creature for miles comes here, including the {them}.',
+    options: [
+      { label: 'Share the water', check: { stat: 'cha', diff: 3 }, success: { text: 'An uneasy peace at the water\'s edge.', food: 3, opinion: 20, anim: 'social' }, fail: { text: 'A scuffle at the water.', food: 1, opinion: -10 } },
+      { label: 'Claim it', check: { stat: 'str', diff: 4 }, success: { text: 'The oasis is yours.', food: 5, opinion: -25, trait: 'territorial', anim: 'attack' }, fail: { text: 'You are driven off, thirsty.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'sandstorm', stage: 'creature', habitat: 'land', biome: 'desert', prop: 'dust', title: 'Sandstorm', tags: ['danger'],
+    text: 'A wall of sand rolls across the desert.',
+    options: [
+      { label: 'Burrow under the sand', check: { stat: 'cun', diff: 3 }, success: { text: 'You wait it out underground.', dna: 2, anim: 'rest' }, fail: { text: 'Some of you are buried for good.', pop: -2 } },
+      { label: 'Huddle with your backs to it', check: { stat: 'tou', diff: 3 }, success: { text: 'Battered but fine.', dna: 1 }, fail: { text: 'The sand flays you.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'tundra_blizzard', stage: 'creature', habitat: 'land', biome: 'tundra', prop: 'snow', title: 'Blizzard', tags: ['danger'],
+    text: 'White, howling, endless. You cannot see your own tail.',
+    options: [
+      { label: 'Huddle together', check: { stat: 'tou', diff: 3 }, success: { text: 'Shared warmth gets you through.', trait: 'social', dna: 1 }, fail: { text: 'Some are lost in the white.', pop: -2 } },
+      { label: 'Dig a snow den', req: { tag: 'grasp' }, result: { text: 'Warm and snug.', dna: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'tundra_mammoth', stage: 'creature', habitat: 'land', biome: 'tundra', prop: 'carcass', title: 'Frozen in the Ice', tags: ['food'],
+    text: 'Something huge died here long ago and froze. The thaw is uncovering it.',
+    options: [
+      { label: 'Dig it out', check: { stat: 'str', diff: 3 }, success: { text: 'A feast that keeps forever in the cold.', food: 8, anim: 'eat' }, fail: { text: 'The ice wins.', food: 1 } },
+      { label: 'Study it', check: { stat: 'cun', diff: 3 }, success: { text: 'A creature from another age. You learn from its bones.', dna: 4 }, fail: { text: 'Just old bones.', dna: 1 } },
+    ],
+  },
+  {
+    id: 'swamp_sinkhole', stage: 'creature', habitat: 'land', biome: 'swamp', prop: 'tar', title: 'Sucking Mud', tags: ['danger'],
+    text: 'The ground gives way. Some of you are sinking.',
+    options: [
+      { label: 'Pull them out', check: { stat: 'str', diff: 3 }, success: { text: 'Everyone gets out.', trait: 'gentle' }, fail: { text: 'The mud keeps some.', pop: -2 } },
+      { label: 'Spread out and crawl', check: { stat: 'cun', diff: 3 }, success: { text: 'Light and wide, you float across.', dna: 2 }, fail: { text: 'Not light enough.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'shore_waves', stage: 'creature', habitat: 'land', biome: 'shore', prop: 'shore', title: 'The Pull of the Sea', tags: ['explore'],
+    text: 'Some of your kind keep wading into the waves and coming back fat with fish. The sea is calling.',
+    options: [
+      { label: 'Learn to fish', check: { stat: 'spd', diff: 3 }, success: { text: 'The shallows are full of food.', food: 4, dna: 2 }, fail: { text: 'The waves knock you about.', pop: -1 } },
+      { label: 'Stay on dry land', result: { text: 'The land is home.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  // ---- Sea ----
+  {
+    id: 'kelp_maze', stage: 'creature', habitat: 'sea', biome: 'kelp', prop: 'kelp', title: 'Lost in the Kelp', tags: ['explore', 'danger'],
+    text: 'The kelp grows so thick that your school is split up in the green maze.',
+    options: [
+      { label: 'Call to each other', check: { stat: 'cha', diff: 3 }, success: { text: 'Everyone finds their way back.', trait: 'social', dna: 1 }, fail: { text: 'Some never answer.', pop: -2 } },
+      { label: 'Feast while you are here', result: { text: 'If you are lost anyway, at least you eat.', food: 4, pop: -1, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'polar_ice', stage: 'creature', habitat: 'sea', biome: 'polar', prop: 'ice', title: 'Under the Ice', tags: ['danger', 'explore'],
+    text: 'The sea is freezing over above you. Soon there will be no way up.',
+    options: [
+      { label: 'Break through', check: { stat: 'str', diff: 4 }, success: { text: 'Air and light again.', dna: 2, anim: 'attack' }, fail: { text: 'The ice holds.', pop: -2 } },
+      { label: 'Live under it', check: { stat: 'tou', diff: 3 }, success: { text: 'Dark, cold and safe from everything above.', trait: 'resilient', dna: 2 }, fail: { text: 'The cold is too much for some.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'polar_krill', stage: 'creature', habitat: 'sea', biome: 'polar', prop: 'swarm', title: 'The Krill Swarm', tags: ['food'],
+    text: 'The water turns pink: a krill swarm miles across.',
+    options: [
+      { label: 'Feed until you can feed no more', result: { text: 'The fattest season of your lives.', food: 6, anim: 'eat' } },
+      { label: 'Follow the swarm', check: { stat: 'spd', diff: 3 }, success: { text: 'It leads you to rich new waters.', food: 3, dna: 3 }, fail: { text: 'It outpaces you.', food: 1 } },
+    ],
+  },
+  {
+    id: 'vent_eruption', stage: 'creature', habitat: 'sea', biome: 'vents', prop: 'vent', title: 'The Vents Erupt', tags: ['danger', 'explore'],
+    text: 'The sea floor cracks and boiling water pours out. Strange chemicals cloud the water.',
+    options: [
+      { label: 'Flee the heat', check: { stat: 'spd', diff: 3 }, success: { text: 'You get clear.', dna: 1, anim: 'flee' }, fail: { text: 'Some are boiled.', pop: -2 } },
+      { label: 'Bathe in the chemicals', check: { stat: 'tou', diff: 4 }, success: { text: 'Something in you changes.', randomPart: true, dna: 2, anim: 'mutate' }, fail: { text: 'Poisoned.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'coast_tidepool', stage: 'creature', habitat: 'sea', biome: 'coast', prop: 'shore', title: 'Stranded', tags: ['explore', 'danger'],
+    text: 'The tide goes out and leaves part of your school stranded on the rocks, gasping.',
+    options: [
+      { label: 'Wriggle back to the water', check: { stat: 'spd', diff: 3 }, success: { text: 'Everyone makes it back.', dna: 1, anim: 'flee' }, fail: { text: 'Not everyone.', pop: -2 } },
+      { label: 'Hold your breath and explore', req: { anyPart: ['tide_lungs', 'lobe_fins', 'walking_legs'] }, result: { text: 'The land is strange, dry and full of food nobody else can reach.', food: 4, dna: 3, mood: 'surprised' } },
     ],
   },
 ];

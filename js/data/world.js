@@ -509,6 +509,33 @@ G.WORLD_NICHES = {
   creature: ['apex', 'hunter', 'big_grazer', 'small_grazer', 'small_grazer', 'scavenger', 'forager', 'browser', 'gentle_giant'],
 };
 
+// Biomes: regions of the world map. Each has its own effects, scenery, events and parts.
+// x, y place it on the world map (0-100); next lists the biomes you can migrate to from it.
+// Cell biomes only matter once you are multicellular, and you only move between them by events.
+G.BIOMES = {
+  cell: [
+    { id: 'vent', name: 'Thermal Vent', x: 50, y: 70, next: ['surface', 'mud'], mods: {}, desc: 'Warm, steady and dark. Nothing changes here.' },
+    { id: 'surface', name: 'Sunlit Surface', x: 50, y: 20, next: ['vent', 'mud'], mods: { forageBonus: 2, damageReduce: -1 }, desc: 'Bright and full of food, but everything can see you.' },
+    { id: 'mud', name: 'Mud Flats', x: 18, y: 55, next: ['vent', 'surface'], mods: { tou: 1, spd: -1 }, desc: 'Thick, safe mud. Slow going.' },
+  ],
+  land: [
+    { id: 'plains', name: 'Open Plains', x: 50, y: 50, next: ['jungle', 'desert', 'tundra', 'swamp', 'shore'], mods: {}, desc: 'Grass to the horizon. No surprises.' },
+    { id: 'jungle', name: 'Jungle', x: 22, y: 28, next: ['plains', 'swamp'], mods: { cun: 1, forageBonus: 1, spd: -1 }, desc: 'Thick, hot and full of food, and of things hiding in the leaves.' },
+    { id: 'desert', name: 'Desert', x: 78, y: 26, next: ['plains', 'tundra'], mods: { tou: 1, foodPerTurn: -1 }, desc: 'Scorching days, freezing nights, and little to eat. What lives here is tough.' },
+    { id: 'tundra', name: 'Tundra', x: 80, y: 70, next: ['plains', 'desert'], mods: { maxPop: 2, foodPerTurn: -1, spd: -1 }, desc: 'Cold, wide and lean. Herds grow big to keep warm.' },
+    { id: 'swamp', name: 'Swamp', x: 20, y: 70, next: ['plains', 'jungle', 'shore'], mods: { forageBonus: 1, tou: -1 }, desc: 'Rich, wet and sickly.' },
+    { id: 'shore', name: 'Shore', x: 50, y: 88, next: ['plains', 'swamp'], mods: { forageBonus: 1, huntBonus: 1 }, desc: 'Where the land meets the sea. From here you could return to the water.', crossing: true },
+  ],
+  sea: [
+    { id: 'warm', name: 'Warm Seas', x: 50, y: 50, next: ['kelp', 'polar', 'vents', 'coast'], mods: {}, desc: 'Blue water as far as you can see.' },
+    { id: 'kelp', name: 'Kelp Forest', x: 22, y: 28, next: ['warm', 'coast'], mods: { forageBonus: 2, spd: -1 }, desc: 'Swaying forests full of food and hiding places.' },
+    { id: 'polar', name: 'Polar Sea', x: 78, y: 26, next: ['warm', 'vents'], mods: { maxPop: 3, tou: 1, foodPerTurn: -1 }, desc: 'Icy water under floating ice. Big, tough life.' },
+    { id: 'vents', name: 'Vent Fields', x: 80, y: 70, next: ['warm', 'polar'], mods: { dnaPerTurn: 1, foodPerTurn: -1 }, desc: 'Smoking vents on the sea floor. Strange chemistry speeds up change.' },
+    { id: 'coast', name: 'Coast', x: 25, y: 80, next: ['warm', 'kelp'], mods: { huntBonus: 1, forageBonus: 1 }, desc: 'Tide pools and beaches. From here you could crawl onto land.', crossing: true },
+  ],
+};
+G.HOME_BIOME = { cell: 'vent', land: 'plains', sea: 'warm' };
+
 // Seasons turn every 6 turns in the creature stage (the cell stage lives by a steady vent).
 G.SEASONS = {
   land: [
@@ -529,11 +556,12 @@ G.SEASON_LENGTH = 6;
 // Activities: long actions that play out over several turns, like CK3's.
 //   target: 'species' needs a species to aim at   turns: fixed length (null = until done or stopped)
 G.ACTIVITIES = [
-  { id: 'migrate', name: 'Migrate', turns: 4, desc: 'Lead your kind to new territory. Costs 1 Food a turn on the road; when you arrive, several neighbours are new, and you find food and DNA. You can move again after 10 turns.' },
+  { id: 'migrate', name: 'Migrate', turns: 4, desc: 'Lead your kind to a neighbouring biome (see the Map tab). Costs 1 Food a turn on the road; when you arrive, most neighbours are new, and you find food and DNA. Only a clever kind (Cunning 6, or the Spark of Mind) can choose where it goes. You can move again after 10 turns.' },
   { id: 'war', name: 'Go to war', target: 'species', desc: 'Fight a species for its territory. Each turn your armies clash and the war score moves. Win and they are crushed; lose and you are.' },
   { id: 'court', name: 'Court', target: 'species', desc: 'Win a species over, turn by turn, with Charm, until they become your allies.' },
   { id: 'avoid', name: 'Avoid', target: 'species', desc: 'Keep out of a species\' way. While you avoid them they rarely attack you, but taking the long way round costs 2 Food a turn.' },
   { id: 'hunt', name: 'Hunt them', target: 'species', desc: 'Make one species your prey. Each turn you hunt them for food; big or fast prey can hurt you.' },
+  { id: 'cross', name: 'Cross over', turns: 5, desc: 'From the Shore, return to the sea; from the Coast, crawl onto land. A 5-turn journey (−1 Food a turn) that costs a quarter of your kind. Parts that only work in your old home are lost, and new ones can grow.' },
   { id: 'scout', name: 'Scout', turns: 3, desc: 'Send scouts far and wide for 3 turns (−1 Food a turn). They always come back with something: a feeding ground, a part to borrow, or DNA. Scouts need 12 turns of rest afterwards.' },
 ];
 
@@ -561,15 +589,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '10';
+G.VERSION = '11';
 G.WHATS_NEW = {
-  title: 'Update 10: The Living World',
+  title: 'Update 11: The World Map',
   items: [
-    'Activities (new tab, or from any species\' page): Migrate, Go to war, Court, Avoid, Hunt them or Scout. Each plays out over several turns, with its own events.',
-    'A crowded world: 6 species in the cell stage and 9 as a creature, each filling a niche (apex predator, small grazer, scavenger, gentle giant...).',
-    'Species compete with others in their niche, keep evolving, and die out. Their empty niche is filled by a descendant of a survivor or by newcomers.',
-    'World history: the age is named after whoever dominates, and you can watch ages rise and fall in the World tab.',
-    'Seasons in the creature stage (spring, summer, autumn and winter on land; blooms, calm, storms and cold currents at sea), migrating herds, nemesis and sworn-ally species, and story chains that continue over several events.',
-    'The map shows who likes whom: grazers mix, rivals in the same niche keep apart, and your herd follows your Activity.',
+    'A new Map tab shows the biomes of your world. Fog hides what your kind does not know yet.',
+    'Cells: a thermal vent, the sunlit surface and mud flats. Biomes only matter once you are multicellular, and only currents and storms move you.',
+    'Land: open plains, jungle, desert, tundra, swamp and shore. Sea: warm seas, kelp forest, polar sea, vent fields and coast. Each has its own effects, scenery, events and parts.',
+    'Early creatures migrate to a random neighbouring biome. At Cunning 6 or the Spark of Mind you can see your neighbours and choose. Keen Memory, Lone Wanderers or Symbolic Thought reveal the whole world.',
+    'From the shore, return to the sea; from the coast, crawl onto land. It is a 5-turn journey, and you lose the parts that only worked in your old home.',
+    '12 biome parts, like Winter Coat, Water Hump, Canopy Tail and Vent Gardens, only show up in their biome.',
   ],
 };

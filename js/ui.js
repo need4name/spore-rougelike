@@ -204,7 +204,7 @@ window.G = window.G || {};
     const net = inc.total - up;
     const goal = nextGoal(run);
     const pct = goal ? Math.min(100, (run.dna / goal.at) * 100) : 100;
-    const era = run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '';
+    const era = (run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
     const fasc = run.fascination && G.INNOVATION[run.fascination];
     return `
       <header class="topbar">
@@ -686,6 +686,48 @@ window.G = window.G || {};
       ${ages.length ? `<h3>World history</h3><ol class="ages">${ages.map((a, i) => `<li class="${i === 0 ? 'now' : ''} ${a.you ? 'you' : ''}"><b>${esc(a.label)}</b><span>from turn ${a.turn}${i === 0 ? ' · now' : ''}</span></li>`).join('')}</ol>` : ''}`;
   }
 
+  // The world map: biomes you know of, linked by the routes between them. Fog hides the rest.
+  function mapTab(run) {
+    const here = G.biome(run);
+    const list = G.biomeList(run);
+    const vis = G.visibleBiomes(run).map((b) => b.id);
+    const v = G.vision(run);
+    const migrating = run.activity && run.activity.id === 'migrate';
+    const canMigrate = G.activityState(run, 'migrate').ok && !migrating;
+    const edges = [];
+    list.forEach((b) => b.next.forEach((n) => {
+      if (n < b.id) return;
+      const o = list.find((x) => x.id === n);
+      const shown = vis.includes(b.id) && vis.includes(n);
+      edges.push(`<line x1="${b.x}" y1="${b.y}" x2="${o.x}" y2="${o.y}" class="route ${shown ? '' : 'fog'}" vector-effect="non-scaling-stroke"/>`);
+    }));
+    const nodes = list.map((b) => {
+      const known = vis.includes(b.id);
+      const isHere = b.id === here.id;
+      const dest = migrating && run.activity.dest === b.id;
+      const reachable = here.next.includes(b.id);
+      return `<button class="biome-node ${known ? '' : 'fog'} ${isHere ? 'here' : ''} ${dest ? 'dest' : ''}" style="left:${b.x}%;top:${b.y}%" data-act="biome-sel" data-arg="${b.id}" ${known ? '' : 'disabled'} aria-label="${esc(known ? b.name : 'Unknown')}"><span>${known ? esc(b.name) : '?'}</span>${isHere ? '<i>You</i>' : ''}${reachable && known && !isHere && v >= 1 ? '<i class="go">→</i>' : ''}</button>`;
+    }).join('');
+    const sel = list.find((b) => b.id === G.ui.biomeSel && vis.includes(b.id)) || here;
+    const selReach = here.next.includes(sel.id);
+    let action = '';
+    if (sel.id !== here.id && selReach && v >= 1) action = `<button class="btn primary small" ${canMigrate ? `data-act="act-start" data-arg="migrate" data-dest="${sel.id}"` : 'disabled'}>Migrate here (4 turns)</button>`;
+    if (sel.id === here.id && here.crossing && run.stage === 'creature') { const st = G.activityState(run, 'cross'); action = `<button class="btn primary small" ${st.ok && !(run.activity && run.activity.id === 'cross') ? 'data-act="act-start" data-arg="cross"' : 'disabled'}>${run.habitat === 'land' ? 'Return to the sea' : 'Crawl onto land'} (5 turns)</button>`; }
+    const visionText = run.stage === 'cell'
+      ? (run.multicellular ? 'Cells cannot travel on purpose: only currents, bubbles and storms move you.' : 'Your single cells live by the vent, and nowhere else matters yet.')
+      : ['You only know your own biome. Migrating takes you somewhere at random. (Reach Cunning 6 or the Spark of Mind to see further.)', 'You can see the biomes next to yours and choose where to migrate. (Keen Memory, Lone Wanderers or Symbolic Thought reveal the whole world.)', 'You know the whole world.'][v];
+    return `
+      <div class="world-map"><svg class="routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>${nodes}</div>
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(sel.name)}${sel.id === here.id ? ' · home' : ''}</strong></div>
+        <span class="inv-desc">${esc(sel.desc)}</span>
+        ${Object.keys(sel.mods).length ? `<span class="inv-mods">${esc(G.describeMods(sel.mods))}${G.biomeMatters(run) ? '' : ' (once you are multicellular)'}</span>` : ''}
+        ${action}
+        ${migrating ? `<span class="note">Migrating${run.activity.dest ? ` to the ${esc(list.find((b) => b.id === run.activity.dest).name)}` : ' somewhere new'}: ${run.activity.turns} of 4 turns.</span>` : ''}
+      </div>
+      <p class="note">${esc(visionText)}</p>`;
+  }
+
   // Activities: long actions, like CK3's.
   function activitiesTab(run) {
     const act = run.activity;
@@ -788,8 +830,8 @@ window.G = window.G || {};
   function sheet(run) {
     const tab = G.ui.sheet;
     if (!tab) return '';
-    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
+    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
+    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
@@ -1080,7 +1122,8 @@ window.G = window.G || {};
       case 'mimic': G.mimicSpecies(arg); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'swap': G.swapWithPartner(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'act-pick': G.ui.actPick = arg || null; G.ui.keepScroll = true; parts = ['sheet']; break;
-      case 'act-start': G.startActivity(arg, el.dataset.target || null); G.ui.actPick = null; G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'biome-sel': G.ui.biomeSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'act-start': G.startActivity(arg, el.dataset.target || null, el.dataset.dest || null); G.ui.actPick = null; G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'act-stop': G.stopActivity(); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;

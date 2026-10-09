@@ -206,6 +206,20 @@ G.PARTS = [
   { id: 'stinger_tail', name: 'Stinger Tail', adj: 'Stinging', stage: 'creature', slot: 'tail', keywords: ['venom'], mods: { str: 1 }, pack: 'venom', rarity: 2, desc: 'Arches over your back, ready to strike.' },
   { id: 'glow_tail', name: 'Glow Tail', adj: 'Glimmering', stage: 'creature', slot: 'tail', keywords: ['glow'], mods: { cha: 1, spd: 1 }, pack: 'deep', rarity: 2, desc: 'A lantern at the end of you.' },
 
+  // ================= BIOME PARTS (only drafted in their biome) =================
+  { id: 'winter_coat', name: 'Winter Coat', adj: 'Shaggy', stage: 'creature', slot: 'skin', habitat: 'land', biome: 'tundra', mods: { tou: 2, foodPerTurn: 1 }, rarity: 3, desc: 'Thick fur that keeps out the worst cold, so you need less food to stay warm.' },
+  { id: 'snowshoe_feet', name: 'Snowshoe Feet', adj: 'Snowshoed', stage: 'creature', slot: 'feet', habitat: 'land', biome: 'tundra', mods: { spd: 2 }, rarity: 3, desc: 'Wide feet that never sink.' },
+  { id: 'water_hump', name: 'Water Hump', adj: 'Humped', stage: 'creature', slot: 'back', habitat: 'land', biome: 'desert', mods: { foodCap: 4, maxPop: 2 }, rarity: 3, desc: 'Stores water and fat for the long dry days.' },
+  { id: 'sand_skin', name: 'Sand Skin', adj: 'Sandy', stage: 'creature', slot: 'skin', habitat: 'land', biome: 'desert', mods: { tou: 1, cun: 1 }, rarity: 3, desc: 'Pale, tough skin the colour of dunes.' },
+  { id: 'canopy_tail', name: 'Canopy Tail', adj: 'Canopy', stage: 'creature', slot: 'tail', habitat: 'land', biome: 'jungle', tags: ['grasp'], mods: { spd: 1, cun: 1 }, rarity: 2, desc: 'A long gripping tail for life in the treetops.' },
+  { id: 'night_eyes', name: 'Night Eyes', adj: 'Night-eyed', stage: 'creature', slot: 'senses', habitat: 'land', biome: 'jungle', mods: { cun: 2, huntBonus: 1 }, rarity: 3, desc: 'Huge pupils that see in the darkest undergrowth.' },
+  { id: 'mud_skin', name: 'Mud Skin', adj: 'Muddy', stage: 'creature', slot: 'skin', habitat: 'land', biome: 'swamp', mods: { tou: 2 }, rarity: 3, desc: 'A coat of dried mud that keeps off sickness and biters.' },
+  { id: 'wading_legs', name: 'Wading Legs', adj: 'Wading', stage: 'creature', slot: 'feet', habitat: 'land', biome: 'swamp', mods: { spd: 1, forageBonus: 1 }, rarity: 3, desc: 'Long toes for walking on mud.' },
+  { id: 'antifreeze_blood', name: 'Antifreeze Blood', adj: 'Frost-proof', stage: 'creature', slot: 'skin', habitat: 'sea', biome: 'polar', mods: { tou: 2, spd: 1 }, rarity: 3, desc: 'Blood that never freezes.' },
+  { id: 'vent_bacteria', name: 'Vent Gardens', adj: 'Vent-grown', stage: 'creature', slot: 'back', habitat: 'sea', biome: 'vents', keywords: ['symbiont'], mods: { foodPerTurn: 2 }, rarity: 2, desc: 'Bacteria on your back that eat the vent chemicals, and feed you.' },
+  { id: 'kelp_camouflage', name: 'Kelp Fronds', adj: 'Frond-draped', stage: 'creature', slot: 'skin', habitat: 'sea', biome: 'kelp', mods: { cun: 2 }, rarity: 3, desc: 'Leafy flaps that make you look like seaweed.' },
+  { id: 'tide_lungs', name: 'Tide Lungs', adj: 'Air-breathing', stage: 'creature', slot: 'senses', habitat: 'sea', biome: 'coast', mods: { tou: 1, cun: 1 }, rarity: 3, desc: 'You can breathe air for a while. The land is not so far away.' },
+
   // ================= THE DEEP (sea only) =================
   // Mouth
   { id: 'coral_beak', name: 'Parrot Beak', adj: 'Beaked', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'herb', mods: { forageBonus: 1, str: 1 }, rarity: 3, desc: 'Fused teeth that scrape algae off coral. Herbivore.' },

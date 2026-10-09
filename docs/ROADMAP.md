@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1, Update 7 (Bloodlines), Update 8 (Many Ways to Live), Update 9 (The Creature Editor) and Update 10 (The Living World) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1, Update 7 (Bloodlines), Update 8 (Many Ways to Live), Update 9 (The Creature Editor), Update 10 (The Living World) and Update 11 (The World Map) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
 
 ---
 
@@ -66,7 +66,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 8 | **Many Ways to Live** ✅ | Every archetype gets a gimmick that changes how the whole run plays | Large |
 | 9 | **The Creature Editor** ✅ | A full editor after the cell stage: limbs, heads, proportions, colors and patterns | Large |
 | 10 | **The Living World** ✅ | A CK3-style Activities tab, a crowded world, extinctions and rising species | Large |
-| 11 | **The World Map** | Biomes, and a world you see more of as your kind gets smarter | Large |
+| 11 | **The World Map** ✅ | Biomes, and a world you see more of as your kind gets smarter | Large |
 | 12 | Shells, Scales and Soft Bodies | Not every creature is a mammal | Medium |
 | 13 | Other Minds | The five Paths of Mind in the Creature stage | Large |
 | 14 | First Gatherings | **Society stage**, part 1: Tribe (land) and Pod (sea) | Large |
@@ -231,7 +231,7 @@ Each gimmick has its own display (a hunger clock for the Predator, a host bar fo
 
 **You'll test:** whether the world feels alive without you, and whether Activities give you enough to do between events.
 
-## Update 11: The World Map
+## Update 11: The World Map ✅
 
 *The world grows as your mind does.*
 

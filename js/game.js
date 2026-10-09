@@ -288,6 +288,7 @@ window.G = window.G || {};
     if (run.stage === 'creature' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
     const season = G.season(run);
     if (season) list.push(season.mods);
+    if (G.biomeMatters(run)) list.push(G.biome(run).mods);
     // Symbiotes share a third of their partner's strengths.
     const partner = G.partnerOf(run);
     if (partner) { const m = {}; G.STATS.forEach((st) => { m[st.id] = Math.floor(G.speciesStat(partner, st.id) / 6); }); list.push(m); }
@@ -363,7 +364,8 @@ window.G = window.G || {};
       && slots.includes(p.slot)
       && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat)
       && (!p.pack || packs.includes(p.pack))
-      && !(G.gimmick(run) === 'grazer' && p.diet === 'carn'));
+      && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
+      && (!p.biome || p.biome === G.biome(run).id));
   };
 
   function sub(text, run, speciesIdx) {
@@ -503,7 +505,7 @@ window.G = window.G || {};
       dna: 3 * (b.memory || 0), totalDna: 0, insight: 0,
       parts: {}, multicellular: false, mind: false, innovations: [], fascination: null,
       instinct: 'forage',
-      traits: [], species: makeWorld('cell'), ages: [], chains: [], openNiches: [], activity: null,
+      traits: [], species: makeWorld('cell'), ages: [], chains: [], openNiches: [], activity: null, biome: 'vent', seenBiomes: ['vent'],
       seen: [], log: [], notices: [],
       draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0,
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
@@ -869,6 +871,7 @@ window.G = window.G || {};
       const b = G.budsOf(run)[0];
       if (b) { const back = Math.round(b.pop); b.extinct = true; b.pop = 0; lines.push({ t: `+${grow(run, back)} Population as the ${b.name} rejoin you`, good: true }); }
     }
+    if (eff.biome && G.biomeMatters(run) && G.biome(run).id !== eff.biome) { moveBiome(run, eff.biome, run.stage === 'cell'); lines.push({ t: `New home: the ${G.biome(run).name}`, good: true }); }
     if (eff.zone && run.habitat === 'sea' && G.zone(run) !== eff.zone) {
       run.zone = eff.zone;
       lines.push({ t: `New home: ${G.SEA_ZONE[eff.zone].name}`, good: true });
@@ -964,6 +967,7 @@ window.G = window.G || {};
     if (e.habitat && e.habitat !== run.habitat) return false;
     if (e.zones && !(run.habitat === 'sea' && e.zones.includes(G.zone(run)))) return false;
     if (e.chained) return false;
+    if (e.biome && !(G.biomeMatters(run) && [].concat(e.biome).includes(G.biome(run).id))) return false;
     if (e.activity && !(run.activity && run.activity.id === e.activity)) return false;
     if (e.season && !(G.season(run) && G.season(run).id === e.season)) return false;
     if (e.era && run.era < e.era) return false;
@@ -982,7 +986,7 @@ window.G = window.G || {};
     if ((e.tags || []).some((t) => focus.includes(t))) w *= 2.2;
     if (run.instinct === 'hide' && (e.tags || []).includes('danger')) w *= 0.5;
     if (!e.repeat) w *= 1.5; // prefer fresh events over repeatable ones
-    if (e.activity || e.season) w *= 2.5; // what you are doing right now drives the story
+    if (e.activity || e.season || e.biome) w *= 2.5; // what you are doing right now drives the story
     return w;
   }
 
@@ -1261,6 +1265,74 @@ window.G = window.G || {};
     return list[Math.floor((run.stageTurn - 1) / G.SEASON_LENGTH) % list.length];
   };
 
+  // ---------- Biomes and the world map ----------
+  G.biomeWorld = (run) => (run.stage === 'cell' ? 'cell' : run.habitat);
+  G.biomeList = (run) => G.BIOMES[G.biomeWorld(run)];
+  G.biome = (run) => { const list = G.biomeList(run); return list.find((b) => b.id === run.biome) || list.find((b) => b.id === G.HOME_BIOME[G.biomeWorld(run)]); };
+  // Biomes only start to matter once your cells cling together.
+  G.biomeMatters = (run) => run.stage === 'creature' || run.multicellular;
+  // How much of the world you can see: 0 = only your biome, 1 = its neighbours (and you choose
+  // where to migrate), 2 = the whole world.
+  G.vision = (run) => {
+    if (run.stage === 'cell') return 0;
+    if (['keen_memory', 'lone_wanderers', 'symbolic_thought'].some((i) => run.innovations.includes(i))) return 2;
+    if (run.mind || G.stat(run, 'cun') >= 6) return 1;
+    return 0;
+  };
+  G.visibleBiomes = (run) => {
+    const here = G.biome(run);
+    const v = G.vision(run);
+    const seen = run.seenBiomes || [];
+    return G.biomeList(run).filter((b) => b.id === here.id || seen.includes(b.id) || v >= 2 || (v >= 1 && here.next.includes(b.id)));
+  };
+  // Move your kind to another biome: most neighbours there are new.
+  function moveBiome(run, id, keepSpecies) {
+    const b = G.biomeList(run).find((x) => x.id === id);
+    if (!b) return;
+    run.biome = id;
+    run.seenBiomes = run.seenBiomes || [];
+    if (!run.seenBiomes.includes(id)) run.seenBiomes.push(id);
+    if (!keepSpecies) {
+      const world = run.stage === 'cell' ? 'cell' : run.habitat;
+      const bound = (s) => s.name === run.partner || s.name === run.host || s.bud || s.nemesis;
+      run.species.forEach((s) => { if (!s.extinct && !bound(s)) { s.extinct = true; s.left = true; s.pop = 0; } });
+      const fresh = makeWorld(world).filter((n) => !run.species.some((x) => x.name === n.name));
+      run.species.push(...fresh.slice(0, run.stage === 'cell' ? 5 : 8));
+    }
+    run.notices.push(`Your kind has reached the ${b.name}. ${b.desc}`);
+    log(run, `Your kind settled in the ${b.name}.`);
+  }
+  // Crawl onto land, or return to the sea, from the shore.
+  function crossHabitat(run) {
+    const to = run.habitat === 'land' ? 'sea' : 'land';
+    const lost = [];
+    Object.keys(run.parts).forEach((k) => {
+      const sl = run.parts[k];
+      if (!sl) return;
+      const ok = (id) => { const p = G.PART[id]; return p && (!p.habitat || p.habitat === to); };
+      if (!ok(sl.id) && sl.merged && ok(sl.merged)) run.parts[k] = { id: sl.merged, merged: null };
+      else if (!ok(sl.id)) { if (!sl.id.startsWith('stubby')) lost.push(G.slotLabel(sl)); delete run.parts[k]; }
+      else if (sl.merged && !ok(sl.merged)) { lost.push(G.PART[sl.merged].name); sl.merged = null; }
+    });
+    run.habitat = to; run.plan = to;
+    const basic = to === 'sea' ? { frontLimbs: 'stubby_front_fins', hindLimbs: 'stubby_rear_fins' } : { frontLimbs: 'stubby_forelegs', hindLimbs: 'stubby_hindlegs' };
+    Object.entries(basic).forEach(([k, id]) => { if (!run.parts[k]) run.parts[k] = { id, merged: null }; });
+    // Everyone needs a mouth: your archetype's own grows in if yours could not come along.
+    if (!run.parts.mouth) run.parts.mouth = { id: G.ARCHETYPE[run.archetype].start[to].mouth, merged: null };
+    if (to === 'sea') run.zone = 'shallows';
+    run.biome = to === 'sea' ? 'coast' : 'shore';
+    run.seenBiomes = [run.biome];
+    run.species = makeWorld(to);
+    setupGimmick(run);
+    addUnique(run.traits, to === 'land' ? 'land_pioneer' : 'deep_dweller');
+    run.freeEdit = true;
+    run.pop = Math.max(1, Math.min(run.pop, G.maxPop(run)));
+    noteParts(run);
+    const text = to === 'land' ? 'Your kind has crawled out onto the land for good.' : 'Your kind has returned to the sea.';
+    run.notices.push(`${text}${lost.length ? ` Left behind: ${lost.join(', ')}.` : ''} New parts can now grow.`);
+    log(run, text);
+  }
+
   // ---------- Activities ----------
   G.ACTIVITY = {}; G.ACTIVITIES.forEach((a) => { G.ACTIVITY[a.id] = a; });
   G.activityTarget = (run) => (run.activity && run.activity.target ? run.species.find((s) => s.name === run.activity.target && !s.extinct) || null : null);
@@ -1276,15 +1348,17 @@ window.G = window.G || {};
       if (id === 'court' && G.speciesStatus(s) === 'allied') return { ok: false, why: 'They are already your allies' };
     }
     if (id === 'migrate' && G.gimmick(run) === 'parasite') return { ok: false, why: 'A parasite goes where its host goes' };
+    if (id === 'migrate' && run.stage === 'cell') return { ok: false, why: 'Cells cannot choose where to go; only currents and storms move them' };
+    if (id === 'cross' && !(run.stage === 'creature' && G.biome(run).crossing)) return { ok: false, why: run.habitat === 'land' ? 'Only from the Shore' : 'Only from the Coast' };
     if (id === 'war' && run.turn < (run.warReadyAt || 0)) return { ok: false, why: `Your kind is tired of war: ready in ${run.warReadyAt - run.turn} turns` };
     if (id === 'scout' && run.turn < (run.scoutReadyAt || 0)) return { ok: false, why: `Your scouts need rest: ready in ${run.scoutReadyAt - run.turn} turns` };
     if (id === 'migrate' && run.turn < (run.migrateReadyAt || 0)) return { ok: false, why: `Too soon to move again: ready in ${run.migrateReadyAt - run.turn} turns` };
     return { ok: true };
   };
-  G.startActivity = function (id, target) {
+  G.startActivity = function (id, target, dest) {
     const run = G.run;
     if (!run || !G.activityState(run, id, target).ok) return;
-    run.activity = { id, target: target || null, turns: 0, score: 0 };
+    run.activity = { id, target: target || null, turns: 0, score: 0, dest: id === 'migrate' && G.vision(run) >= 1 && G.biome(run).next.includes(dest) ? dest : null };
     const a = G.ACTIVITY[id];
     run.notices.push(`Activity begun: ${a.name}${target ? ` (the ${target})` : ''}.`);
     log(run, `Your kind began to ${a.name.toLowerCase()}${target ? `: the ${target}` : ''}.`);
@@ -1314,12 +1388,12 @@ window.G = window.G || {};
     if (act.id === 'migrate') {
       run.food = Math.max(0, run.food - 1);
       if (act.turns >= a.turns) {
-        const world = run.stage === 'cell' ? 'cell' : run.habitat;
-        const movable = run.species.filter((s) => !s.extinct && !s.bud && s.name !== run.partner && s.name !== run.host).sort(() => rand() - 0.5).slice(0, 3);
-        movable.forEach((s) => { s.extinct = true; s.left = true; s.pop = 0; const n = makeOne(world, s.niche || nicheForRole(s.role), takenNames(run)); run.species.push(n); });
+        // Without the wits to choose, you end up wherever the road leads.
+        const dest = act.dest || pick(G.biome(run).next);
+        moveBiome(run, dest);
         run.food += 3; gainDna(run, 3);
         run.migrateReadyAt = run.turn + 10;
-        lines.push(finishActivity(run, `You reached new territory: ${movable.length} new neighbours, +3 Food and +3 DNA.`, true));
+        lines.push(finishActivity(run, `You reached the ${G.biome(run).name}: +3 Food and +3 DNA.`, true));
       } else lines.push({ t: `Migrating (${act.turns}/${a.turns}): −1 Food` });
     }
     if (act.id === 'war') {
@@ -1350,6 +1424,18 @@ window.G = window.G || {};
       else { t.opinion = clamp(t.opinion - 2, -100, 100); lines.push({ t: `The ${t.name} were not impressed: opinion −2` }); }
       if (t.opinion >= 60) { if (t.opinion >= 90) t.sworn = true; gainDna(run, 3); lines.push(finishActivity(run, `The ${t.name} are now your allies. +3 DNA.`, true)); }
       else if (act.turns >= 12) lines.push(finishActivity(run, `The ${t.name} will not be won over, for now.`, false));
+    }
+    if (act.id === 'cross') {
+      run.food = Math.max(0, run.food - 1);
+      if (act.turns >= a.turns) {
+        const lost = Math.ceil(run.pop / 4);
+        run.pop = Math.max(1, run.pop - lost);
+        run.activity = null;
+        crossHabitat(run);
+        lines.push({ t: `The crossing cost ${lost} of your kind`, bad: true });
+        return;
+      }
+      lines.push({ t: `${run.habitat === 'land' ? 'Returning to the sea' : 'Crawling onto land'} (${act.turns}/${a.turns}): −1 Food` });
     }
     if (act.id === 'avoid') { run.food = Math.max(0, run.food - 2); lines.push({ t: `Keeping away from the ${t.name}: −2 Food` }); }
     if (act.id === 'hunt') {
@@ -1540,7 +1626,8 @@ window.G = window.G || {};
     while (out.length < n && pool.length) {
       const p = weightedPick(pool, (x) => (x.evolved ? (x.limbEvo ? 2 : x.evolved === 2 ? 0.4 : 1) : (x.rarity || 2))
         * (boost && (x.keywords || []).includes(boost) ? 3 : 1)
-        * (empty.includes(x.slot) ? 2 : 1));
+        * (empty.includes(x.slot) ? 2 : 1)
+        * (x.biome ? 3 : 1));
       out.push(p.id);
       pool = pool.filter((x) => x.id !== p.id && (out.length >= 2 || x.slot !== p.slot));
     }
@@ -1636,6 +1723,7 @@ window.G = window.G || {};
     Object.entries(basic).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
     run.species = makeWorld(run.habitat);
     run.openNiches = []; run.chains = []; run.activity = null;
+    run.biome = G.HOME_BIOME[run.habitat]; run.seenBiomes = [run.biome];
     setupGimmick(run);
     run.pop = G.maxPop(run);
     run.lastEvent = null;

@@ -1318,7 +1318,8 @@ window.G = window.G || {};
   // Scenery for the map: trees, rocks and ponds on land; kelp, coral and rocks at sea.
   let scenery = null; let sceneryKey = '';
   function makeScenery(run) {
-    const key = `${run.stage}-${run.habitat}-${run.origin}-${run.archetype}`;
+    const biome = G.biome ? G.biome(run).id : '';
+    const key = `${run.stage}-${run.habitat}-${run.origin}-${run.archetype}-${biome}`;
     if (key === sceneryKey) return scenery;
     let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     const items = [];
@@ -1330,10 +1331,16 @@ window.G = window.G || {};
       for (let i = 0; i < 4; i++) { const x = 0.36 + rnd() * 0.2; items.push({ kind: 'rock', x, y: seabed(x) + 0.01, r: 0.5 + rnd() * 0.5 }); }
       for (let i = 0; i < 3; i++) { const x = 0.66 + i * 0.12 + rnd() * 0.04; items.push({ kind: 'seavent', x, y: seabed(x) + 0.01, r: 0.7 + rnd() * 0.4 }); items.push({ kind: 'worms', x: x + 0.035, y: seabed(x + 0.035) + 0.012, r: 0.6 }); }
     } else {
-      for (let i = 0; i < 9; i++) items.push({ kind: 'tree', x: rnd(), y: rnd(), r: 0.7 + rnd() * 0.6 });
-      for (let i = 0; i < 7; i++) items.push({ kind: 'bush', x: rnd(), y: rnd(), r: 0.6 + rnd() * 0.5 });
-      for (let i = 0; i < 5; i++) items.push({ kind: 'rock', x: rnd(), y: rnd(), r: 0.5 + rnd() * 0.7 });
-      items.push({ kind: 'pond', x: 0.2 + rnd() * 0.6, y: 0.3 + rnd() * 0.5, r: 1 });
+      // Each land biome has its own scenery mix: [kind, count].
+      const mix = {
+        plains: [['tree', 6], ['bush', 7], ['rock', 5], ['pond', 1]],
+        jungle: [['tree', 16], ['bush', 10], ['pond', 1]],
+        desert: [['cactus', 8], ['rock', 8], ['dune', 4]],
+        tundra: [['pine', 7], ['snowmound', 8], ['rock', 4]],
+        swamp: [['reed', 12], ['pond', 4], ['tree', 4]],
+        shore: [['rock', 6], ['bush', 4], ['shell', 6]],
+      }[biome] || [['tree', 9], ['bush', 7], ['rock', 5], ['pond', 1]];
+      mix.forEach(([kind, n]) => { for (let i = 0; i < n; i++) items.push({ kind, x: rnd(), y: kind === 'pond' ? 0.3 + rnd() * 0.5 : rnd(), r: (kind === 'pond' ? 0.8 : 0.6) + rnd() * 0.6 }); });
     }
     scenery = items; sceneryKey = key;
     return items;
@@ -1348,6 +1355,12 @@ window.G = window.G || {};
       case 'kelp': for (let i = 0; i < 3; i++) wavy(x + i * k * 0.2, y, k * 2, -Math.PI / 2, k * 0.15, t * 0.7, 'rgba(80, 140, 70, 0.8)', k * 0.12, i + x * 10); break;
       case 'coral': for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + i * k * 0.2, y - k * 0.5, x + i * k * 0.35, y - k * (0.8 - Math.abs(i) * 0.12)); ctx.strokeStyle = hsl(it.hue, 65, 60); ctx.lineWidth = k * 0.1; ctx.lineCap = 'round'; ctx.stroke(); } break;
       case 'blob': dot(x, y, k * 0.3, 'rgba(255,255,255,0.05)'); break;
+      case 'cactus': ctx.fillStyle = '#4f8a4a'; ctx.fillRect(x - k * 0.08, y - k * 0.9, k * 0.16, k * 0.9); ctx.fillRect(x - k * 0.3, y - k * 0.6, k * 0.12, k * 0.3); ctx.fillRect(x - k * 0.3, y - k * 0.6, k * 0.25, k * 0.1); ctx.fillRect(x + k * 0.18, y - k * 0.75, k * 0.12, k * 0.35); ctx.fillRect(x + k * 0.06, y - k * 0.5, k * 0.24, k * 0.1); break;
+      case 'dune': ctx.beginPath(); ctx.ellipse(x, y, k * 1.4, k * 0.35, 0, Math.PI, 0); ctx.fillStyle = 'rgba(214, 178, 110, 0.6)'; ctx.fill(); break;
+      case 'pine': tri(x - k * 0.35, y - k * 0.2, x, y - k * 1.3, x + k * 0.35, y - k * 0.2, '#2d5a45'); tri(x - k * 0.25, y - k * 0.7, x, y - k * 1.5, x + k * 0.25, y - k * 0.7, '#e8f1f5'); line(x, y, x, y - k * 0.2, '#4d3420', k * 0.1); break;
+      case 'snowmound': ctx.beginPath(); ctx.ellipse(x, y, k * 0.6, k * 0.25, 0, Math.PI, 0); ctx.fillStyle = '#eef4f7'; ctx.fill(); break;
+      case 'reed': for (let i = -2; i <= 2; i++) { line(x + i * k * 0.06, y, x + i * k * 0.1 + Math.sin(t + i + x) * 2, y - k * (0.8 + (i % 2) * 0.2), '#6f7f3a', 2); dot(x + i * k * 0.1 + Math.sin(t + i + x) * 2, y - k * (0.8 + (i % 2) * 0.2), k * 0.05, '#7a4b2a'); } break;
+      case 'shell': ctx.beginPath(); ctx.arc(x, y, k * 0.12, Math.PI, 0); ctx.fillStyle = '#f1dcc2'; ctx.fill(); break;
       case 'seavent': {
         ctx.beginPath(); ctx.moveTo(x - k * 0.3, y); ctx.lineTo(x - k * 0.12, y - k * 0.9); ctx.lineTo(x + k * 0.12, y - k * 0.9); ctx.lineTo(x + k * 0.3, y); ctx.closePath(); ctx.fillStyle = '#2b2522'; ctx.fill();
         for (let i = 0; i < 5; i++) { const ph = (t * 0.4 + i * 0.2 + x) % 1; dot(x + Math.sin(ph * 6 + i) * k * 0.15 * (1 + ph), y - k * (0.9 + ph * 1.6), k * (0.08 + ph * 0.18), `rgba(40,36,40,${0.7 * (1 - ph)})`); }
@@ -1361,7 +1374,8 @@ window.G = window.G || {};
 
   // A side-on slice of ocean: light at the top, the reef shelf, the drop-off and the abyss.
   function drawDepthBackground(run, w, h, t) {
-    const hue = G.ORIGIN[run.origin].hue;
+    const region = G.biome(run).id;
+    const hue = G.ORIGIN[run.origin].hue + ({ polar: 15, vents: -25, kelp: -30, coast: -10 }[region] || 0);
     const top = h * 0.05; const bottom = h * 0.98; const Y = (u) => top + u * (bottom - top);
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, hsl(hue + 5, 55, 46)); g.addColorStop(0.22, hsl(hue + 15, 55, 32)); g.addColorStop(0.5, hsl(hue + 35, 55, 17)); g.addColorStop(0.75, hsl(hue + 45, 55, 9)); g.addColorStop(1, hsl(hue + 50, 50, 4));
@@ -1378,6 +1392,10 @@ window.G = window.G || {};
     ctx.lineTo(w, h); ctx.closePath();
     const sg = ctx.createLinearGradient(0, Y(0.35), 0, h); sg.addColorStop(0, hsl(40, 35, 48)); sg.addColorStop(0.3, hsl(30, 20, 22)); sg.addColorStop(1, hsl(240, 15, 7));
     ctx.fillStyle = sg; ctx.fill();
+    // Regional touches: ice floes at the poles, smoking vents, forests of kelp.
+    if (region === 'polar') for (let i = 0; i < 6; i++) { const x = ((i * 0.19 + 0.03) * w + Math.sin(t * 0.2 + i) * 6); ctx.fillStyle = 'rgba(235, 245, 250, 0.85)'; ctx.fillRect(x, top - 4, w * 0.12, 10 + (i % 3) * 4); }
+    if (region === 'kelp') for (let i = 0; i < 14; i++) { const x = (i / 14) * w + 10; wavy(x, Y(seabed(x / w)), (Y(seabed(x / w)) - top) * 0.7, -Math.PI / 2, 8, t * 0.6, 'rgba(70, 130, 60, 0.45)', 4, i); }
+    if (region === 'vents') for (let i = 0; i < 4; i++) { const x = w * (0.2 + i * 0.2); for (let k = 0; k < 5; k++) { const ph = (t * 0.3 + k * 0.2 + i * 0.13) % 1; dot(x + Math.sin(ph * 6) * 8, Y(seabed(x / w)) - ph * h * 0.4, 6 + ph * 14, `rgba(30,26,30,${0.5 * (1 - ph)})`); } }
     // Depth labels, with your home picked out
     const home = G.zone(run);
     ctx.font = "700 10px 'Atkinson Hyperlegible', sans-serif"; ctx.textBaseline = 'top';
@@ -1398,10 +1416,15 @@ window.G = window.G || {};
       for (let i = 0; i < 3; i++) { const cx = ((i * 0.37 + 0.1) * w + t * 6) % (w + 120) - 60; dot(cx, h * (0.05 + i * 0.03), 14, 'rgba(255,255,255,0.08)'); dot(cx + 16, h * (0.05 + i * 0.03) + 3, 11, 'rgba(255,255,255,0.08)'); }
       ctx.fillStyle = hsl(hue + 40, 22, 20);
       ctx.beginPath(); ctx.moveTo(0, h * 0.24); for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h * 0.24 - Math.abs(Math.sin(x * 0.012 + 1)) * h * 0.07 - Math.sin(x * 0.031) * h * 0.02); ctx.lineTo(w, h * 0.26); ctx.lineTo(0, h * 0.26); ctx.fill();
+      // Ground colour by biome: [hue, saturation, lightness].
+      const bio = G.biome(run).id;
+      const [gh, gs, gl] = { plains: [95, 22, 19], jungle: [120, 30, 14], desert: [40, 35, 38], tundra: [200, 12, 62], swamp: [80, 22, 15], shore: [42, 30, 40] }[bio] || [95, 22, 19];
       const gg = ctx.createLinearGradient(0, h * 0.24, 0, h);
-      gg.addColorStop(0, hsl(95, 22, 19)); gg.addColorStop(1, hsl(95, 28, 26));
+      gg.addColorStop(0, hsl(gh, gs, gl)); gg.addColorStop(1, hsl(gh, gs + 6, gl + 7));
       ctx.fillStyle = gg; ctx.fillRect(0, h * 0.24, w, h * 0.76);
-      for (let i = 0; i < 60; i++) { const x = (i * 97.3) % w; const y = h * 0.27 + ((i * 53.1) % (h * 0.72)); line(x, y, x + Math.sin(t + i) * 1.5, y - 5 - (y / h) * 5, hsl(95, 30, 32), 1.5); }
+      if (bio === 'shore') { ctx.fillStyle = 'rgba(80, 150, 190, 0.75)'; ctx.beginPath(); ctx.moveTo(0, h); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, h * 0.8 + Math.sin(x * 0.03 + t * 1.5) * 6); ctx.lineTo(w, h); ctx.fill(); }
+      if (bio !== 'desert' && bio !== 'tundra') for (let i = 0; i < 60; i++) { const x = (i * 97.3) % w; const y = h * 0.27 + ((i * 53.1) % (h * 0.72)); line(x, y, x + Math.sin(t + i) * 1.5, y - 5 - (y / h) * 5, hsl(gh, gs + 8, gl + 13), 1.5); }
+      if (bio === 'tundra') for (let i = 0; i < 40; i++) { const x = ((i * 53.7) + t * 20) % w; const y = ((i * 91.1) + t * 35) % h; dot(x, y, 1.5, 'rgba(255,255,255,0.7)'); }
     } else if (isSeaMap(run)) { drawDepthBackground(run, w, h, t); return; }
     else drawBackground(run, w, h, t);
     const o = run.origin;
