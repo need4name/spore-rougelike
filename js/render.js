@@ -1203,6 +1203,9 @@ window.G = window.G || {};
     let tx = h.hx + (Math.random() - 0.5) * 0.3; let ty = h.hy + (Math.random() - 0.5) * 0.35;
     const zb = zoneBox(run, s);
     if (zb) { tx = zb.x[0] + Math.random() * (zb.x[1] - zb.x[0]); ty = zb.y[0] + Math.random() * (zb.y[1] - zb.y[0]); }
+    // A parasite travels inside its host.
+    const host = !s && G.hostOf(run);
+    if (host && herds.get(host.name)) { const hh = herds.get(host.name); tx = hh.x + (Math.random() - 0.5) * 0.06; ty = hh.y + (Math.random() - 0.5) * 0.06; }
     if (s) {
       const st = G.speciesStatus(s);
       if (st === 'hostile' && you && Math.random() < 0.6) { tx = you.x + 0.08; ty = you.y; }
@@ -1371,6 +1374,10 @@ window.G = window.G || {};
       live.forEach((l, i) => {
         let hd = herds.get(l.key);
         if (!hd) { const [hx0, hy0] = homeFor(i, l.key, run, l.s); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        // A parasite rides inside its host's herd.
+        const hostNow = l.key === 'you' && G.hostOf(run);
+        const hostHerd = hostNow && herds.get(hostNow.name);
+        if (hostHerd) { hd.x = hostHerd.x + 0.02; hd.y = hostHerd.y + 0.01; hd.tx = hd.x; hd.ty = hd.y; hd.dir = hostHerd.dir; return; }
         const zid = seaMap ? (l.s ? l.s.zone : G.zone(run)) : null;
         if (hd.zone !== zid) { hd.zone = zid; behaviour(run, l.key, l.s, hd); }
         // Fast species dart about; slow ones plod.
@@ -1407,7 +1414,8 @@ window.G = window.G || {};
             ctx.drawImage(spr, -size / 2, -size / 2, size, size);
             ctx.restore();
           }
-          const label = `${l.key === 'you' ? 'You' : l.key} · ${pop} · ${G.sizeLabel(realSize(run, l.s), run.stage)}`;
+          const bond = !l.s ? '' : l.s.name === run.partner && G.gimmick(run) === 'symbiote' ? '♥ ' : l.s.name === run.host && G.gimmick(run) === 'parasite' ? 'Host · ' : l.s.bud ? '✦ ' : l.s.name === run.mimic && G.gimmick(run) === 'mimic' ? '🎭 ' : '';
+          const label = `${bond}${l.key === 'you' ? 'You' : l.key} · ${pop} · ${G.sizeLabel(realSize(run, l.s), run.stage)}`;
           ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
           const lx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, hx));

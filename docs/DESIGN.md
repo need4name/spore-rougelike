@@ -27,6 +27,20 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 
 Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and makes matching events more likely. You can change it at any time.
 
+## Archetypes (each breaks one rule for the whole run)
+
+| Archetype | Gimmick |
+|---|---|
+| Drifter | The current picks your Instinct (forage or hunt, by diet). Every 8 turns it carries you on: your worst enemy is replaced by a new species, and half the time you can absorb one of its parts. |
+| Grazer | Max Population ×1.6; DNA per turn = Population ÷ 6; no hunting or meat-eating mouths; damage ×1.5. |
+| Predator | No foraging; hunting only feeds you on a kill (a roll on your best of Strength and Speed). Food storage halved. 5 turns without a kill and you starve. Kills can let you devour a part. |
+| Symbiote | Joined to a partner species (allied, never attacks). +⅙ of its stats; swap parts with it (3 DNA); −2 Food while it struggles; lose half your kind if it dies out (then a new partner). |
+| Parasite | Lives inside a host: +2 Food (3 as a creature) from feeding; max Population ≤ 60% of the host's; drains and angers the host. Steal a part (3 DNA) or jump hosts (3 DNA, lose a quarter of your kind). If the host dies, half of you die too. |
+| Colony | Always grows without symmetry. When full and well fed, a third splits off as an allied offshoot species (up to 3). Reshaping costs half. |
+| Mimic | Disguise as any species (3 DNA): take its colors and copy a part. Checks involving it are 2 easier, and as a predator it attacks 40% less. |
+
+Each archetype has a status chip in the top bar (Hunger, Host, Partner, Current, Herd DNA, Offshoots, Disguise) and its own events. Test bots, fresh: 25–45% reach the creature stage and 3–12% win, depending on archetype. Fully upgraded: 77–100% win.
+
 ## Builds
 
 - **Slots.** Cell has Mouth, Motion and Membrane, plus Senses and Organ once multicellular. Land creatures have Mouth, Senses, Front limbs, Hands, Hind limbs, Feet, Back, Skin and Tail. Sea creatures have Mouth, Senses, Front fins, Arms (pincers, tentacles, clubs: the sea's hands), Rear fins, Underside (walking legs, suckers, belly lights), Dorsal, Skin and Tail.
@@ -58,7 +72,7 @@ After every choice, a scene acts out what happened. When another species is invo
 
 ## Between runs
 
-**It's a roguelike.** Every check is harder by `G.HARSH` (4; finales are exempt), and predators and hostile species attack every turn, beating your Toughness plus half your Speed. A fresh lineage usually dies in the cell stage. Upgrades in the Evolution Tree pay the harshness back, so each run gets further. Test bots: a fresh bot reaches the creature stage about 25% of the time and rarely wins; a fully upgraded bot wins about 88%. In whole campaigns, bots win about 4% of first runs and 40–60% by runs 12–15.
+**It's a roguelike.** Every check is harder by `G.HARSH` (6; finales are exempt). Predators and hostile species attack every turn: the chance (`G.PREDATION` 0.34 plus 0.04 per point of gap) and the size of each strike grow with the gap between their Strength and your Toughness plus half your Speed. A fresh lineage usually dies in the cell stage. Upgrades in the Evolution Tree pay the harshness back, so each run gets further. Test bots: a fresh bot reaches the creature stage about 25% of the time and rarely wins; a fully upgraded bot wins about 88%. In whole campaigns, bots win about 4% of first runs and 40–60% by runs 12–15.
 
 - **Evolution Tree** (22 nodes in 6 columns, about 1,300 Genetic Memory to complete): Hardy Ancestors, Ancestral Pantry, Deep Memory, Rich Genes (+10% DNA), Second Look (reroll), Amber; +1 stat nodes; Second Chance (survive extinction once per run); Short Road (DNA goals −8% per level); Wider Gene Pool; Ancestral Armor; Head Start (a free draft); and the **Twin sockets**.
 - **Twin sockets.** Normally every slot holds one part (merged or not). A Twin upgrade (Mouth, Organ, Senses, Back, Hands, Skin) lets that one slot hold a second part ("hands2"), which merges and evolves on its own.

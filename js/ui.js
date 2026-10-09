@@ -165,6 +165,7 @@ window.G = window.G || {};
       <button class="choice ${selected ? 'selected' : ''}" ${unlocked ? `data-act="pick-${kind}" data-arg="${item.id}"` : 'disabled'} aria-pressed="${selected}">
         <span class="choice-head"><span class="swatch" style="--h:${item.color != null ? item.color : item.hue}"></span><strong>${esc(item.name)}</strong>${unlocked ? '' : `<span class="lock">${ICON.gene} ${item.cost} in Unlocks</span>`}</span>
         <span class="choice-desc">${esc(item.desc)}</span>
+        ${item.rule ? `<span class="choice-rule"><b>${esc(item.rule)}.</b> ${esc(item.ruleDesc)}</span>` : ''}
       </button>`;
     const hostility = m.maxHostility > 0 ? `
       <section class="setup-group">
@@ -202,6 +203,7 @@ window.G = window.G || {};
             <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="Population. At 0 your lineage is extinct.">${ICON.pop}<b>${run.pop}</b>/${max}</span>
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${run.mind ? `<span class="res insight" title="Insight toward ${fasc ? fasc.name : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
+            ${gimmickChip(run)}
           </div>
           <div class="evo" title="DNA">
             <span class="evo-label">${ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
@@ -211,6 +213,20 @@ window.G = window.G || {};
         <button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>
         <div class="tb-row2">${speedControls(run)}</div>
       </header>`;
+  }
+
+  // The archetype's gimmick, at a glance.
+  function gimmickChip(run) {
+    const g = G.gimmick(run);
+    let t = ''; let warn = false; let tip = G.ARCHETYPE[run.archetype].rule || '';
+    if (g === 'predator') { const h = run.hunger || 0; t = `Hunger ${h}/${G.HUNGER_LIMIT}`; warn = h >= G.HUNGER_LIMIT - 1; tip = 'Turns since your last kill. At the limit you starve.'; }
+    if (g === 'parasite') { const h = G.hostOf(run); t = h ? `Host: ${h.name} ${Math.round(h.pop)}` : 'No host'; warn = !h || h.pop < 6 || h.opinion <= -50; tip = 'Your Population can never outgrow your host.'; }
+    if (g === 'symbiote') { const p = G.partnerOf(run); t = p ? `Partner: ${p.name} ${Math.round(p.pop)}` : 'No partner'; warn = !p || p.pop < p.cap * 0.3; }
+    if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); t = `Current: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = 'Turns until the current carries you somewhere new.'; }
+    if (g === 'grazer') { t = `Herd DNA +${G.dnaPerTurn(run)}`; tip = 'Bigger herds earn more DNA.'; }
+    if (g === 'colony') t = `Offshoots ${G.budsOf(run).length}/3`;
+    if (g === 'mimic') { const m = G.mimicOf(run); t = m ? `Disguised: ${m.name}` : 'Undisguised'; }
+    return t ? `<span class="res gimmick ${warn ? 'warn' : ''}" title="${esc(tip)}">${esc(t)}</span>` : '';
   }
 
   // Time controls live in the top bar, well away from event buttons.
@@ -320,8 +336,8 @@ window.G = window.G || {};
     const merging = G.canMerge(run);
     return `
       <article class="card draft">
-        <p class="eyebrow">Mutation</p>
-        <h2>Choose a new part</h2>
+        <p class="eyebrow">${d.source ? { absorb: 'Absorb', devour: 'Devour', steal: 'Steal', copy: 'Copy' }[d.source] : 'Mutation'}</p>
+        <h2>${d.source ? esc({ absorb: `Absorb a part from the ${d.from}`, devour: `You are what you eat: the ${d.from}`, steal: `Steal a part from your host, the ${d.from}`, copy: `Copy a part from the ${d.from}` }[d.source]) : 'Choose a new part'}</h2>
         <p class="note">Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part. The right pairs evolve into something new.</p>
         <div class="draft-list">
           ${d.options.map((pid) => {
@@ -525,6 +541,7 @@ window.G = window.G || {};
         ids.forEach((id) => Object.entries(G.PART[id].mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; }));
         return `<li><span class="slot">${slot.name}</span><span class="pname">${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}${s.merged ? ` · merged from ${esc(G.PART[s.id].name)} and ${esc(G.PART[s.merged].name)}` : ''}</span></li>`;
       }).join('')}</ul>
+      ${partnerSection(run)}
       <h3>Synergies</h3>
       ${Object.keys(counts).length ? `<ul class="synergies">${Object.keys(counts).map((k) => {
         const kw = G.KEYWORDS[k]; const n = counts[k];
@@ -545,8 +562,8 @@ window.G = window.G || {};
     const unit = symId === 'bilateral' && run.habitat === 'sea' ? 'fin pairs' : sym.unit;
     const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k, run.habitat));
     const cur = planFor(n);
-    const canDown = n > sym.min && run.dna >= G.RESHAPE_COST;
-    const canUp = n < sym.max && run.dna >= G.RESHAPE_COST;
+    const canDown = n > sym.min && run.dna >= G.reshapeCost(run);
+    const canUp = n < sym.max && run.dna >= G.reshapeCost(run);
     const off = G.offSlots(run);
     const ladder = [];
     for (let k = sym.min; k <= sym.max; k++) {
@@ -560,9 +577,20 @@ window.G = window.G || {};
         <button class="btn small" ${canUp ? 'data-act="reshape" data-arg="1"' : 'disabled'} aria-label="More ${esc(unit)}">+</button>
       </div>
       <p class="plan-desc">${esc(cur.desc)}${Object.keys(cur.mods).length ? ` <span class="pmods">${esc(G.describeMods(cur.mods))}</span>` : ''}</p>
-      <p class="note">Each change costs ${G.RESHAPE_COST} DNA (you have ${run.dna}).${off.length ? ` This body has no use for: ${off.map((id) => esc(G.slotName(run, id))).join(', ')}. Parts there are kept but do nothing.` : ''}</p>
+      <p class="note">Each change costs ${G.reshapeCost(run)} DNA (you have ${run.dna}).${off.length ? ` This body has no use for: ${off.map((id) => esc(G.slotName(run, id))).join(', ')}. Parts there are kept but do nothing.` : ''}</p>
       <ol class="plan-ladder">${ladder.join('')}</ol>
       <p class="size-line">Size: <b>${G.SIZES[G.sizeOf(run)].name}</b> · about ${G.sizeLabel(G.bodySize(run), run.stage)}</p>`;
+  }
+
+  // Symbiotes can swap parts with their partner species.
+  function partnerSection(run) {
+    const p = G.partnerOf(run);
+    if (!p) return '';
+    const swaps = G.partnerSwaps(run);
+    const can = run.dna >= G.GIMMICK_COST && run.phase === 'map';
+    return `<h3>Your partner: the ${esc(p.name)}</h3>
+      <p class="note">Swap a part: theirs comes to you, yours goes to them. ${G.GIMMICK_COST} DNA each.</p>
+      ${swaps.length ? `<ul class="parts">${swaps.map(({ slot, part }) => `<li><span class="slot">${esc(G.slotName(run, slot))}</span><span class="pname">${esc(G.slotLabel(part))}</span><span class="pmods">${esc(G.describeMods(G.PART[part.id].mods))}</span><button class="btn small" ${can ? `data-act="swap" data-arg="${slot}"` : 'disabled'}>Swap</button></li>`).join('')}</ul>` : '<p class="empty">They have nothing you can use right now.</p>'}`;
   }
 
   function traitsTab(run) {
@@ -581,11 +609,12 @@ window.G = window.G || {};
         <p>Spare Food grows your Population by 1 for every ${G.growthCost(run)} Food, once per turn. You can store up to ${G.foodCap(run)} Food; the rest spoils.</p>
         <p>DNA per turn: ${G.dnaPerTurn(run)}.${run.mind ? ` Insight per turn: ${G.insightPerTurn(run)}.` : ''}</p>
       </div>
-      <div class="instincts">${G.INSTINCTS.map((ins) => `
-        <button class="choice ${run.instinct === ins.id ? 'selected' : ''}" data-act="instinct" data-arg="${ins.id}" aria-pressed="${run.instinct === ins.id}">
+      <div class="instincts">${G.INSTINCTS.map((ins) => { const al = G.instinctAllowed(run, ins.id); return `
+        <button class="choice ${run.instinct === ins.id ? 'selected' : ''}" ${al.ok ? `data-act="instinct" data-arg="${ins.id}"` : 'disabled'} aria-pressed="${run.instinct === ins.id}">
           <span class="choice-head"><strong>${esc(ins.name)}</strong></span>
           <span class="choice-desc">${esc(ins.desc)}</span>
-        </button>`).join('')}</div>
+          ${al.ok || run.instinct === ins.id ? '' : `<span class="reason">${esc(al.why)}</span>`}
+        </button>`; }).join('')}</div>
       <p class="note">You can change your Instinct at any time. It takes effect at the end of the turn.</p>
       ${run.stage === 'creature' && run.habitat === 'sea' ? zonePicker(run) : ''}`;
   }
@@ -623,6 +652,26 @@ window.G = window.G || {};
     }).join('')}</ul><p class="note">Tap a species to see it up close. Allied species (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>`;
   }
 
+  // How this species is tied to you by your archetype's gimmick.
+  function speciesBond(run, s) {
+    const tags = [];
+    if (s.name === run.partner && G.gimmick(run) === 'symbiote') tags.push('Your partner: you share a sixth of its stats');
+    if (s.name === run.host && G.gimmick(run) === 'parasite') tags.push('Your host: you live inside it');
+    if (s.bud) tags.push('Split off from your colony');
+    if (s.name === run.mimic && G.gimmick(run) === 'mimic') tags.push('You are disguised as one of them');
+    return tags.length ? `<p class="bond">${tags.map(esc).join(' · ')}</p>` : '';
+  }
+  function speciesActions(run, s) {
+    if (s.extinct || run.phase !== 'map') return '';
+    const g = G.gimmick(run);
+    const can = run.dna >= G.GIMMICK_COST;
+    const btn = (act, label, arg) => `<button class="btn small ${can ? 'primary' : ''}" ${can ? `data-act="${act}" data-arg="${esc(arg || '')}"` : 'disabled'}>${label} (${G.GIMMICK_COST} DNA)</button>`;
+    let out = '';
+    if (g === 'parasite') out = s.name === run.host ? btn('steal', 'Steal one of its parts') : btn('jump', 'Jump into it as your new host', s.name);
+    if (g === 'mimic' && s.name !== run.mimic) out = btn('mimic', 'Mimic them', s.name);
+    return out ? `<div class="row tight gimmick-actions">${out}</div>` : '';
+  }
+
   function speciesPlan(s) {
     if (s.stage !== 'creature') return '';
     const sym = s.symmetry || 'bilateral'; const n = s.segments != null ? s.segments : 2;
@@ -650,7 +699,9 @@ window.G = window.G || {};
         <button class="portrait-zoom" data-act="view" data-arg="${i}" aria-label="See the ${esc(s.name)} full screen"><canvas class="portrait big" data-species="${i}"></canvas><i>${ICON.expand}</i></button>
         <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${s.size >= 2 ? 'Giant, ' : s.size < 0.6 ? 'Tiny, ' : ''}${G.sizeLabel(s.size, run.stage)}${speciesPlan(s)} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop)}`}</p></div>
       </div>
+      ${speciesBond(run, s)}
       <p>${esc(roleText)} ${esc(attitude)}</p>
+      ${speciesActions(run, s)}
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
       <h3>Compared with you</h3>
       <div class="compare">${G.STATS.map((k) => {
@@ -910,6 +961,10 @@ window.G = window.G || {};
       case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; break;
       case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'zone': G.setZone(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'steal': G.stealFromHost(); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
+      case 'jump': G.jumpHost(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'mimic': G.mimicSpecies(arg); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
+      case 'swap': G.swapWithPartner(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;

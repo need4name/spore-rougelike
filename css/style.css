@@ -462,3 +462,11 @@ button.rival:hover { border-color: var(--accent); }
 .fossil-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .fossil-info span { font-size: 0.85rem; color: var(--muted); }
 .fossil-info .good-text { color: var(--good, #8fd16a); }
+
+/* Archetype gimmicks */
+.choice-rule { display: block; font-size: 0.85rem; color: var(--fg); margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); }
+.choice-rule b { color: var(--accent); }
+.res.gimmick { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); white-space: nowrap; }
+.res.gimmick.warn { background: rgba(239, 125, 107, 0.25); color: #ffd2c9; }
+.bond { color: var(--accent); font-weight: 700; }
+.gimmick-actions { margin: 8px 0; }

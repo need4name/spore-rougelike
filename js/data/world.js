@@ -188,9 +188,11 @@ G.CARRY = {
 // Starting kits. Each archetype sets the parts you begin each body plan with.
 G.ARCHETYPES = [
   {
-    id: 'drifter', name: 'Drifter', cost: 0, color: 190,
-    desc: 'A balanced omnivore. Good for learning the ropes.',
-    mods: {},
+    id: 'drifter', name: 'Drifter', cost: 0, color: 190, gimmick: 'drifter',
+    desc: 'A balanced omnivore that goes where the current takes it.',
+    rule: 'Carried by the current',
+    ruleDesc: 'You cannot choose your Instinct: the current decides. Every 8 turns it carries you somewhere new: you leave your worst enemy behind, meet a new species, and may absorb one of its parts.',
+    mods: { tou: 1 },
     start: {
       cell: { mouth: 'proboscis', motion: 'cilia' },
       land: { mouth: 'mandibles', senses: 'big_eyes' },
@@ -198,8 +200,10 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'grazer', name: 'Grazer', cost: 0, color: 110,
-    desc: 'A sturdy herbivore that rarely goes hungry.',
+    id: 'grazer', name: 'Grazer', cost: 0, color: 110, gimmick: 'grazer',
+    desc: 'A sturdy plant-eater that lives as a vast herd.',
+    rule: 'The vast herd',
+    ruleDesc: 'Your herds grow 60% bigger, and DNA comes from the size of your herd instead of from time. You can never hunt or grow a meat-eating mouth, and every blow kills 50% more of you.',
     mods: { maxPop: 2 },
     start: {
       cell: { mouth: 'filter_mouth', membrane: 'silica_shell' },
@@ -208,8 +212,10 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'predator', name: 'Predator', cost: 30, color: 8,
-    desc: 'Fast and hungry. Hunting is how you eat.',
+    id: 'predator', name: 'Predator', cost: 30, color: 8, gimmick: 'predator',
+    desc: 'Fast and hungry. Hunting is the only way you eat.',
+    rule: 'You are what you eat',
+    ruleDesc: 'No foraging: hunting only feeds you on a kill, and food spoils twice as fast. Go 5 turns without a kill and you starve. Every kill can let you devour a part from the species you ate.',
     mods: { str: 1 },
     start: {
       cell: { mouth: 'tiny_jaw', motion: 'flagellum' },
@@ -218,9 +224,11 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'symbiote', name: 'Symbiote', cost: 50, needsEvo: 2, color: 150,
-    desc: 'Lives alongside helpers that feed it. Slow but rarely starves.',
-    mods: { cha: 1 },
+    id: 'symbiote', name: 'Symbiote', cost: 50, needsEvo: 2, color: 150, gimmick: 'symbiote',
+    desc: 'Two bodies, one life.',
+    rule: 'Two bodies, one life',
+    ruleDesc: 'You live joined to a partner species. You share a sixth of its stats and can swap parts with it, but you suffer when it struggles, and lose half your kind if it dies out.',
+    mods: { maxPop: -2, spd: -1 },
     start: {
       cell: { mouth: 'chloroplasts', membrane: 'slime_coat' },
       land: { mouth: 'trunk', back: 'moss_garden', skin: 'lichen_hide' },
@@ -228,13 +236,39 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'parasite', name: 'Parasite', cost: 70, needsEvo: 5, color: 280,
-    desc: 'Fragile, venomous and sneaky. High risk, high reward.',
+    id: 'parasite', name: 'Parasite', cost: 70, needsEvo: 5, color: 280, gimmick: 'parasite',
+    desc: 'Lives inside other species. High risk, high reward.',
+    rule: 'Inside a host',
+    ruleDesc: 'You live inside a host species and feed on it. Your Population can never outgrow your host, and you can steal its parts. Your host weakens and turns on you, so you must jump to a new one before it dies out.',
     mods: { cun: 1, maxPop: -2 },
     start: {
       cell: { mouth: 'venom_stylet', motion: 'jet_vacuole' },
       land: { mouth: 'venom_fangs', skin: 'warning_skin' },
       sea: { mouth: 'venom_fangs', skin: 'warning_skin' },
+    },
+  },
+  {
+    id: 'colony', name: 'Colony', cost: 40, color: 40, gimmick: 'colony',
+    desc: 'A shapeless colony that spreads by splitting.',
+    mods: { maxPop: 2, spd: -1 },
+    rule: 'Spread by splitting',
+    ruleDesc: 'You always grow without symmetry. When your colony is full and well fed, part of it splits off as an allied species on the map (up to 3), feeding and fighting beside you. Reshaping your body costs half as much.',
+    start: {
+      cell: { mouth: 'engulfing_maw', membrane: 'slime_coat' },
+      land: { mouth: 'grinding_beak', back: 'moss_garden' },
+      sea: { mouth: 'baleen', back: 'kelp_garden' },
+    },
+  },
+  {
+    id: 'mimic', name: 'Mimic', cost: 60, needsEvo: 3, color: 320, gimmick: 'mimic',
+    desc: 'A master of disguise.',
+    mods: { cha: 1 },
+    rule: 'Pass as one of them',
+    ruleDesc: 'Mimic any species you meet (3 DNA): you take on its colors and copy one of its parts. While disguised, every check involving that species is easier, and if it is a predator it rarely attacks you.',
+    start: {
+      cell: { mouth: 'proboscis', membrane: 'photophores' },
+      land: { mouth: 'mandibles', skin: 'scales' },
+      sea: { mouth: 'suction_mouth', skin: 'color_skin' },
     },
   },
 ];
@@ -407,7 +441,8 @@ G.MOVE_COST = 3; // DNA to move to a new depth
 // Real time: seconds per turn at each speed.
 G.SPEEDS = [0, 2.4, 1.2, 0.6];
 
-G.HARSH = 4;        // extra difficulty on every check; the Evolution Tree pays it back
+G.PREDATION = 0.34; // base chance per turn that each predator strikes
+G.HARSH = 6;        // extra difficulty on every check; the Evolution Tree pays it back
 G.BASE_POP = 8;      // max Population
 G.START_POP = 4;
 G.BASE_FOOD = 5;
@@ -440,15 +475,17 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '7';
+G.VERSION = '8';
 G.WHATS_NEW = {
-  title: 'Update 7: Bloodlines',
+  title: 'Update 8: Many Ways to Live',
   items: [
-    'Primordia is now a real roguelike: the world is much harsher, and predators pick off weak lineages every turn. Expect your first lineages to die in the cell stage.',
-    'The Evolution Tree: spend Genetic Memory between runs on stats, more DNA, lower DNA goals, bigger herds, rerolls, Second Chance and more, so every lineage gets further.',
-    'Twin sockets: tree upgrades that let one slot hold a second part (Twin Mouths, Senses, Backs, Hands, Skins, Organs). Each part merges and evolves on its own.',
-    'The Fossil Record: every milestone leaves a fossil. Keep favourites in amber and revive them as a new run from that point (revived runs earn less).',
-    'A gallery of every lineage you have played.',
-    'Each failed finale attempt makes the next one easier, so you never get stuck.',
+    'Every archetype now breaks a rule for the whole run. Read each one on the New lineage screen.',
+    'Drifter: the current picks your Instinct and carries you somewhere new every 8 turns, away from your worst enemy.',
+    'Grazer: a vast herd that earns DNA from its size, never hunts, and takes heavy losses.',
+    'Predator: food only from kills. Watch your Hunger, and devour parts from what you eat.',
+    'Symbiote: joined to a partner species. Share its strength and swap parts, but suffer when it suffers.',
+    'Parasite: live inside a host, steal its parts, and jump to a new host before it dies out.',
+    'New: Colony, which splits off allied offshoots, and Mimic, which disguises itself as other species.',
+    'Predator attacks are smoother and fairer, and the world is a little harsher overall.',
   ],
 };

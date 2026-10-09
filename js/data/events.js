@@ -15,11 +15,12 @@
 //
 // Option fields:
 //   label, hint (short text shown under the button)
-//   req        { diet: ['carn','omni'], keyword: ['venom', 2], trait, part, food, tag: 'grasp', innovation }
+//   req        { diet: ['carn','omni'], keyword: ['venom', 2], trait, part, anyPart, food, tag: 'grasp', innovation, zone, gimmick }
 //   check      { stat: 'spd', diff: 3 }  rolls against a stat, then uses success / fail
 //   result     outcome when there is no check
 //   success / fail / result:
 //     { text, pop, food, dna, insight, trait, loseTrait, opinion, randomPart, legacy, habitat, zone, setback, anim }
+//     archetype gimmicks: partnerPop, hostPop, fed, drift, unmask, newHost, budGoes, budBack
 //   zones      sea events only: list of home depths where it can happen (see G.SEA_ZONES)
 //   Words in braces change with your body: {herd} {Herd} {nests} {cover} {home} {move} {depth}
 //     anim: 'attack' | 'flee' | 'eat' | 'hurt' | 'mutate' | 'social' | 'rest' | 'grow' (picked automatically if left out)
@@ -1002,6 +1003,83 @@ G.EVENTS = [
     options: [
       { label: 'Build a language of color', check: { stat: 'cun', diff: 4 }, success: { text: 'You can tell each other anything without a sound.', insight: 4, dna: 2, trait: 'cooperative' }, fail: { text: 'Everyone flashes at once and nobody understands.', insight: 1 } },
       { label: 'Use it to fool others', result: { text: 'A flash of fake danger and the others scatter from the food.', food: 3, trait: 'calculating' } },
+    ],
+  },
+  // ======================= ARCHETYPE GIMMICKS =======================
+  {
+    id: 'host_fights_back', stage: 'any', title: 'The Host Fights Back', tags: ['danger'], repeat: true,
+    when: (run) => !!G.hostOf(run) && G.hostOf(run).opinion < -20,
+    text: 'Your host has noticed you. Its body is hunting you from the inside.',
+    options: [
+      { label: 'Burrow deeper', check: { stat: 'cun', diff: 3 }, success: { text: 'It cannot find you in there.', dna: 2, anim: 'rest' }, fail: { text: 'It finds some of you.', pop: -2 } },
+      { label: 'Drain it harder', result: { text: 'You feed until it can barely fight.', food: 4, hostPop: -4, anim: 'eat' } },
+      { label: 'Jump to the biggest species nearby', check: { stat: 'spd', diff: 3 }, success: { text: 'You slip into a fresh host.', newHost: true, dna: 1, anim: 'flee' }, fail: { text: 'Few of you make it across.', pop: -3, newHost: true } },
+    ],
+  },
+  {
+    id: 'bigger_host', stage: 'any', title: 'A Bigger Host', tags: ['explore'],
+    when: (run) => G.gimmick(run) === 'parasite',
+    text: 'A big, healthy species passes close by. There is room for many more of you in there.',
+    options: [
+      { label: 'Jump in', check: { stat: 'spd', diff: 3 }, success: { text: 'A roomy new home.', newHost: true, dna: 2, anim: 'flee' }, fail: { text: 'You miss your chance and lose some of you trying.', pop: -2 } },
+      { label: 'Stay where you are', result: { text: 'Better the host you know.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'partner_sick', stage: 'any', title: 'Your Partner Is Sick', tags: ['social'], repeat: true,
+    when: (run) => !!G.partnerOf(run),
+    text: 'A sickness is spreading through your partners. Whatever happens to them happens to you.',
+    options: [
+      { label: 'Share your food', req: { food: 3 }, result: { text: 'You go hungry so they can recover.', food: -3, partnerPop: 4, anim: 'social' } },
+      { label: 'Heal them with your symbionts', req: { keyword: ['symbiont', 1] }, result: { text: 'Your helpers cure them.', partnerPop: 5, dna: 2, mood: 'proud' } },
+      { label: 'Wait it out', check: { stat: 'tou', diff: 3 }, success: { text: 'They pull through.', dna: 1 }, fail: { text: 'Many of them die, and you feel it.', partnerPop: -5, pop: -1 } },
+    ],
+  },
+  {
+    id: 'storm_current', stage: 'any', title: 'The Storm Current', tags: ['explore', 'danger'], repeat: true,
+    when: (run) => G.gimmick(run) === 'drifter',
+    text: 'A wild current grabs your kind and starts pulling you away, much faster than usual.',
+    options: [
+      { label: 'Let it carry you', check: { stat: 'tou', diff: 3 }, success: { text: 'You tumble somewhere new, battered but excited.', drift: true, dna: 2, anim: 'flee' }, fail: { text: 'The current tears some of you apart.', drift: true, pop: -2 } },
+      { label: 'Fight it', check: { stat: 'str', diff: 4 }, success: { text: 'You hold on and stay put.', dna: 2, mood: 'proud' }, fail: { text: 'It takes you anyway, and some of you with it.', drift: true, pop: -3 } },
+    ],
+  },
+  {
+    id: 'lean_hunt', stage: 'any', title: 'The Lean Hunt', tags: ['hunt', 'danger'], repeat: true,
+    when: (run) => G.gimmick(run) === 'predator' && (run.hunger || 0) >= 2,
+    text: 'The prey has grown wary. Your kind is hungry and getting desperate.',
+    options: [
+      { label: 'Go after bigger game', check: { stat: 'str', diff: 4 }, success: { text: 'A huge kill. Everyone eats.', food: 6, fed: true, anim: 'attack' }, fail: { text: 'Bigger game fights back.', pop: -2 } },
+      { label: 'Scavenge', result: { text: 'Old meat, but meat.', food: 2, fed: true, trait: 'scavenger', anim: 'eat' } },
+      { label: 'Eat the weakest of your own', result: { text: 'A grim meal.', pop: -1, food: 3, fed: true, mood: 'sad' } },
+    ],
+  },
+  {
+    id: 'herd_panic', stage: 'any', title: 'Panic in the Herd', tags: ['danger', 'social'], repeat: true,
+    when: (run) => G.gimmick(run) === 'grazer' && run.pop >= 10,
+    text: 'Something spooks one of your kind, and in a heartbeat the whole {herd} is panicking.',
+    options: [
+      { label: 'Calm them', check: { stat: 'cha', diff: 3 }, success: { text: 'The panic fades as fast as it came.', dna: 2, trait: 'social' }, fail: { text: 'Some are trampled in the rush.', pop: -2 } },
+      { label: 'Let it run its course', result: { text: 'You end up somewhere new, and a little smaller.', pop: -1, dna: 3, anim: 'flee' } },
+    ],
+  },
+  {
+    id: 'restless_offshoot', stage: 'any', title: 'A Restless Offshoot', tags: ['social'],
+    when: (run) => G.budsOf(run).length > 0,
+    text: 'One of the colonies that split off from you wants to go its own way.',
+    options: [
+      { label: 'Let it go', result: { text: 'It will always remember where it came from.', dna: 4, budGoes: true, anim: 'social' } },
+      { label: 'Pull it back in', check: { stat: 'cha', diff: 3 }, success: { text: 'It rejoins you, and you are whole again.', budBack: true, anim: 'grow' }, fail: { text: 'It refuses and leaves anyway.', budGoes: true } },
+    ],
+  },
+  {
+    id: 'disguise_slips', stage: 'any', title: 'The Disguise Slips', tags: ['danger', 'social'], repeat: true,
+    when: (run) => !!G.mimicOf(run),
+    text: 'One of the creatures you are imitating looks at you a little too long.',
+    options: [
+      { label: 'Bluff', check: { stat: 'cha', diff: 4 }, success: { text: 'It shrugs and moves on.', dna: 2, mood: 'proud' }, fail: { text: 'It raises the alarm. Your disguise is ruined.', unmask: true, pop: -2 } },
+      { label: 'Slip away', check: { stat: 'spd', diff: 3 }, success: { text: 'Gone before it can be sure.', dna: 1, anim: 'flee' }, fail: { text: 'It chases you off.', unmask: true, pop: -1 } },
+      { label: 'Drop the disguise', result: { text: 'You were getting tired of it anyway.', unmask: true, dna: 2 } },
     ],
   },
 ];

@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1 and Update 7 (Bloodlines) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1, Update 7 (Bloodlines) and Update 8 (Many Ways to Live) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
 
 ---
 
@@ -63,7 +63,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 6 | **The Deep** ✅ | The sea catches up with land | Medium |
 | 6.1 | Patch ✅ | Merging from the first cell draft, a shorter cell stage, a truer map | Small |
 | 7 | **Bloodlines** ✅ | The roguelike core: harder first runs, an upgrade tree between runs (including second sockets), saved lineages | Large |
-| 8 | **Many Ways to Live** | Every archetype gets a gimmick that changes how the whole run plays | Large |
+| 8 | **Many Ways to Live** ✅ | Every archetype gets a gimmick that changes how the whole run plays | Large |
 | 9 | **The Creature Editor** | A full editor after the cell stage: limbs, heads, proportions, colors and patterns | Large |
 | 10 | **The Living World** | A CK3-style Activities tab, a crowded world, extinctions and rising species | Large |
 | 11 | **The World Map** | Biomes, and a world you see more of as your kind gets smarter | Large |
@@ -166,7 +166,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 
 **You'll test:** whether your first run feels short but fair, whether every run gets you further, and whether the upgrades feel worth buying.
 
-## Update 8: Many Ways to Live
+## Update 8: Many Ways to Live ✅
 
 *Every archetype breaks a rule.*
 
