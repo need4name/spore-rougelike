@@ -1864,7 +1864,7 @@ G.ENDINGS.forEach((id) => { const l = G.LEGACIES[id]; (G.ENDING_FOR[l.path] = G.
 (function () {
   const pathOptions = () => G.PATHS.map((p) => ({
     label: `${p.icon} ${p.name}`, hint: p.desc, req: { path: p.id },
-    result: { text: `Your kind begins to think as ${p.name} do. This is your path now, for good.`, path: p.id, insight: 4, anim: 'mutate' },
+    result: { text: `Your kind begins to think as ${p.name} do. This is your path now, for good.`, path: p.id, anim: 'mutate' },
   }));
   const spark = G.EVENTS.find((e) => e.id === 'spark_of_mind');
   spark.text = 'Something has changed behind your eyes. Your kind has begun to wonder, but how it thinks depends on what it is. Choose your Path of Mind. It will shape your people for the rest of this lineage.';
