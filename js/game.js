@@ -28,7 +28,7 @@ window.G = window.G || {};
       maxHostility: 0,
       codex: { events: [], parts: [], legacies: [], evolutions: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
-      fossils: [], history: [],
+      fossils: [], history: [], tips: [], tipsOff: false,
     };
   }
   function mergeMeta(saved) {
@@ -40,6 +40,9 @@ window.G = window.G || {};
     m.fossils = saved.fossils || [];
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
+    // Players from before tips existed have already learned the basics.
+    m.tips = saved.tips || ((saved.stats && saved.stats.runs >= 3) ? ['welcome', 'event', 'draft', 'instinct', 'arch_drifter', 'arch_grazer'] : []);
+    m.tipsOff = !!saved.tipsOff;
     m.maxHostility = saved.maxHostility || 0;
     ['archetypes', 'origins', 'packs'].forEach((k) => {
       const list = (saved.unlocked && saved.unlocked[k]) || [];
@@ -56,6 +59,13 @@ window.G = window.G || {};
   G.saveRun = () => store(SAVE_RUN, G.run);
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
   function save() { G.saveRun(); G.saveMeta(); }
+
+  // The next first-time tip to show, if any.
+  G.nextTutorial = (run, ui) => {
+    if (G.meta.tipsOff || ui.editor) return null;
+    return G.TUTORIALS.find((t) => !G.meta.tips.includes(t.id) && (() => { try { return t.when(run, ui); } catch (e) { return false; } })()) || null;
+  };
+  G.seeTutorial = (id) => { if (id && !G.meta.tips.includes(id)) G.meta.tips.push(id); G.saveMeta(); };
 
   // ---------- Lookups and helpers ----------
   G.ARCHETYPE = {}; G.ARCHETYPES.forEach((a) => { G.ARCHETYPE[a.id] = a; });
@@ -586,8 +596,11 @@ window.G = window.G || {};
     const base = Math.floor(run.totalDna / 3);
     const progress = (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     const winBonus = victory ? 40 : 0;
+    // Every lineage teaches something: a little for each turn survived, and never less than 6,
+    // so early runs that die as cells can still afford the first upgrades.
+    const survival = Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0);
     const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
-    const genes = Math.round((base + progress + winBonus) * mult);
+    const genes = Math.round((base + progress + winBonus + survival) * mult);
     const m = G.meta;
     m.genes += genes;
     if (victory) {
@@ -598,7 +611,7 @@ window.G = window.G || {};
       m.stats.extinctions += 1;
     }
     m.stats.bestDna = Math.max(m.stats.bestDna || 0, run.totalDna);
-    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, mult, revived: !!run.revived } };
+    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, survival, mult, revived: !!run.revived } };
     m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? G.LEGACIES[run.legacy].name : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
     m.history = m.history.slice(0, 30);
     run.phase = 'end';

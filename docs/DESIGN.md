@@ -126,6 +126,9 @@ After every choice, a scene acts out what happened. When another species is invo
 
 ## Between runs
 
+- **Genetic Memory per run:** DNA collected ÷ 3, +1 per 4 turns survived (at least 6 in total), +5/+10/+5/+10 for each stage milestone, +40 for winning; ×1.25 per hostility level, ×0.6 for a revived fossil.
+- **First-time tips:** `G.TUTORIALS` in world.js. Each has a `when(run, ui)` condition and shows once, the first time it holds, in any run; seen ids are saved in `meta.tips`. Tips pause time and never show while the Creature Editor is open.
+
 **It's a roguelike.** Every check is harder by `G.HARSH` (6; finales are exempt). Predators and hostile species attack every turn: the chance (`G.PREDATION` 0.34 plus 0.04 per point of gap) and the size of each strike grow with the gap between their Strength and your Toughness plus half your Speed. A fresh lineage usually dies in the cell stage. Upgrades in the Evolution Tree pay the harshness back, so each run gets further. Test bots: a fresh bot reaches the creature stage about 25% of the time and rarely wins; a fully upgraded bot wins about 88%. In whole campaigns, bots win about 4% of first runs and 40–60% by runs 12–15.
 
 - **Evolution Tree** (22 nodes in 6 columns, about 1,300 Genetic Memory to complete): Hardy Ancestors, Ancestral Pantry, Deep Memory, Rich Genes (+10% DNA), Second Look (reroll), Amber; +1 stat nodes; Second Chance (survive extinction once per run); Short Road (DNA goals −8% per level); Wider Gene Pool; Ancestral Armor; Head Start (a free draft); and the **Twin sockets**.

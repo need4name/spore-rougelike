@@ -601,15 +601,52 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '12';
+G.VERSION = '12.1';
 G.WHATS_NEW = {
-  title: 'Update 12: Shells, Scales and Soft Bodies',
+  title: 'Patch 12.1: Playtest fixes',
   items: [
-    'Not every creature is a mammal. Three new choices in the Creature stage, shown in the Body plan tab: your Frame (inner skeleton, outer shell or soft body), your Young (live young, eggs or budding) and your Blood (warm or cold).',
-    'Shells are armored but must molt every 12 turns. Soft bodies slip away from hunters but are fragile. Eggs boom, live young are safe. Cold blood eats less but slows down in the cold.',
-    '29 new parts: hooked and seed beaks, sticky tongues, compound eyes, heat pits, jointed and jumping legs, pincers, mantis arms, gecko feet, snail shells, segment plates, egg sacs, chitin, feathers, rattles, spinnerets and more.',
-    '17 new evolutions, including Insect Wings, Mantis Scythes, Raptor Beak, Citadel Shell, Exoskeleton and Web Weaver.',
-    '20 new events: molting, clutches and egg thieves, basking stones, cold snaps, the long sleep, ant mounds, stampedes and more. Land now has as many events as the sea.',
-    'Rival species now come as beetles, grasshoppers, snails, slugs, birds, lizards, crabs and sea slugs.',
+    'Mutation drafts now compare each new part with what is in its slot: both halves of a merged part, and exactly what merging, swapping or replacing would change, including your diet. The Body tab shows what each half of a merged part gives.',
+    'Fixed: the Creature Editor could get stuck on phones, with its Done button hidden under the status bar. There is now a big Done button at the bottom too.',
+    'Tips: each feature is explained the first time it appears, whichever run that is, and never again. Turn them off from any tip, or bring them back from How to play.',
+    'Extinction now has a proper scene: the last of your kind falls, its spirit rises, and the earth closes over it as a fossil.',
+    'Every lineage now earns at least 6 Genetic Memory, plus 1 for every 4 turns it survives, so early runs that die as cells can still buy the first upgrades.',
+    'Update 12 (Shells, Scales and Soft Bodies): choose your Frame, Young and Blood; 29 new parts and 17 evolutions; 20 new events; rival bugs, snails, birds, lizards and crabs.',
   ],
 };
+
+// First-time tips. Each shows once, the first time its feature appears, whatever run that is.
+// Checked in order; the first unseen one whose condition holds is shown.
+G.TUTORIALS = [
+  { id: 'welcome', title: 'Your lineage begins', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map',
+    text: 'Time flows on this map while the game runs. Pause or speed up with the buttons at the top. Your Population (top left) eats Food every turn; spare Food grows more of you. Tap any herd to look closer.' },
+  // One tip per archetype, the first time you play it.
+  ...G.ARCHETYPES.map((a) => ({ id: `arch_${a.id}`, title: `The ${a.name}`, when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.archetype === a.id && run.turn >= 3,
+    text: `Every archetype breaks one rule. ${a.ruleDesc}` })),
+  { id: 'event', title: 'Events', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && !G.EVENT[run.event.id].milestone && !G.EVENT[run.event.id].finale,
+    text: 'Events pause time. Each answer shows the stat it tests and your chance of success, or "Certain". Some answers need a part, a diet or a trait; locked ones say what they need.' },
+  { id: 'draft', title: 'Mutations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft',
+    text: 'DNA brings a new part. Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part. The grey box under each part compares it with what you have now. The right pairs evolve into something stronger.' },
+  { id: 'instinct', title: 'Instinct', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.turn >= 4,
+    text: 'Your Instinct (top right) decides what your kind does each turn: forage, hunt, explore or hide. It changes how you find food and which events find you.' },
+  { id: 'multicellular', title: 'Many cells, one body', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'cell' && run.multicellular,
+    text: 'You are multicellular. Two new slots are open (Senses and Organ), your symmetry is fixed for good, and the world around you now matters: some places are richer or harsher than others.' },
+  { id: 'creature', title: 'The Creature stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature',
+    text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
+  { id: 'foundations', title: 'Foundations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['the_frame', 'the_young', 'the_blood'].includes(run.event.id),
+    text: 'Some choices shape your whole kind: your frame, how you have young, and your blood. Each has real costs as well as strengths, and you can only choose once. They show in the Body plan tab.' },
+  { id: 'seasons', title: 'Seasons', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.stageTurn > G.SEASON_LENGTH,
+    text: 'The seasons have turned. Each season changes food and speed for a while (see the chip under your Population). Warm blood shrugs off winter; cold blood slows down in it.' },
+  { id: 'species', title: 'Other species', when: (run, ui) => ui.screen === 'game' && run && ui.speciesView != null,
+    text: 'Every species has needs and an opinion of you, from hostile to allied. Compare your stats before you pick a fight. The buttons start an Activity aimed at them.' },
+  { id: 'giants', title: 'The Age of Giants', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.era >= 2,
+    text: 'The world has grown dangerous: every blow hurts more, and a huge new predator has arrived. Keep your herd fed and your armor up until your kind finds the Spark of Mind.' },
+  { id: 'mind', title: 'The Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'mind',
+    text: 'Your kind can think. Pick what fascinates them, and Insight flows into it each turn. Some ideas lead to others; reach Sapience and you can try to become a people.' },
+  { id: 'extinct', title: 'Extinction is not the end', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'end' && run.result && !run.result.victory,
+    text: 'Every lineage earns Genetic Memory, win or lose. Spend it on the Evolution Tree to make the next one stronger. The evolutions you discovered can appear in future drafts, and your fossils wait in the Fossil Record.' },
+  { id: 'tree', title: 'The Evolution Tree', when: (run, ui) => ui.screen === 'unlocks',
+    text: 'Spend Genetic Memory on lasting upgrades: more Population, Food and DNA, better stats, lower DNA goals, and Twin sockets that let one slot hold two parts. Lower rows open once the row above is bought.' },
+  { id: 'fossils', title: 'Fossils', when: (run, ui) => ui.screen === 'fossils',
+    text: 'Each milestone leaves a fossil. Keep your favourites in amber, and you can revive one later to play on from that moment (it earns a little less Genetic Memory).' },
+];
+G.TUTORIAL = {}; G.TUTORIALS.forEach((t) => { G.TUTORIAL[t.id] = t; });

@@ -283,6 +283,17 @@ Alongside the choices:
 
 **What shipped:** three foundation milestones (Frame, Young, Blood); 29 new parts (beaks, sticky tongue, compound eyes, heat pits, jointed and jumping legs, pincers, mantis arms, gecko feet, digging claws, snail shell, segment plates, egg sac, chitin, feathers, mottled and mucus skin, spinnerets, rattles, drop-off tails, and three sea grips); 17 new evolutions (Raptor Beak, Insect Wings, Mantis Scythes, Citadel Shell, Exoskeleton, Web Weaver, Gripping Hands and more); 20 new events; rival species built as bugs, snails, slugs, birds, lizards, crabs and sea slugs. Soft bodies regrowing lost parts is left for a later update.
 
+## Patch 12.1: Playtest fixes ✅
+
+From the first playtest notes:
+
+- **Compare mutations:** drafts show what each slot holds now (both halves of a merged part) and the exact stat and diet change of every choice. The Body tab lists each merged half's stats.
+- **Editor soft-lock fixed:** the Done button sat under the phone status bar. The header now respects the safe area, and a second Done button sits at the bottom.
+- **First-time tips:** each feature is explained once, the first time it shows up, in whichever run that happens. They are saved between runs, can be turned off, and can be reset from How to play.
+- **Death scene:** the last of your kind falls (or sinks), its spirit rises, "EXTINCT", and the ground closes over it as a fossil.
+- **Early Genetic Memory:** every run earns at least 6, plus 1 per 4 turns survived, so the first upgrades are reachable before you can reach the Creature stage.
+- **Still to do from the notes:** a wider animation pass (more scene variety for everything that has been added since Update 6) belongs with Update 18's polish, but the most important moment, death, is done now.
+
 ## Update 13: Other Minds
 
 *Intelligence comes in many shapes.*

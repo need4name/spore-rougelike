@@ -22,8 +22,32 @@ window.G = window.G || {};
     expand: '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   };
 
+  // First-time tips float above everything and pause the game until dismissed.
+  const tipEl = document.createElement('div'); tipEl.id = 'tip'; document.body.appendChild(tipEl);
+  function renderTip() {
+    if (!G.ui.tip) { const next = G.nextTutorial(G.run, G.ui); if (next) G.ui.tip = next.id; }
+    const t = G.ui.tip && G.TUTORIAL[G.ui.tip];
+    const text = t && (typeof t.text === 'function' ? t.text(G.run) : t.text);
+    tipEl.innerHTML = t && text ? `<div class="tip-card" role="dialog" aria-label="Tip: ${esc(t.title)}">
+        <p class="eyebrow">Tip</p><h3>${esc(t.title)}</h3><p>${esc(text)}</p>
+        <div class="row tight"><button class="btn primary" data-tip="ok">Got it</button><button class="btn ghost small" data-tip="off">Turn off tips</button></div>
+      </div>` : '';
+    if (t && !text) { G.seeTutorial(t.id); G.ui.tip = null; }
+  }
+  tipEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tip]');
+    if (!b) return;
+    G.seeTutorial(G.ui.tip); G.ui.tip = null;
+    if (b.dataset.tip === 'off') { G.meta.tipsOff = true; G.saveMeta(); }
+    renderTip();
+  });
+
   // parts: redraw only these pieces of a mounted game ('top', 'hud', 'modal', 'sheet', 'viewer').
   function render(parts) {
+    renderInner(parts);
+    renderTip();
+  }
+  function renderInner(parts) {
     const s = G.ui.screen;
     const run = G.run;
     if (s === 'game' && run && parts && app.querySelector('.game')) { renderParts(run, parts); return; }
@@ -151,6 +175,7 @@ window.G = window.G || {};
         </details>` : ''}
         <details class="howto">
           <summary>How to play</summary>
+          <p class="note">Tips appear the first time each feature shows up. ${G.meta.tipsOff || G.meta.tips.length ? '<button class="btn small" data-act="tips-reset">Show all tips again</button>' : ''}</p>
           <ol>
             <li>Time flows on the world map. Use pause and the speed buttons, like in CK3. Events pop up at random and pause the game; choose how to respond. Buttons show your chance of success.</li>
             <li>Watch every species roam the map. Herd size shows population. Tap any herd, or your portrait (top left), to inspect it.</li>
@@ -160,7 +185,7 @@ window.G = window.G || {};
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>This is a roguelike: your first lineages will die young. Spend the Genetic Memory they earn on the <b>Evolution Tree</b> (stats, more DNA, lower DNA goals, Twin sockets that let a slot hold two parts) so every lineage gets further.</li>
             <li>The <b>Activities</b> tab lets your kind migrate, go to war, court, avoid or hunt a species, or scout. Each plays out over several turns.</li>
-            <li>When you become a creature, and after each milestone, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns.</li>
+            <li>When you become a creature, at the Age of Giants and at the Spark of Mind, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns.</li>
             <li>Each milestone leaves a fossil. Keep a favourite in amber in the <b>Fossil Record</b> and you can revive it later, so a build you love is never lost.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
@@ -344,6 +369,51 @@ window.G = window.G || {};
       </article>`;
   }
 
+  // Compare a new part with what a slot holds now: the slot's stats, and what each choice would change.
+  const modsOf = (...ids) => {
+    const out = {};
+    ids.filter(Boolean).forEach((id) => Object.entries(G.PART[id].mods || {}).forEach(([k, v]) => { out[k] = (out[k] || 0) + v; }));
+    return out;
+  };
+  function modDiff(after, before) {
+    const keys = new Set([...Object.keys(after), ...Object.keys(before)]);
+    const bits = [];
+    keys.forEach((k) => {
+      const v = (after[k] || 0) - (before[k] || 0);
+      if (!v) return;
+      const good = k === 'damageReduce' || k === 'growthCost' || k === 'upkeep' ? (k === 'damageReduce' ? v > 0 : v < 0) : v > 0;
+      const text = k === 'damageReduce' ? `${v > 0 ? '−' : '+'}${Math.abs(v)} damage taken` : G.describeMods({ [k]: v });
+      bits.push(`<span class="${good ? 'up' : 'down'}">${esc(text)}</span>`);
+    });
+    return `<span>${bits.length ? bits.join(', ') : '<span class="muted">no stat change</span>'}</span>`;
+  }
+  function compareBox(run, pid, socks) {
+    const rows = socks.map((key) => {
+      const sl = run.parts[key];
+      const where = socks.length > 1 ? `${key.endsWith('2') ? '2nd' : '1st'} socket` : 'Now';
+      if (!sl) return `<div class="cmp-now"><b>${where}</b> <span class="muted">empty</span></div><div class="cmp-row"><span>Grow it</span>${modDiff(modsOf(pid), {})}</div>`;
+      const now = modsOf(sl.id, sl.merged);
+      // A new mouth can change what you eat.
+      const dietOf = (a, b) => { const da = a && G.PART[a].diet; const db = b && G.PART[b].diet; return da && db && da !== db ? 'omni' : da || db || 'omni'; };
+      const dietNote = (a, b) => (key === 'mouth' && dietOf(a, b) !== dietOf(sl.id, sl.merged) ? ` <span class="diet">→ ${G.DIET_NAMES[dietOf(a, b)]}</span>` : '');
+      const halves = sl.merged ? ` <span class="muted">(${esc(G.PART[sl.id].name)} + ${esc(G.PART[sl.merged].name)})</span>` : '';
+      const result = (a, b) => {
+        const evo = G.evolutionOf(a, b);
+        if (evo && !G.evolutionKnown(evo)) return '<span class="up">evolves into something new</span>';
+        if (evo) return `<span><span class="up">evolves into ${esc(G.PART[evo].name)}:</span> ${modDiff(modsOf(evo), now)}${dietNote(evo)}</span>`;
+        return `<span>${modDiff(modsOf(a, b), now)}${dietNote(a, b)}</span>`;
+      };
+      const out = [`<div class="cmp-now"><b>${where}</b> ${esc(G.slotLabel(sl))}${halves}: ${esc(G.describeMods(now) || 'no stats')}</div>`];
+      if (sl.merged) {
+        out.push(`<div class="cmp-row"><span>Swap out ${esc(G.PART[sl.id].name)}</span>${result(sl.merged, pid)}</div>`);
+        out.push(`<div class="cmp-row"><span>Swap out ${esc(G.PART[sl.merged].name)}</span>${result(sl.id, pid)}</div>`);
+      } else if (G.canMerge(run)) out.push(`<div class="cmp-row"><span>Merge</span>${result(sl.id, pid)}</div>`);
+      out.push(`<div class="cmp-row"><span>Replace</span><span>${modDiff(modsOf(pid), now)}${dietNote(pid)}</span></div>`);
+      return out.join('');
+    });
+    return `<div class="part-compare">${rows.join('')}</div>`;
+  }
+
   function draftCard(run) {
     const d = run.draft;
     const counts = G.keywordCounts(run);
@@ -392,6 +462,7 @@ window.G = window.G || {};
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
               ${syn}
+              ${compareBox(run, pid, socks)}
               <div class="row tight">${buttons}</div>
             </div>`;
           }).join('')}
@@ -494,7 +565,7 @@ window.G = window.G || {};
         ${(() => { const fresh = G.meta.codex.evolutions.filter((id) => !(run.knownEvos || []).includes(id)); return fresh.length ? `<div class="callout"><strong>Unlocked for future runs</strong><span>${esc(listJoin(fresh.map((id) => G.PART[id].name)))} can now appear in mutation drafts.</span></div>` : ''; })()}
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
-          <span>${b.base} from DNA collected${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
+          <span>${b.base} from DNA collected${b.survival ? ` · +${b.survival} for surviving ${run.turn} turns` : ''}${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
         </div>
         ${G.meta.fossils.some((f) => f.run && f.run.turn <= run.turn && !f.amber) ? '<p class="note">This lineage left fossils at its milestones. Keep a favourite in amber from the Fossil Record to revive it later.</p>' : ''}
         <div class="row">
@@ -553,7 +624,7 @@ window.G = window.G || {};
         const ids = [s.id].concat(s.merged ? [s.merged] : []);
         const mods = {};
         ids.forEach((id) => Object.entries(G.PART[id].mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; }));
-        return `<li><span class="slot">${slot.name}</span><span class="pname">${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}${s.merged ? ` · merged from ${esc(G.PART[s.id].name)} and ${esc(G.PART[s.merged].name)}` : ''}</span></li>`;
+        return `<li><span class="slot">${slot.name}</span><span class="pname">${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}</span>${s.merged ? `<span class="pmods halves">${ids.map((id) => `${esc(G.PART[id].name)}: ${esc(G.describeMods(G.PART[id].mods) || 'no stats')}`).join(' · ')}</span>` : ''}</li>`;
       }).join('')}</ul>
       ${partnerSection(run)}
       <h3>Synergies</h3>
@@ -896,7 +967,7 @@ window.G = window.G || {};
     return `
       <div class="look-preview"><canvas class="portrait huge"></canvas></div>
       <button class="btn primary wide" ${can ? 'data-act="editor-open"' : 'disabled'}>Open the Creature Editor${cost ? ` (${cost} DNA)` : ' (free now)'}</button>
-      <p class="note">Change your body's proportions, limbs, head, colors and patterns. The editor is free when you become a creature and after each milestone; in between it costs ${G.EDITOR_COST} DNA. Looks never change your stats.</p>`;
+      <p class="note">Change your body's proportions, limbs, head, colors and patterns. The editor is free when you become a creature, at the Age of Giants and at the Spark of Mind; in between it costs ${G.EDITOR_COST} DNA. Looks never change your stats.</p>`;
   }
 
   // The Creature Editor: a live preview with four tabs of controls.
@@ -920,6 +991,7 @@ window.G = window.G || {};
       <div class="editor-preview"><canvas class="editor-canvas"></canvas></div>
       <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="editor-tab" data-arg="${id}">${label}</button>`).join('')}</div>
       <div class="editor-body">${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
+      <div class="editor-foot"><button class="btn primary wide" data-act="editor-done">Done</button></div>
     </div>`;
   }
 
@@ -1100,6 +1172,7 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
+      case 'tips-reset': G.meta.tips = []; G.meta.tipsOff = false; G.saveMeta(); break;
       case 'continue': if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); } G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
       case 'setup':
         if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); }
@@ -1164,7 +1237,7 @@ window.G = window.G || {};
   });
 
   // Color sliders update the look live.
-  // The editor opens by itself (for free) after becoming a creature and after each milestone.
+  // The editor opens by itself (for free) after becoming a creature and after the big milestones.
   function autoEditor(parts) {
     const run = G.run;
     if (run && run.freeEdit && run.stage === 'creature' && run.phase === 'map' && G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); }
@@ -1192,7 +1265,7 @@ window.G = window.G || {};
     const dt = Math.min(0.25, (now - lastT) / 1000);
     lastT = now;
     const run = G.run;
-    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && G.ui.speed > 0;
+    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && !G.ui.tip && G.ui.speed > 0;
     const per = G.SPEEDS[G.ui.speed] || 1;
     if (running) {
       acc += dt;

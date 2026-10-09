@@ -10,7 +10,8 @@ window.G = window.G || {};
   const BONE = '#efe6d2';
   const SHELL = '#a9b6bd';
   let ctx = null;
-  let FACE = null; // where the last drawn body's eye and mouth are, for expressions
+  let FACE = null;
+  let NO_SHADOW = false; // the death scene flips bodies over, so their ground shadow must go // where the last drawn body's eye and mouth are, for expressions
 
   const hsl = (h, s, l, a) => `hsla(${h}, ${s}%, ${l}%, ${a == null ? 1 : a})`;
   function glow(color, blur, fn) { ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = blur; fn(); ctx.restore(); }
@@ -251,7 +252,7 @@ window.G = window.G || {};
     if (pos === 'tucked') { hx = biped ? cx + rx * 0.55 : cx + rx * 0.9; hy = biped ? cy - ry * 0.85 : cy - ry * 0.25; }
     const hr = S * 0.1 * (E.mouth ? 1.15 + 0.1 * E.mouth : 1) * (E.senses ? 1.05 : 1) * (L.headSize || 1);
 
-    ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    if (!NO_SHADOW) { ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
 
     // Wings (far side) for flyers, flapping.
     const flap = Math.sin(t * 9) * 0.45;
@@ -861,6 +862,7 @@ window.G = window.G || {};
       ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.2, lw * 0.6); ctx.stroke();
     }
     if (mood === 'love') { dot(f.x, f.y, r * 1.05, '#fff'); heart(f.x, f.y + r * 0.1, r * 0.8, '#e8604c'); }
+    if (mood === 'dead') { dot(f.x, f.y, r * 1.1, f.skin); line(f.x - r * 0.75, f.y - r * 0.75, f.x + r * 0.75, f.y + r * 0.75, ink, lw); line(f.x - r * 0.75, f.y + r * 0.75, f.x + r * 0.75, f.y - r * 0.75, ink, lw); }
     if (mood === 'scared' || mood === 'surprised') { dot(f.x, f.y, r * 1.15, '#fff'); dot(f.x + r * 0.15, f.y, r * 0.35, ink); }
     // Brows
     const by = f.y - r * 1.7; const bw = r * 1.1;
@@ -876,7 +878,7 @@ window.G = window.G || {};
     else if (mood === 'surprised' || mood === 'scared') ctx.ellipse(f.mx, f.my, mw * 0.35, mw * 0.5, 0, 0, Math.PI * 2);
     else if (mood === 'angry') { ctx.moveTo(f.mx - mw, f.my); for (let i = 1; i <= 6; i++) ctx.lineTo(f.mx - mw + (i * mw) / 3, f.my + (i % 2 ? -mw * 0.25 : mw * 0.15)); }
     else if (mood === 'dizzy') { ctx.moveTo(f.mx - mw, f.my); for (let i = 1; i <= 8; i++) ctx.lineTo(f.mx - mw + (i * mw) / 4, f.my + Math.sin(i * 1.7 + t * 8) * mw * 0.2); }
-    else if (mood === 'sleepy') { ctx.moveTo(f.mx - mw * 0.4, f.my); ctx.lineTo(f.mx + mw * 0.4, f.my); }
+    else if (mood === 'sleepy' || mood === 'dead') { ctx.moveTo(f.mx - mw * 0.4, f.my); ctx.lineTo(f.mx + mw * 0.4, f.my); }
     ctx.stroke();
     // Extras
     if (mood === 'worried' || mood === 'scared') {
@@ -1232,8 +1234,10 @@ window.G = window.G || {};
     const babies = Math.min(5, Math.max(0, sc.popDelta || 0));
     const ghosts = Math.min(5, Math.max(0, -(sc.popDelta || 0)));
     const food = sc.foodDelta || 0;
+    const dying = sc.title === 'end';
     function frame(now) {
       if (!canvas.isConnected) { sceneFrame = null; return; }
+      if (dying) { deathFrame(canvas, run, me, reduceMotion ? 6 : (now - start) / 1000, reduceMotion ? 0 : now / 1000); sceneFrame = reduceMotion ? null : requestAnimationFrame(frame); return; }
       const { w, h } = fit(canvas);
       const t = reduceMotion ? 0 : now / 1000;
       const k = reduceMotion ? 2 : (now - start) / 1000 / DUR;
@@ -1304,6 +1308,66 @@ window.G = window.G || {};
     }
     sceneFrame = requestAnimationFrame(frame);
   };
+
+  // Extinction: the last of your kind shudders and falls, the color drains away,
+  // its spirit rises, and the earth (or the seabed) closes over it as a fossil.
+  function deathFrame(canvas, run, me, s, t) {
+    const { w, h } = fit(canvas);
+    ctx.clearRect(0, 0, w, h);
+    drawBackground(run, w, h, s < 1 ? t : 0);
+    const S = Math.min(w * 0.72, h * 1.05);
+    const cx = w * 0.45; const cy = h * 0.48;
+    const land = run.stage === 'creature' && run.habitat === 'land';
+    const ground = land ? cy + S * 0.36 : h * 0.86;
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+    const fall = clamp01((s - 0.7) / 0.9); const ease = 1 - (1 - fall) ** 3;
+    const drain = clamp01(s / 2.2);
+    const bury = clamp01((s - 2.6) / 1.6);
+    // The world darkens.
+    ctx.fillStyle = `rgba(6, 10, 14, ${0.5 * drain})`; ctx.fillRect(0, 0, w, h);
+    // The body: a shudder, then it rolls belly-up and comes to rest on the ground (or sinks to the seabed).
+    const shake = s < 0.7 ? Math.sin(s * 70) * 5 * (1 - s / 0.7) : 0;
+    const restY = ground - S * (land ? 0.16 : 0.1);
+    const pose = (q) => { ctx.translate(cx + shake * (1 - q), cy + (restY - cy) * q); ctx.rotate(q * Math.PI); ctx.translate(-cx, -cy); };
+    ctx.save();
+    ctx.filter = `grayscale(${drain}) brightness(${1 - 0.35 * drain})`;
+    pose(ease);
+    NO_SHADOW = true;
+    drawBody(me, cx, cy, S, s < 0.7 ? t : 0);
+    drawFace(s < 0.7 ? 'scared' : 'dead', 0);
+    ctx.restore(); ctx.filter = 'none';
+    // Its spirit rises and fades.
+    const g = clamp01((s - 1.3) / 2.4);
+    if (g > 0 && g < 1) ghost(cx + Math.sin(g * 7) * S * 0.04, restY - S * 0.25 - g * S * 0.5, S * 0.07, Math.sin(g * Math.PI) * 0.85);
+    // Dust or marine snow settles over it, layer by layer, until only a fossil is left.
+    if (bury > 0) {
+      const top = ground + S * 0.05 - S * (land ? 0.68 : 0.5) * bury;
+      const cols = land ? ['#3d2f25', '#4a3a2c', '#57442f', '#3a2c22'] : ['#1d2b33', '#22333c', '#283b45', '#1a2830'];
+      for (let i = 0; i < 4; i++) {
+        const y0 = top + (h - top) * (i / 4);
+        ctx.fillStyle = cols[i];
+        ctx.beginPath(); ctx.moveTo(0, y0);
+        for (let x = 0; x <= w + 1; x += w / 8) ctx.lineTo(x, y0 + Math.sin(x * 0.02 + i * 2) * 4);
+        ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+      }
+      // The fossil: a pale stone print of the body, pressed into the rock where it fell.
+      const fa = clamp01((s - 3.6) / 1.2);
+      if (fa > 0) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, top + 8, w, h); ctx.clip();
+        ctx.globalAlpha = 0.45 * fa; ctx.filter = 'grayscale(1) sepia(0.4) brightness(1.8) contrast(0.5)';
+        pose(1); drawBody(me, cx, cy, S, 0);
+        ctx.restore(); ctx.filter = 'none';
+      }
+    }
+    NO_SHADOW = false;
+    for (let i = 0; i < 24; i++) { const ph = ((s * 0.12) + i / 24) % 1; dot((i * 61) % w + Math.sin(s + i) * 6, ph * h, 1.5 + (i % 3), `rgba(220, 220, 210, ${0.35 * drain * (1 - ph)})`); }
+    // A slow vignette, and the word.
+    const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${0.7 * drain})`);
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+    const wa = clamp01((s - 1.6) / 0.8);
+    if (wa > 0) comic('EXTINCT', w * 0.5, h * 0.17, S * 0.13 * (1.25 - 0.25 * wa), wa, '#ef7d6b', -0.04);
+  }
 
   // ======================= SPRITES =======================
   // Bodies drawn once to an offscreen canvas, so the world map can show many creatures cheaply.
