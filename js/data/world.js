@@ -64,6 +64,9 @@ G.TRAITS = {
   pack_hunter: { name: 'Pack Hunter', mods: { huntBonus: 1, cha: 1 }, desc: 'Hunts together, eats together.' },
   migratory: { name: 'Migratory', mods: { spd: 1 }, desc: 'Always moving to greener ground.' },
   fertile: { name: 'Fertile', mods: { growthCost: -1 }, desc: 'Young come easily.' },
+  thick_skinned: { name: 'Thick-shelled', mods: { tou: 2, spd: -1 }, desc: 'Each molt grows a heavier shell.' },
+  nocturnal: { name: 'Nocturnal', mods: { cun: 1, damageReduce: 1 }, desc: 'Comes out only after dark.' },
+  hibernator: { name: 'Hibernator', mods: { upkeep: -1, spd: -1 }, desc: 'Sleeps through the hungry months.' },
   territorial: { name: 'Territorial', mods: { str: 1, tou: 1, cha: -1 }, desc: 'This is yours. Everyone knows it.' },
   // Multicellular body plans
   // Symmetry, chosen when you become multicellular. It decides your body plan for good.
@@ -79,6 +82,15 @@ G.TRAITS = {
   deep_dweller: { name: 'Deep Dweller', mods: { tou: 1, maxPop: 1 }, desc: 'Your kind chose the endless sea.' },
   // Size (Age of Giants)
   // Size changes how big your herd can be and how much each member eats (see G.SIZES).
+  // Body foundations, chosen at the start of the creature stage.
+  skeleton_inner: { name: 'Inner Skeleton', foundation: 'skeleton', mods: {}, desc: 'Bones on the inside. Flexible, and the only frame that can carry a giant.' },
+  skeleton_shell: { name: 'Outer Shell', foundation: 'skeleton', mods: { tou: 2, spd: -2 }, desc: 'Armor on the outside, like insects and crabs. Extra legs come cheap, but you must molt to grow, and you can never be a giant on land.' },
+  skeleton_soft: { name: 'Soft Body', foundation: 'skeleton', mods: { cun: 2, tou: -2 }, desc: 'No bones at all, like octopuses and worms. You squeeze through gaps and hunters often miss you, but you are fragile.' },
+  young_live: { name: 'Live Young', foundation: 'young', mods: { tou: 1, cha: 1 }, desc: 'Few babies, kept close and safe. No more than one is born each turn.' },
+  young_eggs: { name: 'Eggs', foundation: 'young', mods: { maxPop: 1 }, desc: 'Big clutches: your numbers boom, twice as many hatch each turn, but eggs can be stolen.' },
+  young_budding: { name: 'Budding', foundation: 'young', mods: { popPerTurn: 1, cha: -1 }, desc: 'New members bud off your body. Steady growth, but no family ties.' },
+  blood_warm: { name: 'Warm Blood', foundation: 'blood', mods: { spd: 1, upkeep: 1 }, desc: 'Active in any weather, and cold seasons cost you no food, but you eat more.' },
+  blood_cold: { name: 'Cold Blood', foundation: 'blood', mods: { upkeep: -1 }, desc: 'You eat less, but you are sluggish in the cold (−2 Speed, −1 Food in cold seasons and cold places) and quick in the heat (+1 Speed).' },
   giant: { name: 'Giant', mods: { str: 3, tou: 3, damageReduce: 1, spd: -1 }, desc: 'Enormous. Few things can hurt you, but your herds are small and hungry.' },
   mid_sized: { name: 'Mid-sized', mods: { str: 1, tou: 1, maxPop: 2 }, desc: 'Big enough to fight, small enough to hide.' },
   small_many: { name: 'Small and Many', mods: { spd: 2, cun: 1, growthCost: -1 }, desc: 'Tiny, quick and everywhere: huge herds, but every danger takes more of you.' },
@@ -336,7 +348,7 @@ G.STAGES = {
   creature: {
     name: 'Creature Stage', turnName: 'Generation',
     drafts: [5, 10, 15, 20, 28, 34, 40, 50, 56, 62, 70],
-    milestones: [{ at: 18, event: 'age_of_giants' }, { at: 32, event: 'spark_of_mind' }],
+    milestones: [{ at: 0, event: 'the_frame' }, { at: 8, event: 'the_young' }, { at: 13, event: 'the_blood' }, { at: 18, event: 'age_of_giants' }, { at: 32, event: 'spark_of_mind' }],
     evolveAt: null, finale: 'creature_finale',
   },
 };
@@ -589,15 +601,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '11';
+G.VERSION = '12';
 G.WHATS_NEW = {
-  title: 'Update 11: The World Map',
+  title: 'Update 12: Shells, Scales and Soft Bodies',
   items: [
-    'A new Map tab shows the biomes of your world. Fog hides what your kind does not know yet.',
-    'Cells: a thermal vent, the sunlit surface and mud flats. Biomes only matter once you are multicellular, and only currents and storms move you.',
-    'Land: open plains, jungle, desert, tundra, swamp and shore. Sea: warm seas, kelp forest, polar sea, vent fields and coast. Each has its own effects, scenery, events and parts.',
-    'Early creatures migrate to a random neighbouring biome. At Cunning 6 or the Spark of Mind you can see your neighbours and choose. Keen Memory, Lone Wanderers or Symbolic Thought reveal the whole world.',
-    'From the shore, return to the sea; from the coast, crawl onto land. It is a 5-turn journey, and you lose the parts that only worked in your old home.',
-    '12 biome parts, like Winter Coat, Water Hump, Canopy Tail and Vent Gardens, only show up in their biome.',
+    'Not every creature is a mammal. Three new choices in the Creature stage, shown in the Body plan tab: your Frame (inner skeleton, outer shell or soft body), your Young (live young, eggs or budding) and your Blood (warm or cold).',
+    'Shells are armored but must molt every 12 turns. Soft bodies slip away from hunters but are fragile. Eggs boom, live young are safe. Cold blood eats less but slows down in the cold.',
+    '29 new parts: hooked and seed beaks, sticky tongues, compound eyes, heat pits, jointed and jumping legs, pincers, mantis arms, gecko feet, snail shells, segment plates, egg sacs, chitin, feathers, rattles, spinnerets and more.',
+    '17 new evolutions, including Insect Wings, Mantis Scythes, Raptor Beak, Citadel Shell, Exoskeleton and Web Weaver.',
+    '20 new events: molting, clutches and egg thieves, basking stones, cold snaps, the long sleep, ant mounds, stampedes and more. Land now has as many events as the sea.',
+    'Rival species now come as beetles, grasshoppers, snails, slugs, birds, lizards, crabs and sea slugs.',
   ],
 };

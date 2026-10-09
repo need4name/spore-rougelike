@@ -572,6 +572,14 @@ window.G = window.G || {};
     if (run.stage !== 'creature') {
       return `${symCard}<p class="note">${Object.values(G.SYMMETRY).map((x) => `${x.name}: ${x.desc}`).map(esc).join('<br>')}</p>`;
     }
+    // Skeleton, young and blood: chosen once each in the creature stage.
+    const found = ['skeleton', 'young', 'blood'].map((f) => {
+      const id = run.traits.find((t) => G.TRAITS[t] && G.TRAITS[t].foundation === f);
+      const label = { skeleton: 'Frame', young: 'Young', blood: 'Blood' }[f];
+      return id ? `<li><b>${label}</b><span><strong>${esc(G.TRAITS[id].name)}</strong> ${esc(G.TRAITS[id].desc)}${Object.keys(G.TRAITS[id].mods).length ? ` <span class="pmods">${esc(G.describeMods(G.TRAITS[id].mods))}</span>` : ''}</span></li>`
+        : `<li class="muted"><b>${label}</b><span>Not yet chosen</span></li>`;
+    });
+    const foundCard = `<div class="plan-found"><h3>Foundations</h3><ul>${found.join('')}</ul></div>`;
     const n = G.segments(run);
     const unit = symId === 'bilateral' && run.habitat === 'sea' ? 'fin pairs' : sym.unit;
     const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k, run.habitat));
@@ -584,7 +592,7 @@ window.G = window.G || {};
       const pl = planFor(k);
       ladder.push(`<li class="${k === n ? 'on' : ''}"><b>${k}</b><span><strong>${esc(pl.name)}</strong> ${esc(G.describeMods(pl.mods) || 'No bonus, no cost')}</span></li>`);
     }
-    return `${symCard}
+    return `${symCard}${foundCard}
       <div class="plan-now">
         <button class="btn small" ${canDown ? 'data-act="reshape" data-arg="-1"' : 'disabled'} aria-label="Fewer ${esc(unit)}">−</button>
         <div><b>${n} ${esc(unit)}</b>${cur.name !== `${n} ${unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
@@ -782,7 +790,8 @@ window.G = window.G || {};
     if (s.stage !== 'creature') return '';
     const sym = s.symmetry || 'bilateral'; const n = s.segments != null ? s.segments : 2;
     const pl = sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n, s.world);
-    return ` · ${G.SYMMETRY[sym].name}, ${pl.name.toLowerCase()}`;
+    const found = [{ inner: 'inner skeleton', shell: 'outer shell', soft: 'soft body' }[s.skeleton], { live: 'live young', eggs: 'lays eggs', budding: 'buds' }[s.young], s.blood && `${s.blood} blood`].filter(Boolean);
+    return ` · ${G.SYMMETRY[sym].name}, ${pl.name.toLowerCase()}${found.length ? ` · ${found.join(', ')}` : ''}`;
   }
 
   // Another species' sheet, like inspecting another ruler in CK3.

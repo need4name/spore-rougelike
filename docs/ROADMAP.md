@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1, Update 7 (Bloodlines), Update 8 (Many Ways to Live), Update 9 (The Creature Editor), Update 10 (The Living World) and Update 11 (The World Map) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1, Update 7 (Bloodlines), Update 8 (Many Ways to Live), Update 9 (The Creature Editor), Update 10 (The Living World) Update 11 (The World Map) and Update 12 (Shells, Scales and Soft Bodies) are out.** Land and sea are now level: 37 events each and 15 grasping parts each, with land slightly ahead on parts and evolutions.
 
 ---
 
@@ -254,7 +254,7 @@ Each gimmick has its own display (a hunger clock for the Predator, a host bar fo
 
 **You'll test:** whether exploring the world feels like a reward for getting smarter.
 
-## Update 12: Shells, Scales and Soft Bodies
+## Update 12: Shells, Scales and Soft Bodies ✅
 
 *Not every creature is a mammal.*
 
@@ -280,6 +280,8 @@ Alongside the choices:
 - **Rival species** use the new bodies too, so the map fills with insects, reptiles, birds and octopuses, not just mammals.
 
 **You'll test:** whether you can build something that is clearly an insect, a reptile, a bird or an octopus, and whether each feels different to play.
+
+**What shipped:** three foundation milestones (Frame, Young, Blood); 29 new parts (beaks, sticky tongue, compound eyes, heat pits, jointed and jumping legs, pincers, mantis arms, gecko feet, digging claws, snail shell, segment plates, egg sac, chitin, feathers, mottled and mucus skin, spinnerets, rattles, drop-off tails, and three sea grips); 17 new evolutions (Raptor Beak, Insect Wings, Mantis Scythes, Citadel Shell, Exoskeleton, Web Weaver, Gripping Hands and more); 20 new events; rival species built as bugs, snails, slugs, birds, lizards, crabs and sea slugs. Soft bodies regrowing lost parts is left for a later update.
 
 ## Update 13: Other Minds
 

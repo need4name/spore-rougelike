@@ -518,3 +518,10 @@ button.rival:hover { border-color: var(--accent); }
 .biome-node.here { outline: 2px solid var(--accent); }
 .biome-node.dest { outline: 2px dashed var(--accent); }
 .biome-node i { font-style: normal; font-size: 0.7rem; color: var(--accent); }
+
+/* Foundations card in the Body plan tab */
+.plan-found { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.04); }
+.plan-found h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.plan-found ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.plan-found li { display: grid; grid-template-columns: 4.5em 1fr; gap: 8px; font-size: 0.85rem; }
+.plan-found li.muted { opacity: 0.6; }

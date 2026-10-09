@@ -52,6 +52,13 @@ window.G = window.G || {};
     return { p, accent, L: b.look || {}, H, E };
   }
 
+  // A body's frame: inner bones, an outer shell, or soft with no skeleton at all.
+  function skel(b) {
+    if (b.skeleton) return b.skeleton;
+    const tr = (b.traits || []).find((id) => id.startsWith('skeleton_'));
+    return tr ? tr.slice(9) : 'inner';
+  }
+
   // Body patterns from the appearance editor, drawn inside a clipped body shape.
   // Body patterns from the editor, drawn inside a clipped body shape centred on 0,0.
   // Pattern size and density scale every pattern; a second pattern color mixes in.
@@ -223,7 +230,8 @@ window.G = window.G || {};
     const longLegs = (H.has('long_bones_h') ? 1.15 : 1) * (E.hindLimbs ? 1.18 + 0.12 * (E.hindLimbs - 1) : 1) * (p.hindLimbs === 'stubby_hindlegs' && !E.hindLimbs ? 0.75 : 1);
     const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs * (L.legLen || 1);
     const legThick = L.legThick || 1;
-    const flying = H.has('feathered_wings') || H.has('true_wings');
+    const flying = H.has('feathered_wings') || H.has('true_wings') || H.has('insect_wings');
+    const frame = skel(b);
     const SHAPES = { slim: [0.9, 0.82], long: [1.25, 0.92], flat: [1.12, 0.72], tall: [0.88, 1.28], pear: [1, 1.05], hunched: [0.95, 1.1] };
     const [shapeX, shapeY] = SHAPES[L.shape] || [1, 1];
     // Extra leg pairs stretch the body into a segmented crawler.
@@ -231,6 +239,7 @@ window.G = window.G || {};
     const rx = S * (biped ? 0.17 : 0.27) * shapeX * segLen / Math.sqrt(segLen) * (L.bodyLen || 1); const ry = S * (biped ? 0.24 : 0.15) * shapeY / Math.sqrt(segLen) * (L.bodyHeight || 1);
     const cy = ground - legLen - ry * 0.8 + Math.sin(t * 1.6) * 1.5;
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 70);
+    const wob = frame === 'soft' ? 1 + Math.sin(t * 3.2) * 0.05 : 1;
     // Neck length is a slider; the old "long neck" option counts as most of the way.
     const neck = Math.max(L.neck === 'long' ? 0.8 : 0, L.neckLen || 0);
     const longNeck = neck > 0.5;
@@ -247,6 +256,17 @@ window.G = window.G || {};
     // Wings (far side) for flyers, flapping.
     const flap = Math.sin(t * 9) * 0.45;
     function wing(near) {
+      if (H.has('insect_wings')) {
+        const sx = cx + rx * 0.1; const sy = cy - ry * 0.7; const buzz = Math.sin(t * 40) * 0.25;
+        [0, 1].forEach((k) => {
+          ctx.save(); ctx.translate(sx - k * rx * 0.3, sy); ctx.rotate(-2.2 + k * 0.35 + buzz + (near ? 0.15 : -0.15));
+          ctx.beginPath(); ctx.ellipse(S * 0.2, 0, S * 0.22, S * 0.06, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(220,240,255,${near ? 0.45 : 0.25})`; ctx.fill(); ctx.strokeStyle = hsl(hue, 30, 30, 0.7); ctx.lineWidth = 1; ctx.stroke();
+          for (let v = 1; v < 4; v++) line(0, 0, S * 0.1 * v, (v - 2) * S * 0.02, hsl(hue, 30, 30, 0.5), 0.8);
+          ctx.restore();
+        });
+        return;
+      }
       const sx = cx + rx * 0.15; const sy = cy - ry * 0.6;
       ctx.save(); ctx.translate(sx, sy); ctx.rotate(-0.5 + flap * (near ? 1 : 0.8)); if (!near) ctx.scale(0.85, 0.85);
       const span = S * (H.has('true_wings') ? 0.62 : 0.55);
@@ -272,6 +292,11 @@ window.G = window.G || {};
     if (H.has('stinger_tail')) { tri(tEnd[0], tEnd[1], tEnd[0] + 12, tEnd[1] - 4, tEnd[0] + 4, tEnd[1] + 8, VENOM); }
     if (H.has('glow_tail')) glow(GLOW, 16, () => dot(tEnd[0], tEnd[1], S * 0.03, GLOW));
     if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.arc(tEnd[0], tEnd[1] + 6, 7, Math.PI, Math.PI * 2.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.03; ctx.stroke(); }
+    if (H.has('drop_tail')) for (let k = 1; k <= 3; k++) { const u = k / 4; dot(tx + (tEnd[0] - tx) * u, ty + (tEnd[1] - ty) * u - Math.sin(u * Math.PI) * ry * 0.15, S * 0.024, k % 2 ? dark : light); }
+    if (H.has('rattle_tail')) { const sh = Math.sin(t * 30) * 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(tEnd[0] - k * 6 + sh, tEnd[1] - k * 2, S * 0.022, S * 0.016, 0.3, 0, Math.PI * 2); ctx.fillStyle = k % 2 ? '#c9b38a' : '#a8916a'; ctx.fill(); } }
+    if (H.has('tail_feathers')) for (let k = -2; k <= 2; k++) { ctx.save(); ctx.translate(tEnd[0], tEnd[1]); ctx.rotate(Math.PI + k * 0.28 - 0.2); ctx.beginPath(); ctx.ellipse(S * 0.08, 0, S * 0.09, S * 0.022, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 20 + k * 12, 55, 60); ctx.fill(); line(0, 0, S * 0.16, 0, hsl(hue, 30, 35), 1); ctx.restore(); }
+    if (H.has('spinneret')) { ctx.beginPath(); ctx.moveTo(tEnd[0], tEnd[1]); ctx.quadraticCurveTo(tEnd[0] - S * 0.05, tEnd[1] + S * 0.1, tEnd[0] - S * 0.02 + Math.sin(t) * 4, ground); ctx.strokeStyle = 'rgba(240,240,250,0.7)'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (H.has('web_weaver')) { const wx = tEnd[0] - S * 0.12; const wy = tEnd[1] + S * 0.04; ctx.strokeStyle = 'rgba(240,240,250,0.45)'; ctx.lineWidth = 0.8; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * S * 0.12, wy + Math.sin(a) * S * 0.12); ctx.stroke(); } for (let r = 1; r <= 3; r++) { ctx.beginPath(); for (let k = 0; k <= 8; k++) { const a = k * Math.PI / 4; ctx.lineTo(wx + Math.cos(a) * S * 0.04 * r, wy + Math.sin(a) * S * 0.04 * r); } ctx.stroke(); } }
 
     // Back parts behind body
     const backTopX = cx - rx * 0.1; const backTopY = cy - ry * 0.85;
@@ -293,6 +318,7 @@ window.G = window.G || {};
       ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.15, rx * 1.05, ry * 1.25, 0, Math.PI, 0); ctx.fillStyle = SHELL; ctx.fill();
       for (let i = 1; i < 5; i++) { const x = cx - rx + (i / 5) * rx * 2; line(x, cy - ry * 0.2, x - (x - cx) * 0.2, cy - ry * 1.3, '#7f8c93', S * 0.01); }
     }
+    if (H.has('egg_sac')) for (let k = 0; k < 7; k++) { const ex = cx - rx * 0.45 + (k % 4) * rx * 0.2 + (k > 3 ? rx * 0.1 : 0); const ey = cy - ry * (k > 3 ? 1.25 : 0.95); dot(ex, ey, S * 0.03, '#f1ead2'); dot(ex - 2, ey - 2, S * 0.01, 'rgba(255,255,255,0.8)'); }
 
     // Limbs
     function leg(x, top, len, kind, foot, col, swing, front) {
@@ -302,6 +328,21 @@ window.G = window.G || {};
       if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); }
       else if (kind === 'fore_tentacles' || H.has(front ? 'boneless_f' : '__none')) { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03 * muscle, front ? 2 : 0); if (kind === 'fore_tentacles') return; }
       else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); }
+      else if (kind === 'jointed_legs' || kind === 'insect_wings') {
+        // Thin armored legs that bend twice, like a beetle's.
+        const k1 = [x + S * 0.06, top - len * 0.15]; const k2 = [x + S * 0.09 + swing, top + len * 0.5];
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(k1[0], k1[1]); ctx.lineTo(k2[0], k2[1]); ctx.lineTo(x + S * 0.05 + swing, gy);
+        ctx.strokeStyle = col; ctx.lineWidth = S * 0.016 * muscle; ctx.lineJoin = 'round'; ctx.stroke();
+        dot(k1[0], k1[1], S * 0.012, SHELL); dot(k2[0], k2[1], S * 0.012, SHELL);
+        drawFoot(x + S * 0.05 + swing, gy, foot, col, 1); return;
+      } else if (kind === 'jumping_legs') {
+        // A grasshopper's folded leg: the knee rises high above the body.
+        const knee = [x + rx * 0.3, Math.min(top - len * 0.55, cy - ry * 0.95)]; const heel = [x - S * 0.1 + swing, gy - len * 0.15];
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(knee[0], knee[1]); ctx.strokeStyle = col; ctx.lineWidth = S * 0.05 * muscle; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(knee[0], knee[1]); ctx.lineTo(heel[0], heel[1]); ctx.lineTo(heel[0] + S * 0.05, gy); ctx.lineWidth = S * 0.015 * muscle; ctx.stroke();
+        for (let i = 1; i < 4; i++) { const u = i / 4; const px = knee[0] + (heel[0] - knee[0]) * u; const py = knee[1] + (heel[1] - knee[1]) * u; line(px, py, px + 4, py - 3, BONE, 1); }
+        drawFoot(heel[0] + S * 0.05, gy, foot, col, 1); return;
+      }
       else {
         const thick = (kind === 'digging_forelegs' || kind === 'powerful_haunches' ? 0.035 : kind === 'grasping_arms' ? 0.026 : 0.022) * muscle * (ev ? 1.35 : 1);
         const kx = x + (kind === 'runner_legs' || kind === 'hopping_legs' ? -S * 0.05 : S * 0.03) + swing;
@@ -314,6 +355,7 @@ window.G = window.G || {};
       if (front && H.has('skin_flaps_f') && !flying) tri(x, top, x - S * 0.18, top + len * 0.15, x - S * 0.02, top + len * 0.7, hsl(hue, 45, 60, 0.55));
       if (front && H.has('flight_feathers') && !flying) for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(x - S * 0.05 - i * 6, top + len * 0.3 + i * 4, S * 0.05, S * 0.012, -0.5, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 30 + i * 15, 60, 62); ctx.fill(); }
       if (front && H.has('gripping_pads_f')) dot(x + swing + 4, gy - 4, S * 0.018, '#f3b3a6');
+      if (H.has(front ? 'chitin_joints_f' : 'chitin_joints_h')) for (let i = 1; i < 4; i++) dot(x + swing * (i / 4) + (i === 2 ? S * 0.02 : 0), top + len * i / 4, S * 0.013, SHELL);
       if (!front && H.has('springy_tendons_h')) { ctx.beginPath(); for (let i = 0; i <= 6; i++) ctx.lineTo(x - 6 + (i % 2) * 10, top + len * (0.2 + i * 0.1)); ctx.strokeStyle = BONE; ctx.lineWidth = 1.5; ctx.stroke(); }
       drawFoot(x + swing, gy, foot, col, (front ? E.hands : E.feet) ? 1.8 : 1);
     }
@@ -331,6 +373,18 @@ window.G = window.G || {};
       } else if (foot === 'webbed_feet') { tri(x - 4, y, x + 12, y - 1, x + 10, y + 3, col); }
       else if (foot === 'heavy_feet') { ctx.fillStyle = col; ctx.fillRect(x - 8, y - 6, 16, 7); }
       else if (foot === 'grasping_fingers') { for (let k = -1; k <= 1; k++) line(x, y - 2, x + 6 + k, y + 4 + k * 3, col, 2); }
+      else if (foot === 'land_pincers' || foot === 'crusher_claws') {
+        const big = foot === 'crusher_claws' ? 1.5 : 1; const open = 0.35 + Math.sin(t * 3) * 0.15;
+        ctx.save(); ctx.translate(x, y - 4);
+        ctx.beginPath(); ctx.ellipse(8 * big, -3 * big, 9 * big, 4 * big, -open, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(8 * big, 3 * big, 8 * big, 3 * big, open, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      } else if (foot === 'raptorial_arms' || foot === 'mantis_scythes') {
+        const big = foot === 'mantis_scythes' ? 1.5 : 1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 6 * big, y - 14 * big); ctx.quadraticCurveTo(x + 14 * big, y - 12 * big, x + 12 * big, y - 2 * big); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke();
+        for (let k = 1; k <= 3; k++) line(x + 2 * k * big, y - 4 * k * big, x + 2 * k * big + 4, y - 4 * k * big + 2, BONE, 1);
+      } else if (foot === 'sticky_pads' || foot === 'gecko_feet' || foot === 'wall_walkers') { for (let k = -1; k <= 2; k++) { line(x, y - 2, x + 3 + k * 4, y + 1, col, 1.8); dot(x + 3 + k * 4, y + 1, 2.4, '#f3b3a6'); } }
+      else if (foot === 'digging_claws') { for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x + k * 4 - 3, y - 4); ctx.quadraticCurveTo(x + k * 4 + 10, y - 3, x + k * 4 + 9, y + 4); ctx.strokeStyle = BONE; ctx.lineWidth = 3; ctx.stroke(); } }
+      else if (foot === 'perching_feet') { for (let k = 0; k < 3; k++) line(x, y - 1, x + 8, y - 3 + k * 3, '#c79a4a', 1.6); line(x, y - 1, x - 6, y + 1, '#c79a4a', 1.6); }
       else dot(x + 2, y - 1, 4, col);
     }
     const backCol = hsl(hue, 35, 25);
@@ -356,7 +410,7 @@ window.G = window.G || {};
     // Body
     if (L.shape === 'pear') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.45, cy + ry * 0.15, rx * 0.6, ry * 1.05, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     if (L.shape === 'hunched') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.55, rx * 0.6, ry * 0.75, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22); ctx.scale(2 - wob, wob);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(0.55, body); grad.addColorStop(1, bellyCol(L, hue) || body);
     ctx.fillStyle = grad; ctx.fill();
@@ -374,8 +428,15 @@ window.G = window.G || {};
     if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.5], [0.45, -0.1], [-0.15, 0.25], [-0.75, 0.2]].forEach(([dx, dy]) => { dot(dx * rx, dy * ry, S * 0.028, '#f2c14e'); dot(dx * rx, dy * ry, S * 0.012, '#1c1414'); });
     if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(-rx * 0.8 + i * rx * 0.2, Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
     if (H.has('bright_plumage')) for (let i = 0; i < 6; i++) dot(-rx * 0.7 + i * rx * 0.28, -ry * 0.2 + (i % 2) * ry * 0.3, S * 0.03, hsl(hue + 120 + i * 30, 70, 60));
+    if (H.has('mottled_skin')) for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.ellipse(-rx * 0.85 + prand(i) * rx * 1.7, -ry * 0.8 + prand(i + 9) * ry * 1.4, S * (0.025 + prand(i + 3) * 0.03), S * (0.018 + prand(i + 5) * 0.02), prand(i + 7) * 3, 0, Math.PI * 2); ctx.fillStyle = i % 2 ? hsl(hue + 30, 30, 32, 0.6) : hsl(90, 25, 38, 0.55); ctx.fill(); }
+    if (H.has('down_feathers')) for (let y = -ry; y < ry * 0.7; y += S * 0.035) for (let x = -rx; x < rx; x += S * 0.045) { ctx.beginPath(); ctx.arc(x + (Math.round(y / (S * 0.035)) % 2) * S * 0.022, y, S * 0.024, 0, Math.PI); ctx.fillStyle = hsl(hue + 15, 35, 72, 0.35); ctx.fill(); }
+    if (H.has('chitin')) { for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * rx * 0.28, -ry); ctx.quadraticCurveTo(i * rx * 0.28 + rx * 0.05, 0, i * rx * 0.28, ry); ctx.strokeStyle = hsl(hue, 30, 22, 0.7); ctx.lineWidth = 2; ctx.stroke(); } ctx.beginPath(); ctx.ellipse(-rx * 0.15, -ry * 0.5, rx * 0.55, ry * 0.15, -0.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill(); }
+    if (H.has('mucus_skin')) { ctx.beginPath(); ctx.ellipse(-rx * 0.2, -ry * 0.45, rx * 0.5, ry * 0.16, -0.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); for (let i = 0; i < 5; i++) dot(-rx * 0.6 + i * rx * 0.3, -ry * 0.1 + (i % 2) * ry * 0.3, S * 0.008, 'rgba(255,255,255,0.6)'); }
+    if (frame === 'shell') for (let i = 1; i < 6; i++) { const x = -rx + (i / 6) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.08, 0, x, ry); ctx.strokeStyle = hsl(hue, 30, 25, 0.55); ctx.lineWidth = 2; ctx.stroke(); }
     finish(L, 0, 0, rx, ry);
     ctx.restore();
+    if (frame === 'shell') { ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 35, 22); ctx.lineWidth = Math.max(2, S * 0.012); ctx.stroke(); ctx.restore(); }
+    if (H.has('exoskeleton')) { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.01, ry * 1.01, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.strokeStyle = SHELL; ctx.lineWidth = 3; ctx.stroke(); }
     if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.02, ry * 1.02, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
     if (E.back) for (let i = 0; i < 5 + E.back * 2; i++) {
       const a = Math.PI * 1.1 + i * (0.8 / (5 + E.back * 2)); const x = cx + Math.cos(a) * rx * 1.02; const y = cy + Math.sin(a) * ry * 1.02;
@@ -390,6 +451,15 @@ window.G = window.G || {};
       }
     }
     if (H.has('moss_garden')) for (let i = 0; i < 6; i++) dot(cx - rx * 0.6 + i * rx * 0.22, cy - ry * 0.95 + Math.abs(i - 2.5) * 3, S * 0.025, PLANT);
+    if (H.has('segment_plates')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.75 + i * rx * 0.3; ctx.beginPath(); ctx.ellipse(x, cy - ry * 0.35, rx * 0.2, ry * 0.75, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.lineTo(x, cy - ry * 0.35); ctx.closePath(); ctx.fillStyle = hsl(hue, 22, 48 - (i % 2) * 6); ctx.fill(); ctx.strokeStyle = hsl(hue, 25, 25); ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (H.has('snail_shell')) {
+      const big = H.has('citadel_shell') ? 1.3 : 1; const sx0 = cx - rx * 0.1; const sy0 = cy - ry * 0.95; const R0 = ry * 1.15 * big;
+      dot(sx0, sy0, R0, '#e3cfa6'); ctx.beginPath();
+      for (let a = 0; a < Math.PI * 5; a += 0.2) { const r = R0 * (1 - a / (Math.PI * 5.5)); ctx.lineTo(sx0 + Math.cos(a) * r, sy0 + Math.sin(a) * r); }
+      ctx.strokeStyle = '#8f6a43'; ctx.lineWidth = 2.2; ctx.stroke();
+      if (H.has('citadel_shell')) for (let k = 0; k < 6; k++) { const a = Math.PI * 1.1 + k * 0.17; tri(sx0 + Math.cos(a) * R0 * 0.95 - 4, sy0 + Math.sin(a) * R0 * 0.95, sx0 + Math.cos(a) * R0 * 1.3, sy0 + Math.sin(a) * R0 * 1.3, sx0 + Math.cos(a) * R0 * 0.95 + 4, sy0 + Math.sin(a) * R0 * 0.95, SHELL); }
+    }
+    if (H.has('rolling_armor')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.75 + i * rx * 0.3; tri(x - 4, cy - ry * 1.05, x, cy - ry * 1.6, x + 4, cy - ry * 1.05, BONE); }
 
     // Near side legs
     hindX.forEach((x, i) => p.hindLimbs && leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, dark, Math.sin(t * 2 + i + 1) * 3, false));
@@ -432,6 +502,9 @@ window.G = window.G || {};
     if (jaw > 1.05) { ctx.beginPath(); ctx.ellipse(hx + hr * 0.45, hy + hr * 0.55, hr * 0.6 * jaw, hr * 0.32 * jaw, 0.15, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); line(hx + hr * 0.1, hy + hr * 0.45, hx + hr * (0.6 + 0.4 * jaw), hy + hr * 0.4, dark, 2); }
     ctx.save(); ctx.translate(mx, my); ctx.scale(jaw, jaw); ctx.translate(-mx, -my);
     if (H.has('grinding_beak')) tri(mx - 6, my - hr * 0.35, mx + hr * 0.7, my, mx - 6, my + hr * 0.3, '#e0b04c');
+    if (H.has('seed_beak')) { tri(mx - 8, my - hr * 0.4, mx + hr * 0.5, my - hr * 0.02, mx - 8, my, '#d9a441'); tri(mx - 8, my, mx + hr * 0.42, my + hr * 0.02, mx - 8, my + hr * 0.3, '#b9862f'); }
+    if (H.has('hooked_beak')) { const big = H.has('raptor_beak') ? 1.25 : 1; ctx.beginPath(); ctx.moveTo(mx - 8, my - hr * 0.4 * big); ctx.quadraticCurveTo(mx + hr * 0.9 * big, my - hr * 0.45 * big, mx + hr * 0.75 * big, my + hr * 0.3 * big); ctx.lineTo(mx + hr * 0.45 * big, my + hr * 0.05); ctx.lineTo(mx - 8, my + hr * 0.2); ctx.closePath(); ctx.fillStyle = '#e8b84a'; ctx.fill(); ctx.strokeStyle = '#7a5a20'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (H.has('sticky_tongue')) { const out = Math.max(0, Math.sin(t * 1.7)) ** 6 * hr * (H.has('harpoon_tongue') ? 2.6 : 1.6); if (out > 1) { line(mx - 2, my + 2, mx + out, my + 2 + out * 0.1, '#e57a8a', 2.5); dot(mx + out, my + 2 + out * 0.1, 3.5, '#e57a8a'); } }
     if (H.has('fangs') || H.has('venom_fangs') || H.has('lure_jaw') || H.has('crushing_jaws')) {
       line(mx - hr * 0.5, my, mx + 2, my, hsl(hue, 30, 15), 3);
       const c = H.has('venom_fangs') ? VENOM : BONE;
@@ -446,12 +519,15 @@ window.G = window.G || {};
     const huge = H.has('big_eyes') || L.eyes === 'huge';
     const es = L.eyeSize || 1;
     FACE = { x: ex, y: ey, r: hr * (huge ? 0.42 : 0.22) * es, mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
-    if (huge) { dot(ex, ey, hr * 0.42 * es, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22 * es, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07 * es, '#fff'); }
+    if (H.has('compound_eyes')) { const cr = hr * (H.has('mosaic_eyes') ? 0.5 : 0.38) * es; dot(ex, ey, cr, '#2c2238'); for (let k = 0; k < 9; k++) { const a = k * 2.4; const r = cr * 0.6 * Math.sqrt((k + 0.5) / 9); dot(ex + Math.cos(a) * r, ey + Math.sin(a) * r, cr * 0.16, hsl(160 + k * 20, 50, 45, 0.8)); } dot(ex - cr * 0.35, ey - cr * 0.4, cr * 0.18, 'rgba(255,255,255,0.7)'); }
+    else if (huge) { dot(ex, ey, hr * 0.42 * es, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22 * es, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07 * es, '#fff'); }
     else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(ex, ey, hr * 0.25 * es, GLOW));
     else { dot(ex, ey, hr * 0.2 * es, '#fff'); dot(ex + hr * 0.06, ey, hr * 0.11 * es, '#1c1414'); }
     // Extra eyes from the editor, around the back and top of the head.
     for (let k = 1; k < Math.min(6, L.eyeCount || 1); k++) { const a = -3.0 + (k - 1) * 0.42; const ax = hx + Math.cos(a) * hr * 0.72; const ay = hy + Math.sin(a) * hr * 0.72; dot(ax, ay, hr * 0.15 * es, '#fff'); dot(ax + 1, ay, hr * 0.08 * es, '#1c1414'); }
     if (H.has('tremor_whiskers') || H.has('electroreceptors')) for (let k = -1; k <= 1; k++) line(mx - 4, my - 4, mx + hr * 0.9, my - 4 + k * hr * 0.35, BONE, 1.2);
+    if (H.has('heat_pits')) for (let k = 0; k < 3; k++) dot(mx - hr * 0.35 + k * 4, my - hr * 0.22, 1.8, hsl(hue, 40, 18));
+    if (H.has('heat_sight')) glow('#ff7a4a', 8, () => { for (let k = 0; k < 3; k++) dot(mx - hr * 0.35 + k * 4, my - hr * 0.22, 1.4, '#ff9a5a'); });
     const er = FACE.r;
     if (E && E.senses) for (let k = 0; k < Math.min(3, E.senses + 1); k++) { const ax = hx - hr * 0.35 + k * hr * 0.3; const ay = hy - hr * 0.75 - (k % 2) * hr * 0.15; dot(ax, ay, hr * 0.13, '#fff'); dot(ax + 1, ay, hr * 0.07, '#1c1414'); }
     if (E && E.mouth) for (let k = 0; k < 4; k++) tri(mx - hr * 0.55 + k * 6, my + 2, mx - hr * 0.5 + k * 6, my - hr * 0.3, mx - hr * 0.45 + k * 6, my + 2, BONE);
@@ -481,7 +557,7 @@ window.G = window.G || {};
     else if (H.has('stinger_tail')) { line(0, 0, -S * 0.22, -S * 0.05, body, S * 0.03); tri(-S * 0.22, -S * 0.05, -S * 0.28, -S * 0.1, -S * 0.27, 0, VENOM); }
     else if (H.has('display_tail')) for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(-S * 0.12, i * 8, S * 0.12, S * 0.02, i * 0.2, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 140 + i * 20, 70, 60); ctx.fill(); }
     else if (H.has('glow_tail')) { line(0, 0, -S * 0.18, 0, body, S * 0.03); glow(GLOW, 16, () => dot(-S * 0.2, 0, S * 0.03, GLOW)); }
-    else if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
+    else if (H.has('prehensile_tail') || H.has('seahorse_tail')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
     ctx.restore();
 
     // Ray wings sit behind the body
@@ -502,6 +578,8 @@ window.G = window.G || {};
     }
     if (H.has('carapace')) { ctx.beginPath(); ctx.ellipse(cx, y0 - ry * 0.2, rx * 0.8, ry * 1.25, 0, Math.PI, 0); ctx.fillStyle = SHELL; ctx.fill(); }
     if (H.has('fat_hump')) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.1, y0 - ry * 0.8, rx * 0.4, ry * 0.6, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (H.has('egg_sac')) for (let k = 0; k < 6; k++) dot(cx - rx * 0.4 + (k % 3) * rx * 0.2 + (k > 2 ? rx * 0.1 : 0), y0 - ry * (k > 2 ? 1.25 : 0.95), S * 0.028, '#f1ead2');
+    if (H.has('segment_plates')) for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.7 + i * rx * 0.28, y0 - ry * 0.2, rx * 0.17, ry * 0.85, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.fillStyle = hsl(hue, 22, 48 - (i % 2) * 6); ctx.fill(); }
     if (H.has('kelp_garden')) for (let i = 0; i < 5; i++) wavy(cx - rx * 0.5 + i * rx * 0.2, y0 - ry * 0.8, S * 0.12, -Math.PI / 2, 4, t, PLANT, 3, i);
     if (H.has('back_spines') || H.has('venom_quills')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.6 + i * rx * 0.22; H.has('venom_quills') ? line(x, y0 - ry * 0.8, x - 6, y0 - ry * 1.9, VENOM, 2) : tri(x - 5, y0 - ry * 0.8, x, y0 - ry * 1.6, x + 5, y0 - ry * 0.8, BONE); }
 
@@ -516,6 +594,8 @@ window.G = window.G || {};
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
     if (H.has('scales') || H.has('swift_scales')) for (let y = y0 - ry; y < y0 + ry; y += S * 0.03) for (let x = cx - rx; x < cx + rx; x += S * 0.04) { ctx.beginPath(); ctx.arc(x + ((Math.round((y - y0) / (S * 0.03)) % 2) * S * 0.02), y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (H.has('chitin')) for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(cx + i * rx * 0.28, y0 - ry); ctx.quadraticCurveTo(cx + i * rx * 0.28 + rx * 0.05, y0, cx + i * rx * 0.28, y0 + ry); ctx.strokeStyle = hsl(hue, 30, 22, 0.7); ctx.lineWidth = 2; ctx.stroke(); }
+    if (skel(b) === 'shell') for (let i = 1; i < 6; i++) { const x = cx - rx + (i / 6) * rx * 2; ctx.beginPath(); ctx.moveTo(x, y0 - ry); ctx.quadraticCurveTo(x + rx * 0.06, y0, x, y0 + ry); ctx.strokeStyle = hsl(hue, 30, 25, 0.45); ctx.lineWidth = 2; ctx.stroke(); }
     if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
     if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
     if (H.has('cleaner_skin')) for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
@@ -584,6 +664,7 @@ window.G = window.G || {};
     if (L.head === 'crest') tri(hx - rx * 0.2, y0 - ry * 0.8, hx - rx * 0.05, y0 - ry * 2, hx + rx * 0.1, y0 - ry * 0.8, dark);
     // Deep-sea mouths
     if (H.has('coral_beak') || H.has('reef_grinder')) { tri(mx - rx * 0.12, my - ry * 0.35, mx + rx * 0.12, my - ry * 0.05, mx - rx * 0.12, my + ry * 0.05, '#e6d3a3'); tri(mx - rx * 0.12, my + ry * 0.05, mx + rx * 0.1, my + ry * 0.12, mx - rx * 0.12, my + ry * 0.3, '#d4bf8a'); }
+    if (H.has('sucker_lips')) { ctx.beginPath(); ctx.ellipse(mx + 2, my, ry * 0.12, ry * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 45, 70); ctx.fill(); ctx.strokeStyle = hsl(hue, 30, 25); ctx.lineWidth = 2; ctx.stroke(); }
     if (H.has('suction_mouth') || H.has('vacuum_maw')) { const open = 1 + Math.sin(t * 3) * 0.25; ctx.beginPath(); ctx.ellipse(mx + 2, my, ry * 0.25 * open, ry * 0.32 * open, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); ctx.strokeStyle = hsl(hue, 45, 65); ctx.lineWidth = 3; ctx.stroke(); }
     if (H.has('cookie_cutter') || H.has('shark_jaws')) { ctx.beginPath(); ctx.arc(mx - 4, my + 2, ry * 0.3, 0.2, Math.PI - 0.2); ctx.strokeStyle = hsl(hue, 30, 15); ctx.lineWidth = 3; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = 0.4 + k * 0.55; tri(mx - 4 + Math.cos(a) * ry * 0.3 - 2, my + 2 + Math.sin(a) * ry * 0.3, mx - 4 + Math.cos(a) * ry * 0.18, my + 2 + Math.sin(a) * ry * 0.18, mx - 4 + Math.cos(a) * ry * 0.3 + 2, my + 2 + Math.sin(a) * ry * 0.3, BONE); } }
     if (H.has('hidden_beak') || H.has('shell_cracker')) { tri(mx - 6, my + ry * 0.2, mx + 6, my + ry * 0.35, mx - 4, my + ry * 0.55, '#3a2a2a'); }
@@ -593,13 +674,14 @@ window.G = window.G || {};
     // Arms in front (pincers, clubs, suckers)
     if (H.has('pincers') || H.has('smasher_claws') || H.has('sorting_claws') || H.has('builders_arms')) for (let k = 0; k < 2; k++) { const ax = mx - rx * 0.1 - k * rx * 0.12; const ay = my + ry * (0.9 + k * 0.2); const big = H.has('smasher_claws') ? 1.3 : 1; line(cx + rx * 0.5, y0 + ry * 0.6, ax, ay, dark, 3); const open = 0.35 + Math.sin(t * 3 + k) * 0.2; ctx.save(); ctx.translate(ax, ay); ctx.beginPath(); ctx.ellipse(S * 0.03 * big, -S * 0.012, S * 0.04 * big, S * 0.016 * big, -open, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 10, 55, 45); ctx.fill(); ctx.beginPath(); ctx.ellipse(S * 0.03 * big, S * 0.012, S * 0.035 * big, S * 0.012 * big, open, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     if (H.has('smasher_club') || H.has('smasher_claws')) { const punch = Math.max(0, Math.sin(t * 2.5)) ** 8 * S * 0.08; line(cx + rx * 0.55, y0 + ry * 0.7, mx + punch - 6, my + ry * 0.6, dark, 4); dot(mx + punch - 4, my + ry * 0.6, S * 0.025, hsl(hue + 30, 60, 55)); }
-    if (H.has('sucker_arms') || H.has('clever_arms') || H.has('builders_arms')) for (let k = 0; k < 4; k++) { const a = Math.PI / 2 - 0.9 + k * 0.25; const ax = cx + rx * 0.55 + k * 4; const ay = y0 + ry * 0.7; ctx.beginPath(); ctx.moveTo(ax, ay); const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; const cx2 = ax + Math.cos(a) * S * 0.12 + Math.sin(t * 2 + k) * 8; ctx.quadraticCurveTo(cx2, ay + Math.sin(a) * S * 0.08, ex, ey); ctx.strokeStyle = body; ctx.lineWidth = S * 0.022 * (1 - k * 0.1); ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; for (let j = 1; j <= 3; j++) dot(ax + (ex - ax) * j / 4, ay + (ey - ay) * j / 4 + 2, 1.6, hsl(hue, 30, 85)); }
+    if (H.has('sucker_arms') || H.has('clever_arms') || H.has('builders_arms') || H.has('clasper_fins')) for (let k = 0; k < (H.has('clasper_fins') && !H.has('sucker_arms') ? 2 : 4); k++) { const a = Math.PI / 2 - 0.9 + k * 0.25; const ax = cx + rx * 0.55 + k * 4; const ay = y0 + ry * 0.7; ctx.beginPath(); ctx.moveTo(ax, ay); const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; const cx2 = ax + Math.cos(a) * S * 0.12 + Math.sin(t * 2 + k) * 8; ctx.quadraticCurveTo(cx2, ay + Math.sin(a) * S * 0.08, ex, ey); ctx.strokeStyle = body; ctx.lineWidth = S * 0.022 * (1 - k * 0.1); ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; for (let j = 1; j <= 3; j++) dot(ax + (ex - ax) * j / 4, ay + (ey - ay) * j / 4 + 2, 1.6, hsl(hue, 30, 85)); }
     if (H.has('baleen') || H.has('grinding_beak')) for (let k = 0; k < 6; k++) line(mx - rx * 0.25 + k * 5, my - 2, mx - rx * 0.25 + k * 5, my + 6, BONE, 1.5);
     if (H.has('lure_jaw')) { ctx.beginPath(); ctx.moveTo(hx, y0 - ry); ctx.quadraticCurveTo(hx + rx * 0.4, y0 - ry * 3, hx + rx * 0.6, y0 - ry * 1.4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + rx * 0.6, y0 - ry * 1.4 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
     FACE = { x: hx, y: hy, r: er * (H.has('big_eyes') ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5 };
     if (E.senses) for (let k = 0; k < 1 + E.senses; k++) { dot(hx - er * (3 + k * 2.4), hy - er * (0.6 + (k % 2)), er * 0.8, '#fff'); dot(hx - er * (3 + k * 2.4) + 1, hy - er * (0.6 + (k % 2)), er * 0.45, '#1c1414'); }
     if (E.mouth) for (let k = 0; k < 5; k++) tri(mx - rx * 0.3 + k * 6, my - 1, mx - rx * 0.28 + k * 6, my + 9, mx - rx * 0.26 + k * 6, my - 1, BONE);
-    if (H.has('big_eyes')) { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
+    if (H.has('compound_eyes')) { dot(hx, hy, er * 1.6, '#2c2238'); for (let k = 0; k < 7; k++) { const a = k * 2.4; dot(hx + Math.cos(a) * er * 0.8, hy + Math.sin(a) * er * 0.8, er * 0.3, hsl(160 + k * 20, 50, 45, 0.8)); } }
+    else if (H.has('big_eyes')) { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
     else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(hx, hy, er * 1.2, GLOW));
     else { dot(hx, hy, er, '#fff'); dot(hx + 1, hy, er * 0.55, '#1c1414'); }
     if (H.has('antennae')) { wavy(hx, hy - er, S * 0.15, -Math.PI * 0.35, 4, t, dark, 2); }
@@ -704,11 +786,25 @@ window.G = window.G || {};
       if ((L.pattern === 'spots' || H.has('warning_skin')) && i % 4 === 2) dot(pts[i][0], pts[i][1] - w * 0.3, w * 0.35, H.has('warning_skin') ? '#f2c14e' : hsl(L.accent != null ? L.accent : hue + 40, 55, 40));
       if ((H.has('back_spines') || H.has('venom_quills') || E.back) && i % 3 === 1 && u > 0.15 && u < 0.9) tri(pts[i][0] - 4, pts[i][1] - w * 0.8, pts[i][0], pts[i][1] - w * 1.9, pts[i][0] + 4, pts[i][1] - w * 0.8, H.has('venom_quills') ? VENOM : (accent || BONE));
       if ((H.has('scales') || H.has('swift_scales')) && i % 2 === 0) { ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], w * 0.6, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (H.has('mottled_skin') && i % 3 === 1) dot(pts[i][0] + 2, pts[i][1] - w * 0.2, w * 0.45, i % 2 ? hsl(hue + 30, 30, 32, 0.6) : hsl(90, 25, 38, 0.55));
+      if ((H.has('chitin') || H.has('segment_plates') || skel(b) === 'shell') && i % 3 === 0) line(pts[i][0], pts[i][1] - w, pts[i][0], pts[i][1] + w, hsl(hue, 30, 25, 0.6), 1.5);
+      if (H.has('mucus_skin') && i % 4 === 0) dot(pts[i][0] - w * 0.2, pts[i][1] - w * 0.5, w * 0.22, 'rgba(255,255,255,0.45)');
+      if (H.has('down_feathers') && i % 2 === 0) { ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1] - w * 0.2, w * 0.7, Math.PI * 1.1, Math.PI * 1.9); ctx.strokeStyle = hsl(hue + 15, 35, 75, 0.6); ctx.lineWidth = 2; ctx.stroke(); }
     }
+    if (H.has('snail_shell')) {
+      const mid = pts[12]; const R0 = thick * (H.has('citadel_shell') ? 2.6 : 2.1); const sx0 = mid[0]; const sy0 = mid[1] - R0 * 0.85;
+      dot(sx0, sy0, R0, '#e3cfa6'); ctx.beginPath();
+      for (let a = 0; a < Math.PI * 5; a += 0.2) { const r = R0 * (1 - a / (Math.PI * 5.5)); ctx.lineTo(sx0 + Math.cos(a) * r, sy0 + Math.sin(a) * r); }
+      ctx.strokeStyle = '#8f6a43'; ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    if (H.has('egg_sac')) for (let k = 0; k < 6; k++) { const q = pts[8 + k * 2]; dot(q[0], q[1] - thick * 1.1, thick * 0.4, '#f1ead2'); }
     if (E.skin) glow(accent || GLOW, 12, () => { for (let i = 0; i < pts.length; i += 3) dot(pts[i][0], pts[i][1], 2, accent || GLOW); });
     const tail = pts[0];
     if (H.has('stinger_tail')) tri(tail[0], tail[1], tail[0] - 14, tail[1] - 6, tail[0] - 4, tail[1] + 8, VENOM);
     if (H.has('club_tail')) dot(tail[0], tail[1], thick * 0.9, SHELL);
+    if (H.has('rattle_tail')) { const sh = Math.sin(t * 30) * 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(tail[0] - k * 6 + sh, tail[1] - k * 2, thick * 0.45, thick * 0.35, 0.3, 0, Math.PI * 2); ctx.fillStyle = k % 2 ? '#c9b38a' : '#a8916a'; ctx.fill(); } }
+    if (H.has('tail_feathers')) for (let k = -2; k <= 2; k++) { ctx.save(); ctx.translate(tail[0], tail[1]); ctx.rotate(Math.PI + k * 0.28); ctx.beginPath(); ctx.ellipse(S * 0.07, 0, S * 0.08, S * 0.02, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 20 + k * 12, 55, 60); ctx.fill(); ctx.restore(); }
+    if (H.has('spinneret')) line(tail[0], tail[1], tail[0] - S * 0.05, ground, 'rgba(240,240,250,0.7)', 1);
     if (H.has('fluke')) { tri(tail[0], tail[1], tail[0] - S * 0.1, tail[1] - S * 0.07, tail[0] - S * 0.06, tail[1], dark); tri(tail[0], tail[1], tail[0] - S * 0.1, tail[1] + S * 0.07, tail[0] - S * 0.06, tail[1], dark); }
     if (sea && p.back) for (let i = 6; i < 26; i++) tri(pts[i][0] - 3, pts[i][1] - thick * 0.8, pts[i][0], pts[i][1] - thick * 1.6, pts[i][0] + 3, pts[i][1] - thick * 0.8, hsl(hue, 40, 38, 0.85));
     const head = pts[pts.length - 1];

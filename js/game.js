@@ -108,7 +108,7 @@ window.G = window.G || {};
     (G.segmentPlan(run).off || []).forEach((x) => { if (!off.includes(x)) off.push(x); });
     return off.concat(off.map((x) => `${x}2`));
   };
-  G.reshapeCost = (run) => (G.gimmick(run) === 'colony' ? Math.ceil(G.RESHAPE_COST / 2) : G.RESHAPE_COST);
+  G.reshapeCost = (run) => (G.gimmick(run) === 'colony' || run.traits.includes('skeleton_shell') ? Math.ceil(G.RESHAPE_COST / 2) : G.RESHAPE_COST);
   G.reshape = function (delta) {
     const run = G.run;
     if (!run || run.stage !== 'creature') return;
@@ -229,7 +229,7 @@ window.G = window.G || {};
   // The highest a slider can go right now (some open later in the run).
   G.sculptMax = (run, sl) => (sl.cap ? Math.min(sl.max, sl.cap(run)) : sl.max);
 
-  // The Creature Editor opens for free when you become a creature and at each milestone after;
+  // The Creature Editor opens for free when you become a creature and after the Age of Giants and the Spark of Mind;
   // in between it costs a little DNA.
   G.editorCost = (run) => (run.freeEdit ? 0 : G.EDITOR_COST);
   G.startEditing = function () {
@@ -287,8 +287,15 @@ window.G = window.G || {};
     if (run.stage === 'creature') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
     if (run.stage === 'creature' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
     const season = G.season(run);
-    if (season) list.push(season.mods);
+    // Warm blood shrugs off the food cost of cold seasons.
+    if (season) list.push(run.traits.includes('blood_warm') && (season.mods.foodPerTurn || 0) < 0 ? { ...season.mods, foodPerTurn: 0 } : season.mods);
     if (G.biomeMatters(run)) list.push(G.biome(run).mods);
+    if (run.traits.includes('blood_cold')) {
+      const cold = (season && ['winter', 'cold'].includes(season.id)) || ['tundra', 'polar'].includes(G.biome(run).id);
+      const hot = (season && ['summer', 'bloom'].includes(season.id)) || ['desert', 'vents'].includes(G.biome(run).id);
+      if (cold) list.push({ spd: -2, foodPerTurn: -1 });
+      else if (hot) list.push({ spd: 1 });
+    }
     // Symbiotes share a third of their partner's strengths.
     const partner = G.partnerOf(run);
     if (partner) { const m = {}; G.STATS.forEach((st) => { m[st.id] = Math.floor(G.speciesStat(partner, st.id) / 6); }); list.push(m); }
@@ -416,6 +423,37 @@ window.G = window.G || {};
     return { plan, stage, multicellular, parts, symmetry, segments };
   }
 
+  // Some species grow into a familiar shape: armored bugs, birds, slugs, crabs.
+  function bodyKit(world, diet, body) {
+    const P = body.parts; const set = (slot, id) => { if (G.PART[id]) P[slot] = { id, merged: null }; };
+    if (world === 'land') {
+      if (body.skeleton === 'shell' && rand() < 0.55) { // a bug
+        body.segments = pick([3, 3, 4, 6]); set('frontLimbs', 'jointed_legs'); set('senses', 'compound_eyes'); set('skin', 'chitin');
+        if (rand() < 0.3) set('hindLimbs', 'jumping_legs');
+        if (rand() < 0.25) set('frontLimbs', 'insect_wings');
+        if (diet !== 'herb' && rand() < 0.5) set('hands', pick(['land_pincers', 'raptorial_arms']));
+        if (rand() < 0.3) set('tail', pick(['spinneret', 'stinger_tail']));
+      } else if (body.skeleton === 'shell' && rand() < 0.5) { // a snail or woodlouse
+        body.segments = pick([0, 4, 6]); set('back', pick(['snail_shell', 'segment_plates']));
+      } else if (body.skeleton === 'soft' && rand() < 0.6) { // a slug
+        body.segments = 0; set('skin', 'mucus_skin'); if (rand() < 0.5) set('senses', 'antennae');
+      } else if (body.blood === 'warm' && rand() < 0.3) { // a bird
+        body.segments = 1; set('frontLimbs', 'feathered_wings'); set('skin', 'down_feathers'); set('feet', 'perching_feet');
+        set('mouth', diet === 'carn' ? 'hooked_beak' : diet === 'herb' ? 'seed_beak' : pick(['hooked_beak', 'seed_beak']));
+        if (rand() < 0.5) set('tail', 'tail_feathers');
+      } else if (body.blood === 'cold' && rand() < 0.3) { // a lizard
+        set('skin', pick(['scales', 'mottled_skin'])); set('feet', 'gecko_feet'); set('tail', pick(['drop_tail', 'rattle_tail']));
+        if (diet !== 'herb') set('mouth', 'sticky_tongue');
+      }
+    } else if (body.skeleton === 'shell' && rand() < 0.5) { // a crab or shrimp
+      body.segments = pick([3, 4]); set('hands', 'pincers'); set('back', pick(['carapace', 'segment_plates'])); if (rand() < 0.5) set('senses', 'compound_eyes');
+    } else if (body.skeleton === 'soft' && rand() < 0.4) { // a sea slug
+      body.segments = 0; set('skin', pick(['slime_skin', 'warning_skin'])); set('tail', 'seahorse_tail');
+    }
+    // A mouth must still match the diet.
+    if (P.mouth && G.PART[P.mouth.id].diet && diet !== 'omni' && G.PART[P.mouth.id].diet !== diet) P.mouth.id = G.PARTS.find((p) => p.slot === 'mouth' && p.stage === 'creature' && p.diet === diet && (!p.habitat || p.habitat === world) && !p.evolved).id;
+  }
+
   // How big each kind of species' population can grow.
   const SPECIES_CAP = { prey: 30, neighbor: 18, rival: 16, predator: 8 };
 
@@ -465,6 +503,8 @@ window.G = window.G || {};
     const size = world === 'cell' ? { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (0.7 + rand() * 0.6) : niche.size[0] + rand() * (niche.size[1] - niche.size[0]);
     const zone = world === 'sea' ? speciesZone(role, body) : undefined;
     body.look = world === 'cell' ? null : randomLook(world);
+    if (world !== 'cell') { body.skeleton = pick(['inner', 'inner', 'shell', 'soft']); body.young = pick(['live', 'eggs', 'eggs']); body.blood = pick(['warm', 'cold']); }
+    if (world !== 'cell' && body.symmetry === 'bilateral') bodyKit(world, diet, body);
     return { name, role, niche: nicheId, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(size * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), zone, ...body };
   }
   const takenNames = (run) => new Set(run ? run.species.map((x) => x.name) : []);
@@ -480,7 +520,8 @@ window.G = window.G || {};
 
   const ROLE_BONUS = { predator: { str: 2, spd: 1 }, prey: { spd: 2, cun: 1 }, rival: { str: 1, tou: 1 }, neighbor: { cha: 2 } };
   G.speciesStat = (s, key) => {
-    let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + ((key === 'str' || key === 'tou') ? Math.round((s.size - 1) * 2) : 0);
+    let v = (s.stage === 'cell' ? 2 : 1) + ((ROLE_BONUS[s.role] || {})[key] || 0) + ((key === 'str' || key === 'tou') ? Math.round((s.size - 1) * 2) : 0)
+      + (s.skeleton === 'shell' && key === 'tou' ? 2 : 0) + (s.skeleton === 'soft' && key === 'cun' ? 1 : 0);
     const off = G.speciesBody(s).off;
     Object.entries(s.parts || {}).filter(([k]) => !off.includes(k)).map(([, slot]) => slot).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
     return Math.max(0, v);
@@ -738,7 +779,8 @@ window.G = window.G || {};
   function damage(run, n) {
     // Event numbers are written for a herd of about 10, so they scale with your herd size.
     // Small creatures lose even more members to the same blow.
-    const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce'));
+    const molting = run.moltUntil && run.turn <= run.moltUntil ? 2 : 0;
+    const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce') + molting);
     const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / 10);
     const dmg = Math.max(1, Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1)));
     run.pop -= dmg;
@@ -1021,6 +1063,8 @@ window.G = window.G || {};
     else if (req.zone && !(run.habitat === 'sea' && G.zone(run) === req.zone)) reason = `Only in ${G.SEA_ZONE[req.zone].name}`;
     else if (req.anyPart && !req.anyPart.some((id) => G.partIds(run).some((pid) => pid === id || (G.PART[pid].from || []).includes(id)))) reason = `Needs ${req.anyPart.map((id) => G.PART[id].name).join(' or ')}`;
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
+    else if (req.budding && !['radial', 'colonial'].includes(G.symmetry(run))) reason = 'Only radial or no-symmetry bodies can bud';
+    else if (opt.result && opt.result.trait === 'giant' && run.traits.includes('skeleton_shell') && run.habitat === 'land') reason = 'An outer shell cannot carry a giant on land';
     else if (req.gimmick && G.gimmick(run) !== req.gimmick) reason = `Only for the ${G.ARCHETYPES.find((a) => a.gimmick === req.gimmick).name}`;
     else if (G.gimmick(run) === 'colony' && run.phase === 'event' && run.event && run.event.id === 'multicellularity' && opt.result && opt.result.trait !== 'sessile_plan') reason = 'A Colony always grows without symmetry';
     else if (G.gimmick(run) === 'grazer' && req.diet && !req.diet.some((d) => d !== 'carn')) reason = 'Grazers never hunt';
@@ -1108,7 +1152,7 @@ window.G = window.G || {};
   }
 
   function applyMilestoneInner(run, id) {
-    if (run.stage === 'creature') run.freeEdit = true;
+    if (run.stage === 'creature' && (id === 'age_of_giants' || id === 'spark_of_mind')) run.freeEdit = true;
     if (id === 'multicellularity') {
       run.multicellular = true;
       run.notices.push('You are multicellular. Two new body slots are open: Senses and Organ.');
@@ -1486,6 +1530,8 @@ window.G = window.G || {};
     lines.push({ t: `Food +${gathered} gathered, −${up} eaten` });
     gimmickTurn(run, lines);
     activityTurn(run, lines);
+    // A shell has to be shed to grow: every 12 turns you are soft for 2 turns.
+    if (run.traits.includes('skeleton_shell') && run.stageTurn % 12 === 0) { run.moltUntil = run.turn + 2; lines.push({ t: 'Molting: your new shell is soft for 2 turns', bad: true }); }
     const season = G.season(run);
     if (season && run.seasonId !== season.id) { if (run.seasonId) run.notices.push(`${season.name}: ${season.desc}`); run.seasonId = season.id; }
     if (run.food < 0) {
@@ -1497,7 +1543,8 @@ window.G = window.G || {};
       // Spare Food becomes young: bigger herds can raise more at once.
       const cost = G.growthCost(run);
       let born = 0;
-      while (run.food >= cost && run.pop < G.maxPop(run) && born < Math.ceil(G.popScale(run))) { run.food -= cost; run.pop += 1; born += 1; }
+      const birthCap = run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run)) * (run.traits.includes('young_eggs') ? 2 : 1);
+      while (run.food >= cost && run.pop < G.maxPop(run) && born < birthCap) { run.food -= cost; run.pop += 1; born += 1; }
       if (born) lines.push({ t: `+${born} Population (used ${born * cost} spare Food)`, good: true });
     }
     // Predators and hostile species pick off your weakest. Toughness and Speed keep them at bay,
@@ -1515,7 +1562,7 @@ window.G = window.G || {};
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
       const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1);
-      if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1)) return;
+      if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1)) return;
       const n = clamp(1 + Math.floor(gap / 3), 1, 3);
       lines.push({ t: `The ${s.name} hunted you: −${damage(run, n)} Population`, bad: true });
     });

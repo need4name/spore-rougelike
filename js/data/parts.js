@@ -206,6 +206,47 @@ G.PARTS = [
   { id: 'stinger_tail', name: 'Stinger Tail', adj: 'Stinging', stage: 'creature', slot: 'tail', keywords: ['venom'], mods: { str: 1 }, pack: 'venom', rarity: 2, desc: 'Arches over your back, ready to strike.' },
   { id: 'glow_tail', name: 'Glow Tail', adj: 'Glimmering', stage: 'creature', slot: 'tail', keywords: ['glow'], mods: { cha: 1, spd: 1 }, pack: 'deep', rarity: 2, desc: 'A lantern at the end of you.' },
 
+  // ================= SHELLS, SCALES AND SOFT BODIES =================
+  // Mouth
+  { id: 'hooked_beak', name: 'Hooked Beak', adj: 'Hook-beaked', stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'carn', mods: { str: 1, cun: 1 }, rarity: 3, desc: 'A sharp, curved beak for tearing. Carnivore.' },
+  { id: 'seed_beak', name: 'Seed Beak', adj: 'Seed-beaked', stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'herb', mods: { forageBonus: 2 }, rarity: 3, desc: 'A short, strong beak for cracking seeds. Herbivore.' },
+  { id: 'sticky_tongue', name: 'Sticky Tongue', adj: 'Tongue-flicking', stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'omni', mods: { huntBonus: 2 }, rarity: 2, desc: 'A long tongue that snaps out and catches insects. Omnivore.' },
+  // Senses
+  { id: 'compound_eyes', name: 'Compound Eyes', adj: 'Many-eyed', stage: 'creature', slot: 'senses', mods: { cun: 1, spd: 1 }, rarity: 3, desc: 'Hundreds of tiny eyes in one. Nothing moves without you seeing it.' },
+  { id: 'heat_pits', name: 'Heat Pits', adj: 'Heat-sensing', stage: 'creature', slot: 'senses', habitat: 'land', mods: { cun: 1, huntBonus: 1 }, rarity: 2, desc: 'Pits on your face that see warm bodies in the dark.' },
+  // Limb mutations (merge with stubby legs)
+  { id: 'chitin_joints_f', name: 'Jointed Chitin', adj: 'Jointed', stage: 'creature', slot: 'frontLimbs', habitat: 'land', mods: { tou: 1 }, rarity: 3, limbMod: true, desc: 'Hard, hinged tubes like an insect\'s legs. Merge with Stubby Forelegs.' },
+  { id: 'chitin_joints_h', name: 'Spring Joints', adj: 'Springing', stage: 'creature', slot: 'hindLimbs', habitat: 'land', mods: { spd: 1 }, rarity: 3, limbMod: true, desc: 'Folded, springy joints like a grasshopper\'s. Merge with Stubby Hind Legs.' },
+  { id: 'jointed_legs', name: 'Jointed Legs', adj: 'Jointed', stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['armor'], mods: { spd: 2, tou: 1 }, rarity: 3, desc: 'Thin, armored, many-jointed legs.' },
+  { id: 'jumping_legs', name: 'Jumping Legs', adj: 'Jumping', stage: 'creature', slot: 'hindLimbs', habitat: 'land', keywords: ['swift'], mods: { spd: 2, str: 1 }, rarity: 2, desc: 'Huge folded legs that fling you across the field.' },
+  // Hands
+  { id: 'land_pincers', name: 'Pincers', adj: 'Pincered', stage: 'creature', slot: 'hands', habitat: 'land', tags: ['grasp'], mods: { str: 1, tou: 1 }, rarity: 3, desc: 'Scorpion claws that grab and crush.' },
+  { id: 'sticky_pads', name: 'Sticky Pads', adj: 'Sticky', stage: 'creature', slot: 'hands', habitat: 'land', mods: { cun: 1, spd: 1 }, rarity: 3, desc: 'Climb anything, even glass-smooth rock.' },
+  { id: 'raptorial_arms', name: 'Raptorial Arms', adj: 'Snatching', stage: 'creature', slot: 'hands', habitat: 'land', mods: { str: 1, huntBonus: 1 }, rarity: 2, desc: 'Folded spiky arms that snap shut like a mantis.' },
+  // Feet
+  { id: 'gecko_feet', name: 'Gecko Feet', adj: 'Clinging', stage: 'creature', slot: 'feet', habitat: 'land', mods: { spd: 1, cun: 1 }, rarity: 3, desc: 'Toes that stick to anything.' },
+  { id: 'digging_claws', name: 'Digging Claws', adj: 'Burrowing', stage: 'creature', slot: 'feet', habitat: 'land', mods: { str: 1, forageBonus: 1 }, rarity: 3, desc: 'Big claws for digging burrows and roots.' },
+  { id: 'perching_feet', name: 'Perching Feet', adj: 'Perching', stage: 'creature', slot: 'feet', habitat: 'land', mods: { spd: 1, cha: 1 }, rarity: 3, desc: 'Bird feet that grip a branch while you sleep.' },
+  // Back
+  { id: 'snail_shell', name: 'Snail Shell', adj: 'Shelled', stage: 'creature', slot: 'back', habitat: 'land', keywords: ['armor'], mods: { tou: 3, spd: -2 }, rarity: 2, desc: 'A spiral home you carry everywhere. Pull in and wait.' },
+  { id: 'segment_plates', name: 'Segment Plates', adj: 'Segmented', stage: 'creature', slot: 'back', keywords: ['armor'], mods: { tou: 2 }, rarity: 3, desc: 'Overlapping plates like a woodlouse. Roll up when threatened.' },
+  { id: 'egg_sac', name: 'Egg Sac', adj: 'Brooding', stage: 'creature', slot: 'back', mods: { maxPop: 2, growthCost: -1 }, rarity: 2, desc: 'Carry your eggs with you, safe on your back.' },
+  // Skin
+  { id: 'chitin', name: 'Chitin Plates', adj: 'Chitinous', stage: 'creature', slot: 'skin', keywords: ['armor'], mods: { tou: 2 }, rarity: 3, desc: 'Hard, shiny armor like a beetle.' },
+  { id: 'down_feathers', name: 'Down Feathers', adj: 'Feathered', stage: 'creature', slot: 'skin', habitat: 'land', mods: { tou: 1, cha: 1, maxPop: 1 }, rarity: 3, desc: 'Soft, warm feathers. The first step toward flight.' },
+  { id: 'mottled_skin', name: 'Mottled Skin', adj: 'Mottled', stage: 'creature', slot: 'skin', habitat: 'land', mods: { cun: 2 }, rarity: 3, desc: 'Blotchy camouflage that melts into leaves and stones.' },
+  { id: 'mucus_skin', name: 'Mucus Skin', adj: 'Glistening', stage: 'creature', slot: 'skin', habitat: 'land', mods: { tou: 1, spd: 1 }, rarity: 3, desc: 'Moist, slippery skin, like a slug or a frog.' },
+  // Tail
+  { id: 'spinneret', name: 'Spinnerets', adj: 'Silk-spinning', stage: 'creature', slot: 'tail', habitat: 'land', mods: { huntBonus: 2 }, rarity: 2, desc: 'Spin silk for traps, nests and safety lines.' },
+  { id: 'tail_feathers', name: 'Tail Feathers', adj: 'Plumed', stage: 'creature', slot: 'tail', habitat: 'land', mods: { spd: 1, cha: 1 }, rarity: 3, desc: 'A fan of feathers for steering and showing off.' },
+  { id: 'rattle_tail', name: 'Rattle', adj: 'Rattling', stage: 'creature', slot: 'tail', habitat: 'land', mods: { cha: 1, damageReduce: 1 }, rarity: 2, desc: 'A warning rattle that makes hunters think twice.' },
+  { id: 'drop_tail', name: 'Drop-off Tail', adj: 'Slippery', stage: 'creature', slot: 'tail', habitat: 'land', mods: { spd: 1, damageReduce: 1 }, rarity: 2, desc: 'Leave your tail wriggling in a hunter\'s mouth and grow a new one.' },
+
+  // Sea grips
+  { id: 'clasper_fins', name: 'Clasper Fins', adj: 'Clasping', stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { str: 1, cun: 1 }, rarity: 3, desc: 'Fin tips that curl around things and hold on.' },
+  { id: 'seahorse_tail', name: 'Seahorse Tail', adj: 'Anchoring', stage: 'creature', slot: 'tail', habitat: 'sea', tags: ['grasp'], mods: { tou: 1, cun: 1 }, rarity: 3, desc: 'A curling tail that anchors you to weed and coral.' },
+  { id: 'sucker_lips', name: 'Sucker Lips', adj: 'Sucker-lipped', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'omni', tags: ['grasp'], mods: { tou: 1, forageBonus: 1 }, rarity: 2, desc: 'Lips that hold on to rocks, prey and things worth carrying. Omnivore.' },
+
   // ================= BIOME PARTS (only drafted in their biome) =================
   { id: 'winter_coat', name: 'Winter Coat', adj: 'Shaggy', stage: 'creature', slot: 'skin', habitat: 'land', biome: 'tundra', mods: { tou: 2, foodPerTurn: 1 }, rarity: 3, desc: 'Thick fur that keeps out the worst cold, so you need less food to stay warm.' },
   { id: 'snowshoe_feet', name: 'Snowshoe Feet', adj: 'Snowshoed', stage: 'creature', slot: 'feet', habitat: 'land', biome: 'tundra', mods: { spd: 2 }, rarity: 3, desc: 'Wide feet that never sink.' },
@@ -344,6 +385,24 @@ G.EVOLUTIONS = [
   { id: 'all_seeing_eyes', name: 'All-Seeing Eyes', adj: 'All-seeing', tier: 2, from: ['hunter_eyes', 'tremor_whiskers'], stage: 'creature', slot: 'senses', mods: { cun: 6, huntBonus: 2 }, desc: 'Legendary. Nothing escapes your notice.' },
   { id: 'masters_hands', name: "Maker's Hands", adj: "Maker's", tier: 2, habitat: 'land', from: ['clever_claws', 'soft_pads'], stage: 'creature', slot: 'hands', tags: ['grasp'], mods: { cun: 3, str: 2, insightPerTurn: 2 }, desc: 'Legendary. Hands that will one day build cities.' },
   { id: 'wind_legs', name: 'Wind Legs', adj: 'Wind-swift', tier: 2, habitat: 'land', from: ['sprinter_legs', 'hopping_legs'], stage: 'creature', slot: 'hindLimbs', keywords: ['swift'], mods: { spd: 6, str: 2 }, desc: 'Legendary. You outrun the wind.' },
+  // ----- Shells, Scales and Soft Bodies -----
+  { id: 'raptor_beak', name: 'Raptor Beak', adj: 'Raptor', from: ['hooked_beak', 'fangs'], stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'carn', mods: { str: 4, cun: 1 }, desc: 'A killing beak like an eagle\'s. Carnivore.' },
+  { id: 'nutcracker_beak', name: 'Nutcracker Beak', adj: 'Nutcracking', from: ['seed_beak', 'grinding_beak'], stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'herb', mods: { forageBonus: 4, tou: 1 }, desc: 'Nothing is too hard to crack. Herbivore.' },
+  { id: 'harpoon_tongue', name: 'Harpoon Tongue', adj: 'Harpooning', from: ['sticky_tongue', 'mandibles'], stage: 'creature', slot: 'mouth', habitat: 'land', diet: 'omni', mods: { huntBonus: 3, cun: 1 }, desc: 'Faster than the eye can follow. Omnivore.' },
+  { id: 'mosaic_eyes', name: 'Mosaic Eyes', adj: 'Mosaic-eyed', from: ['compound_eyes', 'big_eyes'], stage: 'creature', slot: 'senses', mods: { cun: 3, spd: 1, damageReduce: 1 }, desc: 'You see everything, everywhere, at once.' },
+  { id: 'heat_sight', name: 'Heat Sight', adj: 'Heat-seeing', from: ['heat_pits', 'tremor_whiskers'], stage: 'creature', slot: 'senses', habitat: 'land', mods: { cun: 3, huntBonus: 2 }, desc: 'Warm prey glows in the dark like a lantern.' },
+  { id: 'insect_wings', name: 'Insect Wings', adj: 'Buzzing', from: ['jointed_legs', 'skin_flaps_f'], stage: 'creature', slot: 'frontLimbs', habitat: 'land', keywords: ['swift'], tags: ['flight'], mods: { spd: 4, cun: 1 }, desc: 'Clear, veined wings that buzz and hover.' },
+  { id: 'crusher_claws', name: 'Crusher Claws', adj: 'Crushing', from: ['land_pincers', 'sharp_claws'], stage: 'creature', slot: 'hands', habitat: 'land', tags: ['grasp'], mods: { str: 4, tou: 1 }, desc: 'Claws that snap bone.' },
+  { id: 'mantis_scythes', name: 'Mantis Scythes', adj: 'Scythed', from: ['raptorial_arms', 'hooked_talons'], stage: 'creature', slot: 'hands', habitat: 'land', mods: { str: 4, huntBonus: 2 }, desc: 'Two folded scythes, faster than a blink.' },
+  { id: 'wall_walkers', name: 'Wall Walkers', adj: 'Wall-walking', from: ['gecko_feet', 'padded_paws'], stage: 'creature', slot: 'feet', habitat: 'land', mods: { spd: 2, cun: 2 }, desc: 'Walk up walls and across ceilings.' },
+  { id: 'citadel_shell', name: 'Citadel Shell', adj: 'Citadel', from: ['snail_shell', 'carapace'], stage: 'creature', slot: 'back', habitat: 'land', keywords: ['armor'], mods: { tou: 6, spd: -1 }, desc: 'A fortress on your back.' },
+  { id: 'rolling_armor', name: 'Rolling Armor', adj: 'Rolling', from: ['segment_plates', 'back_spines'], stage: 'creature', slot: 'back', keywords: ['armor'], mods: { tou: 3, str: 1, damageReduce: 1 }, desc: 'Roll into a spiky ball that nothing can bite.' },
+  { id: 'exoskeleton', name: 'Exoskeleton', adj: 'Exoskeletal', from: ['chitin', 'scales'], stage: 'creature', slot: 'skin', keywords: ['armor'], mods: { tou: 4, str: 1 }, desc: 'A full suit of jointed armor.' },
+  { id: 'true_plumage', name: 'True Plumage', adj: 'Plumed', from: ['down_feathers', 'bright_plumage'], stage: 'creature', slot: 'skin', habitat: 'land', mods: { cha: 3, tou: 1, spd: 1 }, desc: 'Glorious feathers, warm and dazzling.' },
+  { id: 'web_weaver', name: 'Web Weaver', adj: 'Web-weaving', from: ['spinneret', 'prehensile_tail'], stage: 'creature', slot: 'tail', habitat: 'land', mods: { huntBonus: 3, cun: 2 }, desc: 'Weave great webs, and wait.' },
+  { id: 'regrowing_tail', name: 'Regrowing Tail', adj: 'Regrowing', from: ['drop_tail', 'balancing_tail'], stage: 'creature', slot: 'tail', habitat: 'land', mods: { spd: 2, damageReduce: 1, popPerTurn: 1 }, desc: 'Drop it, grow it back, and drop it again.' },
+  { id: 'gripping_hands', name: 'Gripping Hands', adj: 'Gripping', from: ['clasper_fins', 'sucker_arms'], stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { str: 2, cun: 2 }, desc: 'Finger-like fins with suckers. They can hold a tool.' },
+  { id: 'holdfast_tail', name: 'Holdfast Tail', adj: 'Holdfast', from: ['seahorse_tail', 'paddle_tail'], stage: 'creature', slot: 'tail', habitat: 'sea', tags: ['grasp'], mods: { tou: 2, cun: 2, damageReduce: 1 }, desc: 'Nothing pulls you off your rock.' },
   // ----- The Deep -----
   { id: 'shark_jaws', name: 'Shark Jaws', adj: 'Sharky', from: ['cookie_cutter', 'fangs'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 4, huntBonus: 1 }, desc: 'Rows of teeth that never run out. Carnivore.' },
   { id: 'shell_cracker', name: 'Shell-cracker Beak', adj: 'Cracking', from: ['hidden_beak', 'crushing_jaws'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 3, tou: 1, forageBonus: 1 }, desc: 'No shell is safe. Carnivore.' },
@@ -394,6 +453,8 @@ G.LIMB_RECIPES = [
   ['gliding_fins', 'stubby_front_fins', 'wide_webbing_sf'],
   ['lobe_fins', 'stubby_front_fins', 'lobe_bones_sf'],
   ['lionfish_fins', 'stubby_rear_fins', 'spiny_rays_sh'],
+  ['jointed_legs', 'stubby_forelegs', 'chitin_joints_f'],
+  ['jumping_legs', 'stubby_hindlegs', 'chitin_joints_h'],
 ];
 
 G.RECIPE = {};

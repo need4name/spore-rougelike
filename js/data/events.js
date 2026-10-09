@@ -376,6 +376,200 @@ G.EVENTS = [
   },
 
   // ----- Land only -----
+  // ---------- Shells, Scales and Soft Bodies ----------
+  {
+    id: 'clutch_of_eggs', prop: 'nest', stage: 'creature', title: 'A Clutch of Eggs', tags: ['growth'],
+    when: (run) => run.traits.includes('young_eggs'),
+    text: 'Your {herd} have laid a great clutch of eggs. They are warm, still, and very tempting to everything that walks past.',
+    options: [
+      { label: 'Guard them day and night', check: { stat: 'tou', diff: 4 }, success: { text: 'Not one egg is lost. The hatchlings pour out.', pop: 3, anim: 'grow' }, fail: { text: 'Hungry mouths get past your guard.', pop: 1, food: -2 } },
+      { label: 'Hide them well', check: { stat: 'cun', diff: 4 }, success: { text: 'Buried deep, they hatch in safety.', pop: 2, dna: 1, anim: 'grow' }, fail: { text: 'Something digs them up.', food: -1 } },
+      { label: 'Carry them on your back', req: { anyPart: ['egg_sac'] }, result: { text: 'Wherever you go, the eggs go too. Every one hatches.', pop: 3, dna: 2, anim: 'grow' } },
+      { label: 'Lay and leave', result: { text: 'Lay many, hope some live. A few do.', pop: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'egg_thieves', prop: 'nest', stage: 'creature', title: 'Egg Thieves', tags: ['danger'], species: 'rival',
+    when: (run) => run.traits.includes('young_eggs'),
+    text: 'The {them} have learned that your eggs are easy food. Each night, more go missing.',
+    options: [
+      { label: 'Drive them away', check: { stat: 'str', diff: 4 }, success: { text: 'They learn that your nests bite back.', dna: 2, opinion: -20, anim: 'attack' }, fail: { text: 'They are bolder than you.', pop: -1, opinion: -10 } },
+      { label: 'Lay twice as many', req: { food: 3 }, result: { text: 'They cannot eat them all.', food: -3, pop: 2, anim: 'grow' } },
+      { label: 'Fake nests to fool them', check: { stat: 'cun', diff: 4 }, success: { text: 'They waste their nights on empty holes.', dna: 3, trait: 'cautious' }, fail: { text: 'They find the real ones.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'carried_young', stage: 'creature', title: 'Heavy with Young', tags: ['growth'],
+    when: (run) => run.traits.includes('young_live'),
+    text: 'Many of your {herd} carry young inside them. They are slow, hungry and precious.',
+    options: [
+      { label: 'Rest and feed them', req: { food: 2 }, result: { text: 'Strong young are born, ready to follow within the hour.', food: -2, pop: 2, anim: 'rest' } },
+      { label: 'Keep moving', check: { stat: 'spd', diff: 4 }, success: { text: 'You stay ahead of danger and the young are born safe.', pop: 1, dna: 2, anim: 'flee' }, fail: { text: 'The journey is too hard on them.', pop: -1 } },
+      { label: 'Gather close around them', check: { stat: 'cha', diff: 3 }, success: { text: 'The whole group shields the mothers.', pop: 1, dna: 1, trait: 'social', anim: 'social' }, fail: { text: 'Squabbles break out instead.', food: -1 } },
+    ],
+  },
+  {
+    id: 'molting_season', prop: 'shore', stage: 'creature', title: 'Molting', tags: ['danger', 'growth'],
+    when: (run) => run.traits.includes('skeleton_shell'),
+    text: 'Your old shell has split down the back. You crawl out soft and pale, bigger than before, and helpless until the new one hardens.',
+    options: [
+      { label: 'Hide until you harden', check: { stat: 'cun', diff: 4 }, success: { text: 'Safe in a crevice, your new armor sets hard.', dna: 2, anim: 'rest' }, fail: { text: 'A hunter finds you while you are soft.', pop: -2 } },
+      { label: 'Eat your old shell', result: { text: 'Nothing wasted. The minerals harden you faster.', food: 1, dna: 1, anim: 'eat' } },
+      { label: 'Grow a thicker shell this time', req: { food: 3 }, result: { text: 'Your new shell is heavier than any before.', food: -3, trait: 'thick_skinned', anim: 'grow' } },
+    ],
+  },
+  {
+    id: 'shell_cracker', prop: 'bones', stage: 'creature', title: 'The Shell Cracker', tags: ['danger'], species: 'predator',
+    when: (run) => run.traits.includes('skeleton_shell') || G.keywordCounts(run).armor >= 2,
+    text: 'The {them} have learned a trick: they lift armored animals high and drop them onto the rocks.',
+    options: [
+      { label: 'Hold on tight', check: { stat: 'str', diff: 5 }, success: { text: 'They cannot lift you. They give up.', dna: 2, anim: 'attack' }, fail: { text: 'You hear the crack of shells on stone.', pop: -2 } },
+      { label: 'Stay under cover', check: { stat: 'cun', diff: 4 }, success: { text: 'Under the bushes they cannot reach you.', dna: 2, anim: 'rest' }, fail: { text: 'They wait you out.', food: -2 } },
+      { label: 'Grow too heavy to lift', req: { anyPart: ['snail_shell', 'carapace', 'segment_plates', 'chitin'] }, result: { text: 'Your armor is too heavy for them. They leave hungry.', dna: 3, opinion: -10, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'squeeze_through', prop: 'cave', stage: 'creature', title: 'Through the Crack', tags: ['explore', 'danger'], species: 'predator',
+    when: (run) => run.traits.includes('skeleton_soft'),
+    text: 'The {them} have cornered your {herd} against a cliff. There is only a thin crack in the rock behind you.',
+    options: [
+      { label: 'Squeeze through', check: { stat: 'cun', diff: 2 }, success: { text: 'With no bones to stop you, you flow through the crack like water. Beyond it is a hidden valley.', food: 3, dna: 2, anim: 'flee' }, fail: { text: 'Some of you are too slow.', pop: -1 } },
+      { label: 'Fight', check: { stat: 'str', diff: 5 }, success: { text: 'They did not expect that.', dna: 2, opinion: -15, anim: 'attack' }, fail: { text: 'Soft bodies tear easily.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'drying_out', prop: 'drought', stage: 'creature', habitat: 'land', title: 'Drying Out', tags: ['danger'],
+    when: (run) => run.traits.includes('skeleton_soft') || G.partIds(run).includes('mucus_skin'),
+    text: 'The sun is merciless. Your soft, wet bodies are losing water by the hour.',
+    options: [
+      { label: 'Burrow into the mud', check: { stat: 'str', diff: 3 }, success: { text: 'Cool and damp, you wait for rain.', dna: 2, anim: 'rest' }, fail: { text: 'The mud is baked hard.', pop: -2 } },
+      { label: 'Only move at night', check: { stat: 'cun', diff: 3 }, success: { text: 'You become a creature of the dark.', dna: 2, trait: 'nocturnal' }, fail: { text: 'Dawn catches you in the open.', pop: -1 } },
+      { label: 'Seal in your slime', req: { anyPart: ['mucus_skin', 'slime_skin'] }, result: { text: 'A crust of dried slime keeps the water in.', dna: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'basking_stone', prop: 'sun', stage: 'creature', habitat: 'land', title: 'The Basking Stone', tags: ['food'],
+    when: (run) => run.traits.includes('blood_cold'),
+    text: 'A great flat stone soaks up the morning sun. Your cold bodies ache for its warmth.',
+    options: [
+      { label: 'Bask all morning', result: { text: 'Warm and quick, you hunt well all afternoon.', food: 2, anim: 'rest' } },
+      { label: 'Bask, but keep watch', check: { stat: 'cun', diff: 3 }, success: { text: 'Warm and safe. A perfect day.', food: 2, dna: 2, anim: 'rest' }, fail: { text: 'A hunter finds you sleepy on the rock.', pop: -1 } },
+      { label: 'Claim the stone for good', check: { stat: 'str', diff: 4 }, success: { text: 'It is your stone now. Nobody else basks here.', dna: 2, trait: 'territorial', anim: 'attack' }, fail: { text: 'Bigger baskers push you off.', food: -1 } },
+    ],
+  },
+  {
+    id: 'cold_snap', prop: 'snow', stage: 'creature', habitat: 'land', title: 'Cold Snap', tags: ['danger'],
+    when: (run) => run.traits.includes('blood_cold'),
+    text: 'Frost overnight. Your cold blood thickens and your legs barely move.',
+    options: [
+      { label: 'Sleep it off', result: { text: 'You wake slow but alive. The cold has cost you a day of feeding.', food: -2, anim: 'rest' } },
+      { label: 'Dig below the frost', req: { anyPart: ['digging_claws', 'digging_forelegs'] }, result: { text: 'Underground, the earth is still warm.', dna: 2, anim: 'rest' } },
+      { label: 'Huddle together', check: { stat: 'cha', diff: 3 }, success: { text: 'Shared warmth gets you all through.', dna: 2, anim: 'social' }, fail: { text: 'The ones on the outside freeze.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'long_sleep', prop: 'cave', stage: 'creature', habitat: 'land', season: 'autumn', title: 'The Long Sleep', tags: ['food'],
+    text: 'The days are short and the food is running out. A deep, dry cave smells safe.',
+    options: [
+      { label: 'Fatten up, then hibernate', req: { food: 3 }, result: { text: 'You sleep through the worst of winter.', food: -3, pop: 1, trait: 'hibernator', anim: 'rest' } },
+      { label: 'Store food in the cave', check: { stat: 'cun', diff: 4 }, success: { text: 'A larder for the hard months.', food: 3, dna: 1, anim: 'eat' }, fail: { text: 'It rots before winter comes.', food: -1 } },
+      { label: 'Stay awake and forage', check: { stat: 'tou', diff: 4 }, success: { text: 'Warm blood keeps you going.', food: 2, dna: 2 }, fail: { text: 'There is nothing to find.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'hungry_furnace', prop: 'fruit', stage: 'creature', title: 'The Hungry Furnace', tags: ['food'],
+    when: (run) => run.traits.includes('blood_warm'),
+    text: 'Warm blood burns food like a fire burns wood. Your {herd} are always hungry.',
+    options: [
+      { label: 'Eat everything', req: { diet: ['omni', 'herb'] }, check: { stat: 'tou', diff: 3 }, success: { text: 'Bark, roots, beetles. It all goes in.', food: 3 }, fail: { text: 'Some of it should not have gone in.', pop: -1 } },
+      { label: 'Hunt harder', req: { diet: ['carn', 'omni'] }, check: { stat: 'str', diff: 4 }, success: { text: 'A great kill feeds everyone.', food: 4, anim: 'attack' }, fail: { text: 'It gets away. You go to bed hungry.', food: -2 } },
+      { label: 'Range further', check: { stat: 'spd', diff: 3 }, success: { text: 'New feeding grounds over the hill.', food: 3, dna: 1, anim: 'flee' }, fail: { text: 'Long walks, empty bellies.', food: -1 } },
+    ],
+  },
+  {
+    id: 'ant_mound', prop: 'dust', stage: 'creature', habitat: 'land', title: 'The Ant Mound', tags: ['food'],
+    text: 'A mound taller than you, crawling with millions of biting insects. Inside, a feast.',
+    options: [
+      { label: 'Lick them up', req: { anyPart: ['sticky_tongue'] }, result: { text: 'Flick, flick, flick. Thousands of them.', food: 4, dna: 1, anim: 'eat' } },
+      { label: 'Tear it open', req: { anyPart: ['digging_claws', 'digging_forelegs', 'sharp_claws'] }, result: { text: 'The mound spills open. A banquet.', food: 3, dna: 2, anim: 'attack' } },
+      { label: 'Rush in and grab what you can', check: { stat: 'tou', diff: 4 }, success: { text: 'Bitten all over, but well fed.', food: 2 }, fail: { text: 'The swarm drives you off.', pop: -1 } },
+      { label: 'Leave it alone', result: { text: 'Not worth the bites.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'silk_lines', prop: 'tree', stage: 'creature', habitat: 'land', title: 'Silk in the Grass', tags: ['explore'],
+    text: 'At dawn, the meadow shines with silver threads. Something has been spinning in the night.',
+    options: [
+      { label: 'Spin your own', req: { anyPart: ['spinneret'] }, result: { text: 'Your traps catch more than theirs.', food: 3, dna: 2, anim: 'eat' } },
+      { label: 'Follow the threads', check: { stat: 'cun', diff: 4 }, success: { text: 'You find the spinner, and its stolen food.', food: 2, dna: 2 }, fail: { text: 'You blunder into a web.', pop: -1 } },
+      { label: 'Tear them down', check: { stat: 'str', diff: 2 }, success: { text: 'You clear the meadow.', dna: 1, anim: 'attack' }, fail: { text: 'Sticky everywhere.', food: -1 } },
+    ],
+  },
+  {
+    id: 'showing_off_feathers', prop: 'hearts', stage: 'creature', habitat: 'land', title: 'A Fine Display', tags: ['social'],
+    when: (run) => G.partIds(run).some((id) => ['down_feathers', 'tail_feathers', 'bright_plumage', 'true_plumage', 'display_tail', 'display_frill'].includes(id) || (G.PART[id].from || []).some((f) => ['down_feathers', 'bright_plumage'].includes(f))),
+    text: 'Mating season. The young ones strut and fan and puff themselves up.',
+    options: [
+      { label: 'Dance', check: { stat: 'cha', diff: 3 }, success: { text: 'The finest display wins, and the next generation is finer still.', pop: 2, dna: 2, anim: 'social' }, fail: { text: 'Lots of strutting, few chicks.', pop: 1 } },
+      { label: 'Fight for mates', check: { stat: 'str', diff: 4 }, success: { text: 'The strongest win.', pop: 1, trait: 'territorial', anim: 'attack' }, fail: { text: 'Torn feathers and bruised pride.', pop: -1 } },
+      { label: 'Sing together', result: { text: 'A great chorus at dusk.', dna: 2, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'canopy_climb', prop: 'tree', stage: 'creature', habitat: 'land', biome: ['jungle', 'plains'], title: 'The High Branches', tags: ['explore', 'food'],
+    text: 'The best fruit hangs high in the trees, far above the ground.',
+    options: [
+      { label: 'Climb', req: { anyPart: ['gecko_feet', 'sticky_pads', 'perching_feet', 'gripping_pads_f', 'prehensile_tail'] }, result: { text: 'You walk straight up the trunk. The canopy is yours.', food: 3, dna: 2, anim: 'eat' } },
+      { label: 'Shake the tree', check: { stat: 'str', diff: 4 }, success: { text: 'Fruit rains down.', food: 3, anim: 'eat' }, fail: { text: 'The tree does not move.', food: -1 } },
+      { label: 'Wait for it to fall', result: { text: 'Some does. Most is eaten by birds.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'burrow_world', prop: 'cave', stage: 'creature', habitat: 'land', title: 'Under the Ground', tags: ['explore'],
+    text: 'The ground here is soft and full of roots, grubs and old tunnels.',
+    options: [
+      { label: 'Dig a warren', req: { anyPart: ['digging_claws', 'digging_forelegs'] }, result: { text: 'A maze of tunnels, safe from everything above.', pop: 2, dna: 2, anim: 'grow' } },
+      { label: 'Explore the old tunnels', check: { stat: 'cun', diff: 4 }, success: { text: 'You find a sleeping larder of grubs.', food: 3, dna: 1 }, fail: { text: 'Whatever dug these is still down here.', pop: -2, anim: 'hurt' } },
+      { label: 'Root for grubs', req: { diet: ['herb', 'omni'] }, result: { text: 'Roots and grubs, crunchy and filling.', food: 2, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'stampede', prop: 'dust', stage: 'creature', habitat: 'land', biome: 'plains', title: 'Stampede', tags: ['danger'], species: 'any',
+    text: 'The ground shakes. A great herd of {them} thunders across the plains toward you.',
+    options: [
+      { label: 'Run with them', check: { stat: 'spd', diff: 4 }, success: { text: 'You run in their shadow and are safe from hunters.', dna: 2, opinion: 10, anim: 'flee' }, fail: { text: 'Some of you are trampled.', pop: -2 } },
+      { label: 'Roll into a ball', req: { anyPart: ['segment_plates', 'snail_shell', 'carapace'] }, result: { text: 'They thunder over you. You barely feel it.', dna: 3, anim: 'rest' } },
+      { label: 'Stand firm', check: { stat: 'tou', diff: 5 }, success: { text: 'They part around you like water around a rock.', dna: 3 }, fail: { text: 'You are knocked flat.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'rattling_warning', prop: 'night', stage: 'creature', habitat: 'land', title: 'A Warning in the Grass', tags: ['danger'], species: 'predator',
+    text: 'The {them} are creeping closer through the tall grass. They have not seen you yet.',
+    options: [
+      { label: 'Rattle and hiss', req: { anyPart: ['rattle_tail', 'warning_skin'] }, result: { text: 'They stop dead, and back slowly away.', dna: 2, opinion: -5, anim: 'attack' } },
+      { label: 'Freeze and blend in', check: { stat: 'cun', diff: 4 }, success: { text: 'They walk right past.', dna: 2, anim: 'rest' }, fail: { text: 'They spot you.', pop: -2 } },
+      { label: 'Drop your tail and run', req: { anyPart: ['drop_tail'] }, result: { text: 'They chase the wriggling tail. You grow a new one.', dna: 2, anim: 'flee' } },
+      { label: 'Run', check: { stat: 'spd', diff: 4 }, success: { text: 'Away into the grass.', dna: 1, anim: 'flee' }, fail: { text: 'Not fast enough.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'swamp_leeches', prop: 'pond', stage: 'creature', habitat: 'land', biome: 'swamp', title: 'Leeches', tags: ['danger'],
+    text: 'Every time your {herd} wade through the swamp, they come out covered in leeches.',
+    options: [
+      { label: 'Armor up', req: { keyword: ['armor', 1] }, result: { text: 'They cannot bite through.', dna: 2 } },
+      { label: 'Pick them off each other', check: { stat: 'cha', diff: 3 }, success: { text: 'Grooming becomes a habit that binds you.', dna: 2, trait: 'social', anim: 'social' }, fail: { text: 'They drain you weak.', pop: -1 } },
+      { label: 'Eat them', req: { diet: ['carn', 'omni'] }, result: { text: 'Who is feeding on whom now?', food: 2, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'shore_crabs', prop: 'shore', stage: 'creature', habitat: 'land', biome: 'shore', title: 'The Crab March', tags: ['food'],
+    text: 'Once a year, millions of red crabs march out of the sea to lay their eggs.',
+    options: [
+      { label: 'Feast', req: { diet: ['carn', 'omni'] }, check: { stat: 'str', diff: 3 }, success: { text: 'Crunchy and plentiful.', food: 4, anim: 'eat' }, fail: { text: 'Pinched. Many times.', pop: -1, food: 1 } },
+      { label: 'Steal their eggs', check: { stat: 'cun', diff: 3 }, success: { text: 'An easy meal.', food: 3, dna: 1, anim: 'eat' }, fail: { text: 'The crabs fight back.', food: -1 } },
+      { label: 'Watch and learn', result: { text: 'Armor, claws, eggs. You learn a lot about shells.', dna: 3, anim: 'rest' } },
+    ],
+  },
   {
     id: 'wildfire', prop: 'fire', stage: 'creature', habitat: 'land', title: 'Wildfire', tags: ['danger'],
     text: 'Lightning strikes the dry grass. Within moments, flames race toward your herd.',
@@ -568,6 +762,32 @@ G.EVENTS = [
   },
 
   // ----- Creature milestones and finale -----
+  {
+    id: 'the_frame', stage: 'creature', milestone: true, title: 'The Frame',
+    text: 'Your body needs something to hold it together as it grows. Every lineage finds its own answer.',
+    options: [
+      { label: 'Bones on the inside', hint: 'Inner Skeleton: flexible, and only it can carry a giant', result: { text: 'A skeleton of bone grows inside you.', trait: 'skeleton_inner', anim: 'grow' } },
+      { label: 'Armor on the outside', hint: 'Outer Shell: +2 TOU, −2 SPD. Cheap extra legs, but you must molt, and no giants on land', result: { text: 'A hard shell grows over you, like an insect or a crab.', trait: 'skeleton_shell', anim: 'grow' } },
+      { label: 'No skeleton at all', hint: 'Soft Body: +2 CUN, −2 TOU, hunters strike less often', result: { text: 'You stay soft and boneless, like an octopus or a worm.', trait: 'skeleton_soft', anim: 'grow' } },
+    ],
+  },
+  {
+    id: 'the_young', stage: 'creature', milestone: true, title: 'The Next Generation',
+    text: 'How will your kind bring new life into the world?',
+    options: [
+      { label: 'Give birth to live young', hint: 'Live Young: +1 TOU, +1 CHA, but at most 1 birth a turn', result: { text: 'Few babies, but well protected.', trait: 'young_live', anim: 'social' } },
+      { label: 'Lay eggs', hint: 'Eggs: twice the births, +1 max Population, but eggs can be stolen', result: { text: 'Clutches of eggs, laid in hidden places.', trait: 'young_eggs', anim: 'grow' } },
+      { label: 'Bud new members off your body', hint: 'Budding: +1 Population a turn, −1 CHA. Radial or no-symmetry bodies only', req: { budding: true }, result: { text: 'Little copies of you grow and break away.', trait: 'young_budding', anim: 'grow' } },
+    ],
+  },
+  {
+    id: 'the_blood', stage: 'creature', milestone: true, title: 'Warm or Cold',
+    text: 'Some creatures make their own heat. Others borrow it from the sun.',
+    options: [
+      { label: 'Make your own heat', hint: 'Warm Blood: +1 SPD, cold seasons cost no food, but eat 1 more', result: { text: 'You burn warm from the inside.', trait: 'blood_warm', anim: 'grow' } },
+      { label: 'Borrow heat from the world', hint: 'Cold Blood: eat 1 less, slow in the cold, quick in the heat', result: { text: 'You bask, and you save your strength.', trait: 'blood_cold', anim: 'rest' } },
+    ],
+  },
   {
     id: 'age_of_giants', stage: 'creature', milestone: true, title: 'The Age of Giants',
     text: 'The world has filled with life, and some of it has grown enormous. Every lineage faces the same question: grow huge, or stay small and many?',
