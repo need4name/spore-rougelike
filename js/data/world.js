@@ -268,9 +268,9 @@ G.BOONS = [
 G.STAGES = {
   cell: {
     name: 'Cell Stage', turnName: 'Epoch',
-    drafts: [4, 8, 12, 19, 24, 29, 34, 39],
-    milestones: [{ at: 15, event: 'multicellularity' }],
-    evolveAt: 44, finale: 'cell_finale',
+    drafts: [4, 8, 12, 17, 22, 27, 32],
+    milestones: [{ at: 14, event: 'multicellularity' }],
+    evolveAt: 37, finale: 'cell_finale',
   },
   creature: {
     name: 'Creature Stage', turnName: 'Generation',
@@ -412,15 +412,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '6';
+G.VERSION = '6.1';
 G.WHATS_NEW = {
-  title: 'Update 6: The Deep',
+  title: 'Patch 6.1',
   items: [
-    'Sea creatures get two new slots: Arms (pincers, tentacles, clubs) and Underside (walking legs, suckers, belly lights).',
-    'About 30 new sea parts and 23 new sea evolutions, from shark jaws and ink clouds to electric organs and nautilus shells.',
-    'The sea map now shows depth. Choose a home in the Instinct tab: sunlit shallows, the reef, open water, the twilight zone or the abyss.',
-    '20 new sea events, some only at certain depths, and two new sea endings: the Shell Smiths and the Vent Keepers.',
-    'Shared events now read naturally at sea (schools, egg beds, weed).',
-    'New sea looks: torpedo, deep-bodied, ray and puffer shapes, hammerhead and sword noses, and fin styles.',
+    'Parts can merge from the very first cell draft, and the cell stage is about 15% shorter.',
+    'On the map, fast species dart about and slow ones plod.',
+    'Friendly species settle near you; wary ones keep away.',
+    'Giants look giant and tiny creatures look tiny. Big populations show as big crowds.',
+    'Update 6 (The Deep): sea creatures have Arms and an Underside, about 35 new sea parts, a depth map with a home depth to choose, 22 new sea events and two new sea endings.',
   ],
 };

@@ -141,7 +141,7 @@ window.G = window.G || {};
             <li>Watch every species roam the map. Herd size shows population. Tap any herd, or your portrait (top left), to inspect it.</li>
             <li>Your <b>Instinct</b> (top right) decides how you find food and which events find you. Sea creatures also choose a home depth there, from the sunlit shallows down to the abyss.</li>
             <li>Each turn your Population eats Food. Spare Food grows your Population. Run out and you starve.</li>
-            <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
+            <li>DNA brings mutations. Mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
@@ -315,7 +315,7 @@ window.G = window.G || {};
       <article class="card draft">
         <p class="eyebrow">Mutation</p>
         <h2>Choose a new part</h2>
-        <p class="note">${merging ? 'Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part. The right pairs evolve into something new.' : 'It goes into its slot, replacing whatever is there. Once you are multicellular, parts can merge, and the right pairs evolve.'}</p>
+        <p class="note">Grow it into an empty slot, merge it with the part already there (keeping both), or replace that part. The right pairs evolve into something new.</p>
         <div class="draft-list">
           ${d.options.map((pid) => {
             const p = G.PART[pid];

@@ -137,7 +137,7 @@ window.G = window.G || {};
     return out;
   };
 
-  G.canMerge = (run) => run.stage === 'creature' || run.multicellular;
+  G.canMerge = () => true;
 
   // Display name of what fills a slot, e.g. "Venomous Fangs" for Fangs merged with Venom Fangs.
   G.slotLabel = (slot) => {
@@ -766,7 +766,7 @@ window.G = window.G || {};
   function applyMilestoneInner(run, id) {
     if (id === 'multicellularity') {
       run.multicellular = true;
-      run.notices.push('You are multicellular. Two new body slots are open, and new mutations can now merge with old ones instead of replacing them.');
+      run.notices.push('You are multicellular. Two new body slots are open: Senses and Organ.');
     }
     if (id === 'age_of_giants') {
       run.era = 2; run.eraTurn = 1;

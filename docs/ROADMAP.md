@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep) is out.** The sea now has more parts, evolutions and events than land; Update 7 brings land back level.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep) and Patch 6.1 are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
 
 ---
 
@@ -60,27 +60,53 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 
 | # | Update | Theme | Size |
 |---|---|---|---|
-| 6 | **The Deep** | The sea catches up with land | Medium |
-| 7 | **Shells, Scales and Soft Bodies** | Not every creature is a mammal | Medium |
-| 8 | **Other Minds** | The five Paths of Mind in the Creature stage | Large |
-| 9 | The Living World | Rival species that remember you, event chains, seasons | Medium |
-| 10 | Wild Places | Biomes, and crawling between sea and land | Medium |
-| 11 | Bloodlines | Roguelike depth: challenges, achievements, past lineages | Medium |
-| 12 | First Gatherings | **Society stage**, part 1: Tribe (land) and Pod (sea) | Large |
-| 13 | Neighbours | Society stage, part 2: Hive, Den and Grove, plus rival societies | Large |
-| 14 | Crowns | **Civilization stage**, part 1: land and sea nations | Large |
-| 15 | Empires | Civilization stage, part 2: the other paths, wars, faiths, wonders | Large |
-| 16 | Lift-off | **Space stage**, part 1: leaving home, in very different ships | Large |
-| 17 | The Galaxy | Space stage, part 2: aliens from your past runs, the true ending | Medium |
-| 18 | The Final Polish | Balance, art, sound, tutorial, offline app | Large |
+| 6 | **The Deep** ✅ | The sea catches up with land | Medium |
+| 6.1 | Patch ✅ | Merging from the first cell draft, a shorter cell stage, a truer map | Small |
+| 7 | **Bloodlines** | The roguelike core: harder first runs, an upgrade tree between runs, extra part sockets, saved lineages | Large |
+| 8 | **Many Ways to Live** | Every archetype gets a gimmick that changes how the whole run plays | Large |
+| 9 | **The Creature Editor** | A full editor after the cell stage: limbs, heads, proportions, colors and patterns | Large |
+| 10 | **The Living World** | A CK3-style Activities tab, a crowded world, extinctions and rising species | Large |
+| 11 | **The World Map** | Biomes, and a world you see more of as your kind gets smarter | Large |
+| 12 | Shells, Scales and Soft Bodies | Not every creature is a mammal | Medium |
+| 13 | Other Minds | The five Paths of Mind in the Creature stage | Large |
+| 14 | First Gatherings | **Society stage**, part 1: Tribe (land) and Pod (sea) | Large |
+| 15 | Neighbours | Society stage, part 2: Hive, Den and Grove, plus rival societies | Large |
+| 16 | Crowns | **Civilization stage**, part 1: land and sea nations | Large |
+| 17 | Empires | Civilization stage, part 2: the other paths, wars, faiths, wonders | Large |
+| 18 | Lift-off | **Space stage**, part 1: leaving home, in very different ships | Large |
+| 19 | The Galaxy | Space stage, part 2: aliens from your past runs, the true ending | Medium |
+| 20 | The Final Polish | Balance, art, sound, tutorial, offline app, challenges and achievements | Large |
 
-Updates 6–8 are new. They come first because everything later is built on them: the Society stage can't offer an octopus society until the Creature stage can make an octopus that thinks. This adds three updates before the Tribe stage, but it fixes the problem at the root instead of patching it in every later stage.
+**Why this order.** The playtest after Update 6 showed that the foundations matter more than new content right now.
+
+- **Bloodlines comes first.** It makes the game a real roguelike. Every later update is balanced around runs that get further as you upgrade, so the upgrade tree has to exist before them.
+- **Many Ways to Live and the Creature Editor come next.** They make each run feel different, starting from the first minute.
+- **The Living World and the World Map follow.** They make the world worth exploring.
+
+The "not a mammal" and "Paths of Mind" updates now come after these, still before the Society stage.
+
+## Where the latest playtest feedback went
+
+| Feedback | Where |
+|---|---|
+| Archetypes all end up playing the same | Update 8 |
+| The cell stage is too long with no merging | Patch 6.1 |
+| More than one part in some slots, like cyberware | Update 7 (sockets) and Update 9 (placing them) |
+| A creature editor after the cell stage, with far more options | Update 9 |
+| A CK3-style Activities tab: move, war, befriend, avoid | Update 10 |
+| A more crowded world with more kinds of creature | Update 10 |
+| Extinctions, with new species filling the gap | Update 10 |
+| Size and population differences on the map | Patch 6.1 (bigger contrast), Update 10 (more) |
+| A map that reflects the world: speed, friendships | Patch 6.1 (speed and closeness), Update 10 (between species) |
+| Biomes, and seeing more of the world as you get smarter | Update 11 |
+| Difficulty, and upgrades between runs | Update 7 |
+| Saving a creature you're invested in | Update 7 (Fossil Record) |
 
 ## Ground rules
 
 - **One theme per update.** Ideas that don't fit go on the "waiting" list at the bottom.
 - **Each update is playable on its own.** Nothing is left half-built between updates.
-- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 18. Between updates we only fix what blocks testing or is clearly broken.
+- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 20. Between updates we only fix what blocks testing or is clearly broken.
 - **Saves.** Unlocks and the Codex always carry over. A run in progress may restart when a new stage arrives; the game will say so.
 - **What's new.** From Update 6 on, the title screen shows a short "What's new" note.
 - **Every update is tested on land and in the sea**, and with at least one creature that isn't bilateral.
@@ -105,7 +131,126 @@ Updates 6–8 are new. They come first because everything later is built on them
 
 **You'll test:** play three sea runs in a row. Does the sea feel as deep as land now?
 
-## Update 7: Shells, Scales and Soft Bodies
+## Patch 6.1 ✅
+
+- Parts can merge from the very first cell draft.
+- The cell stage is about 15% shorter.
+- On the map, fast species dart about and slow ones plod.
+- Friendly species settle near you; wary ones keep away.
+- Sprite size and crowd size now follow real body size and population much more strongly.
+
+## Update 7: Bloodlines
+
+*Every run leaves a mark, and every run gets further.*
+
+- **Harder first runs.** A brand-new lineage should usually die in the cell stage or early in the creature stage. Reaching the creature finale takes a few runs' worth of upgrades. The test bots will check this: a bot with no upgrades should rarely win, and a fully upgraded one should win most of the time.
+- **The Evolution Tree.** A big upgrade tree bought with Genetic Memory between runs, laid out like the Mind tree:
+  - +1 to a stat
+  - More DNA per turn
+  - Lower DNA goals for milestones
+  - Extra Population and Food storage
+  - An extra draft choice, and rerolls
+  - Starting parts
+  - Unlocking body-part families
+  - **Extra part sockets**
+- **Part sockets, like cyberware.** Some slots hold more than one part, each one its own specialism. For example: two sets of senses (eyes and echolocation), two back parts (a shell and a garden), two skins. Each socket can still merge and evolve on its own. Sockets come from the Evolution Tree and from milestones.
+- **The Fossil Record.** Every milestone saves a fossil of your lineage: its body, traits and Mind. Long runs are never lost:
+  - Your favourite fossils can be kept **in amber**.
+  - A new run can be started from any amber fossil, at the stage it was saved.
+  - Reviving a fossil costs Genetic Memory, and the run earns a little less, so starting fresh still matters.
+- **A gallery** of every lineage you've played: portrait, how far it got, how it ended and what it unlocked.
+
+**You'll test:** whether your first run feels short but fair, whether every run gets you further, and whether the upgrades feel worth buying.
+
+## Update 8: Many Ways to Live
+
+*Every archetype breaks a rule.*
+
+Each archetype gets a gimmick that changes the whole run, not just its first few minutes:
+
+| Archetype | Gimmick |
+|---|---|
+| **Drifter** | Goes where the current takes it. It can't pick an Instinct. Instead, the current carries it to new places, new species and new events every few turns. It can absorb a part from any species it meets. |
+| **Grazer** | Lives as a vast herd. Population is huge, but it can never hunt. DNA comes from the size of the herd, not from time. Danger hits it hardest. |
+| **Predator** | You are what you eat. There's no foraging: food only comes from hunting, and it spoils fast. Each kill can offer a part from the species you ate. |
+| **Symbiote** | Two bodies, one life. You live joined to a partner species: you share stats, can swap parts between you, and suffer if the partner dies. |
+| **Parasite** | Lives inside a host species on the map. Your Population is capped by the host's, and you steal its parts. You must jump to a new host before yours dies out, and hosts fight back. |
+| **New: Colony** | Starts with no symmetry. Every member of the colony is a module you can reshape, and it splits into new colonies instead of growing. |
+| **New: Mimic** | Copies the looks and some parts of species it meets, and can pass as one of them in events. |
+
+Each gimmick has its own display (a hunger clock for the Predator, a host bar for the Parasite, a current map for the Drifter) and its own events.
+
+**You'll test:** one run with each archetype. Do they feel like different games?
+
+## Update 9: The Creature Editor
+
+*Build exactly the creature you imagine.*
+
+- **The editor opens when you leave the cell stage,** and again at each milestone. Between milestones you can open it for a small DNA cost.
+- **Shape:**
+  - Body length, height and thickness
+  - Neck length
+  - Spine curve
+- **Limbs:** length, thickness and where each pair attaches along the body. Legs can sit far apart or bunched together.
+- **Head:**
+  - Size and shape
+  - Where it sits: on a long neck, low and forward, or tucked into the body
+  - How many eyes, and where they go
+  - Jaw size
+- **Sockets:** place parts in their sockets, and see each one on the creature as you place it.
+- **Colors and patterns, greatly expanded:**
+  - Colors: base, belly, two pattern colors, and glowing or shiny accents
+  - Patterns: stripes, spots, rings, rosettes, tiger, patches, countershading, gradient and iridescent
+  - Each pattern has scale, density and placement settings
+- **Rival species** get the same variety when they're generated, so the world looks far more varied.
+
+**You'll test:** whether you can make a creature that looks like the one in your head.
+
+## Update 10: The Living World
+
+*The world remembers you, and it has a history.*
+
+- **Activities (like CK3):** a tab of long actions that play out over several turns, each with its own events and outcomes:
+  - **Migrate** to new territory
+  - **War** on a species, with a front line and a war score
+  - **Court** a species until it becomes an ally
+  - **Avoid** a species: hide and stay out of its way
+  - **Hunt** a particular prey species
+  - **Scout**
+- **A crowded world:** 8 to 12 species at once, with far more varied bodies, sizes and body plans. Herds of different species mix and compete on the map.
+- **Niches, extinctions and successors:**
+  - Every species fills a niche: big grazer, small grazer, apex predator, scavenger, filter feeder and so on.
+  - When a species dies out, its niche opens. A survivor evolves to fill it, or newcomers migrate in.
+  - A world history tracks the eras ("The Age of the Mossstalkers"), like watching empires rise and fall in CK3.
+- **A truer map:** species that like each other gather together, and rivals keep apart. Prey herds bunch up and flee, and predators patrol.
+- **Event chains, nemesis and ally species, species that evolve, seasons and migrations** (planned before as "The Living World").
+
+**You'll test:** whether the world feels alive without you, and whether Activities give you enough to do between events.
+
+## Update 11: The World Map
+
+*The world grows as your mind does.*
+
+- **A world map of biomes:**
+  - On land: tundra, desert, swamp, jungle and plains.
+  - In the sea: reef, kelp forest, ice shelf and the vents.
+
+  Each biome has its own species, food, events and parts.
+- **What you can see and do depends on your stage:**
+
+  | Stage | Biomes | What you see | How you move |
+  |---|---|---|---|
+  | **Cell** | Always lives by a thermal vent; biomes have no effect | Just the vent | You don't |
+  | **Multicellular** | Biomes start to matter, and you can rise to the sea surface | Only your own biome | Only by random events |
+  | **Early creature** | Biomes matter | Only your own biome | You can choose to migrate, but you don't choose where you end up |
+  | **Smarter creature** (a Mind idea such as Navigation) | Biomes matter | Neighbouring biomes appear on the map | You choose where to go |
+  | **Later** | Biomes matter | Several biomes at once, then the whole world | You choose where to go |
+- **Between sea and land:** crawling out, or going back to the water, becomes a journey on the world map.
+- **New home worlds** built around the biomes.
+
+**You'll test:** whether exploring the world feels like a reward for getting smarter.
+
+## Update 12: Shells, Scales and Soft Bodies
 
 *Not every creature is a mammal.*
 
@@ -121,7 +266,7 @@ New body choices, each with real trade-offs:
   - **Budding:** colonies and radial bodies split into new ones.
 - **Blood:**
   - **Warm:** active all year, but eats more.
-  - **Cold:** eats less, but is sluggish in the cold. This ties in with seasons in Update 9.
+  - **Cold:** eats less, but is sluggish in the cold. This ties in with seasons in Update 10.
 
 Alongside the choices:
 
@@ -132,7 +277,7 @@ Alongside the choices:
 
 **You'll test:** whether you can build something that is clearly an insect, a reptile, a bird or an octopus, and whether each feels different to play.
 
-## Update 8: Other Minds
+## Update 13: Other Minds
 
 *Intelligence comes in many shapes.*
 
@@ -149,47 +294,7 @@ Alongside the choices:
 
 **You'll test:** one run on each path. Does each feel like a different kind of mind, not the same tree in a new color?
 
-## Update 9: The Living World
-
-*The world remembers you.*
-
-- **Event chains:** stories that unfold over several events. For example, a wounded predator returns stronger, or a friendly species asks for help and repays it later.
-- **Nemesis and ally species:** a species you've hurt or helped gets a name and keeps showing up in events about you.
-- **Species that evolve:** other species gain parts, change size and move territory during the run.
-- **Seasons and weather:**
-  - On land: winters, droughts and floods.
-  - In the sea: plankton blooms, cold currents and storms.
-
-  Each comes with matching events. Cold-blooded creatures feel them most.
-- **Migrations:** herds and schools cross the map, and some events only happen while they're passing.
-
-**You'll test:** whether stories feel connected rather than random, and whether the map feels alive on land and in the sea.
-
-## Update 10: Wild Places
-
-*Different worlds play differently.*
-
-- **Biomes:** land regions (tundra, desert, swamp, jungle) and sea regions (reef, kelp forest, ice shelf, the vents), each with its own scenery, food, events and parts.
-- **Moving regions:** migrate partway through a run, with risks along the way.
-- **Between sea and land:** sea creatures can crawl onto land, and land creatures can return to the water, as whales did. It costs you something, and it opens up new parts.
-- **New home worlds** to unlock, built around the biomes.
-
-**You'll test:** whether different regions make you build different creatures.
-
-## Update 11: Bloodlines
-
-*Every run leaves a mark.*
-
-- **Challenge runs:** modifiers you can turn on for a bigger reward. For example: no carnivores, sea only, no hands, or permanent winter.
-- **Achievements**, each with an unlock. For example, "Reach the Spark of Mind on every path" unlocks a new archetype.
-- **Fossil record:** a gallery of every lineage you've played, with its portrait, path, how it ended and what it unlocked.
-- **Past lineages in the world:** creatures from your earlier runs sometimes appear as rival species.
-- **Daily run:** the same world and seed for everyone each day.
-- **More archetypes and boons,** including sea and non-mammal starts.
-
-**You'll test:** whether you want to play "just one more run", and whether unlocks feel worth chasing.
-
-## Update 12: First Gatherings (Society stage, part 1)
+## Update 14: First Gatherings (Society stage, part 1)
 
 *Your creatures become a people.*
 
@@ -204,7 +309,7 @@ Alongside the choices:
 
 **You'll test:** whether the Tribe and the Pod feel equally deep and clearly different, while still feeling like the same game.
 
-## Update 13: Neighbours (Society stage, part 2)
+## Update 15: Neighbours (Society stage, part 2)
 
 *You are not the only people.*
 
@@ -219,7 +324,7 @@ Alongside the choices:
 
 **You'll test:** whether each society plays differently, and whether dealing with neighbours is the interesting part.
 
-## Update 14: Crowns (Civilization stage, part 1)
+## Update 16: Crowns (Civilization stage, part 1)
 
 *The most Crusader Kings 3 part of the game.*
 
@@ -234,7 +339,7 @@ Alongside the choices:
 
 **You'll test:** whether your ruler feels like a person, and whether a sea civilization feels truly different from a land one.
 
-## Update 15: Empires (Civilization stage, part 2)
+## Update 17: Empires (Civilization stage, part 2)
 
 *The whole world, one way or another.*
 
@@ -249,7 +354,7 @@ Alongside the choices:
 
 **You'll test:** whether the late game stays tense, and whether every path's civilization holds up.
 
-## Update 16: Lift-off (Space stage, part 1)
+## Update 18: Lift-off (Space stage, part 1)
 
 *Leave home, each in its own way.*
 
@@ -268,7 +373,7 @@ The stage itself:
 
 **You'll test:** whether space feels like a new frontier, and whether your path still shapes how you play.
 
-## Update 17: The Galaxy (Space stage, part 2)
+## Update 19: The Galaxy (Space stage, part 2)
 
 *Everyone you've ever been is out there.*
 
@@ -278,7 +383,7 @@ The stage itself:
 
 **You'll test:** whether meeting your old creatures is a fun surprise, and whether the ending feels big enough.
 
-## Update 18: The Final Polish
+## Update 20: The Final Polish
 
 *Everything we've been saving for the end.*
 
@@ -289,6 +394,8 @@ The stage itself:
 - **Offline app:** installs to your home screen and works without internet.
 - **Settings:** text size, reduced motion and color-blind palettes.
 - **Performance** on older phones.
+
+- **Challenge runs, achievements and a daily run** (moved here from Bloodlines).
 
 **You'll test:** the whole game, from start to finish, with fresh eyes.
 

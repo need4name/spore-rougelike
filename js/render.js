@@ -1193,7 +1193,7 @@ window.G = window.G || {};
   // Sprites scale with real body size, so giants tower over small herds.
   const realSize = (run, s) => (s ? s.size : G.bodySize(run));
   function herdScale(run, s) {
-    return Math.max(0.45, Math.min(2.1, Math.pow(realSize(run, s), 0.6)));
+    return Math.max(0.35, Math.min(2.6, Math.pow(realSize(run, s), 0.85)));
   }
 
   // Each herd has a home territory spread across the map, and wanders around it.
@@ -1206,7 +1206,8 @@ window.G = window.G || {};
     if (s) {
       const st = G.speciesStatus(s);
       if (st === 'hostile' && you && Math.random() < 0.6) { tx = you.x + 0.08; ty = you.y; }
-      else if (st === 'allied' && you && Math.random() < 0.5) { tx = you.x + (Math.random() - 0.5) * 0.25; ty = you.y + (Math.random() - 0.5) * 0.25; }
+      else if ((st === 'allied' || st === 'friendly') && you && Math.random() < (st === 'allied' ? 0.75 : 0.5)) { tx = you.x + (Math.random() - 0.5) * 0.22; ty = you.y + (Math.random() - 0.5) * 0.22; }
+      else if (st === 'wary' && you && Math.hypot(you.x - h.x, you.y - h.y) < 0.35) { tx = h.x + (h.x > you.x ? 0.3 : -0.3); ty = h.y + (h.y > you.y ? 0.2 : -0.2); }
       else if (s.role === 'predator' && Math.random() < 0.35) {
         const prey = others.filter(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'prey' && !t2.extinct; });
         if (prey.length) { const target = prey[Math.floor(Math.random() * prey.length)][1]; tx = target.x; ty = target.y; }
@@ -1235,6 +1236,10 @@ window.G = window.G || {};
     const zb = run && zoneBox(run, s);
     if (zb) { const fx = key === 'you' ? 0.5 : ((i * 0.618 + 0.2) % 1); const fy = key === 'you' ? 0.5 : ((i * 0.381 + 0.3) % 1); return [zb.x[0] + fx * (zb.x[1] - zb.x[0]), zb.y[0] + fy * (zb.y[1] - zb.y[0])]; }
     if (key === 'you') return [0.45, 0.6];
+    // Friends settle near you; wary and hostile species keep to the far edges.
+    const st = s ? G.speciesStatus(s) : 'neutral';
+    if (st === 'allied' || st === 'friendly') return [0.45 + (((i * 0.618) % 1) - 0.5) * 0.35, 0.6 + (((i * 0.381) % 1) - 0.5) * 0.3];
+    if (st === 'wary' || st === 'hostile') return [i % 2 ? 0.1 + ((i * 0.27) % 0.12) : 0.8 + ((i * 0.27) % 0.12), 0.1 + ((i * 0.381) % 1) * 0.3];
     const hx = 0.12 + ((i * 0.618 + 0.11) % 1) * 0.76;
     const hy = 0.08 + ((i * 0.381 + 0.25) % 1) * 0.84;
     return [hx, hy];
@@ -1368,7 +1373,9 @@ window.G = window.G || {};
         if (!hd) { const [hx0, hy0] = homeFor(i, l.key, run, l.s); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
         const zid = seaMap ? (l.s ? l.s.zone : G.zone(run)) : null;
         if (hd.zone !== zid) { hd.zone = zid; behaviour(run, l.key, l.s, hd); }
-        const speed = (l.s ? 0.025 + G.speciesStat(l.s, 'spd') * 0.003 : 0.03 + G.stat(run, 'spd') * 0.0025) * (reduceMotion ? 0 : 1) * (flies(l.body) ? 1.6 : 1);
+        // Fast species dart about; slow ones plod.
+        const spdStat = l.s ? G.speciesStat(l.s, 'spd') : G.stat(run, 'spd');
+        const speed = Math.max(0.008, Math.min(0.09, 0.006 + spdStat * 0.007)) * (reduceMotion ? 0 : 1) * (flies(l.body) ? 1.6 : 1);
         const dx = hd.tx - hd.x; const dy = hd.ty - hd.y;
         const d = Math.hypot(dx, dy * 0.5);
         if (d < 0.02) behaviour(run, l.key, l.s, hd);
@@ -1384,7 +1391,7 @@ window.G = window.G || {};
           const depth = depthOf(hd.y);
           const size = base * depth * herdScale(run, l.s);
           const pop = Math.max(0, Math.round(l.pop));
-          const icons = Math.max(1, Math.min(14, pop <= 14 ? pop : Math.round(14 * Math.min(1, pop / 40) + 4)));
+          const icons = Math.max(1, pop <= 16 ? pop : Math.min(32, Math.round(16 + (pop - 16) / 3)));
           const hx = hd.x * w; const groundY = top + hd.y * (bottom - top);
           const air = flies(l.body) ? h * 0.16 + Math.sin(t * 1.3 + hd.hx * 9) * 8 : 0;
           const hy = groundY - air;
