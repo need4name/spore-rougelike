@@ -2,7 +2,7 @@
 
 How intelligence works at the end of the Creature stage, and how it leads into the three stages after it: **Tribe**, **Society** and **Empire**.
 
-This is the plan for Updates 13–19. Nothing here is built yet.
+This is the plan for Updates 13–19. **Update 13 (the Mind tree, Paths of Mind and the ten endings) is built;** the rest is not yet.
 
 ---
 

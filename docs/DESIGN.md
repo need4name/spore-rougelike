@@ -9,7 +9,7 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 | Stage | Turn unit | Phases | Status |
 |---|---|---|---|
 | Cell | Epoch | Single cell → **Many Become One** (multicellularity) → **The Edge of the Sea** (land or sea) | Playable |
-| Creature | Generation | First Steps → **Age of Giants** (size choice) → **Spark of Mind** (Mind tree) → First Tribe / First Pod finale | Playable |
+| Creature | Generation | First Steps → **Age of Giants** (size choice) → **Spark of Mind** (choose a Path of Mind) → your Path's finale | Playable |
 | Tribe, Society, Empire | — | — | Planned (Empire is the final stage; see LATER_STAGES.md) |
 
 **Time:** every tick (2.4 s at normal speed) is one Epoch or Generation: Food is gathered and eaten, Population grows, DNA and Insight arrive, and every other species grows, starves or is hunted. Drafts, milestones and finales pause time when DNA reaches them. Random events also pop up and pause time; after choosing, a scene acts out what happened.
@@ -21,7 +21,15 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Population**: your health. At 0 you are extinct.
 - **Food**: you gather Food every turn based on your Instinct and parts, and eat half your Population (rounded up). Spare Food grows Population by 1 (once per turn). Storage is capped, and extra Food spoils. So Food turns into Population, and a bigger Population eats more.
 - **DNA**: drives drafts, milestones and finales.
-- **Insight** (after the Spark of Mind, about halfway through the Creature stage; finishing the tree takes the other half): flows into the idea your kind is fascinated by in the Mind skill tree. Each idea branches from earlier ones, shown with lines. Innovations need the right diet, stats, traits or earlier ideas, and some rule others out (Ambush Instinct or Gentle Grazing; Pack Tactics or Herd Defense; War Bands or Shared Ritual; Lone Wanderers or a social path).
+- **Insight** (after the Spark of Mind, about halfway through the Creature stage; finishing the tree takes the other half): flows into the idea your kind is researching in its Mind tree.
+- **Paths of Mind (Update 13).** At the Spark of Mind you choose one of five Paths: Toolmakers, Singers, Many Minds, the Swarm or Gardeners. Your body and history open some and lock others (`G.openPaths`; every body gets at least two). The Path is fixed for the run.
+- **The Mind tree is built from pieces** (`G.INNOVATIONS`), and each lineage sees only its own:
+  - **Roots** (row 1): three ideas from your temperament, set by your starting archetype (`G.TEMPERAMENTS`: the Hunter, the Herd, the Bond, the Taker, the Many, the Mask, the Wanderer).
+  - **Home** (row 2): three land or sea ideas, plus one from your biome (land) or depth (sea).
+  - **Path** (rows 3–4): four ideas from your Path.
+  - **Awakening** (row 5): your Path's capstone. Researching it brings your Path's finale (`finale_<path>_<land|sea>`).
+- **Endings.** Ten main endings, one for each Path on land and at sea (`G.ENDING_FOR`), each named differently by your temperament: 70 in all (for example, the Hunter's Many Minds sea ending is the Lantern Court). They decide which kind of people you become in the Tribe stage. The **Codex of Endings** tracks every pair of start and ending you have reached; each new one is worth +10 Genetic Memory.
+- **Signature events:** two for each Path, shown only on that Path.
 
 ## Instinct (CK3-style focus)
 

@@ -562,3 +562,20 @@ button.rival:hover { border-color: var(--accent); }
 .outcome.suspense .pill, .outcome.suspense .event-text, .outcome.suspense .effects { animation: reveal 0.35s ease 1.6s both; }
 @keyframes reveal { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .outcome.suspense .pill, .outcome.suspense .event-text, .outcome.suspense .effects { animation: none; } }
+
+/* The Mind tree (Update 13): built from your temperament, home and Path */
+.mind-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 6px; }
+.mind-head .chip { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 0.8rem; }
+.mind-head .chip.path { border-color: var(--accent); color: var(--accent); }
+.mind-goal { flex-basis: 100%; font-size: 0.82rem; color: var(--muted); }
+.mind-goal b { color: var(--fg); }
+.mind-tree { height: 470px; }
+.mind-tree .tier-label { position: absolute; left: 0; writing-mode: vertical-rl; transform: rotate(180deg); translate: 0 -10%; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); opacity: 0.7; }
+.inv-where { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+.ending-grid { list-style: none; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.ending-grid > li > .note { display: block; margin-top: 2px; }
+.ending-grid > li { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.ending-grid ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 3px; font-size: 0.82rem; }
+.ending-grid ul li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+.ending-grid ul li.got b { color: var(--good); }

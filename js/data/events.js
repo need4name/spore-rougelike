@@ -377,6 +377,100 @@ G.EVENTS = [
 
   // ----- Land only -----
   // ---------- Shells, Scales and Soft Bodies ----------
+  // ---------- Paths of Mind: signature events ----------
+  {
+    id: 'tool_borrowed_stick', prop: 'stick', stage: 'creature', title: 'The Borrowed Stick', tags: ['social', 'food'], species: 'neighbor',
+    when: (run) => run.path === 'tool',
+    text: 'One of the {them} watches your kind dig grubs with a stick. Then it picks up a stick of its own.',
+    options: [
+      { label: 'Teach it properly', check: { stat: 'cha', diff: 4 }, success: { text: 'Now two kinds use tools. They will remember who taught them.', opinion: 25, insight: 3, anim: 'social' }, fail: { text: 'It snaps the stick and wanders off.', opinion: -5 } },
+      { label: 'Snatch the stick away', check: { stat: 'str', diff: 3 }, success: { text: 'Tools are yours alone.', insight: 2, opinion: -15, anim: 'attack' }, fail: { text: 'It hits you with it.', pop: -1, opinion: -10 } },
+      { label: 'Let it work it out', result: { text: 'It never quite does. But it keeps trying.', insight: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'tool_broken_edge', prop: 'bones', stage: 'creature', title: 'A Better Edge', tags: ['explore'],
+    when: (run) => run.path === 'tool',
+    text: 'A young one drops a stone and it splits clean, sharper than anything your kind has ever made.',
+    options: [
+      { label: 'Try to do it again', check: { stat: 'cun', diff: 4 }, success: { text: 'Again, and again. A new way of making things.', insight: 4, anim: 'mutate' }, fail: { text: 'Lots of broken stones and sore fingers.', food: -1, insight: 1 } },
+      { label: 'Use this one carefully', result: { text: 'It is passed from hand to hand for generations.', insight: 2, dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'song_duel', prop: 'notes', stage: 'creature', title: 'The Song Duel', tags: ['social'], species: 'rival',
+    when: (run) => run.path === 'song',
+    text: 'The {them} have started singing at the edge of your range: loud, long and clearly meant for you.',
+    options: [
+      { label: 'Out-sing them', check: { stat: 'cha', diff: 5 }, success: { text: 'Your song goes on long after theirs has faded. They leave.', insight: 3, opinion: 10, anim: 'social' }, fail: { text: 'They win, and every creature in the land heard it.', opinion: -10, food: -1 } },
+      { label: 'Learn their song', check: { stat: 'cun', diff: 4 }, success: { text: 'Now you know two songs. They are oddly flattered.', insight: 4, opinion: 20 }, fail: { text: 'It comes out wrong. They take it as an insult.', opinion: -15 } },
+      { label: 'Stay silent', result: { text: 'A song not sung is a song forgotten.', insight: -1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'song_lost_verse', prop: 'notes', stage: 'creature', title: 'The Lost Verse', tags: ['danger'],
+    when: (run) => run.path === 'song',
+    text: 'The oldest singer has died, and with them a verse of the song that nobody else knew.',
+    options: [
+      { label: 'Piece it back together', check: { stat: 'cun', diff: 4 }, success: { text: 'Fragment by fragment, the verse returns.', insight: 3 }, fail: { text: 'It is gone. Something your kind once knew is lost.', insight: -3 } },
+      { label: 'Write a new verse in its place', check: { stat: 'cha', diff: 3 }, success: { text: 'A new verse, about the singer who died.', insight: 2, trait: 'cooperative', anim: 'social' }, fail: { text: 'Nobody can agree on the words.', food: -1 } },
+    ],
+  },
+  {
+    id: 'many_color_talk', prop: 'night', stage: 'creature', title: 'Words of Color', tags: ['social'], species: 'any',
+    when: (run) => run.path === 'many',
+    text: 'One of your kind flickers a pattern at the {them}. To your surprise, they seem to understand it.',
+    options: [
+      { label: 'Teach them a few patterns', check: { stat: 'cha', diff: 4 }, success: { text: 'A shared language of color, small but real.', opinion: 25, insight: 3, anim: 'social' }, fail: { text: 'They take it as a threat display.', opinion: -15 } },
+      { label: 'Use it to fool them', check: { stat: 'cun', diff: 4 }, success: { text: 'They believe the patterns. You eat well.', food: 3, insight: 2, opinion: -10 }, fail: { text: 'They see through you.', opinion: -15 } },
+    ],
+  },
+  {
+    id: 'many_crack_escape', prop: 'cave', stage: 'creature', title: 'Through the Crack', tags: ['danger'], species: 'predator',
+    when: (run) => run.path === 'many',
+    text: 'The {them} have cornered one of your cleverest. There is a crack in the rock, far too small, behind it.',
+    options: [
+      { label: 'Think your way through it', check: { stat: 'cun', diff: 3 }, success: { text: 'It pours itself through, then reaches back to teach the others.', insight: 3, anim: 'flee' }, fail: { text: 'Too slow, this time.', pop: -2 } },
+      { label: 'Change color and vanish', check: { stat: 'cun', diff: 4 }, success: { text: 'The hunter stares straight at it and sees only rock.', insight: 2, dna: 2 }, fail: { text: 'The disguise slips.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'swarm_split', prop: 'dust', stage: 'creature', title: 'The Colony Splits', tags: ['social'],
+    when: (run) => run.path === 'swarm',
+    text: 'A second queen has hatched. Half the colony follows her to the edge of your range.',
+    options: [
+      { label: 'Let them go and found a sister colony', result: { text: 'Two colonies, one mind across the distance.', insight: 3, pop: -2, anim: 'social' } },
+      { label: 'Bring them back together', check: { stat: 'cha', diff: 4 }, success: { text: 'The colony stays one, larger than before.', insight: 2, pop: 1 }, fail: { text: 'A bitter split. Some are lost.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'swarm_build', prop: 'dust', stage: 'creature', title: 'Building', tags: ['explore'],
+    when: (run) => run.path === 'swarm',
+    text: 'Without anyone deciding, the whole colony starts to build something huge.',
+    options: [
+      { label: 'Let it grow', check: { stat: 'tou', diff: 4 }, success: { text: 'A tower taller than any creature, full of cool tunnels.', insight: 3, trait: 'cautious', anim: 'grow' }, fail: { text: 'It collapses in the rain.', food: -2 } },
+      { label: 'Build it near water', check: { stat: 'cun', diff: 4 }, success: { text: 'Cool, damp and safe. Perfect.', insight: 2, food: 2 }, fail: { text: 'The flood finds it first.', pop: -1, food: -1 } },
+    ],
+  },
+  {
+    id: 'garden_blight', prop: 'sickness', stage: 'creature', title: 'Blight', tags: ['danger', 'food'],
+    when: (run) => run.path === 'garden',
+    text: 'A gray rot is spreading through the crop your kind has tended for generations.',
+    options: [
+      { label: 'Burn out the sick patches', check: { stat: 'tou', diff: 4 }, success: { text: 'A hard season, but the crop survives.', food: -2, insight: 3 }, fail: { text: 'The rot spreads anyway.', food: -4 } },
+      { label: 'Find a crop that resists it', check: { stat: 'cun', diff: 4 }, success: { text: 'A new strain, stronger than the old.', insight: 4, anim: 'mutate' }, fail: { text: 'Nothing resists it. Hunger follows.', food: -3, pop: -1 } },
+      { label: 'Abandon the field', result: { text: 'Start again somewhere new.', food: -2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'garden_tame', prop: 'pond', stage: 'creature', title: 'Willing Herds', tags: ['social', 'food'], species: 'prey',
+    when: (run) => run.path === 'garden',
+    text: 'The {them} have started gathering near your gardens, eating the scraps. They are getting tame.',
+    options: [
+      { label: 'Keep them, and keep them safe', check: { stat: 'cha', diff: 4 }, success: { text: 'Your first herd. They give food and ask for little.', food: 3, insight: 2, opinion: 30, anim: 'social' }, fail: { text: 'They panic and scatter.', opinion: -10 } },
+      { label: 'Eat them', req: { diet: ['carn', 'omni'] }, result: { text: 'An easy meal, but they will not come back.', food: 4, opinion: -30, anim: 'eat' } },
+    ],
+  },
   // ---------- Eyes, arms and legs ----------
   {
     id: 'eyes_behind', prop: 'night', stage: 'creature', title: 'From Behind', tags: ['danger'], species: 'predator',
@@ -920,27 +1014,8 @@ G.EVENTS = [
       { label: 'Wonder how to win', hint: '+1 CUN, better hunts', result: { text: 'You begin to plan.', trait: 'calculating', anim: 'attack' } },
     ],
   },
-  {
-    id: 'creature_finale', prop: 'fire', stage: 'creature', finale: true, habitat: 'land', title: 'The First Tribe',
-    text: 'Your kind knows itself now. Around you, the world waits. What you do next decides how your people begin.',
-    options: [
-      { label: 'Tame the fire', req: { innovation: 'stone_tools' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You carry a burning branch home. You are the Firekeepers.', legacy: 'firekeepers', anim: 'mutate' }, fail: { text: 'The fire takes more than it gives. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Unite the peoples of the valley', req: { innovation: 'vocal_language' }, check: { stat: 'cha', diff: 5 }, success: { text: 'Other species gather with yours under one sky. You are the Unifiers.', legacy: 'unifiers', anim: 'social' }, fail: { text: 'The gathering ends in a stampede. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Spread to every corner of the land', check: { stat: 'spd', diff: 5 }, success: { text: 'Your kind walks over every horizon and settles everywhere. You are the Wanderers.', legacy: 'wanderers', anim: 'flee' }, fail: { text: 'The far lands turn you back. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Conquer the valley with war bands', req: { innovation: 'war_bands' }, check: { stat: 'str', diff: 5 }, success: { text: 'Your war bands sweep the valley. Nothing can stand against you. You are the Conquerors.', legacy: 'conquerors', anim: 'attack' }, fail: { text: 'A war with no winners. Not yet.', pop: -3, setback: 0 } },
-    ],
-  },
-  {
-    id: 'creature_finale_sea', prop: 'notes', stage: 'creature', finale: true, habitat: 'sea', title: 'The First Pod',
-    text: 'Your kind knows itself now. The ocean is vast, and it is listening. What you do next decides how your people begin.',
-    options: [
-      { label: 'Sing the first song', check: { stat: 'cha', diff: 5 }, success: { text: 'A song that carries across whole oceans. You are the Deep Singers.', legacy: 'deep_singers', anim: 'social' }, fail: { text: 'The song falls apart. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Build a reef city', req: { innovation: 'shelters' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You shape the coral into homes. You are the Reef Builders.', legacy: 'reef_builders', anim: 'grow' }, fail: { text: 'The reef crumbles. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Rule the currents', check: { stat: 'str', diff: 5 }, success: { text: 'Every creature in the sea knows your name. You are the Tide Lords.', legacy: 'tide_lords', anim: 'attack' }, fail: { text: 'The sea does not bow so easily. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Shape shell and stone into tools', req: { innovation: 'stone_tools' }, check: { stat: 'cun', diff: 5 }, success: { text: 'Shell blades, stone hammers, sponge gloves. You are the Shell Smiths.', legacy: 'shell_smiths', anim: 'mutate' }, fail: { text: 'The shells crack in your grip. Not yet.', pop: -3, setback: 0 } },
-      { label: 'Tame the heat of the vents', req: { zone: 'abyss' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You learn to carry the deep warmth with you: the sea\'s own fire. You are the Vent Keepers.', legacy: 'vent_keepers', anim: 'mutate' }, fail: { text: 'The vent scalds you. Not yet.', pop: -3, setback: 0 } },
-    ],
-  },
+
+
 
 
   // ======================= MORE EVENTS =======================
@@ -1749,17 +1824,93 @@ G.EVENTS = [
 ];
 
 // Endings that a winning run can earn. Shown in the Codex.
+// Creature-stage endings. The ten main ones come from your Path of Mind and your habitat; each is
+// named by your temperament (70 in all), and decides what kind of people you become next.
+// The older endings stay so past lineages in your history still have names.
+const L = (o) => o;
 G.LEGACIES = {
-  firekeepers: { name: 'The Firekeepers', desc: 'Your tribe will begin with fire.' },
-  unifiers: { name: 'The Unifiers', desc: 'Your tribe will begin with allies.' },
-  conquerors: { name: 'The Conquerors', desc: 'Your tribe will begin feared and armed.' },
-  wanderers: { name: 'The Wanderers', desc: 'Your tribes will begin scattered across the whole world.' },
-  deep_singers: { name: 'The Deep Singers', desc: 'Your people will begin with a language that crosses oceans.' },
-  reef_builders: { name: 'The Reef Builders', desc: 'Your people will begin with a city of coral.' },
-  tide_lords: { name: 'The Tide Lords', desc: 'Your people will begin as masters of the sea.' },
-  shell_smiths: { name: 'The Shell Smiths', desc: 'Your people will begin with tools of shell and stone.' },
-  vent_keepers: { name: 'The Vent Keepers', desc: 'Your people will begin with the warmth of the deep vents, the sea\'s own fire.' },
+  firekeepers: L({ name: 'The Firekeepers', path: 'tool', habitat: 'land', desc: 'A Tribe around the first fires.',
+    flavor: { hunter: 'The Spear-Bearers', herd: 'The Firekeepers', bond: 'The Hearth-Kin', taker: 'The Ember Thieves', many: 'The Kiln-Builders', mask: 'The Smoke-Walkers', wanderer: 'The Torch-Carriers' } }),
+  shell_smiths: L({ name: 'The Shell Smiths', path: 'tool', habitat: 'sea', desc: 'A Shell Clan of tool-users, warmed by the vents.',
+    flavor: { hunter: 'The Harpooners', herd: 'The Shell Smiths', bond: 'The Sponge-Glove Clan', taker: 'The Pearl Thieves', many: 'The Vent Forgers', mask: 'The Ink Smiths', wanderer: 'The Tide Tinkers' } }),
+  great_chorus: L({ name: 'The Great Chorus', path: 'song', habitat: 'land', desc: 'A Choir whose songs carry its memory.',
+    flavor: { hunter: 'The Howling Pack', herd: 'The Great Chorus', bond: 'The Unifiers', taker: 'The Mockingbirds', many: 'The Thousand Voices', mask: 'The Echo-Callers', wanderer: 'The Wind Singers' } }),
+  deep_singers: L({ name: 'The Deep Singers', path: 'song', habitat: 'sea', desc: 'A Pod whose songs cross whole oceans.',
+    flavor: { hunter: 'The Hunting Choir', herd: 'The Deep Singers', bond: 'The Harmony Pods', taker: 'The Siren Pods', many: 'The Ocean Chorus', mask: 'The Mimic Choir', wanderer: 'The Migration Song' } }),
+  hidden_dens: L({ name: 'The Hidden Dens', path: 'many', habitat: 'land', desc: 'A Den of clever climbers who speak in color.',
+    flavor: { hunter: 'The Shadow Dens', herd: 'The Watchful Dens', bond: 'The Twined Dens', taker: 'The Nest Thieves', many: 'The Hundred Eyes', mask: 'The Thousand Faces', wanderer: 'The Canopy Drifters' } }),
+  deep_dens: L({ name: 'The Deep Dens', path: 'many', habitat: 'sea', desc: 'A Den of deep-sea minds who speak in light.',
+    flavor: { hunter: 'The Lantern Court', herd: 'The Glimmer Dens', bond: 'The Reef Whisperers', taker: 'The Ink Court', many: 'The Chromatic Council', mask: 'The Changing Ones', wanderer: 'The Current Readers' } }),
+  great_mound: L({ name: 'The Great Mound', path: 'swarm', habitat: 'land', desc: 'A Hive whose mound never stops growing.',
+    flavor: { hunter: 'The Army Hive', herd: 'The Great Mound', bond: 'The Aphid Shepherds', taker: 'The Slaver Hive', many: 'The Endless Hive', mask: 'The Hidden Nest', wanderer: 'The Marching Column' } }),
+  reef_builders: L({ name: 'The Reef Builders', path: 'swarm', habitat: 'sea', desc: 'A living Reef-colony that thinks as one.',
+    flavor: { hunter: 'The Stinging Reef', herd: 'The Reef Builders', bond: 'The Coral Union', taker: 'The Siphon Host', many: 'The Living Reef', mask: 'The False Reef', wanderer: 'The Drifting Colony' } }),
+  grove_keepers: L({ name: 'The Grove Keepers', path: 'garden', habitat: 'land', desc: 'A Grove of fungus farmers.',
+    flavor: { hunter: 'The Trap Gardeners', herd: 'The Grove Keepers', bond: 'The Fungus Partners', taker: 'The Blight Lords', many: 'The Leafcutter Nation', mask: 'The Bloom Masks', wanderer: 'The Seed Scatterers' } }),
+  kelp_shepherds: L({ name: 'The Kelp Shepherds', path: 'garden', habitat: 'sea', desc: 'A Kelp Garden tended by many hands.',
+    flavor: { hunter: 'The Kelp Hunters', herd: 'The Kelp Shepherds', bond: 'The Algae Kin', taker: 'The Tide Reapers', many: 'The Polyp Meadows', mask: 'The Drifting Gardens', wanderer: 'The Current Sowers' } }),
+  // Older endings (before Update 13).
+  unifiers: L({ name: 'The Unifiers', old: true, desc: 'Your tribe will begin with allies.' }),
+  conquerors: L({ name: 'The Conquerors', old: true, desc: 'Your tribe will begin feared and armed.' }),
+  wanderers: L({ name: 'The Wanderers', old: true, desc: 'Your tribes will begin scattered across the whole world.' }),
+  tide_lords: L({ name: 'The Tide Lords', old: true, desc: 'Your people will begin as masters of the sea.' }),
+  vent_keepers: L({ name: 'The Vent Keepers', old: true, desc: 'Your people will begin with the warmth of the deep vents, the sea\'s own fire.' }),
 };
+G.ENDINGS = Object.keys(G.LEGACIES).filter((id) => !G.LEGACIES[id].old);
+G.ENDING_FOR = {};
+G.ENDINGS.forEach((id) => { const l = G.LEGACIES[id]; (G.ENDING_FOR[l.path] = G.ENDING_FOR[l.path] || {})[l.habitat] = id; });
+
+// The Spark of Mind: choose your Path. Paths your body can't support are shown locked.
+(function () {
+  const pathOptions = () => G.PATHS.map((p) => ({
+    label: `${p.icon} ${p.name}`, hint: p.desc, req: { path: p.id },
+    result: { text: `Your kind begins to think as ${p.name} do. This is your path now, for good.`, path: p.id, anim: 'mutate' },
+  }));
+  const spark = G.EVENTS.find((e) => e.id === 'spark_of_mind');
+  spark.text = 'Something has changed behind your eyes. Your kind has begun to wonder, but how it thinks depends on what it is. Choose your Path of Mind. It will shape your people for the rest of this lineage.';
+  spark.options = pathOptions();
+  // For lineages that reached the Spark before paths existed.
+  G.EVENTS.push({ id: 'path_choice', stage: 'creature', chained: true, prop: 'sparks', title: 'How Your Kind Thinks', text: 'Your kind has been thinking for a while now, but in no settled way. It is time to choose your Path of Mind.', options: pathOptions() });
+
+  // One finale for each Path, on land and at sea. Every option reaches the same ending by a different road.
+  const F = {
+    tool: {
+      land: { title: 'The First Fire', prop: 'fire', text: 'Lightning has struck the dry grass. Your kind does not run. It watches, and it reaches for a burning branch.',
+        options: [['Carry the fire home', 'cun', 'Your clever hands carry the flame without dropping it.'], ['Guard it through the night', 'tou', 'You shield it from wind and rain until dawn.'], ['Bring the whole tribe to see', 'cha', 'Everyone gathers in its warm light.']] },
+      sea: { title: 'The Vent Forge', prop: 'vent', text: 'At the edge of a hot vent, a shell left too close glows and softens. Your kind sees it, and understands.',
+        options: [['Shape the softened shell', 'cun', 'The first blade that is truly made, not found.'], ['Hold it in the heat', 'tou', 'You bear the scalding water until the shape is right.'], ['Teach the others', 'cha', 'By the next tide, everyone can do it.']] },
+    },
+    song: {
+      land: { title: 'The Great Song', prop: 'notes', text: 'At dusk, one voice begins a song that holds everything your kind has ever learned.',
+        options: [['Join in, every voice', 'cha', 'The song swells across the whole valley.'], ['Remember every word', 'cun', 'Not one verse is lost.'], ['Sing it at the far edge of the land', 'spd', 'Your song reaches places your feet have never been.']] },
+      sea: { title: 'The Ocean Song', prop: 'notes', text: 'A song begins in the deep, slow and enormous, and the whole ocean seems to listen.',
+        options: [['Answer it, all together', 'cha', 'Your voices carry across whole oceans.'], ['Remember every note', 'cun', 'It will be sung again in a thousand years.'], ['Carry it across the open sea', 'spd', 'Your song swims farther than any of you.']] },
+    },
+    many: {
+      land: { title: 'The Shared Den', prop: 'cave', text: 'Your kind has always lived alone. Tonight, one by one, they come to the same den, and speak in color.',
+        options: [['Speak in ripples of color', 'cha', 'Whole stories pass in a flicker.'], ['Solve the puzzle of the den', 'cun', 'Together you open what none of you could alone.'], ['Hide the den from every hunter', 'tou', 'No one will ever find it.']] },
+      sea: { title: 'The Deep Court', prop: 'night', text: 'In the dark, lights begin to answer one another. Solitary minds are learning to meet.',
+        options: [['Speak in living light', 'cha', 'The dark fills with glowing words.'], ['Out-think the dark', 'cun', 'Each mind adds to the others.'], ['Hold the deep against all comers', 'tou', 'The deep is yours.']] },
+    },
+    swarm: {
+      land: { title: 'The Waking Hive', prop: 'dust', text: 'The mound hums. For the first time, the whole colony thinks one thought at once.',
+        options: [['Raise the great mound', 'tou', 'It rises higher than the trees.'], ['Think as one', 'cun', 'A thousand bodies, one mind.'], ['Swarm across the land', 'str', 'Nothing can stand against the column.']] },
+      sea: { title: 'The Waking Reef', prop: 'coral', text: 'The reef pulses with a slow, shared rhythm. The colony has become a mind.',
+        options: [['Grow the reef outward', 'tou', 'It spreads farther than any reef before it.'], ['Think as one', 'cun', 'Every polyp knows what the others know.'], ['Sting everything that comes close', 'str', 'The reef defends itself.']] },
+    },
+    garden: {
+      land: { title: 'The First Harvest', prop: 'fruit', text: 'The fungus you have tended for generations is finally ready. Enough to feed everyone, and more.',
+        options: [['Bring in the harvest', 'tou', 'A feast, and seed for next year.'], ['Plan the next planting', 'cun', 'You will never go hungry again.'], ['Share it with the other species', 'cha', 'Even your rivals come to eat.']] },
+      sea: { title: 'The First Kelp Fields', prop: 'kelp', text: 'The kelp you planted has grown into a forest you shaped yourselves.',
+        options: [['Bring in the harvest', 'tou', 'The sea has never been so generous.'], ['Plan the next fields', 'cun', 'Rows of kelp stretch into the distance.'], ['Share it with the other species', 'cha', 'Even sharks drift in to rest.']] },
+    },
+  };
+  Object.entries(F).forEach(([path, byHab]) => Object.entries(byHab).forEach(([hab, f]) => {
+    const ending = G.ENDING_FOR[path][hab];
+    G.EVENTS.push({ id: `finale_${path}_${hab}`, stage: 'creature', finale: true, habitat: hab, prop: f.prop, title: f.title, text: f.text,
+      options: f.options.map(([label, stat, win]) => ({ label, check: { stat, diff: 5 }, success: { text: `${win} Your people are born.`, legacy: ending, anim: stat === 'cha' ? 'social' : stat === 'str' ? 'attack' : 'mutate' }, fail: { text: 'Not yet. Your kind is not ready.', pop: -3, setback: 0 } })) });
+  }));
+}());
 
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });

@@ -26,7 +26,7 @@ window.G = window.G || {};
       unlocked: { archetypes: ['drifter', 'grazer'], origins: ['tidal'], packs: [] },
       boons: {},
       maxHostility: 0,
-      codex: { events: [], parts: [], legacies: [], evolutions: [] },
+      codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {},
     };
@@ -49,13 +49,15 @@ window.G = window.G || {};
       const list = (saved.unlocked && saved.unlocked[k]) || [];
       list.forEach((id) => { if (!m.unlocked[k].includes(id)) m.unlocked[k].push(id); });
     });
-    ['events', 'parts', 'legacies', 'evolutions'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
+    ['events', 'parts', 'legacies', 'evolutions', 'endings'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
     Object.assign(m.stats, saved.stats || {});
     return m;
   }
 
   G.meta = mergeMeta(load(SAVE_META));
   G.run = load(SAVE_RUN);
+  // Ideas from before Update 13 no longer exist.
+  if (G.run && G.run.innovations) { const ids = new Set(G.INNOVATIONS.map((i) => i.id)); G.run.innovations = G.run.innovations.filter((id) => ids.has(id)); if (G.run.fascination && !ids.has(G.run.fascination)) G.run.fascination = null; }
   G.saveMeta = () => store(SAVE_META, G.meta);
   G.saveRun = () => store(SAVE_RUN, G.run);
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
@@ -314,7 +316,7 @@ window.G = window.G || {};
     list.push(G.ORIGIN[run.origin].mods);
     G.partIds(run).forEach((pid) => list.push(G.PART[pid].mods));
     run.traits.forEach((t) => { if (G.TRAITS[t]) list.push(G.TRAITS[t].mods); });
-    run.innovations.forEach((i) => list.push(G.INNOVATION[i].mods));
+    run.innovations.forEach((i) => { if (G.INNOVATION[i]) list.push(G.INNOVATION[i].mods); });
     G.activeSynergies(run).forEach((s) => list.push(s.mods));
     const allies = run.species.filter((s) => !s.extinct && G.speciesStatus(s) === 'allied').length;
     if (allies) list.push({ foodPerTurn: allies });
@@ -624,26 +626,30 @@ window.G = window.G || {};
     const base = Math.floor(run.totalDna / 3);
     const progress = (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     const winBonus = victory ? 40 : 0;
+    // Each new square in the Codex of Endings (a start against an ending) is worth a bonus.
+    const endKey = victory && run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null;
+    const firstEnding = endKey && !(G.meta.codex.endings || []).includes(endKey) ? 10 : 0;
     // Lineages that die as cells still learn something: 1 per 4 turns survived, and never less
     // than 6 in all, so early runs can afford the first upgrades.
     const survival = run.stage === 'cell' ? Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0) : 0;
     const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
-    const genes = Math.round((base + progress + winBonus + survival) * mult);
+    const genes = Math.round((base + progress + winBonus + survival + firstEnding) * mult);
     const m = G.meta;
     m.genes += genes;
     if (victory) {
       m.stats.wins += 1;
       m.maxHostility = Math.max(m.maxHostility, Math.min(G.MAX_HOSTILITY, run.hostility + 1));
       if (run.legacy) addUnique(m.codex.legacies, run.legacy);
+      if (endKey) addUnique(m.codex.endings = m.codex.endings || [], endKey);
     } else {
       m.stats.extinctions += 1;
     }
     m.stats.bestDna = Math.max(m.stats.bestDna || 0, run.totalDna);
-    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, survival, mult, revived: !!run.revived } };
-    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? G.LEGACIES[run.legacy].name : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
+    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, survival, firstEnding, mult, revived: !!run.revived } };
+    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? G.endingName(run) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
     m.history = m.history.slice(0, 30);
     run.phase = 'end';
-    log(run, victory ? `${G.LEGACIES[run.legacy].name}: the age of tribes begins.` : `Extinction. ${cause}`);
+    log(run, victory ? `${G.endingName(run)}: your people are born.` : `Extinction. ${cause}`);
     save();
   }
 
@@ -906,8 +912,10 @@ window.G = window.G || {};
     }
     if (eff.dna) lines.push({ t: `+${gainDna(run, eff.dna)} DNA`, good: true });
     if (eff.insight) {
-      run.insight += eff.insight;
-      lines.push({ t: `+${eff.insight} Insight`, good: true });
+      const before = run.insight;
+      run.insight = Math.max(0, run.insight + eff.insight);
+      const d = run.insight - before;
+      if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} Insight`, good: d > 0, bad: d < 0 });
     }
     if (eff.trait) {
       if (addUnique(run.traits, eff.trait)) {
@@ -967,6 +975,11 @@ window.G = window.G || {};
     if (eff.warScore && run.activity && run.activity.id === 'war') { run.activity.score = clamp(run.activity.score + eff.warScore, -100, 100); lines.push({ t: `War score ${eff.warScore > 0 ? '+' : '−'}${Math.abs(eff.warScore)}`, good: eff.warScore > 0, bad: eff.warScore < 0 }); }
     if (eff.nemesis && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) run.species[speciesIdx].nemesis = true;
     if (eff.legacy) run.legacy = eff.legacy;
+    if (eff.path && !run.path) {
+      run.path = eff.path;
+      lines.push({ t: `Path of Mind: ${G.PATH[eff.path].name}`, good: true });
+      log(run, `Your kind chose its Path of Mind: ${G.PATH[eff.path].name}.`);
+    }
     if (eff.setback != null) {
       if (run.stage === 'cell' && eff.setback) {
         run.dna = Math.max(0, run.dna - eff.setback);
@@ -1111,6 +1124,7 @@ window.G = window.G || {};
     else if (req.anyPart && !req.anyPart.some((id) => G.partIds(run).some((pid) => pid === id || (G.PART[pid].from || []).includes(id)))) reason = `Needs ${req.anyPart.map((id) => G.PART[id].name).join(' or ')}`;
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
     else if (req.budding && !['radial', 'colonial'].includes(G.symmetry(run))) reason = 'Only radial or no-symmetry bodies can bud';
+    else if (req.path && !G.pathState(run, req.path).ok) reason = G.pathState(run, req.path).reason;
     else if (opt.result && opt.result.trait === 'giant' && run.traits.includes('skeleton_shell') && run.habitat === 'land') reason = 'An outer shell cannot carry a giant on land';
     else if (req.gimmick && G.gimmick(run) !== req.gimmick) reason = `Only for the ${G.ARCHETYPES.find((a) => a.gimmick === req.gimmick).name}`;
     else if (G.gimmick(run) === 'colony' && run.phase === 'event' && run.event && run.event.id === 'multicellularity' && opt.result && opt.result.trait !== 'sessile_plan') reason = 'A Colony always grows without symmetry';
@@ -1366,7 +1380,7 @@ window.G = window.G || {};
   // where to migrate), 2 = the whole world.
   G.vision = (run) => {
     if (run.stage === 'cell') return 0;
-    if (['keen_memory', 'lone_wanderers', 'symbolic_thought'].some((i) => run.innovations.includes(i))) return 2;
+    if (run.innovations.some((i) => G.INNOVATION[i] && G.INNOVATION[i].vision)) return 2;
     if (run.mind || G.stat(run, 'cun') >= 6) return 1;
     return 0;
   };
@@ -1631,9 +1645,52 @@ window.G = window.G || {};
     researchProgress(run);
   }
 
+  // ---------- Paths of Mind ----------
+  G.PATH = {}; G.PATHS.forEach((p) => { G.PATH[p.id] = p; });
+  G.temperament = (run) => G.TEMPERAMENTS[run.archetype] || G.TEMPERAMENTS.drifter;
+  const hasAnyPart = (run, list) => G.partIds(run).some((id) => list.includes(id) || (G.PART[id].from || []).some((f) => list.includes(f)));
+  // Which Paths your body and history allow on their own.
+  const PATH_TEST = {
+    tool: (run) => G.hasTag(run, 'grasp') || G.armPairs(run) > 0,
+    song: (run) => hasAnyPart(run, G.SONG_PARTS) || G.stat(run, 'cha') >= 5,
+    many: (run) => run.traits.includes('skeleton_soft') || G.symmetry(run) === 'radial' || hasAnyPart(run, G.MANY_PARTS) || G.stat(run, 'cun') >= 7,
+    swarm: (run) => ['colonial', 'radial'].includes(G.symmetry(run)) || run.traits.includes('small_many') || run.traits.includes('young_eggs') || run.traits.includes('young_budding') || run.archetype === 'colony',
+    garden: (run) => G.diet(run) === 'herb' || (G.keywordCounts(run).symbiont || 0) > 0 || hasAnyPart(run, G.GARDEN_PARTS) || run.archetype === 'symbiote',
+  };
+  // Every body can take at least two Paths: if fewer are open, the nearest ones open too.
+  G.openPaths = (run) => {
+    const open = G.PATHS.filter((p) => PATH_TEST[p.id](run)).map((p) => p.id);
+    ['song', 'swarm', 'garden', 'many', 'tool'].forEach((id) => { if (open.length < 2 && !open.includes(id)) open.push(id); });
+    return open;
+  };
+  G.pathState = (run, id) => (G.openPaths(run).includes(id) ? { ok: true } : { ok: false, reason: G.PATH[id].why });
+  // The ending your Path leads to here, named by your temperament.
+  G.endingFor = (run) => (run.path ? G.ENDING_FOR[run.path][run.habitat === 'sea' ? 'sea' : 'land'] : null);
+  G.endingName = (run, legacy) => {
+    const l = G.LEGACIES[legacy || run.legacy];
+    if (!l) return '';
+    return (l.flavor && l.flavor[G.temperament(run).id]) || l.name;
+  };
+  const nameIn = (v, run) => (v && typeof v === 'object' ? v[run.habitat === 'sea' ? 'sea' : 'land'] : v);
+  G.innovationName = (inv, run) => nameIn(inv.name, run);
+  G.innovationDesc = (inv, run) => nameIn(inv.desc, run);
+  // Which parts of the Mind tree this lineage can see.
+  G.innovationVisible = (run, inv) => {
+    if (run.innovations.includes(inv.id)) return true;
+    const hab = run.habitat === 'sea' ? 'sea' : 'land';
+    if (inv.group === 'root') return inv.temper === G.temperament(run).id;
+    if (inv.group === 'trunk') return inv.habitat === hab;
+    if (inv.group === 'home') return hab === 'land' ? G.biome(run).id === inv.home : G.zone(run) === inv.home;
+    return inv.path === run.path;
+  };
+
   // ---------- Mind tree ----------
   G.innovationAvailable = function (run, inv) {
     if (run.innovations.includes(inv.id)) return { ok: false, reason: 'Known' };
+    if (!G.innovationVisible(run, inv)) return { ok: false, hidden: true, reason: 'Not on your path' };
+    const knownTier = (t) => run.innovations.some((id) => G.INNOVATION[id] && G.INNOVATION[id].tier === t);
+    if (inv.tier === 2 && !knownTier(1)) return { ok: false, reason: 'Needs one of your root ideas first' };
+    if (inv.tier === 3 && !knownTier(2)) return { ok: false, reason: 'Needs a land, sea or home idea first' };
     const blocker = run.innovations.find((id) => (inv.excludes || []).includes(id) || (G.INNOVATION[id].excludes || []).includes(inv.id));
     if (blocker) return { ok: false, blocked: true, reason: `Blocked by ${G.INNOVATION[blocker].name}` };
     const r = inv.req || {};
@@ -1653,8 +1710,8 @@ window.G = window.G || {};
       run.insight -= inv.cost;
       run.innovations.push(inv.id);
       run.fascination = null;
-      run.notices.push(`Innovation: ${inv.name}. ${G.describeMods(inv.mods)}.`);
-      log(run, `Your kind discovered ${inv.name}.`);
+      run.notices.push(`Idea: ${G.innovationName(inv, run)}. ${G.describeMods(inv.mods)}.`);
+      log(run, `Your kind discovered ${G.innovationName(inv, run)}.`);
     }
   }
 
@@ -1689,10 +1746,12 @@ window.G = window.G || {};
     if (run.draftsTaken < st.drafts.length && run.dna >= st.drafts[run.draftsTaken]) { startDraft(run); return; }
     const ms = st.milestones.find((m) => run.dna >= m.at && !run.milestonesDone.includes(m.event));
     if (ms) { setEvent(run, G.EVENT[ms.event]); return; }
+    // Lineages that reached the Spark before Paths existed choose one now.
+    if (run.stage === 'creature' && run.mind && !run.path) { setEvent(run, G.EVENT.path_choice); return; }
     if (needsFascination(run)) { run.phase = 'mind'; return; }
-    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'cell' ? run.dna >= st.evolveAt : run.innovations.includes('sapience'));
+    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'cell' ? run.dna >= st.evolveAt : !!run.path && run.innovations.includes(`${run.path}_cap`));
     if (finaleReady) {
-      const id = run.stage === 'cell' ? 'cell_finale' : run.habitat === 'sea' ? 'creature_finale_sea' : 'creature_finale';
+      const id = run.stage === 'cell' ? 'cell_finale' : `finale_${run.path}_${run.habitat === 'sea' ? 'sea' : 'land'}`;
       setEvent(run, G.EVENT[id]);
       return;
     }

@@ -108,33 +108,121 @@ G.SIZES = {
   giant: { name: 'Giant', popMult: 0.65, eatDiv: 1.5, damageMult: 1 },
 };
 
-// The Mind tree: a skill tree, like CK3 cultural innovations. After the Spark of Mind your
-// lineage earns Insight every turn, which goes into the idea it is fascinated by.
-//   col       column in the tree (0-5), for drawing branches
-//   req       { innovation: [any of], diet, stat: ['cha', 6], trait: [any of], tag: 'grasp', tier3: 2 }
-//   excludes  ideas that can never be learned alongside this one
+// ======================= THE MIND =======================
+// At the Spark of Mind your kind chooses one of five Paths of Mind (only the ones its body and
+// history allow), and from then on earns Insight every turn to research the Mind tree.
+// The tree is built from pieces, and you only ever see your own:
+//   tier 1  roots      from your starting cell (your temperament)
+//   tier 2  trunk      from land or sea, plus one "home" idea from your biome (land) or depth (sea)
+//   tier 3  path       your Path of Mind's first ideas
+//   tier 4  path       your Path's deeper ideas
+//   tier 5  capstone   your Path's awakening on land or at sea; researching it brings the finale
+// Fields: group, temper / habitat / home / path decide who sees it; req { innovation: [any of], tag };
+// excludes: ideas that can never be learned alongside it; vision: helps you see more of the world map.
+
+// Your starting archetype is your people's temperament, at every stage of the game.
+G.TEMPERAMENTS = {
+  predator: { id: 'hunter', name: 'The Hunter', desc: 'Wired to wait, watch and pounce.', rule: 'Great hunts and raids; other bands fear you.' },
+  grazer: { id: 'herd', name: 'The Herd', desc: 'Wired for numbers, watchfulness and safety.', rule: 'Strength in numbers; hard to wipe out.' },
+  symbiote: { id: 'bond', name: 'The Bond', desc: 'Wired for trust between kinds.', rule: 'Your partner species joins your band.' },
+  parasite: { id: 'taker', name: 'The Taker', desc: 'Wired to live off others.', rule: 'Tribute, theft and stolen discoveries.' },
+  colony: { id: 'many', name: 'The Many', desc: 'Wired to work as one.', rule: 'Castes early, and great numbers.' },
+  mimic: { id: 'mask', name: 'The Mask', desc: 'Wired to deceive and to watch.', rule: 'Spies, lies and disguises.' },
+  drifter: { id: 'wanderer', name: 'The Wanderer', desc: 'Wired to roam and remember.', rule: 'You move camp and scout far.' },
+};
+
+// The five Paths of Mind. `open(run)` says whether your body and history allow it.
+G.PATHS = [
+  { id: 'tool', name: 'Toolmakers', icon: '🪨', desc: 'Hands that shape the world: tools, then fire on land or vent-forging under the sea.', becomes: { land: 'a Tribe around the first fires', sea: 'a Shell Clan of tool-users' }, resource: { land: 'Fire', sea: 'Vent-heat' },
+    why: 'Needs a part that can grasp: hands, arms, tentacles, a trunk or pincers' },
+  { id: 'song', name: 'Singers', icon: '🎵', desc: 'Memory carried in songs, voices that cross whole valleys or oceans, and a gift for friendship.', becomes: { land: 'a Choir of singers', sea: 'a Pod that sings across oceans' }, resource: { land: 'Song', sea: 'Song' },
+    why: 'Needs a voice or display part (echolocation, frills, plumage, great ears, a display tail) or Charisma 5' },
+  { id: 'many', name: 'Many Minds', icon: '🐙', desc: 'A brain in every arm: camouflage, speaking in color and learning by watching.', becomes: { land: 'a Den of clever climbers', sea: 'a Den of deep-sea minds' }, resource: { land: 'Light', sea: 'Light' },
+    why: 'Needs a soft or radial body, color-changing skin, tentacles, or Cunning 7' },
+  { id: 'swarm', name: 'The Swarm', icon: '🐜', desc: 'Huge numbers that share one mind and raise giant buildings.', becomes: { land: 'a Hive with a growing mound', sea: 'a living Reef-colony' }, resource: { land: 'Brood', sea: 'Brood' },
+    why: 'Needs a shapeless or radial body, a small and numerous kind, eggs or budding, or the Colony archetype' },
+  { id: 'garden', name: 'Gardeners', icon: '🌱', desc: 'Farming other living things, and technology that is grown, not built.', becomes: { land: 'a Grove of fungus farmers', sea: 'a Kelp Garden' }, resource: { land: 'Growth', sea: 'Growth' },
+    why: 'Needs a plant diet, a symbiont part, a plant part, or the Symbiote archetype' },
+];
+G.SONG_PARTS = ['echolocation', 'display_frill', 'lumen_sail', 'display_tail', 'bright_plumage', 'true_plumage', 'tail_feathers', 'great_ears', 'sail_fin', 'great_sail', 'rattle_tail', 'color_skin', 'color_storm'];
+G.MANY_PARTS = ['color_skin', 'color_storm', 'mottled_skin', 'kelp_camouflage', 'vanishing_skin', 'ink_glands', 'fore_tentacles', 'sea_tentacles', 'sucker_arms', 'clever_arms', 'boneless_f'];
+G.GARDEN_PARTS = ['moss_garden', 'kelp_garden', 'lichen_hide', 'algae_chamber', 'vent_bacteria', 'living_reef', 'anemone_crown'];
+
+const I = (o) => o;
 G.INNOVATIONS = [
-  { id: 'ambush_instinct', tier: 1, col: 0, name: 'Ambush Instinct', cost: 6, mods: { str: 1, huntBonus: 1 }, req: { diet: ['carn', 'omni'] }, excludes: ['gentle_grazing'], desc: 'Wait, watch, pounce. The mind of a hunter.' },
-  { id: 'keen_memory', tier: 1, col: 1, name: 'Keen Memory', cost: 6, mods: { cun: 1, exploreBonus: 1 }, desc: 'Remember where food was, and where danger was.' },
-  { id: 'problem_solving', tier: 1, col: 2, name: 'Problem Solving', cost: 6, mods: { cun: 2 }, req: { stat: ['cun', 6] }, desc: 'Figure out how to get the fruit down.' },
-  { id: 'alarm_calls', tier: 1, col: 4, name: 'Alarm Calls', cost: 6, mods: { tou: 1, cha: 1 }, req: { stat: ['cha', 5] }, desc: 'A shout that means "run".' },
-  { id: 'gentle_grazing', tier: 1, col: 5, name: 'Gentle Grazing', cost: 6, mods: { forageBonus: 1, cha: 1 }, req: { diet: ['herb', 'omni'] }, excludes: ['ambush_instinct'], desc: 'Patient minds, shaped by plants and peace.' },
+  // ----- Roots: your temperament -----
+  I({ id: 'patience', group: 'root', temper: 'hunter', tier: 1, name: 'Patience', cost: 6, mods: { cun: 1, huntBonus: 1 }, desc: 'Wait. Wait. Now.' }),
+  I({ id: 'reading_prey', group: 'root', temper: 'hunter', tier: 1, name: 'Reading Prey', cost: 6, mods: { cun: 1, spd: 1 }, desc: 'Know which one is weak before it knows itself.' }),
+  I({ id: 'ambush', group: 'root', temper: 'hunter', tier: 1, name: 'Ambush', cost: 6, mods: { str: 1, huntBonus: 1 }, desc: 'Strike from where they never look.' }),
+  I({ id: 'alarm_calls', group: 'root', temper: 'herd', tier: 1, name: 'Alarm Calls', cost: 6, mods: { tou: 1, cha: 1 }, desc: 'A shout that means "run".' }),
+  I({ id: 'herd_memory', group: 'root', temper: 'herd', tier: 1, name: 'Herd Memory', cost: 6, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'The old ones remember where the water was in the last drought.' }),
+  I({ id: 'safe_ground', group: 'root', temper: 'herd', tier: 1, name: 'Safe Ground', cost: 6, mods: { tou: 2 }, desc: 'Young in the middle, strongest on the outside.' }),
+  I({ id: 'trust', group: 'root', temper: 'bond', tier: 1, name: 'Trust', cost: 6, mods: { cha: 2 }, desc: 'Another kind can be family.' }),
+  I({ id: 'shared_signals', group: 'root', temper: 'bond', tier: 1, name: 'Shared Signals', cost: 6, mods: { cha: 1, cun: 1 }, desc: 'A sign your partners understand too.' }),
+  I({ id: 'gifts', group: 'root', temper: 'bond', tier: 1, name: 'Gifts', cost: 6, mods: { cha: 1, foodPerTurn: 1 }, desc: 'Food given freely comes back twice.' }),
+  I({ id: 'host_reading', group: 'root', temper: 'taker', tier: 1, name: 'Reading Hosts', cost: 6, mods: { cun: 1, cha: 1 }, desc: 'Know what they want, and give them just enough.' }),
+  I({ id: 'exploiting', group: 'root', temper: 'taker', tier: 1, name: 'Exploiting', cost: 6, mods: { cun: 1, foodPerTurn: 1 }, desc: 'Why gather what someone else has gathered?' }),
+  I({ id: 'plain_sight', group: 'root', temper: 'taker', tier: 1, name: 'Hiding in Plain Sight', cost: 6, mods: { cun: 2 }, desc: 'The best hiding place is right next to them.' }),
+  I({ id: 'division_of_labor', group: 'root', temper: 'many', tier: 1, name: 'Division of Labor', cost: 6, mods: { tou: 1, foodPerTurn: 1 }, desc: 'Some gather, some guard, some breed.' }),
+  I({ id: 'chemical_trails', group: 'root', temper: 'many', tier: 1, name: 'Chemical Trails', cost: 6, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'Follow the scent the others left.' }),
+  I({ id: 'common_will', group: 'root', temper: 'many', tier: 1, name: 'The Common Will', cost: 6, mods: { maxPop: 2 }, desc: 'No one decides. Everyone knows.' }),
+  I({ id: 'deception', group: 'root', temper: 'mask', tier: 1, name: 'Deception', cost: 6, mods: { cun: 2 }, desc: 'Look like one thing, be another.' }),
+  I({ id: 'watching', group: 'root', temper: 'mask', tier: 1, name: 'Watching', cost: 6, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'Learn their habits before they learn yours.' }),
+  I({ id: 'imitation', group: 'root', temper: 'mask', tier: 1, name: 'Imitation', cost: 6, mods: { cha: 1, cun: 1 }, desc: 'Do what they do, and they will think you are one of them.' }),
+  I({ id: 'mental_maps', group: 'root', temper: 'wanderer', tier: 1, name: 'Mental Maps', cost: 6, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'Every path you ever walked, remembered.' }),
+  I({ id: 'curiosity', group: 'root', temper: 'wanderer', tier: 1, name: 'Curiosity', cost: 6, mods: { insightPerTurn: 1 }, desc: 'What is over that hill?' }),
+  I({ id: 'season_sense', group: 'root', temper: 'wanderer', tier: 1, name: 'Season Sense', cost: 6, mods: { foodCap: 3, foodPerTurn: 1 }, desc: 'Know when to leave before the food runs out.' }),
 
-  { id: 'pack_tactics', tier: 2, col: 0, name: 'Pack Tactics', cost: 10, mods: { str: 1, huntBonus: 2 }, req: { innovation: ['ambush_instinct'] }, excludes: ['herd_defense'], desc: 'Flank, chase, ambush, together.' },
-  { id: 'teaching', tier: 2, col: 1, name: 'Teaching the Young', cost: 10, mods: { insightPerTurn: 1 }, req: { innovation: ['keen_memory'] }, desc: 'Each generation starts where the last one stopped.' },
-  { id: 'food_caching', tier: 2, col: 2, name: 'Food Caching', cost: 10, mods: { foodCap: 5, foodPerTurn: 1 }, req: { innovation: ['problem_solving'] }, desc: 'Bury it now, eat it in winter.' },
-  { id: 'lone_wanderers', tier: 2, col: 3, name: 'Lone Wanderers', cost: 10, mods: { spd: 2, exploreBonus: 2 }, req: { innovation: ['keen_memory', 'problem_solving'] }, excludes: ['grooming', 'vocal_language'], desc: 'Your kind keeps to itself and roams far.' },
-  { id: 'grooming', tier: 2, col: 4, name: 'Social Grooming', cost: 10, mods: { cha: 1, growthCost: -1 }, req: { innovation: ['alarm_calls', 'gentle_grazing'] }, excludes: ['lone_wanderers'], desc: 'Bonds that hold a group together.' },
-  { id: 'herd_defense', tier: 2, col: 5, name: 'Herd Defense', cost: 10, mods: { tou: 2, damageReduce: 1 }, req: { innovation: ['gentle_grazing', 'alarm_calls'] }, excludes: ['pack_tactics'], desc: 'Young in the middle, horns facing out.' },
+  // ----- Trunk: land or sea -----
+  I({ id: 'fire_watching', group: 'trunk', habitat: 'land', tier: 2, name: 'Watching Fire', cost: 10, mods: { cun: 1, tou: 1 }, desc: 'Lightning-struck grass teaches respect, and curiosity.' }),
+  I({ id: 'far_sight', group: 'trunk', habitat: 'land', tier: 2, name: 'Far Sight', cost: 10, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'Climb high and look out over the whole land.' }),
+  I({ id: 'weather_sense', group: 'trunk', habitat: 'land', tier: 2, name: 'Weather Sense', cost: 10, mods: { foodCap: 4, forageBonus: 1 }, desc: 'Smell the rain a day before it comes.' }),
+  I({ id: 'current_memory', group: 'trunk', habitat: 'sea', tier: 2, name: 'Current Memory', cost: 10, mods: { spd: 1, exploreBonus: 1 }, vision: true, desc: 'Every current is a road, and you know them all.' }),
+  I({ id: 'depth_sense', group: 'trunk', habitat: 'sea', tier: 2, name: 'Depth Sense', cost: 10, mods: { tou: 1, cun: 1 }, desc: 'Feel how deep you are by the weight of the water.' }),
+  I({ id: 'tide_reckoning', group: 'trunk', habitat: 'sea', tier: 2, name: 'Tide Reckoning', cost: 10, mods: { foodCap: 4, forageBonus: 1 }, desc: 'Know when the sea gives and when it takes.' }),
+  // Home: one idea from where you live (land biome or sea depth). Known ones stay if you move.
+  I({ id: 'open_country', group: 'home', home: 'plains', tier: 2, name: 'Open Country', cost: 10, mods: { spd: 1, cha: 1 }, desc: 'The plains teach you to see far and run together.' }),
+  I({ id: 'canopy_minds', group: 'home', home: 'jungle', tier: 2, name: 'Canopy Minds', cost: 10, mods: { cun: 2 }, desc: 'A world of branches is a world of choices.' }),
+  I({ id: 'water_memory', group: 'home', home: 'desert', tier: 2, name: 'Water Memory', cost: 10, mods: { tou: 1, foodCap: 3 }, desc: 'Remember every spring in the desert.' }),
+  I({ id: 'long_winter', group: 'home', home: 'tundra', tier: 2, name: 'The Long Winter', cost: 10, mods: { tou: 2 }, desc: 'Plan for the cold, or die in it.' }),
+  I({ id: 'mud_lore', group: 'home', home: 'swamp', tier: 2, name: 'Mud Lore', cost: 10, mods: { forageBonus: 2 }, desc: 'The swamp hides a feast, if you know where to dig.' }),
+  I({ id: 'tidepool_lore', group: 'home', home: 'shore', tier: 2, name: 'Tidepool Lore', cost: 10, mods: { cun: 1, forageBonus: 1 }, desc: 'Between land and sea, everything is a puzzle.' }),
+  I({ id: 'sunlit_minds', group: 'home', home: 'shallows', tier: 2, name: 'Sunlit Minds', cost: 10, mods: { cha: 1, forageBonus: 1 }, desc: 'Bright water, bright colors, many eyes watching.' }),
+  I({ id: 'reef_lore', group: 'home', home: 'reef', tier: 2, name: 'Reef Lore', cost: 10, mods: { cun: 1, tou: 1 }, desc: 'Every crack in the reef has a story.' }),
+  I({ id: 'open_water_minds', group: 'home', home: 'open', tier: 2, name: 'Open Water', cost: 10, mods: { spd: 2 }, desc: 'Nowhere to hide, so think fast.' }),
+  I({ id: 'twilight_eyes', group: 'home', home: 'twilight', tier: 2, name: 'Twilight Eyes', cost: 10, mods: { cun: 2 }, desc: 'Half-light sharpens the mind.' }),
+  I({ id: 'living_light', group: 'home', home: 'abyss', tier: 2, name: 'Living Light', cost: 10, mods: { cun: 1, cha: 1 }, desc: 'In the dark, a light is a word.' }),
 
-  { id: 'war_bands', tier: 3, col: 0, name: 'War Bands', cost: 14, mods: { str: 3 }, req: { innovation: ['pack_tactics'], trait: ['aggressive', 'feared', 'territorial'] }, excludes: ['shared_ritual'], desc: 'Organized violence. Rivals learn to fear you.' },
-  { id: 'symbolic_thought', tier: 3, col: 1, name: 'Symbolic Thought', cost: 14, mods: { cun: 2, insightPerTurn: 1 }, req: { innovation: ['teaching'] }, desc: 'This mark means that thing.' },
-  { id: 'shelters', tier: 3, col: 2, name: 'Shelters', cost: 14, mods: { tou: 2, maxPop: 3 }, req: { innovation: ['food_caching', 'herd_defense', 'pack_tactics'] }, desc: 'Nests, dens and walls against the world.' },
-  { id: 'stone_tools', tier: 3, col: 3, name: 'Tools', cost: 14, mods: { str: 2, forageBonus: 1 }, req: { innovation: ['food_caching', 'teaching', 'lone_wanderers'], tag: 'grasp' }, desc: 'A sharp edge changes everything.' },
-  { id: 'vocal_language', tier: 3, col: 4, name: 'Vocal Language', cost: 14, mods: { cha: 2 }, req: { innovation: ['grooming'] }, excludes: ['lone_wanderers'], desc: 'Sounds with meanings. Lets you speak with other species.' },
-  { id: 'shared_ritual', tier: 3, col: 5, name: 'Shared Ritual', cost: 14, mods: { cha: 2, dnaPerTurn: 1 }, req: { innovation: ['herd_defense', 'grooming'] }, excludes: ['war_bands'], desc: 'Dances and songs that everyone knows.' },
-
-  { id: 'sapience', tier: 4, col: 2.5, name: 'Self-Awareness', cost: 22, mods: { cun: 1, cha: 1 }, req: { tier3: 2 }, desc: 'You know that you are. This leads to the end of the Creature stage.' },
+  // ----- Toolmakers -----
+  I({ id: 'first_tools', group: 'path', path: 'tool', tier: 3, name: 'First Tools', cost: 14, mods: { str: 1, forageBonus: 1 }, desc: 'A stick to dig, a stone to crack.' }),
+  I({ id: 'teaching', group: 'path', path: 'tool', tier: 3, name: 'Teaching the Young', cost: 14, mods: { insightPerTurn: 1 }, desc: 'Each generation starts where the last one stopped.' }),
+  I({ id: 'crafting', group: 'path', path: 'tool', tier: 4, name: { land: 'Shaped Stone', sea: 'Shell Craft' }, cost: 18, mods: { str: 2, tou: 1 }, req: { innovation: ['first_tools'] }, desc: 'Not just a tool: a tool made to be a tool.' }),
+  I({ id: 'shelters', group: 'path', path: 'tool', tier: 4, name: 'Shelters', cost: 18, mods: { tou: 1, maxPop: 3 }, req: { innovation: ['first_tools', 'teaching'] }, desc: 'Walls against the world.' }),
+  I({ id: 'tool_cap', group: 'cap', path: 'tool', tier: 5, name: { land: 'Taming Fire', sea: 'The Vent Forge' }, cost: 24, mods: { str: 1, cun: 1 }, req: { innovation: ['crafting', 'shelters'] }, desc: { land: 'Carry the fire home. This ends the Creature stage.', sea: 'Carry the heat of the vents. This ends the Creature stage.' } }),
+  // ----- Singers -----
+  I({ id: 'call_answer', group: 'path', path: 'song', tier: 3, name: 'Call and Answer', cost: 14, mods: { cha: 2 }, desc: 'One calls, and the whole group replies.' }),
+  I({ id: 'long_memory', group: 'path', path: 'song', tier: 3, name: 'Long Memory', cost: 14, mods: { insightPerTurn: 1 }, desc: 'Songs remember what no single mind could.' }),
+  I({ id: 'song_maps', group: 'path', path: 'song', tier: 4, name: 'Song-Maps', cost: 18, mods: { spd: 1, exploreBonus: 2 }, vision: true, req: { innovation: ['call_answer', 'long_memory'] }, desc: 'A song that is a map of the whole world.' }),
+  I({ id: 'chorus', group: 'path', path: 'song', tier: 4, name: 'Chorus', cost: 18, mods: { cha: 2, tou: 1 }, req: { innovation: ['call_answer'] }, desc: 'Many voices, one song, one people.' }),
+  I({ id: 'song_cap', group: 'cap', path: 'song', tier: 5, name: { land: 'The Great Song', sea: 'The Ocean Song' }, cost: 24, mods: { cha: 2 }, req: { innovation: ['song_maps', 'chorus'] }, desc: 'A song that holds everything your kind knows. This ends the Creature stage.' }),
+  // ----- Many Minds -----
+  I({ id: 'arm_brains', group: 'path', path: 'many', tier: 3, name: 'A Brain in Every Arm', cost: 14, mods: { cun: 2 }, desc: 'Every limb thinks for itself.' }),
+  I({ id: 'color_talk', group: 'path', path: 'many', tier: 3, name: 'Color-Talk', cost: 14, mods: { cha: 2 }, desc: 'Ripples of color that say more than words.' }),
+  I({ id: 'shapeshifting', group: 'path', path: 'many', tier: 4, name: 'Shapeshifting', cost: 18, mods: { cun: 1, damageReduce: 1 }, req: { innovation: ['arm_brains'] }, desc: 'Become a rock, a weed, a predator.' }),
+  I({ id: 'watch_learn', group: 'path', path: 'many', tier: 4, name: 'Watch and Learn', cost: 18, mods: { cun: 1, insightPerTurn: 1 }, req: { innovation: ['arm_brains', 'color_talk'] }, desc: 'See it done once, and you can do it.' }),
+  I({ id: 'many_cap', group: 'cap', path: 'many', tier: 5, name: 'Minds That Meet', cost: 24, mods: { cun: 2 }, req: { innovation: ['shapeshifting', 'watch_learn'] }, desc: 'Clever loners who choose to share their dens. This ends the Creature stage.' }),
+  // ----- The Swarm -----
+  I({ id: 'castes', group: 'path', path: 'swarm', tier: 3, name: 'Castes', cost: 14, mods: { maxPop: 3 }, desc: 'Workers, soldiers, breeders: each born to its task.' }),
+  I({ id: 'pheromone_paths', group: 'path', path: 'swarm', tier: 3, name: 'Pheromone Paths', cost: 14, mods: { cun: 1, exploreBonus: 1 }, vision: true, desc: 'A road of scent that every member follows.' }),
+  I({ id: 'great_mound', group: 'path', path: 'swarm', tier: 4, name: { land: 'The Great Mound', sea: 'The Living Reef' }, cost: 18, mods: { tou: 2, maxPop: 2 }, req: { innovation: ['castes'] }, desc: 'A home that grows with every generation.' }),
+  I({ id: 'one_will', group: 'path', path: 'swarm', tier: 4, name: 'One Will', cost: 18, mods: { str: 1, tou: 1, damageReduce: 1 }, req: { innovation: ['castes', 'pheromone_paths'] }, desc: 'A thousand bodies move as one.' }),
+  I({ id: 'swarm_cap', group: 'cap', path: 'swarm', tier: 5, name: 'The Hive Mind', cost: 24, mods: { tou: 1, cun: 1 }, req: { innovation: ['great_mound', 'one_will'] }, desc: 'Many bodies, one mind. This ends the Creature stage.' }),
+  // ----- Gardeners -----
+  I({ id: 'tending', group: 'path', path: 'garden', tier: 3, name: 'Tending', cost: 14, mods: { forageBonus: 2 }, desc: 'Pull the weeds, and the good plants grow.' }),
+  I({ id: 'seed_memory', group: 'path', path: 'garden', tier: 3, name: 'Seed Memory', cost: 14, mods: { foodCap: 5, foodPerTurn: 1 }, desc: 'Remember where the good ones sprouted.' }),
+  I({ id: 'herding', group: 'path', path: 'garden', tier: 4, name: 'Herding', cost: 18, mods: { foodPerTurn: 1, cha: 1 }, req: { innovation: ['tending', 'seed_memory'] }, desc: 'Keep other creatures, and they keep you.' }),
+  I({ id: 'living_tools', group: 'path', path: 'garden', tier: 4, name: 'Living Tools', cost: 18, mods: { cun: 1, tou: 1, forageBonus: 1 }, req: { innovation: ['tending'] }, desc: 'Grow the thing you need instead of making it.' }),
+  I({ id: 'garden_cap', group: 'cap', path: 'garden', tier: 5, name: { land: 'The First Harvest', sea: 'The First Kelp Fields' }, cost: 24, mods: { forageBonus: 1, cha: 1 }, req: { innovation: ['herding', 'living_tools'] }, desc: 'You no longer find food. You grow it. This ends the Creature stage.' }),
 ];
 
 // What each cell part grows into when your lineage leaves the Cell stage.
@@ -614,19 +702,16 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '12.2';
+G.VERSION = '13';
 G.WHATS_NEW = {
-  title: 'Patch 12.2: Bodies that make sense',
+  title: 'Update 13: Other Minds',
   items: [
-    'Arms: in the Body plan you choose how many limb pairs are arms. Walk on two legs with your hands free, be a six-legged centaur, or drop your legs entirely and haul yourself along on ten arms.',
-    'Bodies balance themselves: separate front and hind limb lengths tilt the body (long hind legs lean forward; long arms knuckle-walk like a gorilla), there is a head angle, legs always sit under the body, and everything on your back now moves with it.',
-    'Tails are no longer automatic: you need a tail part to have one.',
-    'The Creature Editor is free whenever you like, big creatures are framed to fit, and on phones the buttons stay clear of the status bar even inside the Claude app.',
-    'Checks build tension: a needle swings across your odds while your creature sweats, then the result lands. Every action has a wind-up, bigger movements, and hits freeze with a screen shake.',
-    'Seasons and weather show on the map: spring showers, summer haze, autumn leaves, winter snow; plankton blooms, storms and drifting ice at sea.',
-    'Eyes and limbs matter: new events reward (and sometimes punish) many eyes, arms, standing upright and many legs.',
-    'Drifters choose their own Instinct on land or once their kind can think; on land the current becomes wanderlust.',
-    'Gene Affinities: after your first win, spend Genetic Memory to make wings, venom, armor or other mutations turn up more often.',
+    'Intelligence comes in many shapes. At the Spark of Mind your kind chooses one of five Paths of Mind: Toolmakers, Singers, Many Minds, the Swarm or Gardeners. Your body and history decide which are open, and your choice is fixed for the lineage.',
+    'A new Mind tree, built from your own story: roots from your starting cell (each archetype has its own temperament), ideas from land or sea and from where you live, then your Path, and an Awakening at the top.',
+    '10 new endings, one for each Path on land and at sea, and each named by your temperament: 70 in all. A deep-sea predator that becomes Many Minds is the Lantern Court; a grazer on land that becomes a Toolmaker is the Firekeepers.',
+    'The Codex of Endings tracks every start and ending you have reached. Each new one is worth +10 Genetic Memory.',
+    'Radial and shapeless bodies finally have a real road to intelligence, through Many Minds and the Swarm.',
+    '10 signature events, two for each Path: song duels, blights, a colony that splits, words of color and more.',
   ],
 };
 
@@ -648,6 +733,8 @@ G.TUTORIALS = [
     text: 'You are multicellular. Two new slots are open (Senses and Organ), your symmetry is fixed for good, and the world around you now matters: some places are richer or harsher than others.' },
   { id: 'creature', title: 'The Creature stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature',
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
+  { id: 'paths', title: 'Paths of Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['spark_of_mind', 'path_choice'].includes(run.event.id),
+    text: 'How your kind thinks depends on what it is. Your body and history open some Paths and lock others (locked ones say what they need). Your Path is fixed for this lineage and decides which ending, and which kind of people, you can become.' },
   { id: 'foundations', title: 'Foundations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['the_frame', 'the_young', 'the_blood'].includes(run.event.id),
     text: 'Some choices shape your whole kind: your frame, how you have young, and your blood. Each has real costs as well as strengths, and you can only choose once. They show in the Body plan tab.' },
   { id: 'seasons', title: 'Seasons', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.stageTurn > G.SEASON_LENGTH,
@@ -657,7 +744,7 @@ G.TUTORIALS = [
   { id: 'giants', title: 'The Age of Giants', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.era >= 2,
     text: 'The world has grown dangerous: every blow hurts more, and a huge new predator has arrived. Keep your herd fed and your armor up until your kind finds the Spark of Mind.' },
   { id: 'mind', title: 'The Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'mind',
-    text: 'Your kind can think. Pick what fascinates them, and Insight flows into it each turn. Some ideas lead to others; reach Sapience and you can try to become a people.' },
+    text: 'Your kind can think. Pick an idea to research, and Insight flows into it each turn. Your tree grows from your starting cell (roots), where you live (land, sea and home) and your Path of Mind. Research the Awakening at the top of your Path to try to become a people.' },
   { id: 'extinct', title: 'Extinction is not the end', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'end' && run.result && !run.result.victory,
     text: 'Every lineage earns Genetic Memory, win or lose. Spend it on the Evolution Tree to make the next one stronger. The evolutions you discovered can appear in future drafts, and your fossils wait in the Fossil Record.' },
   { id: 'tree', title: 'The Evolution Tree', when: (run, ui) => ui.screen === 'unlocks',

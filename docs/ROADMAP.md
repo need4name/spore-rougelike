@@ -70,7 +70,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 12 | **Shells, Scales and Soft Bodies** ✅ | Not every creature is a mammal | Medium |
 | 12.1 | Patch ✅ | Comparing mutations, tips, a death scene, an editor fix | Small |
 | 12.2 | Patch ✅ | Arms, self-balancing bodies, tension in checks, seasons on the map, Gene Affinities | Medium |
-| 13 | Other Minds | The Mind tree rebuilt: roots from your start, Paths of Mind, 10 endings | Large |
+| 13 | **Other Minds** ✅ | The Mind tree rebuilt: roots from your start, Paths of Mind, 10 endings | Large |
 | 14 | First Fires | **Tribe stage**, part 1: Tribe (land) and Pod (sea) | Large |
 | 15 | Many Kinds | Tribe stage, part 2: Hive, Reef-colony, Den, Grove and Kelp Garden | Large |
 | 16 | Peoples | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
@@ -314,7 +314,7 @@ From the second playtest notes:
 - **Drifters** choose their Instinct on land and once the Mind awakens.
 - **Gene Affinities:** a late-game shop (after the first win) that makes chosen families of mutations more common in drafts.
 
-## Update 13: Other Minds
+## Update 13: Other Minds ✅
 
 *Intelligence comes in many shapes.*
 
@@ -329,6 +329,13 @@ From the second playtest notes:
 - **Test bots** check that every Path wins about as often as the others.
 
 **You'll test:** whether a predator, a grazer and a symbiote think differently, not just the same tree in a new color.
+
+**What shipped:**
+- 21 root ideas (3 for each temperament), 6 land and sea ideas, 11 home ideas (one for each biome and depth), 20 Path ideas and 5 Awakenings.
+- 10 Path finales and 70 named endings.
+- The Codex of Endings.
+- 10 signature events, two for each Path.
+- Lineages that reached the Spark before this update choose a Path when they next play.
 
 ## Update 14: First Fires (Tribe stage, part 1)
 

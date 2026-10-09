@@ -241,7 +241,7 @@ window.G = window.G || {};
           <div class="res-row">
             <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="Population. At 0 your lineage is extinct.">${ICON.pop}<b>${run.pop}</b>/${max}</span>
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
-            ${run.mind ? `<span class="res insight" title="Insight toward ${fasc ? fasc.name : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
+            ${run.mind ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
             ${gimmickChip(run)}
             ${run.activity ? `<span class="res gimmick" title="Your current Activity">${esc({ war: 'War', court: 'Courting', avoid: 'Avoiding', hunt: 'Hunting', migrate: 'Migrating', scout: 'Scouting' }[run.activity.id])}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
             ${G.season(run) ? `<span class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
@@ -481,56 +481,77 @@ window.G = window.G || {};
       <article class="card finale">
         <p class="eyebrow">The Mind</p>
         <h2>What fascinates your kind?</h2>
-        <p class="note">Insight flows into it each turn (${G.insightPerTurn(run)} per turn now). Some ideas depend on your diet, your nature and what you already know, and some rule others out.</p>
+        <p class="note">Insight flows into it each turn (${G.insightPerTurn(run)} per turn now). Your tree grows from your temperament, where you live and your Path of Mind.</p>
         ${mindTree(run)}
       </article>`;
   }
 
-  // The Mind as a skill tree: rows are tiers, lines show which idea leads to which.
+  // The Mind as a skill tree, built from this lineage's pieces: roots (temperament), trunk (land or
+  // sea, plus home), its Path's ideas, and the Path's capstone. Rows are tiers.
+  const TIER_LABEL = { 1: 'Roots', 2: 'Home', 3: 'Path', 4: 'Path', 5: 'Awakening' };
+  function mindHeader(run) {
+    const tm = G.temperament(run); const pth = run.path && G.PATH[run.path];
+    const end = G.endingFor(run);
+    return `<div class="mind-head">
+        <span class="chip">${esc(tm.name)}</span>
+        ${pth ? `<span class="chip path">${pth.icon} ${esc(pth.name)}</span>` : ''}
+        ${end ? `<span class="mind-goal">Leads to <b>${esc(G.endingName(run, end))}</b>: ${esc(G.LEGACIES[end].desc)}</span>` : ''}
+      </div>`;
+  }
   function mindTree(run) {
-    const sel = G.INNOVATION[G.ui.mindSel] || G.INNOVATION[run.fascination] || G.INNOVATIONS.find((i) => G.innovationAvailable(run, i).ok) || G.INNOVATIONS[0];
+    const visible = G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv));
+    const sel = (G.ui.mindSel && visible.find((i) => i.id === G.ui.mindSel)) || (run.fascination && G.INNOVATION[run.fascination]) || visible.find((i) => G.innovationAvailable(run, i).ok) || visible[0];
     const state = (inv) => {
       if (run.innovations.includes(inv.id)) return 'done';
       if (run.fascination === inv.id) return 'current';
       const av = G.innovationAvailable(run, inv);
       return av.ok ? 'open' : av.blocked ? 'blocked' : 'locked';
     };
-    const X = (inv) => 9 + inv.col * 16.4;
-    const Y = (inv) => 11 + (inv.tier - 1) * 26;
+    const tiers = {}; visible.forEach((inv) => { (tiers[inv.tier] = tiers[inv.tier] || []).push(inv); });
+    const pos = {};
+    Object.entries(tiers).forEach(([tier, list]) => list.forEach((inv, i) => { pos[inv.id] = { x: 14 + ((i + 0.5) / list.length) * 80, y: 7 + (Number(tier) - 1) * 21.5 }; }));
+    const known = (id) => run.innovations.includes(id);
     const edges = [];
-    G.INNOVATIONS.forEach((inv) => {
-      const r = inv.req || {};
-      const parents = r.tier3 ? G.INNOVATIONS.filter((i) => i.tier === 3) : (r.innovation || []).map((id) => G.INNOVATION[id]);
-      parents.forEach((par) => {
-        const known = run.innovations.includes(par.id);
-        const cls = known && run.innovations.includes(inv.id) ? 'done' : known ? 'lit' : 'dim';
-        edges.push(`<path class="edge ${cls}" d="M${X(par)} ${Y(par) + 5} C ${X(par)} ${Y(par) + 15}, ${X(inv)} ${Y(inv) - 15}, ${X(inv)} ${Y(inv) - 5}" vector-effect="non-scaling-stroke"/>`);
-      });
+    const edge = (par, inv) => {
+      const cls = known(par.id) && known(inv.id) ? 'done' : known(par.id) ? 'lit' : 'dim';
+      const a = pos[par.id]; const b = pos[inv.id];
+      edges.push(`<path class="edge ${cls}" d="M${a.x} ${a.y + 4} C ${a.x} ${a.y + 12}, ${b.x} ${b.y - 12}, ${b.x} ${b.y - 4}" vector-effect="non-scaling-stroke"/>`);
+    };
+    visible.forEach((inv) => {
+      const explicit = ((inv.req || {}).innovation || []).map((id) => G.INNOVATION[id]).filter((p) => pos[p.id]);
+      // Rows 2 and 3 open from any idea in the row above: draw lines from the ones you know (or all, if none yet).
+      const implicit = inv.tier === 2 || inv.tier === 3 ? (tiers[inv.tier - 1] || []) : [];
+      const fromKnown = implicit.filter((p) => known(p.id));
+      (explicit.length ? explicit : fromKnown.length ? fromKnown : implicit).forEach((par) => edge(par, inv));
     });
     const icon = { done: '✓', current: '◔', open: '', blocked: '✕', locked: '🔒' };
     return `
-      <div class="skill-tree">
+      ${mindHeader(run)}
+      <div class="skill-tree mind-tree">
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
-        ${G.INNOVATIONS.map((inv) => {
-          const st = state(inv);
-          return `<button class="node ${st} ${sel.id === inv.id ? 'sel' : ''} ${inv.tier === 4 ? 'apex' : ''}" style="left:${X(inv)}%;top:${Y(inv)}%" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel.id === inv.id}" aria-label="${esc(inv.name)}"><span>${esc(inv.name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
+        ${Object.keys(tiers).map((t) => `<span class="tier-label" style="top:${7 + (Number(t) - 1) * 21.5 - 6}%">${TIER_LABEL[t]}</span>`).join('')}
+        ${visible.map((inv) => {
+          const st = state(inv); const name = G.innovationName(inv, run);
+          return `<button class="node ${st} ${sel && sel.id === inv.id ? 'sel' : ''} ${inv.group === 'cap' ? 'apex' : ''}" style="left:${pos[inv.id].x}%;top:${pos[inv.id].y}%" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel && sel.id === inv.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
         }).join('')}
       </div>
-      ${mindDetail(run, sel, state(sel))}`;
+      ${sel ? mindDetail(run, sel, state(sel)) : ''}`;
   }
 
   function mindDetail(run, sel, st) {
     const av = G.innovationAvailable(run, sel);
-    const excl = (sel.excludes || []).map((id) => G.INNOVATION[id].name);
+    const excl = (sel.excludes || []).map((id) => G.innovationName(G.INNOVATION[id], run));
     let action = '';
     if (st === 'open') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${sel.cost} Insight)</button>`;
     if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${sel.cost} Insight</span>`;
     if (st === 'done') action = '<span class="note good-text">Known</span>';
+    const where = { root: `Root: ${G.temperament(run).name}`, trunk: run.habitat === 'sea' ? 'Sea' : 'Land', home: 'Home', path: run.path ? G.PATH[run.path].name : 'Path', cap: 'Awakening: ends the Creature stage' }[sel.group];
     return `
       <div class="inv-detail">
-        <div class="inv-head"><strong>${esc(sel.name)}</strong><span>${ICON.insight} ${sel.cost}</span></div>
-        <span class="inv-mods">${esc(G.describeMods(sel.mods))}</span>
-        <span class="inv-desc">${esc(sel.desc)}</span>
+        <div class="inv-head"><strong>${esc(G.innovationName(sel, run))}</strong><span>${ICON.insight} ${sel.cost}</span></div>
+        <span class="inv-where">${esc(where)}</span>
+        <span class="inv-mods">${esc(G.describeMods(sel.mods))}${sel.vision ? ' · see more of the world map' : ''}</span>
+        <span class="inv-desc">${esc(G.innovationDesc(sel, run))}</span>
         ${excl.length ? `<span class="inv-excl">Rules out: ${esc(excl.join(', '))}</span>` : ''}
         ${!av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
         <div class="row tight">${action}</div>
@@ -562,12 +583,12 @@ window.G = window.G || {};
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
       <article class="card end ${r.victory ? 'finale' : ''}">
         <p class="eyebrow">${r.victory ? 'Prototype complete' : 'Extinction'}</p>
-        <h2>${r.victory ? esc(leg.name) : 'Your lineage is gone'}</h2>
-        <p class="event-text">${r.victory ? `${esc(leg.desc)} The Tribe stage is coming in a future update.` : `${esc(r.cause)} It lasted ${run.turn} turns and reached the ${esc(G.STAGES[run.stage].name)}${run.stage === 'creature' ? ` (${esc(G.ERAS[run.era])})` : ''}.`}</p>
+        <h2>${r.victory ? esc(G.endingName(run)) : 'Your lineage is gone'}</h2>
+        <p class="event-text">${r.victory ? `${leg.path ? `${esc(G.PATH[leg.path].name)} · ${esc(G.temperament(run).name)}. ` : ''}Your people will become ${esc(leg.desc.replace(/\.$/, '').replace(/^A /, 'a '))}. ${leg.path ? esc(G.temperament(run).rule) : ''} The Tribe stage arrives in Update 14.` : `${esc(r.cause)} It lasted ${run.turn} turns and reached the ${esc(G.STAGES[run.stage].name)}${run.stage === 'creature' ? ` (${esc(G.ERAS[run.era])})` : ''}.`}</p>
         ${(() => { const fresh = G.meta.codex.evolutions.filter((id) => !(run.knownEvos || []).includes(id)); return fresh.length ? `<div class="callout"><strong>Unlocked for future runs</strong><span>${esc(listJoin(fresh.map((id) => G.PART[id].name)))} can now appear in mutation drafts.</span></div>` : ''; })()}
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
-          <span>${b.base} from DNA collected${b.survival ? ` · +${b.survival} for surviving ${run.turn} turns` : ''}${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
+          <span>${b.base} from DNA collected${b.survival ? ` · +${b.survival} for surviving ${run.turn} turns` : ''}${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new ending in the Codex` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
         </div>
         ${G.meta.fossils.some((f) => f.run && f.run.turn <= run.turn && !f.amber) ? '<p class="note">This lineage left fossils at its milestones. Keep a favourite in amber from the Fossil Record to revive it later.</p>' : ''}
         <div class="row">
@@ -704,7 +725,7 @@ window.G = window.G || {};
 
   function traitsTab(run) {
     const list = run.traits.map((t) => ({ name: G.TRAITS[t].name, mods: G.TRAITS[t].mods, desc: G.TRAITS[t].desc }))
-      .concat(run.innovations.map((i) => ({ name: G.INNOVATION[i].name, mods: G.INNOVATION[i].mods, desc: 'Innovation' })));
+      .concat(run.innovations.filter((i) => G.INNOVATION[i]).map((i) => ({ name: G.innovationName(G.INNOVATION[i], run), mods: G.INNOVATION[i].mods, desc: 'Idea' })));
     if (!list.length) return '<p class="empty">No traits yet. Events will shape who your lineage becomes.</p>';
     return `<ul class="traits">${list.map((tr) => `<li><strong>${esc(tr.name)}</strong><span>${esc(G.describeMods(tr.mods))}</span><em>${esc(tr.desc)}</em></li>`).join('')}</ul>`;
   }
@@ -1163,7 +1184,6 @@ window.G = window.G || {};
     const events = G.EVENTS;
     const seenEvents = events.filter((e) => c.events.includes(e.id)).length;
     const seenParts = G.PARTS.filter((p) => c.parts.includes(p.id)).length;
-    const legacies = Object.keys(G.LEGACIES);
     const evos = G.EVOLUTIONS;
     const evoCard = (e) => (c.evolutions.includes(e.id)
       ? `<li class="evo-known"><strong>${esc(e.name)}${e.evolved === 2 ? ' ★' : ''}</strong><span>${esc(G.PART[e.from[0]].name)} + ${esc(G.PART[e.from[1]].name)}</span><span>${esc(G.describeMods(e.mods))}</span></li>`
@@ -1174,8 +1194,11 @@ window.G = window.G || {};
     return `
       <main class="codex">
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Codex of Life</h1></header>
-        <section><h2>Endings <span class="count">${c.legacies.length} / ${legacies.length}</span></h2>
-          <ul class="codex-grid">${legacies.map((id) => (c.legacies.includes(id) ? `<li><strong>${esc(G.LEGACIES[id].name)}</strong><span>${esc(G.LEGACIES[id].desc)}</span></li>` : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>
+        <section><h2>Codex of Endings <span class="count">${(c.endings || []).length} / ${G.ENDINGS.length * G.ARCHETYPES.length}</span></h2>
+          <p class="note">Each Path of Mind has an ending on land and one at sea, and every starting archetype gives it a different name. A new square is worth +10 Genetic Memory.</p>
+          <ul class="ending-grid">${G.ENDINGS.map((id) => { const l = G.LEGACIES[id]; const pth = G.PATH[l.path];
+            return `<li><strong>${pth.icon} ${esc(pth.name)} · ${l.habitat === 'sea' ? 'Sea' : 'Land'}</strong><span class="note">${esc(l.desc)}</span><ul>${G.ARCHETYPES.map((a) => { const tm = G.TEMPERAMENTS[a.id]; const got = (c.endings || []).includes(`${id}|${tm.id}`);
+              return `<li class="${got ? 'got' : ''}"><span>${esc(a.name)}</span><b>${got ? esc(l.flavor[tm.id]) : '???'}</b></li>`; }).join('')}</ul></li>`; }).join('')}</ul>
         </section>
         <section><h2>Evolutions <span class="count">${c.evolutions.length} / ${evos.length}</span></h2>
           <p class="note">Merge the right two parts to evolve them. Discoveries unlock new archetypes and worlds.</p>
