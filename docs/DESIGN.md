@@ -58,6 +58,13 @@ After every choice, a scene acts out what happened. When another species is invo
 
 ## Between runs
 
+**It's a roguelike.** Every check is harder by `G.HARSH` (4; finales are exempt), and predators and hostile species attack every turn, beating your Toughness plus half your Speed. A fresh lineage usually dies in the cell stage. Upgrades in the Evolution Tree pay the harshness back, so each run gets further. Test bots: a fresh bot reaches the creature stage about 25% of the time and rarely wins; a fully upgraded bot wins about 88%. In whole campaigns, bots win about 4% of first runs and 40–60% by runs 12–15.
+
+- **Evolution Tree** (22 nodes in 6 columns, about 1,300 Genetic Memory to complete): Hardy Ancestors, Ancestral Pantry, Deep Memory, Rich Genes (+10% DNA), Second Look (reroll), Amber; +1 stat nodes; Second Chance (survive extinction once per run); Short Road (DNA goals −8% per level); Wider Gene Pool; Ancestral Armor; Head Start (a free draft); and the **Twin sockets**.
+- **Twin sockets.** Normally every slot holds one part (merged or not). A Twin upgrade (Mouth, Organ, Senses, Back, Hands, Skin) lets that one slot hold a second part ("hands2"), which merges and evolves on its own.
+- **Fossil Record.** Every milestone and new stage saves a fossil (a snapshot of the run). Keep up to 1–3 in amber; reviving one costs 12–45 Genetic Memory and the run earns 60%. A gallery lists the last 30 lineages.
+- **Finales** get 1 easier per failed attempt.
+
 - **Genetic Memory** = DNA ÷ 3 + milestone bonuses + 40 for winning, × Hostility bonus.
 - **Unlocks:** archetypes, home worlds, mutation packs, ancestral boons and Hostility 1–5.
 - **Codex of Life:** every event, part and ending found.

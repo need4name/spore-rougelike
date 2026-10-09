@@ -28,6 +28,7 @@ window.G = window.G || {};
       maxHostility: 0,
       codex: { events: [], parts: [], legacies: [], evolutions: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
+      fossils: [], history: [],
     };
   }
   function mergeMeta(saved) {
@@ -35,6 +36,10 @@ window.G = window.G || {};
     if (!saved) return m;
     m.genes = saved.genes || 0;
     m.boons = saved.boons || {};
+    Object.keys(m.boons).forEach((id) => { if (!G.BOON[id]) delete m.boons[id]; else m.boons[id] = Math.min(m.boons[id], G.BOON[id].costs.length); });
+    m.fossils = saved.fossils || [];
+    m.history = saved.history || [];
+    m.seenVersion = saved.seenVersion;
     m.maxHostility = saved.maxHostility || 0;
     ['archetypes', 'origins', 'packs'].forEach((k) => {
       const list = (saved.unlocked && saved.unlocked[k]) || [];
@@ -82,7 +87,7 @@ window.G = window.G || {};
     if (run.stage !== 'creature') return [];
     const off = (G.SYMMETRY[G.symmetry(run)].off || []).slice();
     (G.segmentPlan(run).off || []).forEach((x) => { if (!off.includes(x)) off.push(x); });
-    return off;
+    return off.concat(off.map((x) => `${x}2`));
   };
   G.reshape = function (delta) {
     const run = G.run;
@@ -126,8 +131,18 @@ window.G = window.G || {};
   G.sizeLabel = (size, stage) => (stage === 'cell' ? `${Math.round(size * 30)} µm` : size * 1.2 >= 1 ? `${(size * 1.2).toFixed(1)} m` : `${Math.round(size * 120)} cm`);
 
   // Slots available right now (cell slots marked `multi` wait for multicellularity).
-  G.slotsFor = (run) => { const off = G.offSlots(run); return G.SLOTS[run.plan].filter((s) => (!s.multi || run.multicellular) && !off.includes(s.id)); };
-  G.slotName = (run, slotId) => (G.SLOTS[run.plan].find((s) => s.id === slotId) || { name: slotId }).name;
+  // Twin sockets: an Evolution Tree upgrade lets one slot hold a second part ("hands2").
+  G.twinOwned = (slotId) => G.BOONS.some((b) => b.twin === slotId && G.boonLevel(b.id) > 0);
+  G.baseSlot = (slotId) => String(slotId).replace(/2$/, '');
+  G.allSlots = (run) => {
+    const out = [];
+    G.SLOTS[run.plan].forEach((s) => { out.push(s); if (G.twinOwned(s.id)) out.push({ id: `${s.id}2`, name: `${s.name} (2nd)`, multi: s.multi, twin: true, base: s.id }); });
+    return out;
+  };
+  G.slotsFor = (run) => { const off = G.offSlots(run); return G.allSlots(run).filter((s) => (!s.multi || run.multicellular) && !off.includes(s.id)); };
+  // The sockets a part can go into right now (one, or two with a Twin upgrade).
+  G.socketsFor = (run, part) => G.slotsFor(run).filter((s) => G.baseSlot(s.id) === part.slot).map((s) => s.id);
+  G.slotName = (run, slotId) => (G.allSlots(run).find((s) => s.id === slotId) || { name: slotId }).name;
 
   // Every part id on the body, merged halves included.
   G.partIds = (run) => {
@@ -230,6 +245,7 @@ window.G = window.G || {};
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
     if (run.stage === 'creature') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
     if (run.stage === 'creature' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
+    G.BOONS.forEach((b) => { const lvl = G.boonLevel(b.id); if (b.mods && lvl) { const m = {}; Object.entries(b.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(m); } });
     if (run.hostility >= 2) list.push({ upkeep: 1 });
     if (run.hostility >= 4) list.push({ maxPop: -2 });
     return list;
@@ -271,7 +287,11 @@ window.G = window.G || {};
   G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 5) + G.mod(run, 'insightPerTurn') : 0);
 
   // Checks get harder as a creature, in later eras, and the longer you linger in one (up to +2).
-  G.difficulty = (run, base) => base + (run.stage === 'creature' ? 0.5 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  // Primordia is harsh: a fresh lineage struggles, and the Evolution Tree is how later runs get further.
+  // Every failed finale attempt teaches you something: the next try is a little easier.
+  // Finales have their own difficulty, so the extra harshness does not apply to them.
+  const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.HARSH : 0);
+  G.difficulty = (run, base) => base + G.HARSH - finaleEase(run) + (run.stage === 'creature' ? 0.5 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   G.chance = (run, stat, base) => clamp(50 + (G.stat(run, stat) - G.difficulty(run, base)) * 12, 5, 95);
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
@@ -401,6 +421,7 @@ window.G = window.G || {};
     G.meta.stats.runs += 1;
     noteParts(run);
     G.run = run;
+    if (G.boonLevel('head_start')) startDraft(run);
     save();
     return run;
   };
@@ -409,7 +430,7 @@ window.G = window.G || {};
     const base = Math.floor(run.totalDna / 3);
     const progress = (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     const winBonus = victory ? 40 : 0;
-    const mult = 1 + 0.25 * run.hostility;
+    const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
     const genes = Math.round((base + progress + winBonus) * mult);
     const m = G.meta;
     m.genes += genes;
@@ -421,10 +442,22 @@ window.G = window.G || {};
       m.stats.extinctions += 1;
     }
     m.stats.bestDna = Math.max(m.stats.bestDna || 0, run.totalDna);
-    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, mult } };
+    run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, mult, revived: !!run.revived } };
+    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? G.LEGACIES[run.legacy].name : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
+    m.history = m.history.slice(0, 30);
     run.phase = 'end';
     log(run, victory ? `${G.LEGACIES[run.legacy].name}: the age of tribes begins.` : `Extinction. ${cause}`);
     save();
+  }
+
+  // The Second Chance upgrade: once per run, a few survivors cling on.
+  function secondChance(run) {
+    if (!G.boonLevel('second_chance') || run.secondChanceUsed) return false;
+    run.secondChanceUsed = true;
+    run.pop = 3;
+    run.notices.push('Second Chance: your kind should have died out, but a few survivors cling on.');
+    log(run, 'A few survivors cling on against all odds.');
+    return true;
   }
 
   G.endRunEarly = function () {
@@ -433,7 +466,7 @@ window.G = window.G || {};
 
   // ---------- Effects ----------
   function gainDna(run, n) {
-    const amount = n > 0 ? Math.round(n * G.ORIGIN[run.origin].dnaMult) : n;
+    const amount = n > 0 ? Math.round(n * G.ORIGIN[run.origin].dnaMult * (1 + 0.1 * G.boonLevel('rich_genes'))) : n;
     run.dna = Math.max(0, run.dna + amount);
     if (amount > 0) run.totalDna += amount;
     return amount;
@@ -475,12 +508,15 @@ window.G = window.G || {};
   }
 
   // Put a part on the body: fill an empty slot, merge with what is there, or replace it.
-  function installPart(run, part, mode) {
-    const slot = run.parts[part.slot];
+  function installPart(run, part, mode, socket) {
+    // Which socket: the one asked for, else the first empty one, else the main one.
+    const sockets = G.socketsFor(run, part);
+    const key = sockets.includes(socket) ? socket : (sockets.find((k) => !run.parts[k]) || part.slot);
+    const slot = run.parts[key];
     let text;
     if (!slot) {
-      run.parts[part.slot] = { id: part.id, merged: null };
-      text = `${part.name} grows in your ${G.slotName(run, part.slot).toLowerCase()} slot`;
+      run.parts[key] = { id: part.id, merged: null };
+      text = `${part.name} grows in your ${G.slotName(run, key).toLowerCase()} slot`;
     } else if (mode === 'merge' && !slot.merged && G.canMerge(run)) {
       const before = G.slotLabel(slot);
       slot.merged = part.id;
@@ -491,16 +527,16 @@ window.G = window.G || {};
       const gone = G.PART[dropBase ? slot.id : slot.merged];
       const kept = dropBase ? slot.merged : slot.id;
       const before = G.slotLabel(slot);
-      run.parts[part.slot] = { id: kept, merged: part.id };
-      text = `${part.name} takes the place of ${gone.name}: ${before} becomes ${G.slotLabel(run.parts[part.slot])}`;
+      run.parts[key] = { id: kept, merged: part.id };
+      text = `${part.name} takes the place of ${gone.name}: ${before} becomes ${G.slotLabel(run.parts[key])}`;
     } else {
       const before = G.slotLabel(slot);
-      run.parts[part.slot] = { id: part.id, merged: null };
+      run.parts[key] = { id: part.id, merged: null };
       text = `${part.name} replaces ${before}`;
     }
     addUnique(G.meta.codex.parts, part.id);
-    const before = run.parts[part.slot] && run.parts[part.slot].merged ? [G.PART[run.parts[part.slot].id].name, G.PART[run.parts[part.slot].merged].name] : null;
-    const evo = tryEvolve(run, part.slot);
+    const before = run.parts[key] && run.parts[key].merged ? [G.PART[run.parts[key].id].name, G.PART[run.parts[key].merged].name] : null;
+    const evo = tryEvolve(run, key);
     if (evo) text = `${before[0]} + ${before[1]} evolved into ${G.PART[evo.id].name}!`;
     run.pop = Math.min(run.pop, G.maxPop(run));
     return text;
@@ -562,6 +598,7 @@ window.G = window.G || {};
         lines.push({ t: `−${eff.setback} DNA: you must grow more before trying again`, bad: true });
       }
       run.finaleRetryAt = run.turn + 3;
+      run.finaleTries = (run.finaleTries || 0) + 1;
       lines.push({ t: 'You can try again in 3 turns', bad: true });
     }
     return lines;
@@ -742,11 +779,12 @@ window.G = window.G || {};
     const run = G.run;
     if (!run || run.phase !== 'scene') return;
     const sc = run.scene;
-    if (run.pop <= 0) { endRun(run, false, 'Your lineage died out.'); return; }
+    if (run.pop <= 0 && !secondChance(run)) { endRun(run, false, 'Your lineage died out.'); return; }
     if (sc.milestone) {
       run.milestonesDone.push(sc.milestone);
       applyMilestone(run, sc.milestone);
       nextStep(run, false);
+      G.fossilize(run);
     } else if (sc.finale && sc.won) {
       if (run.stage === 'cell') evolve(run, sc.habitat);
       else endRun(run, true);
@@ -841,6 +879,18 @@ window.G = window.G || {};
       while (run.food >= cost && run.pop < G.maxPop(run) && born < Math.ceil(G.popScale(run))) { run.food -= cost; run.pop += 1; born += 1; }
       if (born) lines.push({ t: `+${born} Population (used ${born * cost} spare Food)`, good: true });
     }
+    // Predators and hostile species pick off your weakest. Toughness and Speed keep them at bay,
+    // and the longer you linger in a stage, the hungrier the world gets.
+    run.species.forEach((s) => {
+      if (s.extinct || run.pop <= 0) return;
+      const hostile = G.speciesStatus(s) === 'hostile';
+      if (s.role !== 'predator' && !hostile) return;
+      if (rand() >= (hostile ? 0.35 : 0.25) * (run.instinct === 'hide' ? 0.5 : 1)) return;
+      const atk = G.speciesStat(s, 'str') + (run.stage === 'creature' ? Math.floor(G.HARSH / 2) : G.HARSH) + Math.min(3, Math.floor(run.stageTurn / 10));
+      const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
+      const n = Math.min(3, atk - def);
+      if (n > 0) lines.push({ t: `The ${s.name} hunted you: −${damage(run, n)} Population`, bad: true });
+    });
     const regrow = G.mod(run, 'popPerTurn');
     if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} Population from symbionts`, good: true }); }
     const cap = G.foodCap(run);
@@ -852,7 +902,7 @@ window.G = window.G || {};
       lines.push({ t: `+${ins} Insight`, good: true });
     }
     run.pop = Math.min(run.pop, G.maxPop(run));
-    if (run.pop <= 0) { endRun(run, false, 'Your lineage starved.'); return; }
+    if (run.pop <= 0 && !secondChance(run)) { endRun(run, false, 'Your lineage starved.'); return; }
     const st = G.STAGES[run.stage];
     run.lastTurn = { title: `${st.turnName} ${run.stageTurn}`, lines };
     run.turn += 1; run.stageTurn += 1; run.eraTurn += 1;
@@ -903,8 +953,16 @@ window.G = window.G || {};
 
   // Decide what comes next: a mutation draft, a milestone, a choice of fascination, the finale,
   // a random event (only when time has just passed), or back to the world map.
-  function nextStep(run, allowEvent) {
+  // DNA goals for this stage, lowered by the Short Road upgrade.
+  G.goals = (run) => {
     const st = G.STAGES[run.stage];
+    const k = 1 - 0.08 * G.boonLevel('short_road');
+    const f = (n) => Math.max(1, Math.round(n * k));
+    return { drafts: st.drafts.map(f), milestones: st.milestones.map((m) => ({ ...m, at: f(m.at) })), evolveAt: st.evolveAt && f(st.evolveAt) };
+  };
+
+  function nextStep(run, allowEvent) {
+    const st = G.goals(run);
     if (run.draftsTaken < st.drafts.length && run.dna >= st.drafts[run.draftsTaken]) { startDraft(run); return; }
     const ms = st.milestones.find((m) => run.dna >= m.at && !run.milestonesDone.includes(m.event));
     if (ms) { setEvent(run, G.EVENT[ms.event]); return; }
@@ -926,7 +984,7 @@ window.G = window.G || {};
     const n = G.meta.boons.choice ? 4 : 3;
     const boost = G.ORIGIN[run.origin].boostKeyword;
     const have = G.partIds(run);
-    const empty = G.slotsFor(run).filter((s) => !run.parts[s.id]).map((s) => s.id);
+    const empty = G.slotsFor(run).filter((s) => !run.parts[s.id]).map((s) => G.baseSlot(s.id));
     let pool = G.partPool(run).filter((p) => !have.includes(p.id));
     const out = [];
     while (out.length < n && pool.length) {
@@ -944,10 +1002,10 @@ window.G = window.G || {};
     run.phase = 'draft';
   }
 
-  G.pickDraft = function (pid, mode) {
+  G.pickDraft = function (pid, mode, socket) {
     const run = G.run;
     if (!run || run.phase !== 'draft' || !run.draft.options.includes(pid)) return;
-    const text = installPart(run, G.PART[pid], mode);
+    const text = installPart(run, G.PART[pid], mode, socket);
     log(run, `Mutation: ${text}.`);
     run.draftsTaken += 1;
     run.draft = null;
@@ -1014,8 +1072,10 @@ window.G = window.G || {};
       const p = G.PART[cs.id];
       const keep = p.slot === 'mouth' || p.evolved;
       const to = keep && G.CARRY[cs.id] && G.CARRY[cs.id][run.habitat];
-      if (to && !run.parts[G.PART[to].slot]) {
-        run.parts[G.PART[to].slot] = { id: to, merged: null };
+      const toSlot = to && G.PART[to].slot;
+      const sock = to && [toSlot, `${toSlot}2`].find((k) => !run.parts[k] && (k === toSlot || G.twinOwned(toSlot)));
+      if (sock) {
+        run.parts[sock] = { id: to, merged: null };
         carried.push({ from: G.PART[cs.id].name, to: G.PART[to].name });
       } else left.push(G.slotLabel(cs));
     });
@@ -1040,20 +1100,74 @@ window.G = window.G || {};
     const run = G.run;
     if (!run || run.phase !== 'evolved') return;
     nextStep(run, false);
+    G.fossilize(run);
     save();
+  };
+
+  // ---------- Fossils and history ----------
+  // How far a run got, in words.
+  G.reachedLabel = (run) => {
+    if (run.stage === 'cell') return run.multicellular ? 'Multicellular' : 'Single cell';
+    if (run.mind) return 'Spark of Mind';
+    if (run.era >= 2) return 'Age of Giants';
+    return run.habitat === 'sea' ? 'Creature of the sea' : 'Creature of the land';
+  };
+  const reviveKey = (run) => (run.stage === 'cell' ? 'multicellular' : run.mind ? 'mind' : run.era >= 2 ? 'giants' : 'creature');
+  G.amberSlots = () => 1 + G.boonLevel('amber');
+  // Save a fossil of the run as it is now. Called after each milestone and each new stage.
+  G.fossilize = function (run) {
+    const m = G.meta;
+    const snap = JSON.parse(JSON.stringify(run));
+    snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null;
+    snap.phase = 'map'; snap.event = null; snap.scene = null; snap.draft = null; snap.evolved = null;
+    const key = reviveKey(run);
+    m.fossils.unshift({ id: `f${Date.now()}${Math.floor(rand() * 1000)}`, date: Date.now(), archetype: run.archetype, origin: run.origin, label: G.reachedLabel(run), key, turn: run.turn, amber: false, body: G.bodyOf(run), run: snap });
+    const amber = m.fossils.filter((f) => f.amber);
+    const loose = m.fossils.filter((f) => !f.amber).slice(0, G.FOSSIL_KEEP);
+    m.fossils = m.fossils.filter((f) => amber.includes(f) || loose.includes(f));
+    G.saveMeta();
+  };
+  G.setAmber = function (id, on) {
+    const f = G.meta.fossils.find((x) => x.id === id);
+    if (!f) return false;
+    if (on && !f.amber && G.meta.fossils.filter((x) => x.amber).length >= G.amberSlots()) return false;
+    f.amber = !!on;
+    G.saveMeta();
+    return true;
+  };
+  G.reviveCost = (f) => G.REVIVE_COST[f.key] || 20;
+  // Start a new run from a fossil kept in amber.
+  G.reviveFossil = function (id) {
+    const m = G.meta;
+    const f = m.fossils.find((x) => x.id === id);
+    if (!f || !f.amber || m.genes < G.reviveCost(f)) return false;
+    m.genes -= G.reviveCost(f);
+    const run = JSON.parse(JSON.stringify(f.run));
+    run.revived = true;
+    run.knownEvos = m.codex.evolutions.slice();
+    run.baseMaxPop = G.BASE_POP + G.boonLevel('hardy');
+    run.baseFoodCap = G.FOOD_CAP + 2 * G.boonLevel('pantry');
+    run.secondChanceUsed = false;
+    run.result = null; run.phase = 'map'; run.notices = ['A fossil stirs. Your lineage lives again, from where it left off. (Revived lineages earn less Genetic Memory.)'];
+    log(run, 'Revived from a fossil kept in amber.');
+    m.stats.runs += 1;
+    G.run = run;
+    save();
+    return true;
   };
 
   // ---------- Unlock shop ----------
   G.boonLevel = (id) => G.meta.boons[id] || 0;
   G.boonCost = (b) => b.costs[G.boonLevel(b.id)];
+  G.boonOpen = (b) => (b.req || []).every((id) => G.boonLevel(id) > 0);
 
   G.buy = function (kind, id) {
     const m = G.meta;
     let cost;
     if (kind === 'boon') {
-      const b = G.BOONS.find((x) => x.id === id);
+      const b = G.BOON[id];
       cost = b && G.boonCost(b);
-      if (cost == null || m.genes < cost) return false;
+      if (cost == null || m.genes < cost || !G.boonOpen(b)) return false;
       m.boons[id] = G.boonLevel(id) + 1;
     } else {
       const list = { archetypes: G.ARCHETYPES, origins: G.ORIGINS, packs: G.PACKS }[kind];

@@ -2,7 +2,7 @@
 
 The game grows in **themed updates**, like Minecraft's. Each update has one theme, a short list of what's in it, and a test checklist. After each one you play it, send feedback, and any fixes go into a small patch (6.1, 6.2…) before the next update starts.
 
-**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep) and Patch 6.1 are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
+**Done so far:** Updates 1–5 built the Cell and Creature stages: event cards, real-time map, drafts, merging, evolutions, Mind tree, flight, symmetry and body plans. **Update 6 (The Deep), Patch 6.1 and Update 7 (Bloodlines) are out.** The sea now has more parts, evolutions and events than land; Update 12 brings land back level.
 
 ---
 
@@ -62,7 +62,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 |---|---|---|---|
 | 6 | **The Deep** ✅ | The sea catches up with land | Medium |
 | 6.1 | Patch ✅ | Merging from the first cell draft, a shorter cell stage, a truer map | Small |
-| 7 | **Bloodlines** | The roguelike core: harder first runs, an upgrade tree between runs, extra part sockets, saved lineages | Large |
+| 7 | **Bloodlines** ✅ | The roguelike core: harder first runs, an upgrade tree between runs (including second sockets), saved lineages | Large |
 | 8 | **Many Ways to Live** | Every archetype gets a gimmick that changes how the whole run plays | Large |
 | 9 | **The Creature Editor** | A full editor after the cell stage: limbs, heads, proportions, colors and patterns | Large |
 | 10 | **The Living World** | A CK3-style Activities tab, a crowded world, extinctions and rising species | Large |
@@ -91,7 +91,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 |---|---|
 | Archetypes all end up playing the same | Update 8 |
 | The cell stage is too long with no merging | Patch 6.1 |
-| More than one part in some slots, like cyberware | Update 7 (sockets) and Update 9 (placing them) |
+| Like Cyberpunk: one part per slot, but an upgrade lets a slot hold two | Update 7 (Twin sockets in the Evolution Tree) |
 | A creature editor after the cell stage, with far more options | Update 9 |
 | A CK3-style Activities tab: move, war, befriend, avoid | Update 10 |
 | A more crowded world with more kinds of creature | Update 10 |
@@ -139,7 +139,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 - Friendly species settle near you; wary ones keep away.
 - Sprite size and crowd size now follow real body size and population much more strongly.
 
-## Update 7: Bloodlines
+## Update 7: Bloodlines ✅
 
 *Every run leaves a mark, and every run gets further.*
 
@@ -152,8 +152,14 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
   - An extra draft choice, and rerolls
   - Starting parts
   - Unlocking body-part families
-  - **Extra part sockets**
-- **Part sockets, like cyberware.** Some slots hold more than one part, each one its own specialism. For example: two sets of senses (eyes and echolocation), two back parts (a shell and a garden), two skins. Each socket can still merge and evolve on its own. Sockets come from the Evolution Tree and from milestones.
+  - **Twin sockets** (see below)
+- **Twin sockets, like Cyberpunk's cyberware perks.** Normally every slot holds one part (merged or not). Each "Twin" upgrade in the Evolution Tree lets **one specific slot** hold a second part, for example:
+  - **Twin Hands:** claws and grasping fingers.
+  - **Twin Senses:** big eyes and echolocation.
+  - **Twin Back:** a shell and a garden.
+  - **Twin Mouth:** fangs and a filter.
+
+  The second socket works like the first: it merges and evolves on its own, so you can have two specialisms in one area. Twin upgrades are expensive, and later ones need earlier ones first.
 - **The Fossil Record.** Every milestone saves a fossil of your lineage: its body, traits and Mind. Long runs are never lost:
   - Your favourite fossils can be kept **in amber**.
   - A new run can be started from any amber fossil, at the stage it was saved.
@@ -197,7 +203,7 @@ Each gimmick has its own display (a hunger clock for the Predator, a host bar fo
   - Where it sits: on a long neck, low and forward, or tucked into the body
   - How many eyes, and where they go
   - Jaw size
-- **Sockets:** place parts in their sockets, and see each one on the creature as you place it.
+- **Twin sockets:** see both parts on the creature and move them around.
 - **Colors and patterns, greatly expanded:**
   - Colors: base, belly, two pattern colors, and glowing or shiny accents
   - Patterns: stripes, spots, rings, rosettes, tiger, patches, countershading, gradient and iridescent

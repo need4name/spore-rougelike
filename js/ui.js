@@ -32,10 +32,14 @@ window.G = window.G || {};
     else if (s === 'setup') html = setupScreen();
     else if (s === 'unlocks') html = unlocksScreen();
     else if (s === 'codex') html = codexScreen();
+    else if (s === 'fossils') html = fossilScreen();
     else if (s === 'game') html = run ? gameScreen(run) : titleScreen();
     if (G.stopScene) G.stopScene();
     app.innerHTML = html;
     app.dataset.screen = s;
+    // Portraits of fossils and past lineages.
+    app.querySelectorAll('canvas[data-fossil]').forEach((c) => { const f = G.meta.fossils.find((x) => x.id === c.dataset.fossil); if (f) G.drawPortrait(c, f.body); });
+    app.querySelectorAll('canvas[data-history]').forEach((c) => { const h = G.meta.history[Number(c.dataset.history)]; if (h && h.body) G.drawPortrait(c, h.body); });
     if (s === 'game' && run) {
       renderParts(run, ['top', 'hud', 'modal', 'sheet', 'viewer']);
       G.startMap(app.querySelector('canvas.map'), onMapTap);
@@ -122,7 +126,8 @@ window.G = window.G || {};
         <div class="menu">
           ${live ? `<button class="btn primary" data-act="continue">Continue lineage <small>${esc(G.STAGES[G.run.stage].name)}, ${esc(G.STAGES[G.run.stage].turnName)} ${G.run.stageTurn}</small></button>` : ''}
           <button class="btn ${live ? '' : 'primary'}" data-act="setup">New lineage</button>
-          <button class="btn" data-act="go" data-arg="unlocks">Unlocks <span class="gene-count">${ICON.gene} ${m.genes}</span></button>
+          <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree and unlocks <span class="gene-count">${ICON.gene} ${m.genes}</span></button>
+          <button class="btn" data-act="go" data-arg="fossils">Fossil Record${m.fossils.some((f) => f.amber) ? ` <small>${m.fossils.filter((f) => f.amber).length} in amber</small>` : ''}</button>
           <button class="btn" data-act="go" data-arg="codex">Codex of Life</button>
         </div>
         <dl class="record">
@@ -143,6 +148,8 @@ window.G = window.G || {};
             <li>Each turn your Population eats Food. Spare Food grows your Population. Run out and you starve.</li>
             <li>DNA brings mutations. Mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
+            <li>This is a roguelike: your first lineages will die young. Spend the Genetic Memory they earn on the <b>Evolution Tree</b> (stats, more DNA, lower DNA goals, Twin sockets that let a slot hold two parts) so every lineage gets further.</li>
+            <li>Each milestone leaves a fossil. Keep a favourite in amber in the <b>Fossil Record</b> and you can revive it later, so a build you love is never lost.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
           </ol>
@@ -215,7 +222,7 @@ window.G = window.G || {};
 
   // The next thing DNA is working toward, for the progress bar.
   function nextGoal(run) {
-    const st = G.STAGES[run.stage];
+    const st = G.goals(run);
     const goals = [];
     st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: 'mutation' }));
     st.milestones.filter((m) => !run.milestonesDone.includes(m.event)).forEach((m) => goals.push({ at: m.at, label: G.EVENT[m.event].title }));
@@ -321,7 +328,6 @@ window.G = window.G || {};
             const p = G.PART[pid];
             const slot = run.parts[p.slot];
             const slotName = G.slotName(run, p.slot);
-            const canMergeHere = merging && slot && !slot.merged;
             const syn = (p.keywords || []).map((k) => {
               const have = (counts[k] || 0) + 1;
               return have >= 2 ? `<span class="syn-hint" style="--kw:${G.KEYWORDS[k].color}">${G.KEYWORDS[k].name} ${have}: ${esc(G.KEYWORDS[k].tiers[Math.min(3, have)].desc)}</span>` : '';
@@ -332,20 +338,26 @@ window.G = window.G || {};
               if (!evo) return '';
               return G.evolutionKnown(evo) ? ` → EVOLVES: ${G.PART[evo].name}` : ' → ✨ something new?';
             };
-            let buttons;
-            if (!slot) buttons = `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="grow">Grow it</button>`;
-            else if (slot.merged) {
-              // A merged slot stays merged: choose which half the new part replaces.
-              const h1 = evoHint(slot.merged); const h2 = evoHint(slot.id);
-              buttons = `<button class="btn small primary ${h1 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapBase">Swap out ${esc(G.PART[slot.id].name)}${esc(h1)}</button>`
-                + `<button class="btn small primary ${h2 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapMerged">Swap out ${esc(G.PART[slot.merged].name)}${esc(h2)}</button>`;
-            } else {
-              const h = evoHint(slot.id);
-              buttons = `${canMergeHere ? `<button class="btn small primary ${h ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="merge">Merge with ${esc(G.PART[slot.id].name)}${esc(h)}</button>` : ''}<button class="btn small ${canMergeHere ? '' : 'primary'}" data-act="draft" data-arg="${pid}" data-mode="replace">Replace ${esc(G.slotLabel(slot))}</button>`;
-            }
+            // One set of buttons per socket (two with a Twin upgrade).
+            const socks = G.socketsFor(run, p);
+            const socketButtons = (key) => {
+              const sl = run.parts[key];
+              const tag = socks.length > 1 ? `data-socket="${key}"` : '';
+              const where = socks.length > 1 ? `${key.endsWith('2') ? '2nd' : '1st'} socket: ` : '';
+              if (!sl) return `<button class="btn small primary" data-act="draft" data-arg="${pid}" data-mode="grow" ${tag}>${where}Grow it</button>`;
+              if (sl.merged) {
+                // A merged slot stays merged: choose which half the new part replaces.
+                const h1 = evoHint(sl.merged); const h2 = evoHint(sl.id);
+                return `<button class="btn small primary ${h1 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapBase" ${tag}>${where}Swap out ${esc(G.PART[sl.id].name)}${esc(h1)}</button>`
+                  + `<button class="btn small primary ${h2 ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="swapMerged" ${tag}>${where}Swap out ${esc(G.PART[sl.merged].name)}${esc(h2)}</button>`;
+              }
+              const h = evoHint(sl.id);
+              return `${merging ? `<button class="btn small primary ${h ? 'evo' : ''}" data-act="draft" data-arg="${pid}" data-mode="merge" ${tag}>${where}Merge with ${esc(G.PART[sl.id].name)}${esc(h)}</button>` : ''}<button class="btn small" data-act="draft" data-arg="${pid}" data-mode="replace" ${tag}>${where}Replace ${esc(G.slotLabel(sl))}</button>`;
+            };
+            const buttons = socks.map(socketButtons).join('');
             return `
             <div class="part-card">
-              <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}</span>
+              <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}${socks.length > 1 ? ` · 2nd: ${run.parts[socks[1]] ? esc(G.slotLabel(run.parts[socks[1]])) : 'empty'}` : ''}</span>
               <span class="opt-label">${esc(p.name)}${kwTags(p)}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
@@ -452,11 +464,13 @@ window.G = window.G || {};
         ${(() => { const fresh = G.meta.codex.evolutions.filter((id) => !(run.knownEvos || []).includes(id)); return fresh.length ? `<div class="callout"><strong>Unlocked for future runs</strong><span>${esc(listJoin(fresh.map((id) => G.PART[id].name)))} can now appear in mutation drafts.</span></div>` : ''; })()}
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
-          <span>${b.base} from DNA collected${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.mult > 1 ? ` · ×${b.mult} hostility` : ''}</span>
+          <span>${b.base} from DNA collected${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
         </div>
+        ${G.meta.fossils.some((f) => f.run && f.run.turn <= run.turn && !f.amber) ? '<p class="note">This lineage left fossils at its milestones. Keep a favourite in amber from the Fossil Record to revive it later.</p>' : ''}
         <div class="row">
           <button class="btn primary" data-act="setup">New lineage</button>
-          <button class="btn" data-act="go" data-arg="unlocks">Spend memory</button>
+          <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree</button>
+          <button class="btn" data-act="go" data-arg="fossils">Fossil Record</button>
         </div>
       </article>`;
   }
@@ -496,7 +510,7 @@ window.G = window.G || {};
 
   function bodyTab(run) {
     const counts = G.keywordCounts(run);
-    const slots = G.SLOTS[run.plan];
+    const slots = G.allSlots(run);
     return `
       <div class="stats">${G.STATS.map((s) => `<div class="stat" title="${s.name}"><span>${s.short}</span><b>${G.stat(run, s.id)}</b></div>`).join('')}</div>
       <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> (${G.sizeLabel(G.bodySize(run), run.stage)}) · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${G.SIZES[G.sizeOf(run)].eatDiv} members${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
@@ -735,27 +749,98 @@ window.G = window.G || {};
         ${owned ? '<span class="owned-tag">Unlocked</span>' : `<button class="btn small ${afford ? 'primary' : ''}" ${afford ? `data-act="buy" data-kind="${kind}" data-arg="${it.id}"` : 'disabled'}>${ICON.gene} ${it.cost}</button>`}
       </li>`;
     };
-    const boon = (b) => {
-      const lvl = G.boonLevel(b.id);
-      const cost = G.boonCost(b);
-      const maxed = cost == null;
-      const afford = !maxed && m.genes >= cost;
-      return `<li class="shop-item ${maxed ? 'owned' : ''}">
-        <div><strong>${esc(b.name)} <span class="lvl">${lvl}/${b.costs.length}</span></strong><p>${esc(b.desc)}</p></div>
-        ${maxed ? '<span class="owned-tag">Maxed</span>' : `<button class="btn small ${afford ? 'primary' : ''}" ${afford ? `data-act="buy" data-kind="boon" data-arg="${b.id}"` : 'disabled'}>${ICON.gene} ${cost}</button>`}
-      </li>`;
-    };
+
     return `
       <main class="shop">
-        <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Unlocks</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
-        <p class="note">Genetic Memory is earned from every lineage, even ones that go extinct.</p>
+        <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Evolution</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
+        <p class="note">Genetic Memory is earned from every lineage, even ones that go extinct. Spend it on the Evolution Tree to make every later run stronger and get further.</p>
+        <section><h2>Evolution Tree</h2>${evolutionTree()}</section>
         <section><h2>Archetypes</h2><ul class="shop-list">${G.ARCHETYPES.filter((a) => a.cost).map((a) => item('archetypes', a)).join('')}</ul></section>
         <section><h2>Home worlds</h2><ul class="shop-list">${G.ORIGINS.filter((o) => o.cost).map((o) => item('origins', o)).join('')}</ul></section>
         <section><h2>Mutation packs</h2><ul class="shop-list">${G.PACKS.map((p) => item('packs', p)).join('')}</ul></section>
-        <section><h2>Ancestral boons</h2><ul class="shop-list">${G.BOONS.map(boon).join('')}</ul></section>
         <section class="reset">${G.ui.confirmReset
           ? '<span>Erase all progress, unlocks and the current lineage?</span><button class="btn small danger" data-act="reset-yes">Erase everything</button><button class="btn small ghost" data-act="reset-no">Cancel</button>'
           : '<button class="btn small ghost" data-act="reset">Reset all progress</button>'}</section>
+      </main>`;
+  }
+
+  // The Evolution Tree, drawn like the Mind tree.
+  function evolutionTree() {
+    const m = G.meta;
+    const sel = G.BOON[G.ui.treeSel] || G.BOONS.find((b) => G.boonOpen(b) && G.boonCost(b) != null) || G.BOONS[0];
+    const state = (b) => {
+      const lvl = G.boonLevel(b.id);
+      if (G.boonCost(b) == null) return 'done';
+      if (!G.boonOpen(b)) return 'locked';
+      return lvl ? 'current' : 'open';
+    };
+    const X = (b) => 9 + b.col * 16.4;
+    const Y = (b) => 11 + (b.tier - 1) * 26;
+    const edges = [];
+    G.BOONS.forEach((b) => (b.req || []).forEach((rid) => {
+      const par = G.BOON[rid];
+      const cls = G.boonLevel(par.id) && G.boonLevel(b.id) ? 'done' : G.boonLevel(par.id) ? 'lit' : 'dim';
+      edges.push(`<path class="edge ${cls}" d="M${X(par)} ${Y(par) + 5} C ${X(par)} ${Y(par) + 15}, ${X(b)} ${Y(b) - 15}, ${X(b)} ${Y(b) - 5}" vector-effect="non-scaling-stroke"/>`);
+    }));
+    const icon = { done: '✓', current: '', open: '', locked: '🔒' };
+    const st = state(sel);
+    const lvl = G.boonLevel(sel.id);
+    const cost = G.boonCost(sel);
+    const afford = cost != null && m.genes >= cost && G.boonOpen(sel);
+    return `
+      <div class="skill-tree evo-tree">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
+        ${G.BOONS.map((b) => {
+          const s2 = state(b); const l2 = G.boonLevel(b.id);
+          return `<button class="node ${s2} ${sel.id === b.id ? 'sel' : ''} ${b.twin ? 'twin' : ''}" style="left:${X(b)}%;top:${Y(b)}%" data-act="tree-sel" data-arg="${b.id}" aria-pressed="${sel.id === b.id}" aria-label="${esc(b.name)}"><span>${esc(b.name)}</span>${b.costs.length > 1 && l2 ? `<i aria-hidden="true">${l2}/${b.costs.length}</i>` : icon[s2] ? `<i aria-hidden="true">${icon[s2]}</i>` : ''}</button>`;
+        }).join('')}
+      </div>
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(sel.name)}${sel.costs.length > 1 ? ` · level ${lvl}/${sel.costs.length}` : ''}</strong>${cost != null ? `<span>${ICON.gene} ${cost}</span>` : ''}</div>
+        <span class="inv-desc">${esc(sel.desc)}</span>
+        ${sel.twin ? '<span class="inv-mods">Twin socket: this slot can hold a second part, which merges and evolves on its own.</span>' : ''}
+        ${st === 'locked' ? `<span class="reason">Needs ${esc((sel.req || []).map((id) => G.BOON[id].name).join(' and '))} first</span>` : ''}
+        ${st === 'done' ? '<span class="note good-text">Fully evolved</span>' : `<button class="btn primary small" ${afford ? `data-act="buy" data-kind="boon" data-arg="${sel.id}"` : 'disabled'}>${lvl ? 'Upgrade' : 'Evolve'} (${ICON.gene} ${cost})</button>`}
+      </div>`;
+  }
+
+  // ---------- Fossil Record ----------
+  function fossilScreen() {
+    const m = G.meta;
+    const amberCount = m.fossils.filter((f) => f.amber).length;
+    const slots = G.amberSlots();
+    const when = (t) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const fossil = (f) => {
+      const cost = G.reviveCost(f);
+      const arch = G.ARCHETYPE[f.archetype];
+      return `<li class="fossil ${f.amber ? 'amber' : ''}">
+        <canvas class="portrait" data-fossil="${f.id}"></canvas>
+        <div class="fossil-info">
+          <strong>${esc(arch ? arch.name : 'Unknown')} lineage</strong>
+          <span>${esc(f.label)} · turn ${f.turn} · ${when(f.date)}</span>
+          <div class="row tight">
+            ${f.amber
+              ? `<button class="btn small primary" ${m.genes >= cost ? `data-act="revive" data-arg="${f.id}"` : 'disabled'}>Revive (${ICON.gene} ${cost})</button><button class="btn small ghost" data-act="amber-off" data-arg="${f.id}">Release</button>`
+              : `<button class="btn small" ${amberCount < slots ? `data-act="amber-on" data-arg="${f.id}"` : 'disabled'}>Keep in amber</button>`}
+          </div>
+        </div>
+      </li>`;
+    };
+    const hist = (h, i) => `<li class="fossil ${h.victory ? 'won' : ''}">
+        <canvas class="portrait" data-history="${i}"></canvas>
+        <div class="fossil-info">
+          <strong>${esc(G.ARCHETYPE[h.archetype] ? G.ARCHETYPE[h.archetype].name : '')} lineage${h.revived ? ' (revived)' : ''}</strong>
+          <span>Reached: ${esc(h.reached)} · ${h.turns} turn${h.turns === 1 ? '' : 's'} · ${when(h.date)}</span>
+          <span class="${h.victory ? 'good-text' : 'muted'}">${esc(h.cause)} · +${h.genes} Genetic Memory</span>
+        </div>
+      </li>`;
+    const live = G.run && G.run.phase !== 'end';
+    return `
+      <main class="shop">
+        <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Fossil Record</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
+        <p class="note">Every milestone leaves a fossil of your lineage. Keep your favourites in amber (${amberCount}/${slots} used; the Amber upgrade gives more room). A fossil in amber can be revived as a new run from that point. Revived lineages earn ${Math.round(G.REVIVE_MULT * 100)}% Genetic Memory.${live ? ' Reviving ends the lineage you are playing now.' : ''}</p>
+        <section><h2>Fossils</h2>${m.fossils.length ? `<ul class="fossil-list">${m.fossils.map(fossil).join('')}</ul>` : '<p class="empty">No fossils yet. Reach a milestone, like becoming multicellular, to leave one.</p>'}</section>
+        <section><h2>Past lineages</h2>${m.history.length ? `<ul class="fossil-list">${m.history.map(hist).join('')}</ul>` : '<p class="empty">No finished lineages yet.</p>'}</section>
       </main>`;
   }
 
@@ -817,7 +902,7 @@ window.G = window.G || {};
       case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
       case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; break;
       case 'continue-mutation': G.continueMutation(); parts = ['top', 'hud', 'modal']; break;
-      case 'draft': G.pickDraft(arg, el.dataset.mode); parts = ['top', 'hud', 'modal']; break;
+      case 'draft': G.pickDraft(arg, el.dataset.mode, el.dataset.socket); parts = ['top', 'hud', 'modal']; break;
       case 'reroll': G.rerollDraft(); parts = ['modal']; break;
       case 'skip-draft': G.skipDraft(); parts = ['top', 'hud', 'modal']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
@@ -839,6 +924,13 @@ window.G = window.G || {};
       case 'abandon-no': G.ui.confirmAbandon = false; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'buy': G.buy(el.dataset.kind, arg); break;
+      case 'tree-sel': G.ui.treeSel = arg; break;
+      case 'amber-on': G.setAmber(arg, true); break;
+      case 'amber-off': G.setAmber(arg, false); break;
+      case 'revive':
+        if (G.run && G.run.phase !== 'end') G.endRunEarly();
+        if (G.reviveFossil(arg)) { if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return; }
+        break;
       case 'reset': G.ui.confirmReset = true; break;
       case 'reset-no': G.ui.confirmReset = false; break;
       case 'reset-yes': G.resetAll(); go('title'); return;

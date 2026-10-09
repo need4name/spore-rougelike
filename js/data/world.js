@@ -254,14 +254,41 @@ G.PACKS = [
   { id: 'venom', name: 'Venom Glands', cost: 45, needsEvo: 1, desc: 'Adds 8 Venom parts: stylets, barbs, spurs, stingers and stinging arms.' },
 ];
 
-// Permanent upgrades bought with Genetic Memory. Each level costs the next price.
+// The Evolution Tree: permanent upgrades bought with Genetic Memory between runs.
+// Laid out like the Mind tree: col 0-5, tier 1-4 (top to bottom).
+//   costs  one price per level      req   nodes that must be bought first
+//   mods   stat changes per level   twin  slot that gains a second socket
 G.BOONS = [
-  { id: 'hardy', name: 'Hardy Ancestors', costs: [20, 40, 70], desc: '+1 max Population per level.' },
-  { id: 'pantry', name: 'Ancestral Pantry', costs: [15, 30], desc: '+3 starting Food and +2 Food storage per level.' },
-  { id: 'memory', name: 'Deep Memory', costs: [25, 50], desc: 'Start each stage with +3 DNA per level.' },
-  { id: 'reroll', name: 'Second Chances', costs: [50], desc: 'Reroll each mutation draft once.' },
-  { id: 'choice', name: 'Wider Gene Pool', costs: [80], desc: 'Mutation drafts offer 4 parts instead of 3.' },
+  { id: 'hardy', name: 'Hardy Ancestors', col: 0, tier: 1, costs: [8, 18, 35], desc: '+1 max Population per level.' },
+  { id: 'pantry', name: 'Ancestral Pantry', col: 1, tier: 1, costs: [6, 15], desc: '+3 starting Food and +2 Food storage per level.' },
+  { id: 'memory', name: 'Deep Memory', col: 2, tier: 1, costs: [8, 20], desc: 'Start each stage with +3 DNA per level.' },
+  { id: 'rich_genes', name: 'Rich Genes', col: 3, tier: 1, costs: [12, 28, 50], desc: '+10% DNA from everything, per level.' },
+  { id: 'reroll', name: 'Second Look', col: 4, tier: 1, costs: [15], desc: 'Reroll each mutation draft once.' },
+  { id: 'amber', name: 'Amber', col: 5, tier: 1, costs: [10, 25], desc: 'Keep one more fossil in amber per level (you start with room for one).' },
+  { id: 'tough_cells', name: 'Tough Cells', col: 0, tier: 2, req: ['hardy'], costs: [20, 45], mods: { tou: 1 }, desc: '+1 Toughness per level, every run.' },
+  { id: 'strong_cells', name: 'Strong Cells', col: 1, tier: 2, req: ['pantry'], costs: [20, 45], mods: { str: 1 }, desc: '+1 Strength per level, every run.' },
+  { id: 'clever_cells', name: 'Clever Cells', col: 2, tier: 2, req: ['memory'], costs: [20, 45], mods: { cun: 1 }, desc: '+1 Cunning per level, every run.' },
+  { id: 'bright_cells', name: 'Bright Cells', col: 3, tier: 2, req: ['rich_genes'], costs: [20, 45], mods: { cha: 1 }, desc: '+1 Charm per level, every run.' },
+  { id: 'twin_mouth', name: 'Twin Mouths', col: 4, tier: 2, req: ['reroll'], costs: [40], twin: 'mouth', desc: 'A second Mouth socket: two ways to eat.' },
+  { id: 'twin_organ', name: 'Twin Organs', col: 5, tier: 2, req: ['amber'], costs: [35], twin: 'organ', desc: 'A second Organ socket for multicellular cells.' },
+  { id: 'second_chance', name: 'Second Chance', col: 0, tier: 3, req: ['tough_cells'], costs: [50], desc: 'Once per run, when your kind would go extinct, a few survivors cling on.' },
+  { id: 'quick_cells', name: 'Quick Cells', col: 1, tier: 3, req: ['strong_cells'], costs: [30, 60], mods: { spd: 1 }, desc: '+1 Speed per level, every run.' },
+  { id: 'short_road', name: 'Short Road', col: 2, tier: 3, req: ['clever_cells'], costs: [35, 70], desc: 'Every DNA goal (drafts, milestones, finales) is 8% lower per level.' },
+  { id: 'choice', name: 'Wider Gene Pool', col: 3, tier: 3, req: ['bright_cells'], costs: [55], desc: 'Mutation drafts offer 4 parts instead of 3.' },
+  { id: 'twin_senses', name: 'Twin Senses', col: 4, tier: 3, req: ['twin_mouth'], costs: [60], twin: 'senses', desc: 'A second Senses socket: eyes and echolocation, say.' },
+  { id: 'twin_back', name: 'Twin Backs', col: 5, tier: 3, req: ['twin_organ'], costs: [60], twin: 'back', desc: 'A second Back (or Dorsal) socket: a shell and a garden.' },
+  { id: 'ancestral_armor', name: 'Ancestral Armor', col: 0, tier: 4, req: ['second_chance'], costs: [80], mods: { damageReduce: 1 }, desc: 'Every blow kills one fewer of you, every run.' },
+  { id: 'head_start', name: 'Head Start', col: 2, tier: 4, req: ['short_road'], costs: [70], desc: 'Every run begins with a free mutation draft.' },
+  { id: 'twin_hands', name: 'Twin Hands', col: 4, tier: 4, req: ['twin_senses'], costs: [90], twin: 'hands', desc: 'A second Hands (or Arms) socket: claws and clever fingers.' },
+  { id: 'twin_skin', name: 'Twin Skins', col: 5, tier: 4, req: ['twin_back'], costs: [80], twin: 'skin', desc: 'A second Skin socket: armor and camouflage.' },
 ];
+G.BOON = {}; G.BOONS.forEach((b) => { G.BOON[b.id] = b; });
+
+// Fossils: a snapshot at each milestone. Reviving one from amber costs Genetic Memory,
+// and a revived run earns less, so fresh runs still matter.
+G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45 };
+G.REVIVE_MULT = 0.6;
+G.FOSSIL_KEEP = 8; // recent fossils kept besides the ones in amber
 
 // Stage pacing. DNA earned in a stage triggers drafts, milestones and finally the finale.
 // Milestones are big events that change the rules (multicellularity, size, mind).
@@ -380,8 +407,9 @@ G.MOVE_COST = 3; // DNA to move to a new depth
 // Real time: seconds per turn at each speed.
 G.SPEEDS = [0, 2.4, 1.2, 0.6];
 
+G.HARSH = 4;        // extra difficulty on every check; the Evolution Tree pays it back
 G.BASE_POP = 8;      // max Population
-G.START_POP = 5;
+G.START_POP = 4;
 G.BASE_FOOD = 5;
 G.FOOD_CAP = 10;
 G.GROWTH_COST = 3;   // spare Food needed for +1 Population
@@ -412,14 +440,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '6.1';
+G.VERSION = '7';
 G.WHATS_NEW = {
-  title: 'Patch 6.1',
+  title: 'Update 7: Bloodlines',
   items: [
-    'Parts can merge from the very first cell draft, and the cell stage is about 15% shorter.',
-    'On the map, fast species dart about and slow ones plod.',
-    'Friendly species settle near you; wary ones keep away.',
-    'Giants look giant and tiny creatures look tiny. Big populations show as big crowds.',
-    'Update 6 (The Deep): sea creatures have Arms and an Underside, about 35 new sea parts, a depth map with a home depth to choose, 22 new sea events and two new sea endings.',
+    'Primordia is now a real roguelike: the world is much harsher, and predators pick off weak lineages every turn. Expect your first lineages to die in the cell stage.',
+    'The Evolution Tree: spend Genetic Memory between runs on stats, more DNA, lower DNA goals, bigger herds, rerolls, Second Chance and more, so every lineage gets further.',
+    'Twin sockets: tree upgrades that let one slot hold a second part (Twin Mouths, Senses, Backs, Hands, Skins, Organs). Each part merges and evolves on its own.',
+    'The Fossil Record: every milestone leaves a fossil. Keep favourites in amber and revive them as a new run from that point (revived runs earn less).',
+    'A gallery of every lineage you have played.',
+    'Each failed finale attempt makes the next one easier, so you never get stuck.',
   ],
 };
