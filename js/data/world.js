@@ -381,6 +381,24 @@ G.APPEARANCE = {
     { id: 'stripes', name: 'Stripes', need: { keyword: 'swift' }, why: 'Needs a Swift part' },
     { id: 'bands', name: 'Armor bands', need: { keyword: 'armor' }, why: 'Needs an Armor part' },
     { id: 'glowspots', name: 'Glow spots', need: { keyword: 'glow' }, why: 'Needs a Glow part' },
+    { id: 'rings', name: 'Rings' },
+    { id: 'patches', name: 'Patches' },
+    { id: 'countershade', name: 'Countershading' },
+    { id: 'gradient', name: 'Two-tone' },
+    { id: 'rosettes', name: 'Rosettes', need: { stat: ['cun', 5] }, why: 'Needs Cunning 5' },
+    { id: 'tiger', name: 'Tiger stripes', need: { stat: ['str', 5] }, why: 'Needs Strength 5' },
+    { id: 'iridescent', name: 'Iridescent', need: { era: 2 }, why: 'Opens in the Age of Giants' },
+  ],
+  finish: [
+    { id: 'matte', name: 'Matte' },
+    { id: 'glossy', name: 'Glossy' },
+    { id: 'glowing', name: 'Glowing edges', need: { keyword: 'glow' }, why: 'Needs a Glow part' },
+  ],
+  headPos: [
+    { id: 'neck', name: 'On the neck' },
+    { id: 'forward', name: 'Low and forward' },
+    { id: 'high', name: 'Held high' },
+    { id: 'tucked', name: 'Tucked in' },
   ],
   shape: [
     { id: 'round', name: 'Round' },
@@ -438,6 +456,28 @@ G.SEA_ZONES = [
 ];
 G.MOVE_COST = 3; // DNA to move to a new depth
 
+// The Creature Editor's sliders. Values are multipliers (1 = normal) unless noted.
+//   group  which editor tab     cap  optional function(run) giving a lower maximum, with capWhy
+G.SCULPT = [
+  { id: 'bodyLen', name: 'Body length', group: 'body', min: 0.7, max: 1.5, step: 0.05, def: 1 },
+  { id: 'bodyHeight', name: 'Body height', group: 'body', min: 0.7, max: 1.5, step: 0.05, def: 1 },
+  { id: 'spine', name: 'Back slope', group: 'body', min: -1, max: 1, step: 0.1, def: 0, ends: ['Head up', 'Head down'] },
+  { id: 'neckLen', name: 'Neck length', group: 'body', min: 0, max: 1, step: 0.05, def: 0, only: 'land', cap: (run) => (run.era >= 2 ? 1 : 0.4), capWhy: 'Longer necks open in the Age of Giants' },
+  { id: 'legLen', name: 'Limb length', group: 'limbs', min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'legThick', name: 'Limb thickness', group: 'limbs', min: 0.6, max: 1.8, step: 0.05, def: 1 },
+  { id: 'legSpread', name: 'Limb spacing', group: 'limbs', min: 0.5, max: 1.5, step: 0.05, def: 1, ends: ['Bunched', 'Far apart'] },
+  { id: 'legShift', name: 'Limb position', group: 'limbs', min: -0.5, max: 0.5, step: 0.05, def: 0, ends: ['Toward the tail', 'Toward the head'] },
+  { id: 'headSize', name: 'Head size', group: 'head', min: 0.7, max: 1.6, step: 0.05, def: 1 },
+  { id: 'eyeCount', name: 'Number of eyes', group: 'head', min: 1, max: 6, step: 1, def: 1 },
+  { id: 'eyeSize', name: 'Eye size', group: 'head', min: 0.6, max: 1.8, step: 0.05, def: 1 },
+  { id: 'jaw', name: 'Jaw size', group: 'head', min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'patScale', name: 'Pattern size', group: 'color', min: 0.5, max: 2, step: 0.05, def: 1 },
+  { id: 'patDensity', name: 'Pattern density', group: 'color', min: 0.5, max: 2, step: 0.05, def: 1 },
+];
+G.SCULPT_BY_ID = {}; G.SCULPT.forEach((x) => { G.SCULPT_BY_ID[x.id] = x; });
+G.COLOR_KEYS = ['hue', 'belly', 'accent', 'accent2']; // hue sliders, 0-359
+G.EDITOR_COST = 2; // DNA to open the editor between milestones
+
 // Real time: seconds per turn at each speed.
 G.SPEEDS = [0, 2.4, 1.2, 0.6];
 
@@ -475,17 +515,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '8';
+G.VERSION = '9';
 G.WHATS_NEW = {
-  title: 'Update 8: Many Ways to Live',
+  title: 'Update 9: The Creature Editor',
   items: [
-    'Every archetype now breaks a rule for the whole run. Read each one on the New lineage screen.',
-    'Drifter: the current picks your Instinct and carries you somewhere new every 8 turns, away from your worst enemy.',
-    'Grazer: a vast herd that earns DNA from its size, never hunts, and takes heavy losses.',
-    'Predator: food only from kills. Watch your Hunger, and devour parts from what you eat.',
-    'Symbiote: joined to a partner species. Share its strength and swap parts, but suffer when it suffers.',
-    'Parasite: live inside a host, steal its parts, and jump to a new host before it dies out.',
-    'New: Colony, which splits off allied offshoots, and Mimic, which disguises itself as other species.',
-    'Predator attacks are smoother and fairer, and the world is a little harsher overall.',
+    'When your lineage leaves the cell stage, the Creature Editor opens. It opens again, free, after every milestone, and costs 2 DNA in between (from the Look tab).',
+    'Body: shape, length, height, back slope and neck length.',
+    'Limbs: length, thickness, spacing, and how far forward or back they sit.',
+    'Head: shape, position (on the neck, low and forward, held high or tucked in), size, up to 6 eyes, eye size and jaw size.',
+    'Colors: body, belly and two pattern colors; 12 patterns with size and density sliders; matte, glossy or glowing finishes.',
+    'Every rival species now gets its own random proportions, head and pattern, so the world looks far more varied.',
   ],
 };

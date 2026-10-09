@@ -470,3 +470,17 @@ button.rival:hover { border-color: var(--accent); }
 .res.gimmick.warn { background: rgba(239, 125, 107, 0.25); color: #ffd2c9; }
 .bond { color: var(--accent); font-weight: 700; }
 .gimmick-actions { margin: 8px 0; }
+
+/* Creature Editor */
+.editor { position: fixed; inset: 0; z-index: 60; background: var(--bg, #0c1a1d); display: flex; flex-direction: column; max-width: 720px; margin: 0 auto; }
+.editor-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; }
+.editor-head h2 { margin: 0; }
+.editor-preview { flex: 0 0 34vh; padding: 0 16px; }
+.editor-canvas { width: 100%; height: 100%; display: block; border-radius: var(--radius); background: #132b30; }
+.editor .tabs { padding: 0 16px; }
+.editor-body { flex: 1; overflow-y: auto; padding: 8px 16px 32px; }
+.sculpt { margin: 10px 0 14px; }
+.sculpt label { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; }
+.sculpt output { color: var(--muted); font-weight: 400; }
+.sculpt input[type=range] { width: 100%; accent-color: var(--accent); min-height: 32px; }
+.sculpt .ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }

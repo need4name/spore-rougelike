@@ -202,7 +202,7 @@ window.G = window.G || {};
   };
   // The look actually shown: choices that are no longer allowed fall back to the first option.
   G.effectiveLook = (run) => {
-    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four', head: 'round', fins: 'plain' }, run.look || {});
+    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four', head: 'round', fins: 'plain', headPos: 'neck', finish: 'matte' }, run.look || {});
     Object.keys(G.APPEARANCE).forEach((k) => {
       const opt = G.APPEARANCE[k].find((o) => o.id === l[k]);
       if (!opt || !G.lookOptionState(run, opt).ok) l[k] = G.APPEARANCE[k][0].id;
@@ -214,13 +214,33 @@ window.G = window.G || {};
     const run = G.run;
     if (!run) return;
     run.look = run.look || {};
-    if (key === 'hue' || key === 'accent') run.look[key] = Number(value);
-    else {
+    if (G.COLOR_KEYS.includes(key)) run.look[key] = clamp(Math.round(Number(value)), 0, 359);
+    else if (G.SCULPT_BY_ID[key]) {
+      const sl = G.SCULPT_BY_ID[key];
+      run.look[key] = clamp(Number(value), sl.min, G.sculptMax(run, sl));
+    } else {
       const opt = (G.APPEARANCE[key] || []).find((o) => o.id === value);
       if (!opt || !G.lookOptionState(run, opt).ok) return;
       run.look[key] = value;
     }
     G.saveRun();
+  };
+
+  // The highest a slider can go right now (some open later in the run).
+  G.sculptMax = (run, sl) => (sl.cap ? Math.min(sl.max, sl.cap(run)) : sl.max);
+
+  // The Creature Editor opens for free when you become a creature and at each milestone after;
+  // in between it costs a little DNA.
+  G.editorCost = (run) => (run.freeEdit ? 0 : G.EDITOR_COST);
+  G.startEditing = function () {
+    const run = G.run;
+    if (!run || run.stage !== 'creature' || run.phase !== 'map') return false;
+    const cost = G.editorCost(run);
+    if (run.dna < cost) return false;
+    run.dna -= cost;
+    run.freeEdit = false;
+    G.saveRun();
+    return true;
   };
 
   G.hasTag = (run, tag) => G.partIds(run).some((id) => (G.PART[id].tags || []).includes(tag));
@@ -394,6 +414,24 @@ window.G = window.G || {};
   // How big each kind of species' population can grow.
   const SPECIES_CAP = { prey: 30, neighbor: 18, rival: 16, predator: 8 };
 
+  // Rival species get the same variety as the editor: random proportions, heads and patterns.
+  function randomLook(world) {
+    const r = (lo, hi) => Math.round((lo + rand() * (hi - lo)) * 100) / 100;
+    const opts = (key) => G.APPEARANCE[key].filter((o) => !o.only || o.only === world).map((o) => o.id);
+    const hue = Math.floor(rand() * 360);
+    return {
+      pattern: pick(opts('pattern').filter((id) => id !== 'glowspots' && id !== 'bands')),
+      shape: pick(opts('shape')), head: pick(opts('head')), eyes: pick(['round', 'sleepy', 'fierce', 'round']),
+      headPos: world === 'land' ? pick(['neck', 'neck', 'forward', 'high', 'tucked']) : 'neck', finish: pick(['matte', 'matte', 'glossy']),
+      fins: world === 'sea' ? pick(['plain', 'spiky', 'flowing', 'sharp']) : undefined,
+      accent: (hue + 120 + Math.floor(rand() * 120)) % 360, accent2: Math.floor(rand() * 360), belly: (hue + (rand() < 0.5 ? 0 : 40)) % 360,
+      bodyLen: r(0.8, 1.35), bodyHeight: r(0.8, 1.3), spine: r(-0.5, 0.5), neckLen: world === 'land' ? r(0, 0.8) : 0,
+      legLen: r(0.7, 1.45), legThick: r(0.7, 1.5), legSpread: r(0.7, 1.3), legShift: r(-0.3, 0.3),
+      headSize: r(0.8, 1.4), eyeCount: pick([1, 1, 1, 2, 3, 4]), eyeSize: r(0.7, 1.5), jaw: r(0.7, 1.4),
+      patScale: r(0.6, 1.6), patDensity: r(0.6, 1.6),
+    };
+  }
+
   // Where a sea species lives: glowing ones deep down, hunters in open water, prey on the reef.
   function speciesZone(role, body) {
     const glows = Object.values(body.parts || {}).some((sl) => sl && [sl.id, sl.merged].some((id) => id && (G.PART[id].keywords || []).includes('glow')));
@@ -414,6 +452,7 @@ window.G = window.G || {};
       const cap = Math.round(SPECIES_CAP[role] * (world === 'cell' ? 1.5 : 1));
       const sizeBase = { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (world === 'cell' ? 1 : 0.6 + rand() * 0.9);
       const zone = world === 'sea' ? speciesZone(role, body) : undefined;
+      body.look = world === 'cell' ? null : randomLook(world);
       return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(sizeBase * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), zone, ...body };
     });
   }
@@ -429,7 +468,7 @@ window.G = window.G || {};
     const sym = s.symmetry || 'bilateral';
     const n = s.segments != null ? s.segments : 2;
     const off = s.stage === 'creature' ? (G.SYMMETRY[sym].off || []).concat(sym === 'bilateral' ? (G.legPlan(n).off || []) : []) : [];
-    return { stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2.5 ? ['giant'] : [], symmetry: sym, segments: n, off };
+    return { stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2.5 ? ['giant'] : [], symmetry: sym, segments: n, off, look: s.look || null };
   };
 
   // ---------- Starting and ending runs ----------
@@ -547,7 +586,7 @@ window.G = window.G || {};
     const parts = {};
     Object.entries(run.parts).forEach(([k, v]) => { if (v && !k.endsWith('2')) parts[k] = { id: v.id, merged: v.merged }; });
     run.species.push({ name, role: 'neighbor', diet: G.diet(run), opinion: 100, hue: (body.hue + 25) % 360, size: G.bodySize(run), seed: Math.floor(rand() * 1000), world, cap: 14, pop: n,
-      plan: run.plan, stage: run.stage, multicellular: run.multicellular, parts, symmetry: G.symmetry(run), segments: G.segments(run), zone: run.habitat === 'sea' ? G.zone(run) : undefined, bud: true });
+      plan: run.plan, stage: run.stage, multicellular: run.multicellular, parts, symmetry: G.symmetry(run), segments: G.segments(run), zone: run.habitat === 'sea' ? G.zone(run) : undefined, bud: true, look: run.stage === 'creature' ? G.effectiveLook(run) : null });
     lines.push({ t: `${n} of you split off and founded the ${name}, your allies`, good: true });
     run.notices.push(`Part of your colony split off and founded the ${name}. They are your allies.`);
     log(run, `The ${name} budded off from your colony.`);
@@ -1031,6 +1070,7 @@ window.G = window.G || {};
   }
 
   function applyMilestoneInner(run, id) {
+    if (run.stage === 'creature') run.freeEdit = true;
     if (id === 'multicellularity') {
       run.multicellular = true;
       run.notices.push('You are multicellular. Two new body slots are open: Senses and Organ.');
@@ -1345,6 +1385,7 @@ window.G = window.G || {};
     run.quietTicks = 1;
     noteParts(run);
     run.evolved = { heritage, cellParts, carried, left };
+    run.freeEdit = true;
     run.notices = [];
     log(run, `Your lineage ${run.habitat === 'land' ? 'leaves the water for the land' : 'claims the open sea'}. It carries the ${G.TRAITS[heritage].name} trait.`);
     run.phase = 'evolved';

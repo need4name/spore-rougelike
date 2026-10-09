@@ -41,7 +41,7 @@ window.G = window.G || {};
     app.querySelectorAll('canvas[data-fossil]').forEach((c) => { const f = G.meta.fossils.find((x) => x.id === c.dataset.fossil); if (f) G.drawPortrait(c, f.body); });
     app.querySelectorAll('canvas[data-history]').forEach((c) => { const h = G.meta.history[Number(c.dataset.history)]; if (h && h.body) G.drawPortrait(c, h.body); });
     if (s === 'game' && run) {
-      renderParts(run, ['top', 'hud', 'modal', 'sheet', 'viewer']);
+      renderParts(run, ['top', 'hud', 'modal', 'sheet', 'viewer', 'editor']);
       G.startMap(app.querySelector('canvas.map'), onMapTap);
     }
   }
@@ -66,6 +66,16 @@ window.G = window.G || {};
       const nb = app.querySelector('.sheet-body');
       if (nb && G.ui.keepScroll) nb.scrollTop = scroll;
       G.ui.keepScroll = false;
+    }
+    if (parts.includes('editor')) {
+      const old = app.querySelector('.editor-body');
+      const scroll = old ? old.scrollTop : 0;
+      const el = put('#editor', editor(run));
+      const c = el && el.querySelector('canvas.editor-canvas');
+      if (c) G.playEditor(c);
+      const nb = app.querySelector('.editor-body');
+      if (nb && G.ui.keepEditorScroll) nb.scrollTop = scroll;
+      G.ui.keepEditorScroll = false;
     }
     if (parts.includes('viewer')) {
       const el = put('#viewer', viewer(run));
@@ -149,6 +159,7 @@ window.G = window.G || {};
             <li>DNA brings mutations. Mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>This is a roguelike: your first lineages will die young. Spend the Genetic Memory they earn on the <b>Evolution Tree</b> (stats, more DNA, lower DNA goals, Twin sockets that let a slot hold two parts) so every lineage gets further.</li>
+            <li>When you become a creature, and after each milestone, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns.</li>
             <li>Each milestone leaves a fossil. Keep a favourite in amber in the <b>Fossil Record</b> and you can revive it later, so a build you love is never lost.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
@@ -744,22 +755,66 @@ window.G = window.G || {};
   }
 
   // The appearance editor. Some looks unlock with progress.
-  function lookTab(run) {
+  // A chip group for one appearance option list (locked options show why).
+  function lookGroup(run, key, title) {
     const L = G.effectiveLook(run);
-    const hue = G.bodyOf(run).hue;
-    const acc = run.look && run.look.accent != null ? run.look.accent : (hue + 40) % 360;
-    const group = (key, title) => `
-      <div class="look-group"><h3>${title}</h3><div class="chips">${G.APPEARANCE[key].filter((o) => !o.only || o.only === run.habitat).map((o) => {
+    const list = G.APPEARANCE[key].filter((o) => !o.only || o.only === run.habitat);
+    const locked = list.filter((o) => !G.lookOptionState(run, o).ok);
+    return `
+      <div class="look-group"><h3>${title}</h3><div class="chips">${list.map((o) => {
         const st = G.lookOptionState(run, o);
         const on = L[key] === o.id;
         return `<button class="chip ${on ? 'on' : ''}" ${st.ok ? `data-act="look" data-kind="${key}" data-arg="${o.id}"` : 'disabled'} aria-pressed="${on}" title="${esc(st.ok ? o.name : o.why)}">${esc(o.name)}${st.ok ? '' : ' 🔒'}</button>`;
-      }).join('')}</div>${G.APPEARANCE[key].some((o) => !G.lookOptionState(run, o).ok && !G.lookOptionState(run, o).hidden) ? `<p class="note">${esc(G.APPEARANCE[key].filter((o) => !G.lookOptionState(run, o).ok && !G.lookOptionState(run, o).hidden).map((o) => `${o.name}: ${o.why}`).join(' · '))}</p>` : ''}</div>`;
+      }).join('')}</div>${locked.length ? `<p class="note">${esc(locked.map((o) => `${o.name}: ${o.why}`).join(' · '))}</p>` : ''}</div>`;
+  }
+  // A slider for one sculpt value.
+  function sculptSlider(run, sl) {
+    const L = G.effectiveLook(run);
+    const v = L[sl.id] != null ? L[sl.id] : sl.def;
+    const max = G.sculptMax(run, sl);
+    const shown = sl.step >= 1 ? v : `${Math.round(v * 100)}%`;
+    return `<div class="sculpt"><label for="sc-${sl.id}"><span>${esc(sl.name)}</span><output data-out="${sl.id}">${sl.ends ? '' : shown}</output></label>
+      <input id="sc-${sl.id}" type="range" min="${sl.min}" max="${max}" step="${sl.step}" value="${Math.min(v, max)}" data-look="${sl.id}">
+      ${sl.ends ? `<div class="ends"><span>${esc(sl.ends[0])}</span><span>${esc(sl.ends[1])}</span></div>` : ''}
+      ${max < sl.max ? `<p class="note">${esc(sl.capWhy)}</p>` : ''}</div>`;
+  }
+  function hueSlider(run, key, title, def) {
+    const v = run.look && run.look[key] != null ? run.look[key] : def;
+    return `<div class="look-group"><h3>${title}</h3><input type="range" min="0" max="359" value="${v}" data-look="${key}" style="--h:${v}" class="hue-slider" aria-label="${title}"></div>`;
+  }
+
+  // The Look tab: a preview and the way into the Creature Editor.
+  function lookTab(run) {
+    const cost = G.editorCost(run);
+    const can = run.phase === 'map' && run.dna >= cost;
     return `
       <div class="look-preview"><canvas class="portrait huge"></canvas></div>
-      <div class="look-group"><h3>Body color</h3><input id="look-hue" type="range" min="0" max="359" value="${hue}" data-look="hue" style="--h:${hue}" class="hue-slider" aria-label="Body color"></div>
-      <div class="look-group"><h3>Pattern color</h3><input id="look-accent" type="range" min="0" max="359" value="${acc}" data-look="accent" style="--h:${acc}" class="hue-slider" aria-label="Pattern color"></div>
-      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${group('head', 'Head')}${run.habitat === 'sea' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('fins', 'Fins') : ''}${run.habitat === 'land' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('neck', 'Neck') + (G.segments(run) === 2 ? group('posture', 'Posture') : '') : ''}${group('eyes', 'Eyes')}
-      <p class="note">Looks are just looks: they never change your stats.</p>`;
+      <button class="btn primary wide" ${can ? 'data-act="editor-open"' : 'disabled'}>Open the Creature Editor${cost ? ` (${cost} DNA)` : ' (free now)'}</button>
+      <p class="note">Change your body's proportions, limbs, head, colors and patterns. The editor is free when you become a creature and after each milestone; in between it costs ${G.EDITOR_COST} DNA. Looks never change your stats.</p>`;
+  }
+
+  // The Creature Editor: a live preview with four tabs of controls.
+  function editor(run) {
+    if (!G.ui.editor || !run || run.stage !== 'creature') return '';
+    const tab = G.ui.editorTab || 'body';
+    const sea = run.habitat === 'sea';
+    const bilateral = G.symmetry(run) === 'bilateral';
+    const legs = bilateral && G.segments(run) > 0;
+    const sliders = (group) => G.SCULPT.filter((sl) => sl.group === group && (!sl.only || sl.only === run.habitat)).map((sl) => sculptSlider(run, sl)).join('');
+    const hue = G.bodyOf(run).hue;
+    const panels = {
+      body: () => `${lookGroup(run, 'shape', 'Body shape')}${sliders('body')}${!sea && legs && G.segments(run) === 2 ? lookGroup(run, 'posture', 'Posture') : ''}`,
+      limbs: () => `${legs || !bilateral ? sliders('limbs') : '<p class="empty">Your body has no limbs. Change that in the Body plan tab.</p>'}${sea && legs ? lookGroup(run, 'fins', 'Fins') : ''}`,
+      head: () => `${lookGroup(run, 'head', 'Head shape')}${!sea && bilateral ? lookGroup(run, 'headPos', 'Head position') : ''}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
+      color: () => `${hueSlider(run, 'hue', 'Body color', hue)}${hueSlider(run, 'belly', 'Belly color', hue)}${hueSlider(run, 'accent', 'Pattern color', (hue + 40) % 360)}${hueSlider(run, 'accent2', 'Second pattern color', (hue + 70) % 360)}${lookGroup(run, 'pattern', 'Pattern')}${sliders('color')}${lookGroup(run, 'finish', 'Finish')}`,
+    };
+    const tabs = [['body', 'Body'], ['limbs', sea ? 'Fins' : 'Limbs'], ['head', 'Head'], ['color', 'Colors']];
+    return `<div class="editor" role="dialog" aria-modal="true" aria-label="Creature Editor">
+      <header class="editor-head"><h2>Creature Editor</h2><button class="btn small primary" data-act="editor-done">Done</button></header>
+      <div class="editor-preview"><canvas class="editor-canvas"></canvas></div>
+      <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="editor-tab" data-arg="${id}">${label}</button>`).join('')}</div>
+      <div class="editor-body">${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
+    </div>`;
   }
 
   function viewerBody(run) {
@@ -785,6 +840,7 @@ window.G = window.G || {};
         <div class="world"><canvas class="map" aria-label="World map"></canvas><div id="hud" class="map-hud"></div><div id="modal"></div></div>
         <div id="sheet"></div>
         <div id="viewer"></div>
+        <div id="editor"></div>
       </div>`;
   }
 
@@ -951,14 +1007,17 @@ window.G = window.G || {};
       case 'pick-hostility': G.ui.setup.hostility = Number(arg); break;
       case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility); if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
       case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
-      case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; break;
+      case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
       case 'continue-mutation': G.continueMutation(); parts = ['top', 'hud', 'modal']; break;
       case 'draft': G.pickDraft(arg, el.dataset.mode, el.dataset.socket); parts = ['top', 'hud', 'modal']; break;
       case 'reroll': G.rerollDraft(); parts = ['modal']; break;
       case 'skip-draft': G.skipDraft(); parts = ['top', 'hud', 'modal']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
-      case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; break;
+      case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
+      case 'editor-open': if (G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; G.ui.sheet = null; } parts = ['top', 'sheet', 'editor']; break;
+      case 'editor-done': G.ui.editor = false; parts = ['top', 'editor', 'sheet']; break;
+      case 'editor-tab': G.ui.editorTab = arg; parts = ['editor']; break;
       case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'zone': G.setZone(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'steal': G.stealFromHost(); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
@@ -966,7 +1025,7 @@ window.G = window.G || {};
       case 'mimic': G.mimicSpecies(arg); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'swap': G.swapWithPartner(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
-      case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;
       case 'species-back': G.ui.speciesView = null; parts = ['sheet']; break;
@@ -995,11 +1054,20 @@ window.G = window.G || {};
   });
 
   // Color sliders update the look live.
+  // The editor opens by itself (for free) after becoming a creature and after each milestone.
+  function autoEditor(parts) {
+    const run = G.run;
+    if (run && run.freeEdit && run.stage === 'creature' && run.phase === 'map' && G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); }
+  }
+
   app.addEventListener('input', (e) => {
     const el = e.target.closest('[data-look]');
     if (!el) return;
     G.setLook(el.dataset.look, el.value);
     el.style.setProperty('--h', el.value);
+    const out = app.querySelector(`output[data-out="${el.dataset.look}"]`);
+    const sl = G.SCULPT_BY_ID[el.dataset.look];
+    if (out && sl && !sl.ends) out.textContent = sl.step >= 1 ? el.value : `${Math.round(el.value * 100)}%`;
     const prev = app.querySelector('.look-preview canvas');
     if (prev) G.drawPortrait(prev, G.run);
     const top = app.querySelector('#tb canvas.portrait');
@@ -1014,7 +1082,7 @@ window.G = window.G || {};
     const dt = Math.min(0.25, (now - lastT) / 1000);
     lastT = now;
     const run = G.run;
-    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && G.ui.speed > 0;
+    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && G.ui.speed > 0;
     const per = G.SPEEDS[G.ui.speed] || 1;
     if (running) {
       acc += dt;

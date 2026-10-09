@@ -53,13 +53,36 @@ window.G = window.G || {};
   }
 
   // Body patterns from the appearance editor, drawn inside a clipped body shape.
+  // Body patterns from the editor, drawn inside a clipped body shape centred on 0,0.
+  // Pattern size and density scale every pattern; a second pattern color mixes in.
+  const prand = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
   function pattern(L, rx, ry, S, hue, t) {
-    const col = hsl(L.accent != null ? L.accent : hue + 40, 55, 40, 0.55);
-    if (L.pattern === 'spots') [[-0.55, -0.35], [-0.1, -0.55], [0.35, -0.25], [-0.3, 0.2], [0.15, 0.25], [0.6, 0.05]].forEach(([dx, dy], i) => dot(dx * rx, dy * ry, S * (0.025 + (i % 3) * 0.008), col));
-    if (L.pattern === 'stripes') for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * rx * 0.3, -ry); ctx.quadraticCurveTo(i * rx * 0.3 + rx * 0.12, 0, i * rx * 0.3, ry); ctx.strokeStyle = col; ctx.lineWidth = S * 0.025; ctx.stroke(); }
-    if (L.pattern === 'bands') for (let i = -2; i <= 2; i++) { ctx.fillStyle = col; ctx.fillRect(i * rx * 0.4 - S * 0.02, -ry, S * 0.04, ry * 2); }
-    if (L.pattern === 'glowspots') glow(GLOW, 8, () => { for (let i = 0; i < 7; i++) dot(-rx * 0.7 + i * rx * 0.23, -ry * 0.3 + (i % 2) * ry * 0.35, S * (0.012 + 0.004 * Math.sin(t * 3 + i)), GLOW); });
+    const a1 = L.accent != null ? L.accent : hue + 40;
+    const a2 = L.accent2 != null ? L.accent2 : a1 + 30;
+    const col = hsl(a1, 55, 40, 0.6); const col2 = hsl(a2, 60, 55, 0.7);
+    const sc = L.patScale || 1; const dn = L.patDensity || 1;
+    const n = (k) => Math.max(1, Math.round(k * dn));
+    switch (L.pattern) {
+      case 'spots': for (let i = 0; i < n(7); i++) dot((prand(i) * 2 - 1) * rx * 0.85, (prand(i + 50) * 2 - 1) * ry * 0.75, S * (0.022 + prand(i + 9) * 0.014) * sc, i % 3 === 2 ? col2 : col); break;
+      case 'stripes': { const k = n(7); for (let i = 0; i < k; i++) { const x = -rx + ((i + 0.5) / k) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.12, 0, x, ry); ctx.strokeStyle = i % 2 ? col2 : col; ctx.lineWidth = S * 0.022 * sc; ctx.stroke(); } break; }
+      case 'bands': { const k = n(5); for (let i = 0; i < k; i++) { ctx.fillStyle = i % 2 ? col2 : col; ctx.fillRect(-rx + ((i + 0.5) / k) * rx * 2 - S * 0.02 * sc, -ry, S * 0.04 * sc, ry * 2); } break; }
+      case 'glowspots': glow(GLOW, 8, () => { for (let i = 0; i < n(7); i++) dot((prand(i + 3) * 2 - 1) * rx * 0.8, (prand(i + 70) * 2 - 1) * ry * 0.5, S * (0.012 + 0.004 * Math.sin(t * 3 + i)) * sc, GLOW); }); break;
+      case 'rings': for (let i = 0; i < n(6); i++) { const x = (prand(i + 5) * 2 - 1) * rx * 0.8; const y = (prand(i + 25) * 2 - 1) * ry * 0.65; const r = S * (0.028 + prand(i) * 0.012) * sc; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = col; ctx.lineWidth = r * 0.45; ctx.stroke(); dot(x, y, r * 0.45, col2); } break;
+      case 'rosettes': for (let i = 0; i < n(9); i++) { const x = (prand(i + 11) * 2 - 1) * rx * 0.85; const y = (prand(i + 41) * 2 - 1) * ry * 0.7; const r = S * 0.025 * sc; dot(x, y, r * 0.8, col2); for (let k = 0; k < 4; k++) { const a = k * 1.6 + i; dot(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.35, hsl(a1, 50, 22, 0.8)); } } break;
+      case 'tiger': { const k = n(6); for (let i = 0; i < k; i++) { const x = -rx * 0.9 + ((i + 0.5) / k) * rx * 1.8; const len = ry * (1.1 + prand(i) * 0.6); ctx.beginPath(); ctx.moveTo(x - S * 0.02 * sc, -ry); ctx.lineTo(x + S * 0.03 * sc, -ry + len * 0.5); ctx.lineTo(x - S * 0.005, -ry + len); ctx.lineTo(x + S * 0.01 * sc, -ry); ctx.closePath(); ctx.fillStyle = hsl(a1, 40, 15, 0.75); ctx.fill(); } break; }
+      case 'patches': for (let i = 0; i < n(6); i++) { const x = -rx * 0.8 + ((i + prand(i + 17) * 0.6) / n(6)) * rx * 1.7; const y = (prand(i + 33) * 2 - 1) * ry * 0.5; ctx.beginPath(); ctx.ellipse(x, y, rx * 0.22 * sc * (0.7 + prand(i + 2) * 0.6), ry * 0.35 * sc, prand(i + 4) * 3, 0, Math.PI * 2); ctx.fillStyle = i % 2 ? col2 : col; ctx.fill(); } break;
+      case 'countershade': { const g = ctx.createLinearGradient(0, -ry, 0, ry); g.addColorStop(0, hsl(a1, 45, 30, 0.75)); g.addColorStop(0.45 / sc, hsl(a1, 45, 30, 0.3)); g.addColorStop(Math.min(1, 0.55 / sc + 0.1), 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(-rx, -ry, rx * 2, ry * 2); break; }
+      case 'gradient': { const g = ctx.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, hsl(a1, 60, 50, 0.75)); g.addColorStop(1, hsl(a2, 60, 55, 0.75)); ctx.fillStyle = g; ctx.fillRect(-rx, -ry, rx * 2, ry * 2); break; }
+      case 'iridescent': { const k = n(6); for (let i = 0; i < k; i++) { const x = -rx + ((i + ((t * 0.3) % 1)) / k) * rx * 2; ctx.fillStyle = hsl((a1 + i * 50 + t * 40) % 360, 80, 65, 0.3); ctx.fillRect(x, -ry, rx * 2 / k * sc, ry * 2); } break; }
+      default: break;
+    }
   }
+  // Glossy highlights and glowing edges from the editor's finish setting.
+  function finish(L, x, y, rx, ry) {
+    if (L.finish === 'glossy') { ctx.beginPath(); ctx.ellipse(x - rx * 0.2, y - ry * 0.5, rx * 0.45, ry * 0.18, -0.15, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.fill(); }
+    if (L.finish === 'glowing') glow(hsl(L.accent != null ? L.accent : 175, 85, 65), 14, () => { ctx.beginPath(); ctx.ellipse(x, y, rx * 1.01, ry * 1.01, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(L.accent != null ? L.accent : 175, 85, 70, 0.8); ctx.lineWidth = 2.5; ctx.stroke(); });
+  }
+  const bellyCol = (L, hue) => (L.belly != null ? hsl(L.belly, 45, 72) : null);
 
   function sizeScale(b) {
     if (b.traits.includes('giant')) return 1.22;
@@ -198,19 +221,26 @@ window.G = window.G || {};
     const biped = nSeg === 1 || (nSeg === 2 && (b.look ? L.posture === 'two' : H.has('upright_legs')));
     // Long bones and evolved limbs make taller creatures; stubby legs make squat ones.
     const longLegs = (H.has('long_bones_h') ? 1.15 : 1) * (E.hindLimbs ? 1.18 + 0.12 * (E.hindLimbs - 1) : 1) * (p.hindLimbs === 'stubby_hindlegs' && !E.hindLimbs ? 0.75 : 1);
-    const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs;
+    const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs * (L.legLen || 1);
+    const legThick = L.legThick || 1;
     const flying = H.has('feathered_wings') || H.has('true_wings');
     const SHAPES = { slim: [0.9, 0.82], long: [1.25, 0.92], flat: [1.12, 0.72], tall: [0.88, 1.28], pear: [1, 1.05], hunched: [0.95, 1.1] };
     const [shapeX, shapeY] = SHAPES[L.shape] || [1, 1];
     // Extra leg pairs stretch the body into a segmented crawler.
     const segLen = nSeg >= 3 ? 1 + 0.2 * (nSeg - 2) : 1;
-    const rx = S * (biped ? 0.17 : 0.27) * shapeX * segLen / Math.sqrt(segLen); const ry = S * (biped ? 0.24 : 0.15) * shapeY / Math.sqrt(segLen);
+    const rx = S * (biped ? 0.17 : 0.27) * shapeX * segLen / Math.sqrt(segLen) * (L.bodyLen || 1); const ry = S * (biped ? 0.24 : 0.15) * shapeY / Math.sqrt(segLen) * (L.bodyHeight || 1);
     const cy = ground - legLen - ry * 0.8 + Math.sin(t * 1.6) * 1.5;
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 70);
-    const longNeck = L.neck === 'long';
-    const hx = biped ? cx + rx * 0.4 : cx + rx * 0.95 + (longNeck ? S * 0.06 : 0);
-    const hy = biped ? cy - ry * 1.15 : cy - ry * 0.6 - (longNeck ? S * 0.16 : 0);
-    const hr = S * 0.1 * (E.mouth ? 1.15 + 0.1 * E.mouth : 1) * (E.senses ? 1.05 : 1);
+    // Neck length is a slider; the old "long neck" option counts as most of the way.
+    const neck = Math.max(L.neck === 'long' ? 0.8 : 0, L.neckLen || 0);
+    const longNeck = neck > 0.5;
+    const pos = L.headPos || 'neck';
+    let hx = biped ? cx + rx * 0.4 : cx + rx * 0.95 + neck * S * 0.08;
+    let hy = biped ? cy - ry * 1.15 : cy - ry * 0.6 - neck * S * 0.2;
+    if (pos === 'forward' && !biped) { hx += S * 0.06; hy = cy + ry * 0.05 - neck * S * 0.05; }
+    if (pos === 'high') { hy -= S * 0.06; hx -= S * 0.02; }
+    if (pos === 'tucked') { hx = biped ? cx + rx * 0.55 : cx + rx * 0.9; hy = biped ? cy - ry * 0.85 : cy - ry * 0.25; }
+    const hr = S * 0.1 * (E.mouth ? 1.15 + 0.1 * E.mouth : 1) * (E.senses ? 1.05 : 1) * (L.headSize || 1);
 
     ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
 
@@ -268,7 +298,7 @@ window.G = window.G || {};
     function leg(x, top, len, kind, foot, col, swing, front) {
       const gy = top + len;
       const ev = front ? E.frontLimbs : E.hindLimbs;
-      const muscle = H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1;
+      const muscle = (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1) * legThick;
       if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); }
       else if (kind === 'fore_tentacles' || H.has(front ? 'boneless_f' : '__none')) { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03 * muscle, front ? 2 : 0); if (kind === 'fore_tentacles') return; }
       else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); }
@@ -315,6 +345,10 @@ window.G = window.G || {};
       hindX = [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
       frontX = [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
     }
+    // The editor moves legs closer together or apart, and toward the head or tail.
+    const spread = L.legSpread || 1; const shift = (L.legShift || 0) * rx;
+    hindX = hindX.map((x) => cx + (x - cx) * spread + shift);
+    frontX = frontX.map((x) => cx + (x - cx) * spread + shift);
     // far side
     hindX.forEach((x, i) => p.hindLimbs && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, backCol, Math.sin(t * 2 + i) * 3, false));
     frontX.forEach((x) => p.frontLimbs && !H.has('wing_membranes') && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, backCol, Math.sin(t * 2 + 1) * 3, true));
@@ -322,9 +356,9 @@ window.G = window.G || {};
     // Body
     if (L.shape === 'pear') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.45, cy + ry * 0.15, rx * 0.6, ry * 1.05, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     if (L.shape === 'hunched') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.55, rx * 0.6, ry * 0.75, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
-    ctx.save(); ctx.translate(cx, cy); if (biped) ctx.rotate(-0.15);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-    const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(1, body);
+    const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(0.55, body); grad.addColorStop(1, bellyCol(L, hue) || body);
     ctx.fillStyle = grad; ctx.fill();
     ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
@@ -340,6 +374,7 @@ window.G = window.G || {};
     if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.5], [0.45, -0.1], [-0.15, 0.25], [-0.75, 0.2]].forEach(([dx, dy]) => { dot(dx * rx, dy * ry, S * 0.028, '#f2c14e'); dot(dx * rx, dy * ry, S * 0.012, '#1c1414'); });
     if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(-rx * 0.8 + i * rx * 0.2, Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
     if (H.has('bright_plumage')) for (let i = 0; i < 6; i++) dot(-rx * 0.7 + i * rx * 0.28, -ry * 0.2 + (i % 2) * ry * 0.3, S * 0.03, hsl(hue + 120 + i * 30, 70, 60));
+    finish(L, 0, 0, rx, ry);
     ctx.restore();
     if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.02, ry * 1.02, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
     if (E.back) for (let i = 0; i < 5 + E.back * 2; i++) {
@@ -374,8 +409,8 @@ window.G = window.G || {};
     if (flying) wing(true);
 
     // Neck and head
-    ctx.beginPath(); ctx.moveTo(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4); ctx.lineTo(hx, hy);
-    ctx.strokeStyle = body; ctx.lineWidth = S * (longNeck ? 0.075 : 0.09); ctx.lineCap = 'round'; ctx.stroke();
+    if (pos !== 'tucked') { ctx.beginPath(); ctx.moveTo(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4); ctx.lineTo(hx, hy);
+      ctx.strokeStyle = body; ctx.lineWidth = S * (longNeck ? 0.075 : 0.09) * Math.max(0.8, Math.min(1.3, L.headSize || 1)); ctx.lineCap = 'round'; ctx.stroke(); }
     drawHead(p, hx, hy, hr, hue, body, dark, t, S, L);
   }
 
@@ -392,6 +427,10 @@ window.G = window.G || {};
     if (H.has('antennae')) { wavy(hx - hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.6, 4, t, dark, 2); wavy(hx + hr * 0.2, hy - hr * 0.8, hr * 1.6, -Math.PI * 0.35, 4, t, dark, 2, 1.5); }
     const mx = hx + hr * 0.9; const my = hy + hr * 0.25;
     const m = p.mouth;
+    // A bigger jaw: a heavier lower jaw under the mouth.
+    const jaw = L.jaw || 1;
+    if (jaw > 1.05) { ctx.beginPath(); ctx.ellipse(hx + hr * 0.45, hy + hr * 0.55, hr * 0.6 * jaw, hr * 0.32 * jaw, 0.15, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); line(hx + hr * 0.1, hy + hr * 0.45, hx + hr * (0.6 + 0.4 * jaw), hy + hr * 0.4, dark, 2); }
+    ctx.save(); ctx.translate(mx, my); ctx.scale(jaw, jaw); ctx.translate(-mx, -my);
     if (H.has('grinding_beak')) tri(mx - 6, my - hr * 0.35, mx + hr * 0.7, my, mx - 6, my + hr * 0.3, '#e0b04c');
     if (H.has('fangs') || H.has('venom_fangs') || H.has('lure_jaw') || H.has('crushing_jaws')) {
       line(mx - hr * 0.5, my, mx + 2, my, hsl(hue, 30, 15), 3);
@@ -402,12 +441,16 @@ window.G = window.G || {};
     if (H.has('mandibles')) [-1, 1].forEach((s) => { ctx.beginPath(); ctx.moveTo(mx - 4, my + s * 3); ctx.quadraticCurveTo(mx + hr * 0.6, my + s * hr * 0.5, mx + hr * 0.5, my + s); ctx.strokeStyle = dark; ctx.lineWidth = 4; ctx.stroke(); });
     if (H.has('trunk')) { ctx.beginPath(); ctx.moveTo(mx - 4, my - 2); ctx.quadraticCurveTo(mx + hr * 1.1, my + hr * 0.3, mx + hr * 0.6 + Math.sin(t * 1.5) * 4, my + hr * 1.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.lineCap = 'round'; ctx.stroke(); }
     if (H.has('baleen')) for (let k = 0; k < 5; k++) line(mx - hr * 0.5 + k * 4, my - 2, mx - hr * 0.5 + k * 4, my + hr * 0.4, BONE, 1.5);
+    ctx.restore();
     const ex = hx + hr * 0.25; const ey = hy - hr * 0.25;
     const huge = H.has('big_eyes') || L.eyes === 'huge';
-    FACE = { x: ex, y: ey, r: hr * (huge ? 0.42 : 0.22), mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
-    if (huge) { dot(ex, ey, hr * 0.42, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07, '#fff'); }
-    else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(ex, ey, hr * 0.25, GLOW));
-    else { dot(ex, ey, hr * 0.2, '#fff'); dot(ex + hr * 0.06, ey, hr * 0.11, '#1c1414'); }
+    const es = L.eyeSize || 1;
+    FACE = { x: ex, y: ey, r: hr * (huge ? 0.42 : 0.22) * es, mx: hx + hr * 0.5, my: hy + hr * 0.55, top: hy - hr * 1.15, skin: body, s: S * 0.5 };
+    if (huge) { dot(ex, ey, hr * 0.42 * es, '#fff'); dot(ex + hr * 0.1, ey, hr * 0.22 * es, '#1c1414'); dot(ex + hr * 0.18, ey - hr * 0.1, hr * 0.07 * es, '#fff'); }
+    else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(ex, ey, hr * 0.25 * es, GLOW));
+    else { dot(ex, ey, hr * 0.2 * es, '#fff'); dot(ex + hr * 0.06, ey, hr * 0.11 * es, '#1c1414'); }
+    // Extra eyes from the editor, around the back and top of the head.
+    for (let k = 1; k < Math.min(6, L.eyeCount || 1); k++) { const a = -3.0 + (k - 1) * 0.42; const ax = hx + Math.cos(a) * hr * 0.72; const ay = hy + Math.sin(a) * hr * 0.72; dot(ax, ay, hr * 0.15 * es, '#fff'); dot(ax + 1, ay, hr * 0.08 * es, '#1c1414'); }
     if (H.has('tremor_whiskers') || H.has('electroreceptors')) for (let k = -1; k <= 1; k++) line(mx - 4, my - 4, mx + hr * 0.9, my - 4 + k * hr * 0.35, BONE, 1.2);
     const er = FACE.r;
     if (E && E.senses) for (let k = 0; k < Math.min(3, E.senses + 1); k++) { const ax = hx - hr * 0.35 + k * hr * 0.3; const ay = hy - hr * 0.75 - (k % 2) * hr * 0.15; dot(ax, ay, hr * 0.13, '#fff'); dot(ax + 1, ay, hr * 0.07, '#1c1414'); }
@@ -423,7 +466,7 @@ window.G = window.G || {};
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
     const SEA_SHAPES = { long: [1.2, 1], slim: [0.95, 0.8], round: [1, b.look ? 1.12 : 1], torpedo: [1.12, 0.82], ray: [0.85, 0.55], puffer: [0.72, 1.7], deep: [0.78, 1.7] };
     const [sx, sy] = SEA_SHAPES[L.shape] || [1, 1];
-    const rx = S * 0.33 * sx; const ry = S * 0.13 * sy;
+    const rx = S * 0.33 * sx * (L.bodyLen || 1); const ry = S * 0.13 * sy * (L.bodyHeight || 1);
     const y0 = cy + Math.sin(t * 1.4) * 3;
     const tailX = cx - rx * 0.95;
     const sw = Math.sin(t * 3) * 0.25;
@@ -468,7 +511,7 @@ window.G = window.G || {};
     // Body
     ctx.save();
     ctx.beginPath(); ctx.ellipse(cx, y0, rx, ry, 0, 0, Math.PI * 2);
-    const grad = ctx.createLinearGradient(cx, y0 - ry, cx, y0 + ry); grad.addColorStop(0, body); grad.addColorStop(1, light);
+    const grad = ctx.createLinearGradient(cx, y0 - ry, cx, y0 + ry); grad.addColorStop(0, body); grad.addColorStop(1, bellyCol(L, hue) || light);
     ctx.fillStyle = grad; ctx.fill(); ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
@@ -476,6 +519,7 @@ window.G = window.G || {};
     if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
     if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
     if (H.has('cleaner_skin')) for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
+    finish(L, cx, y0, rx, ry);
     ctx.restore();
     if (H.has('blubber')) { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.03, ry * 1.08, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 30, 80, 0.6); ctx.lineWidth = 3; ctx.stroke(); }
     if (L.shape === 'puffer') for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2; tri(cx + Math.cos(a - 0.08) * rx, y0 + Math.sin(a - 0.08) * ry, cx + Math.cos(a) * rx * 1.18, y0 + Math.sin(a) * ry * 1.14, cx + Math.cos(a + 0.08) * rx, y0 + Math.sin(a + 0.08) * ry, BONE); }
@@ -516,7 +560,7 @@ window.G = window.G || {};
     };
     const nSegSea = b.segments != null ? b.segments : 2;
     for (let i = 2; i < nSegSea; i++) if (p.hindLimbs || p.frontLimbs) fin(cx + rx * (0.25 - (i - 1) * (0.7 / Math.max(1, nSegSea - 1))), y0 + ry * 0.6, p.frontLimbs || p.hindLimbs, S * 0.1);
-    if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1));
+    if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1) * (L.legLen || 1));
     if (p.hindLimbs && !H.has('sea_tentacles')) fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.1 * (E.hindLimbs ? 1.4 : 1));
     if (E.frontLimbs >= 2) fin(cx + rx * 0.05, y0 + ry * 0.7, p.frontLimbs, S * 0.12);
     if (E.back && !['spiral_shell', 'sail_fin', 'anemone_crown', 'angler_rod', 'carapace'].some((id) => H.has(id))) tri(cx - rx * 0.5, y0 - ry * 0.85, cx - rx * 0.2, y0 - ry * (2.6 + 0.4 * E.back), cx + rx * 0.1, y0 - ry * 0.85, accent || dark);
@@ -530,7 +574,8 @@ window.G = window.G || {};
       const c = H.has('venom_fangs') ? VENOM : BONE;
       [0, 1, 2].forEach((k) => tri(mx - rx * 0.2 + k * 7, my, mx - rx * 0.18 + k * 7, my + 7, mx - rx * 0.14 + k * 7, my, c));
     }
-    const er = S * 0.022;
+    const er = S * 0.022 * (L.eyeSize || 1) * (L.headSize || 1);
+    for (let k = 1; k < Math.min(6, L.eyeCount || 1); k++) { const ax = hx - er * (2.5 + k * 2.2); const ay = hy - er * (k % 2 ? 1.2 : -0.4); dot(ax, ay, er * 0.75, '#fff'); dot(ax + 1, ay, er * 0.4, '#1c1414'); }
     // Head shapes
     if (L.head === 'sword') { tri(mx - 4, my - ry * 0.35, mx + S * 0.3, my - ry * 0.25, mx - 4, my - ry * 0.05, BONE); }
     if (L.head === 'hammer') { ctx.beginPath(); ctx.ellipse(hx + rx * 0.08, hy, S * 0.025, ry * 1.3, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); dot(hx + rx * 0.08, hy - ry * 1.2, S * 0.014, '#fff'); dot(hx + rx * 0.08, hy + ry * 1.2, S * 0.014, '#fff'); dot(hx + rx * 0.1, hy - ry * 1.2, S * 0.007, '#1c1414'); dot(hx + rx * 0.1, hy + ry * 1.2, S * 0.007, '#1c1414'); }
@@ -570,7 +615,7 @@ window.G = window.G || {};
     const hue = b.hue; const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
     const n = b.segments || 5;
     const R = S * (b.habitat === 'sea' ? 0.13 : 0.1);
-    const armLen = S * (b.habitat === 'sea' ? 0.24 : 0.36) * (H.has('long_bones_f') || E.frontLimbs ? 1.25 : 1) * (H.has('stubby_forelegs') && !E.frontLimbs ? 0.85 : 1);
+    const armLen = S * (b.habitat === 'sea' ? 0.24 : 0.36) * (L.legLen || 1) * (H.has('long_bones_f') || E.frontLimbs ? 1.25 : 1) * (H.has('stubby_forelegs') && !E.frontLimbs ? 0.85 : 1);
     if (b.habitat === 'sea') {
       // Jellyfish: a pulsing bell with trailing tentacles.
       const pulse = 1 + Math.sin(t * 3) * 0.06;
@@ -625,7 +670,7 @@ window.G = window.G || {};
     const hue = b.hue; const body = hsl(hue, 45, 52); const dark = hsl(hue, 40, 30); const light = hsl(hue, 55, 68);
     const n = b.segments || 3;
     const ground = cy + S * 0.3;
-    const R = S * 0.17;
+    const R = S * 0.17 * Math.sqrt((L.bodyLen || 1) * (L.bodyHeight || 1));
     const by = ground - R * 0.85;
     ctx.beginPath(); ctx.ellipse(cx, ground, R * 1.8, R * 0.3, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     for (let i = 0; i < n; i++) { const x = cx - R * 1.1 + (i / Math.max(1, n - 1)) * R * 2.2; const reach = Math.sin(t * 2.5 + i * 1.3) * R * 0.15; ctx.beginPath(); ctx.ellipse(x + reach, ground - R * 0.18, R * 0.3, R * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
@@ -648,7 +693,7 @@ window.G = window.G || {};
     const hue = b.hue; const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30);
     const sea = b.habitat === 'sea';
     const ground = sea ? cy + S * 0.05 : cy + S * 0.3;
-    const len = S * 0.62; const thick = S * 0.065;
+    const len = S * 0.62 * (L.bodyLen || 1); const thick = S * 0.065 * (L.bodyHeight || 1);
     const pts = [];
     for (let i = 0; i <= 30; i++) { const u = i / 30; pts.push([cx - len / 2 + u * len, ground - thick * 0.6 - Math.sin(u * Math.PI * 2.4 - t * 3) * S * 0.06 * (0.4 + u * 0.6) * (sea ? 1.4 : 1)]); }
     if (!sea) { ctx.beginPath(); ctx.ellipse(cx, ground, len * 0.55, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
@@ -993,7 +1038,7 @@ window.G = window.G || {};
     ctx.clearRect(0, 0, w, h);
     const land = b.stage === 'creature' && b.habitat !== 'sea';
     const S = Math.min(w, h) * (b.stage === 'cell' ? 1.15 : land ? 0.95 : 1.1) / sizeScale(b);
-    drawBody(b, land ? w * 0.42 : w * 0.5, h * (land ? 0.4 : 0.5), S, 0.6);
+    drawBody(b, land ? w * 0.42 : w * 0.5, h * (land ? 0.45 : 0.5), S * (land ? 0.92 : 1), 0.6);
   };
 
   let sceneFrame = null;
@@ -1177,7 +1222,7 @@ window.G = window.G || {};
     const prev = ctx;
     ctx = c.getContext('2d');
     const land = b.stage === 'creature' && b.habitat !== 'sea';
-    drawBody(b, size * (land ? 0.44 : 0.5), size * (land ? 0.4 : 0.5), (size * 0.9) / sizeScale(b), 0.6);
+    drawBody(b, size * (land ? 0.44 : 0.5), size * (land ? 0.46 : 0.5), (size * (land ? 0.82 : 0.9)) / sizeScale(b), 0.6);
     ctx = prev;
     spriteCache.set(key, c);
     if (spriteCache.size > 60) spriteCache.delete(spriteCache.keys().next().value);
@@ -1463,6 +1508,27 @@ window.G = window.G || {};
       viewFrame = reduceMotion ? null : requestAnimationFrame(frame);
     }
     viewFrame = requestAnimationFrame(frame);
+  };
+
+  // The editor's live preview: redraws your creature every frame, so slider changes show at once.
+  let editFrame = null;
+  G.playEditor = function (canvas) {
+    if (editFrame) cancelAnimationFrame(editFrame);
+    function frame(now) {
+      const run = G.run;
+      if (!canvas.isConnected || !run) { editFrame = null; return; }
+      const { w, h } = fit(canvas);
+      const t = reduceMotion ? 0.6 : now / 1000;
+      ctx.clearRect(0, 0, w, h);
+      drawBackground(run, w, h, t);
+      const b = G.bodyOf(run);
+      const land = b.habitat !== 'sea';
+      const S = Math.min(w * 0.8, h * 1.05) / sizeScale(b);
+      drawBody(b, w * (land ? 0.45 : 0.5), h * (land ? 0.36 : 0.5), S, t);
+      drawFace('happy', t);
+      editFrame = requestAnimationFrame(frame);
+    }
+    editFrame = requestAnimationFrame(frame);
   };
 
   G.stopScene = function () { if (sceneFrame) cancelAnimationFrame(sceneFrame); sceneFrame = null; };
