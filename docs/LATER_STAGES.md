@@ -37,6 +37,7 @@ So a deep-sea predator and a land grazer don't just look different. They think d
 | **Your body** | Parts become talents: hands craft, voices sing, glow lures, venom poisons, shells armor, wings scout | Talents become your people's strengths in traditions | Strengths shape your technology and armies |
 | **Other species** | Become animals in your territory: hunt them, tame them, revere them as totems | Tamed species become herds, mounts or partners; some species become rival peoples | Rival peoples become rival empires |
 | **Your history** | Your Chronicle becomes stories your leader tells | Your ending and ancestors become myths and the start of a faith | Myths become a religion that can spread and split |
+| **Rivalries** | Your nemesis species becomes your band's ancestral enemy, and old allies stay friendly | Feuds and friendships carry over: an old enemy band becomes a rival people with a grudge | Old grudges become rival empires, wars of revenge and ancient alliances |
 
 ---
 
@@ -197,17 +198,14 @@ The same game engine runs both. But the trees, resources, rules, myths and story
 
 ---
 
-## Decisions already made
+## Decisions made
 
 - **Path of Mind:** you choose it at the Spark of Mind, from the 2–3 Paths your body and history allow.
+- **Paths are fixed for the whole run.** They never mix, even in the Empire stage, so each run stays true to its path and replaying with a different start or path is the way to see more. Conquering or allying with another kind gives you their people as subjects or friends, never their path. The Bond temperament's partner species joins your band, but you still think along your own path.
 - **Societies:** one shared engine, with a resource, a culture tree and 1–2 unique rules for each kind.
+- **Rival species can learn to think.** This happens rarely in the Tribe stage (a rival band appears) and often in Society. Rivalries are the backbone of the later stages: your nemesis, your allies and your feuds carry forward from stage to stage (see "Rivalries" in the table above).
+- **How deep characters are at each stage:** a leader in the Tribe, a ruler and council in Society, and the full dynasty only in the Empire. **This is provisional:** it needs playtesting, and may change once you can play the Tribe stage.
 - **Build order:** the Creature-stage Mind tree comes first (Update 13), then the Tribe stage with Toolmakers on land and Singers at sea.
-
-## Questions still open (with recommendations)
-
-1. **Can rival species learn to think?** Recommended: yes. Rarely in the Tribe stage (a rival band appears), often in Society. It gives the strongest sense that your old world is still alive.
-2. **How deep are characters at each stage?** Recommended: a leader only in the Tribe, a ruler and council in Society, and the full dynasty only in the Empire. Characters get deeper as the stages zoom out.
-3. **Can paths mix?** Recommended: not until the Empire stage. There, conquering or allying with a people of another kind can give you their branch. The Bond temperament can start this earlier through its partner species.
 
 ---
 

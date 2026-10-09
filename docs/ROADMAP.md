@@ -398,6 +398,7 @@ From the second playtest notes:
 ## Scrapped
 
 - **The Space stage** (was Updates 18–19). The game now ends with the Empire stage. Its best ideas moved: the true ending and New Game+ go to Update 19, and past lineages returning as rivals go to Updates 10 and 19.
+- **Mixing Paths of Mind.** Paths are fixed for the whole run, to make replaying with a different path worthwhile.
 - **A single Society stage followed by Civilization.** This is now three stages: Tribe, Society and Empire (see [LATER_STAGES.md](LATER_STAGES.md)).
 
 ## Ideas waiting for a home
@@ -405,4 +406,3 @@ From the second playtest notes:
 - Sharing a creature as an image or a link.
 - A creature-naming screen.
 - Hybrid symmetry (for example, a radial creature with a bilateral head).
-- Mixing two Paths of Mind late in a run (planned for the Empire stage: conquer or ally with another kind of people to gain their branch).
