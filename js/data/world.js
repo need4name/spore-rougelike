@@ -609,7 +609,7 @@ G.WHATS_NEW = {
     'Fixed: the Creature Editor could get stuck on phones, with its Done button hidden under the status bar. There is now a big Done button at the bottom too.',
     'Tips: each feature is explained the first time it appears, whichever run that is, and never again. Turn them off from any tip, or bring them back from How to play.',
     'Extinction now has a proper scene: the last of your kind falls, its spirit rises, and the earth closes over it as a fossil.',
-    'Every lineage now earns at least 6 Genetic Memory, plus 1 for every 4 turns it survives, so early runs that die as cells can still buy the first upgrades.',
+    'Lineages that die as cells now earn at least 6 Genetic Memory, plus 1 for every 4 turns they survived, so early runs can still buy the first upgrades.',
     'Update 12 (Shells, Scales and Soft Bodies): choose your Frame, Young and Blood; 29 new parts and 17 evolutions; 20 new events; rival bugs, snails, birds, lizards and crabs.',
   ],
 };

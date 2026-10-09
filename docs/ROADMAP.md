@@ -291,7 +291,7 @@ From the first playtest notes:
 - **Editor soft-lock fixed:** the Done button sat under the phone status bar. The header now respects the safe area, and a second Done button sits at the bottom.
 - **First-time tips:** each feature is explained once, the first time it shows up, in whichever run that happens. They are saved between runs, can be turned off, and can be reset from How to play.
 - **Death scene:** the last of your kind falls (or sinks), its spirit rises, "EXTINCT", and the ground closes over it as a fossil.
-- **Early Genetic Memory:** every run earns at least 6, plus 1 per 4 turns survived, so the first upgrades are reachable before you can reach the Creature stage.
+- **Early Genetic Memory:** a lineage that dies as a cell earns at least 6, plus 1 per 4 turns survived, so the first upgrades are reachable before you can reach the Creature stage.
 - **Still to do from the notes:** a wider animation pass (more scene variety for everything that has been added since Update 6) belongs with Update 18's polish, but the most important moment, death, is done now.
 
 ## Update 13: Other Minds

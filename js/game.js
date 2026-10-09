@@ -596,9 +596,9 @@ window.G = window.G || {};
     const base = Math.floor(run.totalDna / 3);
     const progress = (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     const winBonus = victory ? 40 : 0;
-    // Every lineage teaches something: a little for each turn survived, and never less than 6,
-    // so early runs that die as cells can still afford the first upgrades.
-    const survival = Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0);
+    // Lineages that die as cells still learn something: 1 per 4 turns survived, and never less
+    // than 6 in all, so early runs can afford the first upgrades.
+    const survival = run.stage === 'cell' ? Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0) : 0;
     const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
     const genes = Math.round((base + progress + winBonus + survival) * mult);
     const m = G.meta;
