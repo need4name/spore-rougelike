@@ -38,13 +38,13 @@ The causes go deeper than the numbers:
 
 At the Spark of Mind milestone you choose how your kind thinks, much like choosing symmetry when you became multicellular. Which paths are open depends on your body. Each path has its own Mind tree, its own events and endings, and its own version of every later stage.
 
-| Path | Inspired by | On land | In the sea | Needs | Strengths | Becomes |
+| Path | Inspired by | On land | In the sea | Needs | Strengths | Becomes (Tribe → Society → Empire) |
 |---|---|---|---|---|---|---|
-| **Toolmakers** | Apes, crows, sea otters | Ape-like, crow-like | Otters, crabs with shells | A grasping part (hands, trunk, beak, pincers, tentacles) | Tools, then fire on land or vent-forging under water | Tribe → Kingdoms |
-| **Singers** | Whales, dolphins, songbirds, wolves | Songbirds, howlers | Whales, dolphins | A voice, echolocation or display parts | Memory carried in songs, huge range, friendship and diplomacy | Pod or Choir → Song-nations |
-| **Many Minds** | Octopuses, cuttlefish | Soft climbers | Octopuses, cuttlefish | A soft or radial body, color-changing skin | A brain in every arm, camouflage, speaking in color, fast learning | Den network → Shifting cities |
-| **The Swarm** | Ants, bees, termites, coral | Ant- and termite-like | Coral, siphonophores | No symmetry, small size or a strongly social lineage | Huge numbers that share one mind, giant buildings | Hive → Hive empire |
-| **Gardeners** | Leafcutter ants, farming fish, fungi | Fungus farmers | Kelp and algae farmers | Symbiont parts or a plant diet | Farming other species, living technology | Grove or Garden → Living empire |
+| **Toolmakers** | Apes, crows, sea otters | Ape-like, crow-like | Otters, crabs with shells | A grasping part (hands, trunk, beak, pincers, tentacles) | Tools, then fire on land or vent-forging under water | Tribe or Shell Clan → Hearthlands → Kingdom or Forge-cities |
+| **Singers** | Whales, dolphins, songbirds, wolves | Songbirds, howlers | Whales, dolphins | A voice, echolocation or display parts | Memory carried in songs, huge range, friendship and diplomacy | Choir or Pod → Song-circles → Song-nation |
+| **Many Minds** | Octopuses, cuttlefish | Soft climbers | Octopuses, cuttlefish | A soft or radial body, color-changing skin | A brain in every arm, camouflage, speaking in color, fast learning | Den → Den Network → Shifting Cities |
+| **The Swarm** | Ants, bees, termites, coral | Ant- and termite-like | Coral, siphonophores | No symmetry, small size or a strongly social lineage | Huge numbers that share one mind, giant buildings | Hive or Reef-colony → Hive-cities → Hive Dominion |
+| **Gardeners** | Leafcutter ants, farming fish, fungi | Fungus farmers | Kelp and algae farmers | Symbiont parts or a plant diet | Farming other species, living technology | Grove or Kelp Garden → Garden League → Living Empire |
 
 **What replaces fire under water?** Sea paths get their own breakthroughs instead: heat from deep-sea vents, electricity (like electric eels), living light, chemistry and venom, and shaping coral as it grows. Sea civilizations get a different technology tree, not a land tree with the words changed.
 
@@ -67,13 +67,19 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 9 | **The Creature Editor** ✅ | A full editor after the cell stage: limbs, heads, proportions, colors and patterns | Large |
 | 10 | **The Living World** ✅ | A CK3-style Activities tab, a crowded world, extinctions and rising species | Large |
 | 11 | **The World Map** ✅ | Biomes, and a world you see more of as your kind gets smarter | Large |
-| 12 | Shells, Scales and Soft Bodies | Not every creature is a mammal | Medium |
-| 13 | Other Minds | The five Paths of Mind in the Creature stage | Large |
-| 14 | First Gatherings | **Society stage**, part 1: Tribe (land) and Pod (sea) | Large |
-| 15 | Neighbours | Society stage, part 2: Hive, Den and Grove, plus rival societies | Large |
-| 16 | Crowns | **Civilization stage**, part 1: land and sea nations | Large |
-| 17 | Empires | Civilization stage, part 2: the other paths, wars, faiths, wonders | Large |
-| 18 | The Final Polish | Balance, art, sound, tutorial, offline app, challenges and achievements | Large |
+| 12 | **Shells, Scales and Soft Bodies** ✅ | Not every creature is a mammal | Medium |
+| 12.1 | Patch ✅ | Comparing mutations, tips, a death scene, an editor fix | Small |
+| 12.2 | Patch ✅ | Arms, self-balancing bodies, tension in checks, seasons on the map, Gene Affinities | Medium |
+| 13 | Other Minds | The Mind tree rebuilt: roots from your start, Paths of Mind, 10 endings | Large |
+| 14 | First Fires | **Tribe stage**, part 1: Tribe (land) and Pod (sea) | Large |
+| 15 | Many Kinds | Tribe stage, part 2: Hive, Reef-colony, Den, Grove and Kelp Garden | Large |
+| 16 | Peoples | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
+| 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
+| 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
+| 19 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+ | Large |
+| 20 | The Final Polish | Balance, art, sound, settings, offline app, challenges and achievements | Large |
+
+**The full plan for Updates 13–19 is in [LATER_STAGES.md](LATER_STAGES.md):** how your start, your Path of Mind and your ending flow into the Tribe, Society and Empire stages.
 
 **Why this order.** The playtest after Update 6 showed that the foundations matter more than new content right now.
 
@@ -312,93 +318,78 @@ From the second playtest notes:
 
 *Intelligence comes in many shapes.*
 
-- **The Spark of Mind becomes a choice** of the five Paths of Mind. Paths your body can't support are shown locked, with what you'd need.
-- **A Mind tree for each path.** The current tree becomes the Toolmakers' tree.
-- **Signature events for each path:**
-  - Singers: song-duels, long migrations.
-  - Many Minds: color-talk, escaping through a crack.
-  - Swarm: the colony splits, building a mound.
-  - Gardeners: a blight hits your crop.
-- **Creature-stage endings for every path,** on land and in the sea (about 12 in total, up from 7).
+- **The Mind tree rebuilt from pieces:**
+  - **Roots** from your starting cell: your temperament (the Hunter, the Herd, the Bond, the Taker, the Many, the Mask, the Wanderer).
+  - **A trunk** for land or sea, plus ideas from your biome or depth (the deep sea gives Living Light; the desert gives Water Memory).
+  - **Branches** opened by your body: arms, many eyes, a voice, a soft body, a hive-like colony.
+- **The Spark of Mind becomes a choice** of the 2–3 Paths of Mind your body and history allow. Paths you can't take are shown locked, with what you'd need.
+- **Self-Awareness is replaced by capstones.** Each Path has one ending on land and one at sea (10 in all), and each ending gets a twist from your temperament. For example, a deep-sea predator on the Many Minds path becomes the Lantern Court.
+- **The Codex of Endings:** a grid of your starts against every ending.
 - **Radial and colonial bodies get a real road to intelligence** through Many Minds and the Swarm.
-- **Test bots** check that every path wins about as often as the others.
+- **Test bots** check that every Path wins about as often as the others.
 
-**You'll test:** one run on each path. Does each feel like a different kind of mind, not the same tree in a new color?
+**You'll test:** whether a predator, a grazer and a symbiote think differently, not just the same tree in a new color.
 
-## Update 14: First Gatherings (Society stage, part 1)
+## Update 14: First Fires (Tribe stage, part 1)
 
-*Your creatures become a people.*
+*Your creatures become a band.*
 
-- **A new Society stage** follows the Creature stage. Your path and ending decide which kind of society you become. This update brings two:
-  - **Tribe** (Toolmakers, land): a village of huts and fires. Your old Creature-stage species become animals you hunt, herd or befriend.
-  - **Pod** (Singers, sea): a roaming pod with songkeepers, migration routes and whale-falls to feed on. Its memory is carried in songs instead of tools.
-- **Resources:** Population, Food and DNA become Members, Food and **Ideas**.
-- **Discoveries replace body-part drafts.** The Tribe gets spears, baskets and fire. The Pod gets song-maps, hunting spirals and shared memory. Some discoveries combine into better ones, as parts evolve.
-- **A named leader** with traits: a chief for the Tribe, an elder singer for the Pod. When the leader dies, someone else takes over.
-- **About 25 events for each society** and a finale for each.
-- **Stage select:** once you've reached a stage, a new run can start there with a lineage you've already played.
+- **The Tribe stage engine:** a band of 5–30 members in your home biome, a named leader who can die and be replaced, keepers, and Discoveries that you draft and combine the way you did with parts.
+- **Two kinds:** the **Tribe** (Toolmakers, land: Fire) and the **Pod** (Singers, sea: Song).
+- **Your body becomes your talents:** hands craft, voices sing, glow lures, venom poisons, shells armor.
+- **Species from your Creature world become wildlife** to hunt, tame or revere as totems.
+- **Three endings** for each kind (Settle, Roam, Conquer), and **Stage Select** to start a run in the Tribe stage with a fossil.
 
-**You'll test:** whether the Tribe and the Pod feel equally deep and clearly different, while still feeling like the same game.
+**You'll test:** whether the Tribe and the Pod feel equally deep and clearly different.
 
-## Update 15: Neighbours (Society stage, part 2)
+## Update 15: Many Kinds (Tribe stage, part 2)
+
+- The **Hive** and **Reef-colony** (Swarm), the **Den** (Many Minds), and the **Grove** and **Kelp Garden** (Gardeners).
+- **Rival bands,** some of them rival species from your Creature world that learned to think.
+- **Ancestral Wisdom:** the Tribe-stage tab of the Evolution screen.
+
+## Update 16: Peoples (Society stage, part 1)
 
 *You are not the only people.*
 
-- **Three more societies:**
-  - **Hive** (Swarm): a queen, castes and a mound that keeps growing.
-  - **Den** (Many Minds): clever loners linked by color-signals.
-  - **Grove** (Gardeners): farms of fungi or kelp tended together.
-- **Rival societies** on the map, each with its own leader and opinion of you, of any kind. A Tribe can meet a Hive.
-- **Diplomacy:** trade, gifts, joining families, raids and alliances, with a flavor for each kind of society.
-- **Culture trees** for every society. Choices exclude each other, for example warlike or peaceful.
-- **Society endings** that lead into the Civilization stage.
+- **The Society stage engine:** 3–8 settlements in a region, a ruler and a council of three, and **Traditions and Laws** (a culture tree whose first node is your founding myth).
+- **Toolmakers and Singers** on land and at sea.
+- **Neighbour peoples** of any kind, with gifts, trade, alliances, raids and wars.
 
-**You'll test:** whether each society plays differently, and whether dealing with neighbours is the interesting part.
+## Update 17: Faith and Neighbours (Society stage, part 2)
 
-## Update 16: Crowns (Civilization stage, part 1)
+- **The other kinds** of society.
+- **Faiths built from your own history:** your ancestor, your ending, your nemesis species.
+- **Society endings:** unite your region by Conquest, Trade, Faith or a Wonder. How you win decides your kind of empire.
+- **Heritage:** the Society-stage tab of the Evolution screen.
+
+## Update 18: Crowns (Empire stage, part 1)
 
 *The most Crusader Kings 3 part of the game.*
 
-- **A regional map** of settlements you found and grow:
-  - On land: cities.
-  - In the sea: reef-cities and vent-colonies.
-- **A ruler and a dynasty:** your ruler has traits, a family, heirs and rivals, and succession can go wrong. For a Pod, the ruler is a line of songkeepers.
-- **A council:** advisors who give advice, scheme and sometimes betray you.
-- **Three ways to grow,** as in Spore: military, trade or faith.
-- **Two technology trees:** fire and metal on land; vents, electricity, living light and coral-shaping in the sea.
-- **About 30 events for each of land and sea,** many built around characters.
+- **The world as a realm:** the World Map divided into provinces, with land and sea realms.
+- **A dynasty:** ruler, heirs, spouse, rivals, inheritance laws, vassals, and a council that schemes.
+- **Technology:** fire, then metal, then engines on land; vents, then electricity, then living light, then coral-shaping at sea. Your kind of people changes it again.
+- **The first two kinds** of empire.
 
-**You'll test:** whether your ruler feels like a person, and whether a sea civilization feels truly different from a land one.
+## Update 19: Empires (Empire stage, part 2)
 
-## Update 17: Empires (Civilization stage, part 2)
+- **The other kinds** of empire, and **rival empires** descended from lineages in your Fossil Record.
+- **Wars, treaties, betrayals, faiths that spread and split, wonders and disasters.**
+- **Grand endings** for each kind, which unlock **New Game+**. There are also a few dead ends that still earn Genetic Memory.
+- **Legacy:** the Empire-stage tab of the Evolution screen.
 
-*The whole world, one way or another.*
-
-- **Civilizations for the other paths:**
-  - **Hive empires:** the queen's lineage and huge buildings.
-  - **Den networks:** cities that change shape.
-  - **Living empires:** grown technology.
-- **Rival nations** of any kind, plus wars, treaties and betrayals.
-- **Faiths** that spread, split and clash.
-- **Wonders and disasters:** plague, famine, rebellion and the sea turning to acid.
-- **The true endings.** Civilization is the final stage. Each path has its own grand ending, which unlocks **New Game+**: a new world that starts with echoes of your old ones. There are also a few "dead end" endings that still earn Genetic Memory.
-- **Rival nations descended from your past lineages:** creatures from your Fossil Record can appear as rival civilizations.
-
-**You'll test:** whether the late game stays tense, and whether every path's civilization holds up.
-
-## Update 18: The Final Polish
+## Update 20: The Final Polish
 
 *Everything we've been saving for the end.*
 
 - **Balance pass** across every stage and path, using the test bots and your notes.
 - **Art pass:** better drawings, animations and scenes.
 - **Sound and music:** ambient sounds for land, sea and each stage.
-- **Tutorial:** a gentle first run that teaches the game as you play it.
 - **Offline app:** installs to your home screen and works without internet.
 - **Settings:** text size, reduced motion and color-blind palettes.
 - **Performance** on older phones.
-
-- **Challenge runs, achievements and a daily run** (moved here from Bloodlines).
+- **Challenge runs, achievements and a daily run.**
 
 **You'll test:** the whole game, from start to finish, with fresh eyes.
 
@@ -406,11 +397,12 @@ From the second playtest notes:
 
 ## Scrapped
 
-- **The Space stage** (was Updates 18–19). The game now ends with the Civilization stage. Its best ideas moved: the true ending and New Game+ go to Update 17, and past lineages returning as rivals go to Updates 10 and 17.
+- **The Space stage** (was Updates 18–19). The game now ends with the Empire stage. Its best ideas moved: the true ending and New Game+ go to Update 19, and past lineages returning as rivals go to Updates 10 and 19.
+- **A single Society stage followed by Civilization.** This is now three stages: Tribe, Society and Empire (see [LATER_STAGES.md](LATER_STAGES.md)).
 
 ## Ideas waiting for a home
 
 - Sharing a creature as an image or a link.
 - A creature-naming screen.
 - Hybrid symmetry (for example, a radial creature with a bilateral head).
-- Mixing two Paths of Mind late in a run.
+- Mixing two Paths of Mind late in a run (planned for the Empire stage: conquer or ally with another kind of people to gain their branch).

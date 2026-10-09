@@ -4,7 +4,7 @@
 
 An evolution roguelike for phone, tablet and computer, played in the browser. Guide one lineage from a single cell to the dawn of a thinking people, on land or in the sea, through event cards (in the style of Crusader Kings 3), mutation drafts, merged body parts and a Mind tree. Every run earns Genetic Memory that unlocks new archetypes, home worlds, part packs and permanent boosts.
 
-**Prototype scope:** the Cell and Creature stages. The Society and Civilization stages are planned as themed updates (see [docs/ROADMAP.md](docs/ROADMAP.md)).
+**Prototype scope:** the Cell and Creature stages. The Tribe, Society and Empire stages are planned as themed updates (see [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/LATER_STAGES.md](docs/LATER_STAGES.md)).
 
 ## Playing it
 
