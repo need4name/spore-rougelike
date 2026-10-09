@@ -130,12 +130,16 @@ window.G = window.G || {};
           <div><dt>Became a people</dt><dd>${m.stats.wins}</dd></div>
           <div><dt>Most DNA</dt><dd>${m.stats.bestDna || 0}</dd></div>
         </dl>
+        ${G.WHATS_NEW ? `<details class="howto whatsnew" ${m.seenVersion !== G.VERSION ? 'open' : ''}>
+          <summary>What's new · ${esc(G.WHATS_NEW.title)}</summary>
+          <ul>${G.WHATS_NEW.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+        </details>` : ''}
         <details class="howto">
           <summary>How to play</summary>
           <ol>
             <li>Time flows on the world map. Use pause and the speed buttons, like in CK3. Events pop up at random and pause the game; choose how to respond. Buttons show your chance of success.</li>
             <li>Watch every species roam the map. Herd size shows population. Tap any herd, or your portrait (top left), to inspect it.</li>
-            <li>Your <b>Instinct</b> (top right) decides how you find food and which events find you.</li>
+            <li>Your <b>Instinct</b> (top right) decides how you find food and which events find you. Sea creatures also choose a home depth there, from the sunlit shallows down to the abyss.</li>
             <li>Each turn your Population eats Food. Spare Food grows your Population. Run out and you starve.</li>
             <li>DNA brings mutations. Later, mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
@@ -524,7 +528,8 @@ window.G = window.G || {};
       return `${symCard}<p class="note">${Object.values(G.SYMMETRY).map((x) => `${x.name}: ${x.desc}`).map(esc).join('<br>')}</p>`;
     }
     const n = G.segments(run);
-    const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k));
+    const unit = symId === 'bilateral' && run.habitat === 'sea' ? 'fin pairs' : sym.unit;
+    const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k, run.habitat));
     const cur = planFor(n);
     const canDown = n > sym.min && run.dna >= G.RESHAPE_COST;
     const canUp = n < sym.max && run.dna >= G.RESHAPE_COST;
@@ -536,9 +541,9 @@ window.G = window.G || {};
     }
     return `${symCard}
       <div class="plan-now">
-        <button class="btn small" ${canDown ? 'data-act="reshape" data-arg="-1"' : 'disabled'} aria-label="Fewer ${esc(sym.unit)}">−</button>
-        <div><b>${n} ${esc(sym.unit)}</b>${cur.name !== `${n} ${sym.unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
-        <button class="btn small" ${canUp ? 'data-act="reshape" data-arg="1"' : 'disabled'} aria-label="More ${esc(sym.unit)}">+</button>
+        <button class="btn small" ${canDown ? 'data-act="reshape" data-arg="-1"' : 'disabled'} aria-label="Fewer ${esc(unit)}">−</button>
+        <div><b>${n} ${esc(unit)}</b>${cur.name !== `${n} ${unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
+        <button class="btn small" ${canUp ? 'data-act="reshape" data-arg="1"' : 'disabled'} aria-label="More ${esc(unit)}">+</button>
       </div>
       <p class="plan-desc">${esc(cur.desc)}${Object.keys(cur.mods).length ? ` <span class="pmods">${esc(G.describeMods(cur.mods))}</span>` : ''}</p>
       <p class="note">Each change costs ${G.RESHAPE_COST} DNA (you have ${run.dna}).${off.length ? ` This body has no use for: ${off.map((id) => esc(G.slotName(run, id))).join(', ')}. Parts there are kept but do nothing.` : ''}</p>
@@ -567,7 +572,25 @@ window.G = window.G || {};
           <span class="choice-head"><strong>${esc(ins.name)}</strong></span>
           <span class="choice-desc">${esc(ins.desc)}</span>
         </button>`).join('')}</div>
-      <p class="note">You can change your Instinct at any time. It takes effect at the end of the turn.</p>`;
+      <p class="note">You can change your Instinct at any time. It takes effect at the end of the turn.</p>
+      ${run.stage === 'creature' && run.habitat === 'sea' ? zonePicker(run) : ''}`;
+  }
+
+  // Sea creatures choose a home depth, each with trade-offs.
+  function zonePicker(run) {
+    const cur = G.zone(run);
+    return `<h3>Home depth</h3>
+      <div class="instincts">${G.SEA_ZONES.map((z) => {
+        const st = G.zoneState(run, z.id);
+        const here = z.id === cur;
+        const can = !here && st.ok && run.dna >= G.MOVE_COST;
+        return `<button class="choice ${here ? 'selected' : ''}" ${can ? `data-act="zone" data-arg="${z.id}"` : 'disabled'} aria-pressed="${here}">
+          <span class="choice-head"><strong>${esc(z.name)}</strong>${here ? '<span class="kw">Home</span>' : ''}</span>
+          <span class="choice-desc">${esc(z.desc)} <b>${esc(G.describeMods(z.mods))}</b></span>
+          ${st.ok ? '' : `<span class="reason">${esc(st.why)}</span>`}
+        </button>`;
+      }).join('')}</div>
+      <p class="note">Moving to a new depth costs ${G.MOVE_COST} DNA (you have ${run.dna}). Some events only happen at certain depths.</p>`;
   }
 
   function worldTab(run) {
@@ -589,7 +612,7 @@ window.G = window.G || {};
   function speciesPlan(s) {
     if (s.stage !== 'creature') return '';
     const sym = s.symmetry || 'bilateral'; const n = s.segments != null ? s.segments : 2;
-    const pl = sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n);
+    const pl = sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n, s.world);
     return ` · ${G.SYMMETRY[sym].name}, ${pl.name.toLowerCase()}`;
   }
 
@@ -661,16 +684,16 @@ window.G = window.G || {};
     const hue = G.bodyOf(run).hue;
     const acc = run.look && run.look.accent != null ? run.look.accent : (hue + 40) % 360;
     const group = (key, title) => `
-      <div class="look-group"><h3>${title}</h3><div class="chips">${G.APPEARANCE[key].map((o) => {
+      <div class="look-group"><h3>${title}</h3><div class="chips">${G.APPEARANCE[key].filter((o) => !o.only || o.only === run.habitat).map((o) => {
         const st = G.lookOptionState(run, o);
         const on = L[key] === o.id;
         return `<button class="chip ${on ? 'on' : ''}" ${st.ok ? `data-act="look" data-kind="${key}" data-arg="${o.id}"` : 'disabled'} aria-pressed="${on}" title="${esc(st.ok ? o.name : o.why)}">${esc(o.name)}${st.ok ? '' : ' 🔒'}</button>`;
-      }).join('')}</div>${G.APPEARANCE[key].some((o) => !G.lookOptionState(run, o).ok) ? `<p class="note">${esc(G.APPEARANCE[key].filter((o) => !G.lookOptionState(run, o).ok).map((o) => `${o.name}: ${o.why}`).join(' · '))}</p>` : ''}</div>`;
+      }).join('')}</div>${G.APPEARANCE[key].some((o) => !G.lookOptionState(run, o).ok && !G.lookOptionState(run, o).hidden) ? `<p class="note">${esc(G.APPEARANCE[key].filter((o) => !G.lookOptionState(run, o).ok && !G.lookOptionState(run, o).hidden).map((o) => `${o.name}: ${o.why}`).join(' · '))}</p>` : ''}</div>`;
     return `
       <div class="look-preview"><canvas class="portrait huge"></canvas></div>
       <div class="look-group"><h3>Body color</h3><input id="look-hue" type="range" min="0" max="359" value="${hue}" data-look="hue" style="--h:${hue}" class="hue-slider" aria-label="Body color"></div>
       <div class="look-group"><h3>Pattern color</h3><input id="look-accent" type="range" min="0" max="359" value="${acc}" data-look="accent" style="--h:${acc}" class="hue-slider" aria-label="Pattern color"></div>
-      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${group('head', 'Head')}${run.habitat === 'land' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('neck', 'Neck') + (G.segments(run) === 2 ? group('posture', 'Posture') : '') : ''}${group('eyes', 'Eyes')}
+      ${group('pattern', 'Pattern')}${group('shape', 'Body shape')}${group('head', 'Head')}${run.habitat === 'sea' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('fins', 'Fins') : ''}${run.habitat === 'land' && G.symmetry(run) === 'bilateral' && G.segments(run) > 0 ? group('neck', 'Neck') + (G.segments(run) === 2 ? group('posture', 'Posture') : '') : ''}${group('eyes', 'Eyes')}
       <p class="note">Looks are just looks: they never change your stats.</p>`;
   }
 
@@ -779,8 +802,9 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
-      case 'continue': G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
+      case 'continue': if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); } G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
       case 'setup':
+        if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); }
         G.ui.setup = G.ui.setup || { archetype: 'drifter', origin: 'tidal', hostility: 0 };
         if (!G.meta.unlocked.archetypes.includes(G.ui.setup.archetype)) G.ui.setup.archetype = 'drifter';
         if (!G.meta.unlocked.origins.includes(G.ui.setup.origin)) G.ui.setup.origin = 'tidal';
@@ -800,6 +824,7 @@ window.G = window.G || {};
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
       case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; break;
       case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'zone': G.setZone(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;

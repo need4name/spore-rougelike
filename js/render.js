@@ -421,20 +421,35 @@ window.G = window.G || {};
     const hue = b.hue;
     const { p, accent, L, H, E } = look(b);
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
-    const rx = S * 0.33 * (L.shape === 'long' ? 1.2 : L.shape === 'slim' ? 0.95 : 1); const ry = S * 0.13 * (L.shape === 'slim' ? 0.8 : L.shape === 'round' && b.look ? 1.12 : 1);
+    const SEA_SHAPES = { long: [1.2, 1], slim: [0.95, 0.8], round: [1, b.look ? 1.12 : 1], torpedo: [1.12, 0.82], ray: [0.85, 0.55], puffer: [0.72, 1.7], deep: [0.78, 1.7] };
+    const [sx, sy] = SEA_SHAPES[L.shape] || [1, 1];
+    const rx = S * 0.33 * sx; const ry = S * 0.13 * sy;
     const y0 = cy + Math.sin(t * 1.4) * 3;
     const tailX = cx - rx * 0.95;
     const sw = Math.sin(t * 3) * 0.25;
 
     // Tail
     ctx.save(); ctx.translate(tailX, y0); ctx.rotate(sw * 0.4);
-    if (H.has('fluke') || !p.tail) { tri(0, 0, -S * 0.2, -S * 0.12, -S * 0.12, 0, dark); tri(0, 0, -S * 0.2, S * 0.12, -S * 0.12, 0, dark); }
+    if (H.has('thresher_tail') || H.has('whip_lash')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.2, -S * 0.05, -S * 0.42, -S * 0.2 + sw * 20); ctx.quadraticCurveTo(-S * 0.2, -S * 0.01, 0, S * 0.03); ctx.fillStyle = dark; ctx.fill(); tri(0, 0, -S * 0.1, S * 0.08, -S * 0.06, 0, dark); }
+    if (H.has('paddle_tail') || H.has('whip_lash')) { ctx.beginPath(); ctx.ellipse(-S * 0.1, 0, S * 0.12, S * 0.07, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
+    if (H.has('jet_siphon') || H.has('jet_drive')) { ctx.beginPath(); ctx.ellipse(-S * 0.03, S * 0.03, S * 0.06, S * 0.03, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 40, 40); ctx.fill(); for (let k = 0; k < 4; k++) { const ph = (t * 1.5 + k * 0.25) % 1; ctx.beginPath(); ctx.arc(-S * (0.1 + ph * 0.25), S * 0.03 + Math.sin(k * 3) * 6, 2 + ph * 4, 0, Math.PI * 2); ctx.strokeStyle = `rgba(220,245,255,${0.7 * (1 - ph)})`; ctx.lineWidth = 1.2; ctx.stroke(); } }
+    if (H.has('fluke') || (!p.tail && !H.has('jet_siphon'))) { tri(0, 0, -S * 0.2, -S * 0.12, -S * 0.12, 0, dark); tri(0, 0, -S * 0.2, S * 0.12, -S * 0.12, 0, dark); }
     if (E.tail) for (let k = 1; k <= E.tail + 1; k++) tri(0, 0, -S * (0.24 + 0.04 * k), (k % 2 ? -1 : 1) * S * (0.06 + 0.05 * k), -S * 0.14, 0, accent || dark);
     else if (H.has('stinger_tail')) { line(0, 0, -S * 0.22, -S * 0.05, body, S * 0.03); tri(-S * 0.22, -S * 0.05, -S * 0.28, -S * 0.1, -S * 0.27, 0, VENOM); }
     else if (H.has('display_tail')) for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(-S * 0.12, i * 8, S * 0.12, S * 0.02, i * 0.2, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 140 + i * 20, 70, 60); ctx.fill(); }
     else if (H.has('glow_tail')) { line(0, 0, -S * 0.18, 0, body, S * 0.03); glow(GLOW, 16, () => dot(-S * 0.2, 0, S * 0.03, GLOW)); }
     else if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
     ctx.restore();
+
+    // Ray wings sit behind the body
+    if (L.shape === 'ray') { const flap = Math.sin(t * 2.2) * ry * 1.2; ctx.beginPath(); ctx.moveTo(cx + rx * 0.9, y0); ctx.quadraticCurveTo(cx - rx * 0.1, y0 - ry * 6 - flap, cx - rx * 0.7, y0); ctx.quadraticCurveTo(cx - rx * 0.1, y0 + ry * 6 + flap, cx + rx * 0.9, y0); ctx.fillStyle = hsl(hue, 50, 62); ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (L.fins === 'flowing') for (let k = -1; k <= 1; k += 2) wavy(cx - rx * 0.2, y0 + k * ry * 0.7, S * 0.22, Math.PI - k * 0.5, 5, t, hsl(hue, 55, 62, 0.7), S * 0.03, k);
+    // Sail fin, angler rod and arms behind the body
+    if (H.has('sail_fin') || H.has('great_sail')) { const tall = H.has('great_sail') ? 3.6 : 2.8; ctx.beginPath(); ctx.moveTo(cx - rx * 0.6, y0 - ry * 0.8); ctx.quadraticCurveTo(cx - rx * 0.3, y0 - ry * tall, cx + rx * 0.4, y0 - ry * (tall - 0.4)); ctx.lineTo(cx + rx * 0.4, y0 - ry * 0.8); ctx.closePath(); ctx.fillStyle = hsl(hue + 200, 55, 45, 0.85); ctx.fill(); for (let i = 0; i < 7; i++) line(cx - rx * 0.5 + i * rx * 0.14, y0 - ry * 0.8, cx - rx * 0.45 + i * rx * 0.14, y0 - ry * (tall - 0.6), dark, 1.2); }
+    if (H.has('angler_rod')) { const tx = cx + rx * 1.2; const ty = y0 - ry * 1.6 + Math.sin(t * 2) * 4; ctx.beginPath(); ctx.moveTo(cx + rx * 0.3, y0 - ry * 0.8); ctx.quadraticCurveTo(cx + rx * 0.7, y0 - ry * 3.2, tx, ty); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(tx, ty, S * 0.025, GLOW)); }
+    if (H.has('feeding_arms') || H.has('clever_arms') || H.has('death_veil')) for (let k = 0; k < 2; k++) { const len = S * (0.32 + k * 0.05); wavy(cx + rx * 0.8, y0 + ry * 0.4, len, 0.25 + k * 0.25, 4, t, dark, S * 0.014, k + 3); dot(cx + rx * 0.8 + Math.cos(0.25 + k * 0.25) * len, y0 + ry * 0.4 + Math.sin(0.25 + k * 0.25) * len, S * 0.022, hsl(hue, 40, 40)); }
+    if (H.has('stinging_arms') || H.has('death_veil')) for (let k = 0; k < 6; k++) wavy(cx + rx * 0.2 - k * rx * 0.15, y0 + ry * 0.8, S * 0.3, Math.PI / 2 + 0.2, 5, t, hsl(280, 60, 72, 0.8), 1.5, k);
+    if (H.has('feather_arms') || H.has('sorting_claws')) for (let k = 0; k < 3; k++) { const ax = cx + rx * 0.75; const ay = y0 + ry * 0.3; const a = -0.3 + k * 0.4 + Math.sin(t * 2 + k) * 0.1; const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; line(ax, ay, ex, ey, dark, 2); for (let j = 1; j <= 5; j++) { const fx = ax + (ex - ax) * j / 6; const fy = ay + (ey - ay) * j / 6; line(fx, fy, fx + 4, fy - 6, light, 1.2); line(fx, fy, fx + 4, fy + 6, light, 1.2); } }
 
     // Dorsal
     if (H.has('dorsal_fin')) tri(cx - rx * 0.3, y0 - ry * 0.85, cx - rx * 0.05, y0 - ry * 2.2, cx + rx * 0.25, y0 - ry * 0.85, dark);
@@ -463,6 +478,27 @@ window.G = window.G || {};
     if (H.has('cleaner_skin')) for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
     ctx.restore();
     if (H.has('blubber')) { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.03, ry * 1.08, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 30, 80, 0.6); ctx.lineWidth = 3; ctx.stroke(); }
+    if (L.shape === 'puffer') for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2; tri(cx + Math.cos(a - 0.08) * rx, y0 + Math.sin(a - 0.08) * ry, cx + Math.cos(a) * rx * 1.18, y0 + Math.sin(a) * ry * 1.14, cx + Math.cos(a + 0.08) * rx, y0 + Math.sin(a + 0.08) * ry, BONE); }
+    if (L.fins === 'spiky') for (let k = 0; k < 5; k++) { const x = cx - rx * 0.4 + k * rx * 0.18; tri(x - 4, y0 - ry * 0.9, x + 2, y0 - ry * 1.5, x + 5, y0 - ry * 0.9, dark); }
+    if (L.fins === 'sharp') { tri(cx - rx * 0.1, y0 - ry * 0.9, cx - rx * 0.35, y0 - ry * 1.9, cx + rx * 0.2, y0 - ry * 0.9, dark); tri(cx - rx * 0.2, y0 + ry * 0.9, cx - rx * 0.4, y0 + ry * 1.5, cx, y0 + ry * 0.9, dark); }
+    // Deep-sea skins
+    if (H.has('color_skin') || H.has('color_storm')) { ctx.save(); ctx.beginPath(); ctx.ellipse(cx, y0, rx, ry, 0, 0, Math.PI * 2); ctx.clip(); for (let i = -4; i <= 4; i++) { const x = cx + i * rx * 0.25 + ((t * 30) % (rx * 0.25)); ctx.fillStyle = hsl(hue + 60 * Math.sin(t * 2 + i), 70, 60, 0.35); ctx.fillRect(x, y0 - ry, rx * 0.12, ry * 2); } ctx.restore(); }
+    if (H.has('electric_organ') || H.has('storm_body')) glow('#f6f08a', 10, () => { for (let k = 0; k < 3; k++) { const x0 = cx - rx * 0.6 + k * rx * 0.5; const flick = Math.sin(t * 13 + k * 2) > 0.2; if (!flick) continue; ctx.beginPath(); ctx.moveTo(x0, y0 - ry * 1.3); ctx.lineTo(x0 + 6, y0 - ry * 1.05); ctx.lineTo(x0 - 2, y0 - ry * 0.95); ctx.lineTo(x0 + 5, y0 - ry * 0.65); ctx.strokeStyle = '#f6f08a'; ctx.lineWidth = 2; ctx.stroke(); } });
+    if (H.has('slime_skin')) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.2, y0 - ry * 0.45, rx * 0.45, ry * 0.18, -0.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(); for (let k = 0; k < 3; k++) drop(cx - rx * 0.4 + k * rx * 0.4, y0 + ry * 0.95 + ((t * 10 + k * 7) % 12), 3, 'rgba(200,240,220,0.6)'); }
+    if (H.has('pressure_skin')) for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(cx - rx * 0.5 + k * rx * 0.3, y0, ry * 0.6, -0.6, 0.6); ctx.strokeStyle = hsl(hue, 30, 30, 0.5); ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (H.has('ink_glands') || H.has('vanishing_skin')) for (let k = 0; k < 4; k++) { const ph = ((t * 0.6 + k * 0.25) % 1); dot(cx - rx * (1 + ph * 0.8), y0 + ry * 0.3 + Math.sin(k * 2) * ry * 0.4, S * (0.02 + ph * 0.04), `rgba(20,16,30,${0.6 * (1 - ph)})`); }
+    if (H.has('lateral_line') || H.has('ripple_sense')) for (let k = 0; k < 12; k++) dot(cx - rx * 0.8 + k * rx * 0.14, y0 + Math.sin(k * 0.5) * ry * 0.08, 1.4, hsl(hue, 40, 28));
+    // Shells and crowns on the back
+    if (H.has('spiral_shell') || H.has('nautilus_shell')) { const sx0 = cx - rx * 0.15; const sy0 = y0 - ry * 0.9; const R0 = ry * (H.has('nautilus_shell') ? 1.35 : 1.05); dot(sx0, sy0, R0, '#e9d8b8'); ctx.beginPath(); for (let a = 0; a < Math.PI * 5; a += 0.2) { const r = R0 * (1 - a / (Math.PI * 5.5)); ctx.lineTo(sx0 + Math.cos(a) * r, sy0 + Math.sin(a) * r); } ctx.strokeStyle = '#a67c52'; ctx.lineWidth = 2; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = k * 1.2; line(sx0 + Math.cos(a) * R0 * 0.3, sy0 + Math.sin(a) * R0 * 0.3, sx0 + Math.cos(a) * R0, sy0 + Math.sin(a) * R0, '#c49a6c', 1.5); } }
+    if (H.has('anemone_crown') || H.has('living_reef')) for (let k = 0; k < 4; k++) { const ax = cx - rx * 0.45 + k * rx * 0.3; const ay = y0 - ry * 0.85; for (let j = -2; j <= 2; j++) wavy(ax, ay, S * 0.07, -Math.PI / 2 + j * 0.3, 2, t, hsl(330 + k * 15, 70, 70), 2.2, j + k); dot(ax, ay, 3, hsl(330, 50, 50)); }
+    if (H.has('living_reef')) for (let k = 0; k < 3; k++) dot(cx - rx * 0.3 + k * rx * 0.3 + Math.sin(t + k) * 6, y0 - ry * 2 - Math.cos(t * 1.3 + k) * 5, S * 0.015, hsl(40 + k * 60, 80, 60));
+    // Underside
+    if (H.has('walking_legs') || H.has('reef_walkers')) for (let k = 0; k < 4; k++) { const lx = cx - rx * 0.5 + k * rx * 0.3; const step = Math.sin(t * 5 + k * 1.5) * 4; ctx.beginPath(); ctx.moveTo(lx, y0 + ry * 0.8); ctx.lineTo(lx + 6 + step, y0 + ry * 1.5); ctx.lineTo(lx + 2 + step, y0 + ry * 2.2); ctx.strokeStyle = dark; ctx.lineWidth = 2.5; ctx.stroke(); }
+    if (H.has('sucker_pads') || H.has('thousand_feet') || H.has('reef_walkers')) for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.6 + k * rx * 0.24, y0 + ry * 0.93, 4, 2.5, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 78); ctx.fill(); }
+    if (H.has('tube_feet') || H.has('thousand_feet')) for (let k = 0; k < 16; k++) { const lx = cx - rx * 0.7 + k * rx * 0.09; line(lx, y0 + ry * 0.85, lx + Math.sin(t * 4 + k) * 2, y0 + ry * 1.25, hsl(hue, 45, 70), 1.5); }
+    if (H.has('crawling_fins')) for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.2 + k * rx * 0.45, y0 + ry * 1.1, rx * 0.1, ry * 0.3, 0.3 + Math.sin(t * 3 + k) * 0.2, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
+    if (H.has('belly_plate') || H.has('lantern_plate')) { ctx.beginPath(); ctx.ellipse(cx, y0 + ry * 0.55, rx * 0.75, ry * 0.45, 0, 0, Math.PI); ctx.fillStyle = SHELL; ctx.fill(); }
+    if (H.has('belly_lights') || H.has('lantern_plate')) glow(GLOW, 10, () => { for (let k = 0; k < 7; k++) dot(cx - rx * 0.6 + k * rx * 0.2, y0 + ry * 0.8, S * 0.01 * (1.2 + 0.4 * Math.sin(t * 3 + k)), GLOW); });
 
     // Fins (near)
     const finSwing = Math.sin(t * 2.5) * 0.3;
@@ -471,6 +507,9 @@ window.G = window.G || {};
       if (kind === 'pectoral_fins' || kind === 'pelvic_fins') tri(0, 0, -len * 0.3, len, len * 0.2, len * 0.7, dark);
       else if (kind === 'front_flippers' || kind === 'rear_flippers') { ctx.beginPath(); ctx.ellipse(0, len * 0.5, len * 0.22, len * 0.55, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
       else if (kind === 'armored_fins') { tri(0, 0, -len * 0.3, len, len * 0.2, len * 0.7, SHELL); }
+      else if (kind === 'gliding_fins') { ctx.rotate(-0.9); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-len * 1.2, len * 0.4, -len * 2.2, len * 0.1); ctx.quadraticCurveTo(-len * 1.2, len * 0.9, 0, len * 0.25); ctx.fillStyle = hsl(hue, 50, 70, 0.8); ctx.fill(); for (let k = 1; k <= 4; k++) line(0, len * 0.1, -len * 0.5 * k, len * (0.15 + 0.08 * k), dark, 1); }
+      else if (kind === 'lobe_fins') { ctx.beginPath(); ctx.ellipse(0, len * 0.4, len * 0.2, len * 0.5, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); line(0, 0, 0, len * 0.7, BONE, 2); tri(-len * 0.2, len * 0.8, 0, len * 1.15, len * 0.2, len * 0.8, dark); }
+      else if (kind === 'lionfish_fins') { for (let k = -3; k <= 3; k++) { const a = k * 0.25; const ex = Math.sin(a) * len * 1.5; const ey = Math.cos(a) * len * 1.5; line(0, 0, ex, ey, k % 2 ? '#f3e9dc' : '#c0392b', 2.5); } ctx.globalAlpha = 0.35; tri(-len * 1.1, len * 1.1, 0, 0, len * 1.1, len * 1.1, '#c0392b'); ctx.globalAlpha = 1; }
       else if (kind === 'stubby_front_fins' || kind === 'stubby_rear_fins') { ctx.beginPath(); ctx.ellipse(0, len * 0.3, len * 0.18, len * 0.32, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
       else if (kind === 'fore_tentacles') { ctx.restore(); wavy(x, y, len * 1.3, Math.PI / 2 - 0.3, 6, t, dark, S * 0.02); return; }
       ctx.restore();
@@ -480,7 +519,7 @@ window.G = window.G || {};
     if (p.frontLimbs) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1));
     if (p.hindLimbs && !H.has('sea_tentacles')) fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.1 * (E.hindLimbs ? 1.4 : 1));
     if (E.frontLimbs >= 2) fin(cx + rx * 0.05, y0 + ry * 0.7, p.frontLimbs, S * 0.12);
-    if (E.back) tri(cx - rx * 0.5, y0 - ry * 0.85, cx - rx * 0.2, y0 - ry * (2.6 + 0.4 * E.back), cx + rx * 0.1, y0 - ry * 0.85, accent || dark);
+    if (E.back && !['spiral_shell', 'sail_fin', 'anemone_crown', 'angler_rod', 'carapace'].some((id) => H.has(id))) tri(cx - rx * 0.5, y0 - ry * 0.85, cx - rx * 0.2, y0 - ry * (2.6 + 0.4 * E.back), cx + rx * 0.1, y0 - ry * 0.85, accent || dark);
     if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.02, ry * 1.04, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
 
     // Head end
@@ -491,9 +530,27 @@ window.G = window.G || {};
       const c = H.has('venom_fangs') ? VENOM : BONE;
       [0, 1, 2].forEach((k) => tri(mx - rx * 0.2 + k * 7, my, mx - rx * 0.18 + k * 7, my + 7, mx - rx * 0.14 + k * 7, my, c));
     }
+    const er = S * 0.022;
+    // Head shapes
+    if (L.head === 'sword') { tri(mx - 4, my - ry * 0.35, mx + S * 0.3, my - ry * 0.25, mx - 4, my - ry * 0.05, BONE); }
+    if (L.head === 'hammer') { ctx.beginPath(); ctx.ellipse(hx + rx * 0.08, hy, S * 0.025, ry * 1.3, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); dot(hx + rx * 0.08, hy - ry * 1.2, S * 0.014, '#fff'); dot(hx + rx * 0.08, hy + ry * 1.2, S * 0.014, '#fff'); dot(hx + rx * 0.1, hy - ry * 1.2, S * 0.007, '#1c1414'); dot(hx + rx * 0.1, hy + ry * 1.2, S * 0.007, '#1c1414'); }
+    if (L.head === 'snout') { ctx.beginPath(); ctx.ellipse(mx + rx * 0.08, my - ry * 0.1, rx * 0.22, ry * 0.3, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (L.head === 'big') { ctx.beginPath(); ctx.ellipse(hx - rx * 0.05, y0 - ry * 0.55, rx * 0.3, ry * 0.75, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
+    if (L.head === 'crest') tri(hx - rx * 0.2, y0 - ry * 0.8, hx - rx * 0.05, y0 - ry * 2, hx + rx * 0.1, y0 - ry * 0.8, dark);
+    // Deep-sea mouths
+    if (H.has('coral_beak') || H.has('reef_grinder')) { tri(mx - rx * 0.12, my - ry * 0.35, mx + rx * 0.12, my - ry * 0.05, mx - rx * 0.12, my + ry * 0.05, '#e6d3a3'); tri(mx - rx * 0.12, my + ry * 0.05, mx + rx * 0.1, my + ry * 0.12, mx - rx * 0.12, my + ry * 0.3, '#d4bf8a'); }
+    if (H.has('suction_mouth') || H.has('vacuum_maw')) { const open = 1 + Math.sin(t * 3) * 0.25; ctx.beginPath(); ctx.ellipse(mx + 2, my, ry * 0.25 * open, ry * 0.32 * open, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); ctx.strokeStyle = hsl(hue, 45, 65); ctx.lineWidth = 3; ctx.stroke(); }
+    if (H.has('cookie_cutter') || H.has('shark_jaws')) { ctx.beginPath(); ctx.arc(mx - 4, my + 2, ry * 0.3, 0.2, Math.PI - 0.2); ctx.strokeStyle = hsl(hue, 30, 15); ctx.lineWidth = 3; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = 0.4 + k * 0.55; tri(mx - 4 + Math.cos(a) * ry * 0.3 - 2, my + 2 + Math.sin(a) * ry * 0.3, mx - 4 + Math.cos(a) * ry * 0.18, my + 2 + Math.sin(a) * ry * 0.18, mx - 4 + Math.cos(a) * ry * 0.3 + 2, my + 2 + Math.sin(a) * ry * 0.3, BONE); } }
+    if (H.has('hidden_beak') || H.has('shell_cracker')) { tri(mx - 6, my + ry * 0.2, mx + 6, my + ry * 0.35, mx - 4, my + ry * 0.55, '#3a2a2a'); }
+    // Deep-sea senses
+    if (H.has('mantis_eyes') || H.has('rainbow_eyes')) for (let k = 0; k < 2; k++) { const ex = hx - k * 8 + 4; const ey = hy - ry * (1.2 + k * 0.2) + Math.sin(t * 2 + k) * 2; line(hx - k * 6, hy - ry * 0.4, ex, ey, dark, 2); ctx.beginPath(); ctx.ellipse(ex, ey, er * 1.2, er * 0.8, 0.3, 0, Math.PI * 2); const g2 = ctx.createLinearGradient(ex - er, ey, ex + er, ey); g2.addColorStop(0, '#e74c3c'); g2.addColorStop(0.5, '#f1c40f'); g2.addColorStop(1, '#2ecc71'); ctx.fillStyle = g2; ctx.fill(); line(ex - er, ey, ex + er, ey, '#1c1414', 1.2); }
+    if (H.has('barbels')) for (let k = 0; k < 3; k++) wavy(mx - 4 - k * 3, my + 3, S * 0.09, Math.PI / 2 + 0.4 - k * 0.3, 3, t, dark, 1.5, k);
+    // Arms in front (pincers, clubs, suckers)
+    if (H.has('pincers') || H.has('smasher_claws') || H.has('sorting_claws') || H.has('builders_arms')) for (let k = 0; k < 2; k++) { const ax = mx - rx * 0.1 - k * rx * 0.12; const ay = my + ry * (0.9 + k * 0.2); const big = H.has('smasher_claws') ? 1.3 : 1; line(cx + rx * 0.5, y0 + ry * 0.6, ax, ay, dark, 3); const open = 0.35 + Math.sin(t * 3 + k) * 0.2; ctx.save(); ctx.translate(ax, ay); ctx.beginPath(); ctx.ellipse(S * 0.03 * big, -S * 0.012, S * 0.04 * big, S * 0.016 * big, -open, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 10, 55, 45); ctx.fill(); ctx.beginPath(); ctx.ellipse(S * 0.03 * big, S * 0.012, S * 0.035 * big, S * 0.012 * big, open, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    if (H.has('smasher_club') || H.has('smasher_claws')) { const punch = Math.max(0, Math.sin(t * 2.5)) ** 8 * S * 0.08; line(cx + rx * 0.55, y0 + ry * 0.7, mx + punch - 6, my + ry * 0.6, dark, 4); dot(mx + punch - 4, my + ry * 0.6, S * 0.025, hsl(hue + 30, 60, 55)); }
+    if (H.has('sucker_arms') || H.has('clever_arms') || H.has('builders_arms')) for (let k = 0; k < 4; k++) { const a = Math.PI / 2 - 0.9 + k * 0.25; const ax = cx + rx * 0.55 + k * 4; const ay = y0 + ry * 0.7; ctx.beginPath(); ctx.moveTo(ax, ay); const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; const cx2 = ax + Math.cos(a) * S * 0.12 + Math.sin(t * 2 + k) * 8; ctx.quadraticCurveTo(cx2, ay + Math.sin(a) * S * 0.08, ex, ey); ctx.strokeStyle = body; ctx.lineWidth = S * 0.022 * (1 - k * 0.1); ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; for (let j = 1; j <= 3; j++) dot(ax + (ex - ax) * j / 4, ay + (ey - ay) * j / 4 + 2, 1.6, hsl(hue, 30, 85)); }
     if (H.has('baleen') || H.has('grinding_beak')) for (let k = 0; k < 6; k++) line(mx - rx * 0.25 + k * 5, my - 2, mx - rx * 0.25 + k * 5, my + 6, BONE, 1.5);
     if (H.has('lure_jaw')) { ctx.beginPath(); ctx.moveTo(hx, y0 - ry); ctx.quadraticCurveTo(hx + rx * 0.4, y0 - ry * 3, hx + rx * 0.6, y0 - ry * 1.4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + rx * 0.6, y0 - ry * 1.4 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
-    const er = S * 0.022;
     FACE = { x: hx, y: hy, r: er * (H.has('big_eyes') ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5 };
     if (E.senses) for (let k = 0; k < 1 + E.senses; k++) { dot(hx - er * (3 + k * 2.4), hy - er * (0.6 + (k % 2)), er * 0.8, '#fff'); dot(hx - er * (3 + k * 2.4) + 1, hy - er * (0.6 + (k % 2)), er * 0.45, '#1c1414'); }
     if (E.mouth) for (let k = 0; k < 5; k++) tri(mx - rx * 0.3 + k * 6, my - 1, mx - rx * 0.28 + k * 6, my + 9, mx - rx * 0.26 + k * 6, my - 1, BONE);
@@ -1144,6 +1201,8 @@ window.G = window.G || {};
     const you = herds.get('you');
     const others = [...herds.entries()].filter(([k]) => k !== key);
     let tx = h.hx + (Math.random() - 0.5) * 0.3; let ty = h.hy + (Math.random() - 0.5) * 0.35;
+    const zb = zoneBox(run, s);
+    if (zb) { tx = zb.x[0] + Math.random() * (zb.x[1] - zb.x[0]); ty = zb.y[0] + Math.random() * (zb.y[1] - zb.y[0]); }
     if (s) {
       const st = G.speciesStatus(s);
       if (st === 'hostile' && you && Math.random() < 0.6) { tx = you.x + 0.08; ty = you.y; }
@@ -1160,7 +1219,21 @@ window.G = window.G || {};
   }
 
   // Home territories: spread evenly so herds never all bunch together.
-  function homeFor(i, key) {
+  // Sea creatures keep to their home depth (see G.SEA_ZONES).
+  const isSeaMap = (run) => run.stage === 'creature' && run.habitat === 'sea';
+  function zoneBox(run, s) {
+    if (!isSeaMap(run)) return null;
+    return G.SEA_ZONE[s ? (s.zone || 'open') : G.zone(run)];
+  }
+  // The sea floor, in map units: a shallow reef shelf, a steep drop, then the abyss.
+  function seabed(x) {
+    if (x < 0.33) return 0.36 + Math.sin(x * 40) * 0.006;
+    if (x < 0.58) return 0.36 + ((x - 0.33) / 0.25) * 0.57;
+    return 0.93 + Math.sin(x * 31) * 0.01;
+  }
+  function homeFor(i, key, run, s) {
+    const zb = run && zoneBox(run, s);
+    if (zb) { const fx = key === 'you' ? 0.5 : ((i * 0.618 + 0.2) % 1); const fy = key === 'you' ? 0.5 : ((i * 0.381 + 0.3) % 1); return [zb.x[0] + fx * (zb.x[1] - zb.x[0]), zb.y[0] + fy * (zb.y[1] - zb.y[0])]; }
     if (key === 'you') return [0.45, 0.6];
     const hx = 0.12 + ((i * 0.618 + 0.11) % 1) * 0.76;
     const hy = 0.08 + ((i * 0.381 + 0.25) % 1) * 0.84;
@@ -1176,9 +1249,11 @@ window.G = window.G || {};
     const items = [];
     if (run.stage === 'cell') { for (let i = 0; i < 6; i++) items.push({ kind: 'blob', x: rnd(), y: rnd(), r: 0.5 + rnd() }); }
     else if (run.habitat === 'sea') {
-      for (let i = 0; i < 9; i++) items.push({ kind: 'kelp', x: rnd(), y: 0.55 + rnd() * 0.45, r: 0.6 + rnd() * 0.6 });
-      for (let i = 0; i < 6; i++) items.push({ kind: 'coral', x: rnd(), y: 0.6 + rnd() * 0.4, r: 0.6 + rnd() * 0.5, hue: Math.floor(rnd() * 360) });
-      for (let i = 0; i < 4; i++) items.push({ kind: 'rock', x: rnd(), y: 0.5 + rnd() * 0.5, r: 0.6 + rnd() * 0.6 });
+      // Reef shelf, the drop-off and the abyss floor.
+      for (let i = 0; i < 5; i++) { const x = rnd() * 0.32; items.push({ kind: 'kelp', x, y: seabed(x), r: 0.6 + rnd() * 0.5 }); }
+      for (let i = 0; i < 8; i++) { const x = rnd() * 0.33; items.push({ kind: 'coral', x, y: seabed(x) + 0.003, r: 0.5 + rnd() * 0.5, hue: Math.floor(rnd() * 360) }); }
+      for (let i = 0; i < 4; i++) { const x = 0.36 + rnd() * 0.2; items.push({ kind: 'rock', x, y: seabed(x) + 0.01, r: 0.5 + rnd() * 0.5 }); }
+      for (let i = 0; i < 3; i++) { const x = 0.66 + i * 0.12 + rnd() * 0.04; items.push({ kind: 'seavent', x, y: seabed(x) + 0.01, r: 0.7 + rnd() * 0.4 }); items.push({ kind: 'worms', x: x + 0.035, y: seabed(x + 0.035) + 0.012, r: 0.6 }); }
     } else {
       for (let i = 0; i < 9; i++) items.push({ kind: 'tree', x: rnd(), y: rnd(), r: 0.7 + rnd() * 0.6 });
       for (let i = 0; i < 7; i++) items.push({ kind: 'bush', x: rnd(), y: rnd(), r: 0.6 + rnd() * 0.5 });
@@ -1198,8 +1273,45 @@ window.G = window.G || {};
       case 'kelp': for (let i = 0; i < 3; i++) wavy(x + i * k * 0.2, y, k * 2, -Math.PI / 2, k * 0.15, t * 0.7, 'rgba(80, 140, 70, 0.8)', k * 0.12, i + x * 10); break;
       case 'coral': for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + i * k * 0.2, y - k * 0.5, x + i * k * 0.35, y - k * (0.8 - Math.abs(i) * 0.12)); ctx.strokeStyle = hsl(it.hue, 65, 60); ctx.lineWidth = k * 0.1; ctx.lineCap = 'round'; ctx.stroke(); } break;
       case 'blob': dot(x, y, k * 0.3, 'rgba(255,255,255,0.05)'); break;
+      case 'seavent': {
+        ctx.beginPath(); ctx.moveTo(x - k * 0.3, y); ctx.lineTo(x - k * 0.12, y - k * 0.9); ctx.lineTo(x + k * 0.12, y - k * 0.9); ctx.lineTo(x + k * 0.3, y); ctx.closePath(); ctx.fillStyle = '#2b2522'; ctx.fill();
+        for (let i = 0; i < 5; i++) { const ph = (t * 0.4 + i * 0.2 + x) % 1; dot(x + Math.sin(ph * 6 + i) * k * 0.15 * (1 + ph), y - k * (0.9 + ph * 1.6), k * (0.08 + ph * 0.18), `rgba(40,36,40,${0.7 * (1 - ph)})`); }
+        glow('#ff8a3d', 10, () => dot(x, y - k * 0.9, k * 0.07, '#ff8a3d'));
+        break;
+      }
+      case 'worms': for (let i = -2; i <= 2; i++) { const wx = x + i * k * 0.08; line(wx, y, wx + Math.sin(t + i) * 2, y - k * (0.3 + (i % 2) * 0.1), '#e8e0d0', k * 0.05); dot(wx + Math.sin(t + i) * 2, y - k * (0.3 + (i % 2) * 0.1), k * 0.05, '#e04a4a'); } break;
       default: break;
     }
+  }
+
+  // A side-on slice of ocean: light at the top, the reef shelf, the drop-off and the abyss.
+  function drawDepthBackground(run, w, h, t) {
+    const hue = G.ORIGIN[run.origin].hue;
+    const top = h * 0.05; const bottom = h * 0.98; const Y = (u) => top + u * (bottom - top);
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, hsl(hue + 5, 55, 46)); g.addColorStop(0.22, hsl(hue + 15, 55, 32)); g.addColorStop(0.5, hsl(hue + 35, 55, 17)); g.addColorStop(0.75, hsl(hue + 45, 55, 9)); g.addColorStop(1, hsl(hue + 50, 50, 4));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    // Surface and sunbeams
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.moveTo(0, top); for (let x = 0; x <= w; x += 12) ctx.lineTo(x, top + Math.sin(x * 0.05 + t * 1.5) * 2); ctx.lineTo(w, 0); ctx.lineTo(0, 0); ctx.fill();
+    for (let i = 0; i < 5; i++) { const bx = ((i * 0.23 + 0.05) * w + Math.sin(t * 0.3 + i) * 20); ctx.beginPath(); ctx.moveTo(bx, top); ctx.lineTo(bx + 30, top); ctx.lineTo(bx + 90, h * 0.5); ctx.lineTo(bx + 40, h * 0.5); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,230,0.05)'; ctx.fill(); }
+    // Marine snow and deep glows
+    for (let i = 0; i < 40; i++) { const x = (i * 83.7) % w; const y = (i * 61.3 + t * 8) % h; dot(x, y, 1.1, `rgba(255,255,255,${y > h * 0.4 ? 0.25 : 0.1})`); }
+    glow(GLOW, 8, () => { for (let i = 0; i < 9; i++) { const x = w * (0.55 + ((i * 0.37) % 0.42)); const y = Y(0.5 + ((i * 0.29) % 0.38)); if (Math.sin(t * 2 + i * 1.7) > 0.3) dot(x, y, 1.6, GLOW); } });
+    // Sea floor
+    ctx.beginPath(); ctx.moveTo(0, h);
+    for (let x = 0; x <= w; x += 6) ctx.lineTo(x, Y(seabed(x / w)));
+    ctx.lineTo(w, h); ctx.closePath();
+    const sg = ctx.createLinearGradient(0, Y(0.35), 0, h); sg.addColorStop(0, hsl(40, 35, 48)); sg.addColorStop(0.3, hsl(30, 20, 22)); sg.addColorStop(1, hsl(240, 15, 7));
+    ctx.fillStyle = sg; ctx.fill();
+    // Depth labels, with your home picked out
+    const home = G.zone(run);
+    ctx.font = "700 10px 'Atkinson Hyperlegible', sans-serif"; ctx.textBaseline = 'top';
+    G.SEA_ZONES.forEach((z) => {
+      const mine = z.id === home;
+      ctx.textAlign = z.id === 'reef' ? 'left' : 'right';
+      ctx.fillStyle = mine ? 'rgba(242, 181, 68, 0.9)' : 'rgba(232, 239, 228, 0.35)';
+      ctx.fillText(z.name.toUpperCase() + (mine ? ' · HOME' : ''), z.id === 'reef' ? 8 : w - 8, Y(z.y[0]) - 14);
+    });
   }
 
   function drawMapBackground(run, w, h, t) {
@@ -1215,7 +1327,8 @@ window.G = window.G || {};
       gg.addColorStop(0, hsl(95, 22, 19)); gg.addColorStop(1, hsl(95, 28, 26));
       ctx.fillStyle = gg; ctx.fillRect(0, h * 0.24, w, h * 0.76);
       for (let i = 0; i < 60; i++) { const x = (i * 97.3) % w; const y = h * 0.27 + ((i * 53.1) % (h * 0.72)); line(x, y, x + Math.sin(t + i) * 1.5, y - 5 - (y / h) * 5, hsl(95, 30, 32), 1.5); }
-    } else drawBackground(run, w, h, t);
+    } else if (isSeaMap(run)) { drawDepthBackground(run, w, h, t); return; }
+    else drawBackground(run, w, h, t);
     const o = run.origin;
     const P = { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.95 };
     if (o === 'vents') drawProp('vent', 'back', P);
@@ -1243,7 +1356,8 @@ window.G = window.G || {};
       drawMapBackground(run, w, h, t);
       const wet = run.stage === 'cell' || run.habitat === 'sea';
       const land = !wet;
-      const top = land ? h * 0.3 : h * 0.12; const bottom = h * 0.93;
+      const seaMap = isSeaMap(run);
+      const top = land ? h * 0.3 : seaMap ? h * 0.05 : h * 0.12; const bottom = seaMap ? h * 0.98 : h * 0.93;
       const base = Math.min(w, h) * 0.12;
       const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
       // Keep the herd list in sync with the world.
@@ -1251,7 +1365,9 @@ window.G = window.G || {};
       [...herds.keys()].forEach((k) => { if (!live.find((l) => l.key === k)) herds.delete(k); });
       live.forEach((l, i) => {
         let hd = herds.get(l.key);
-        if (!hd) { const [hx0, hy0] = homeFor(i, l.key); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        if (!hd) { const [hx0, hy0] = homeFor(i, l.key, run, l.s); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        const zid = seaMap ? (l.s ? l.s.zone : G.zone(run)) : null;
+        if (hd.zone !== zid) { hd.zone = zid; behaviour(run, l.key, l.s, hd); }
         const speed = (l.s ? 0.025 + G.speciesStat(l.s, 'spd') * 0.003 : 0.03 + G.stat(run, 'spd') * 0.0025) * (reduceMotion ? 0 : 1) * (flies(l.body) ? 1.6 : 1);
         const dx = hd.tx - hd.x; const dy = hd.ty - hd.y;
         const d = Math.hypot(dx, dy * 0.5);
@@ -1259,7 +1375,7 @@ window.G = window.G || {};
         else { hd.x += (dx / d) * speed * dt; hd.y += (dy / d) * speed * dt * 0.5; if (Math.abs(dx) > 0.01) hd.dir = dx > 0 ? 1 : -1; }
       });
       // Draw scenery and herds together, far to near.
-      const depthOf = (y) => (land ? 0.55 + 0.45 * y : 0.7 + 0.3 * y);
+      const depthOf = (y) => (land ? 0.55 + 0.45 * y : seaMap ? 0.85 : 0.7 + 0.3 * y);
       const drawables = makeScenery(run).map((it) => ({ y: it.y, draw: () => { const k = base * depthOf(it.y) * it.r; drawScenery(it, it.x * w, top + it.y * (bottom - top), k, t); } }));
       mapHits = [];
       live.forEach((l) => {
@@ -1287,12 +1403,13 @@ window.G = window.G || {};
           const label = `${l.key === 'you' ? 'You' : l.key} · ${pop} · ${G.sizeLabel(realSize(run, l.s), run.stage)}`;
           ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
+          const lx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, hx));
           const ly = hy - spread * 0.35 - size * 0.55;
           const st = l.s ? G.speciesStatus(l.s) : 'you';
           ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
-          ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(hx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(hx - tw / 2, ly - 9, tw, 18); ctx.fill();
+          ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(lx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(lx - tw / 2, ly - 9, tw, 18); ctx.fill();
           ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, hx, ly + 1);
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx, ly + 1);
           mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
         } });
       });

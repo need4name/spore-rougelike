@@ -38,7 +38,9 @@ G.SLOTS = {
     { id: 'mouth', name: 'Mouth' },
     { id: 'senses', name: 'Senses' },
     { id: 'frontLimbs', name: 'Front fins' },
+    { id: 'hands', name: 'Arms' },
     { id: 'hindLimbs', name: 'Rear fins' },
+    { id: 'feet', name: 'Underside' },
     { id: 'back', name: 'Dorsal' },
     { id: 'skin', name: 'Skin' },
     { id: 'tail', name: 'Tail' },
@@ -203,6 +205,54 @@ G.PARTS = [
   { id: 'fluke', name: 'Fluke', adj: 'Fluked', stage: 'creature', slot: 'tail', habitat: 'sea', keywords: ['swift'], mods: { spd: 2 }, rarity: 3, desc: 'A powerful tail for long journeys.' },
   { id: 'stinger_tail', name: 'Stinger Tail', adj: 'Stinging', stage: 'creature', slot: 'tail', keywords: ['venom'], mods: { str: 1 }, pack: 'venom', rarity: 2, desc: 'Arches over your back, ready to strike.' },
   { id: 'glow_tail', name: 'Glow Tail', adj: 'Glimmering', stage: 'creature', slot: 'tail', keywords: ['glow'], mods: { cha: 1, spd: 1 }, pack: 'deep', rarity: 2, desc: 'A lantern at the end of you.' },
+
+  // ================= THE DEEP (sea only) =================
+  // Mouth
+  { id: 'coral_beak', name: 'Parrot Beak', adj: 'Beaked', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'herb', mods: { forageBonus: 1, str: 1 }, rarity: 3, desc: 'Fused teeth that scrape algae off coral. Herbivore.' },
+  { id: 'suction_mouth', name: 'Suction Mouth', adj: 'Slurping', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'omni', mods: { forageBonus: 1, cun: 1 }, rarity: 3, desc: 'Snaps open and sucks in whatever is near. Omnivore.' },
+  { id: 'cookie_cutter', name: 'Cookie-cutter Jaw', adj: 'Biting', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 1, huntBonus: 1 }, rarity: 2, desc: 'Bites a neat round plug out of animals far bigger than you. Carnivore.' },
+  { id: 'hidden_beak', name: 'Hidden Beak', adj: 'Beaked', stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 1, cun: 1 }, rarity: 2, desc: 'A hard parrot-like beak tucked away under soft flesh. Carnivore.' },
+  // Senses
+  { id: 'lateral_line', name: 'Lateral Line', adj: 'Rippling', stage: 'creature', slot: 'senses', habitat: 'sea', mods: { spd: 1, cun: 1 }, rarity: 3, desc: 'Feels every ripple in the water, even in the dark.' },
+  { id: 'mantis_eyes', name: 'Mantis Eyes', adj: 'Rainbow-eyed', stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 2, huntBonus: 1 }, rarity: 1, desc: 'Eyes on stalks that see colors no one else can.' },
+  { id: 'barbels', name: 'Barbels', adj: 'Whiskered', stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 1, forageBonus: 1 }, rarity: 3, desc: 'Fleshy whiskers that taste the mud for food.' },
+  // Front and rear fin mutations (merge with stubby fins)
+  { id: 'wide_webbing_sf', name: 'Wide Webbing', adj: 'Webbed', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', mods: { spd: 1 }, rarity: 2, limbMod: true, desc: 'Broad, thin fins. Merge with Stubby Fins.' },
+  { id: 'lobe_bones_sf', name: 'Lobe Bones', adj: 'Lobed', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', mods: { tou: 1 }, rarity: 2, limbMod: true, desc: 'Fleshy fins with real bones inside. Merge with Stubby Fins.' },
+  { id: 'spiny_rays_sh', name: 'Spiny Rays', adj: 'Spiny', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', mods: { tou: 1 }, rarity: 2, limbMod: true, desc: 'Fin rays sharpened into spines. Merge with Stubby Rear Fins.' },
+  // Advanced fins grown from the mutations above (locked until first created)
+  { id: 'gliding_fins', name: 'Gliding Fins', adj: 'Gliding', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', keywords: ['swift'], mods: { spd: 3, exploreBonus: 1 }, rarity: 2, desc: 'Leap out of the water and glide over the waves, like a flying fish.' },
+  { id: 'lobe_fins', name: 'Lobe Fins', adj: 'Lobe-finned', stage: 'creature', slot: 'frontLimbs', habitat: 'sea', mods: { str: 1, tou: 1, cun: 1 }, rarity: 2, desc: 'Fins with bones and muscle. They prop you up on the sea floor, and one day they could walk.' },
+  { id: 'lionfish_fins', name: 'Lionfish Fins', adj: 'Lionfish', stage: 'creature', slot: 'hindLimbs', habitat: 'sea', keywords: ['venom'], mods: { str: 1, tou: 1, cha: 1 }, rarity: 2, desc: 'A fan of striped, venomous spines.' },
+  // Arms (the sea's hands)
+  { id: 'pincers', name: 'Pincers', adj: 'Pincered', stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { str: 1, tou: 1 }, rarity: 3, desc: 'Crab claws that grab, pinch and carry.' },
+  { id: 'feeding_arms', name: 'Feeding Arms', adj: 'Reaching', stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { cun: 1, forageBonus: 1 }, rarity: 3, desc: 'Two long arms that shoot out and grab dinner.' },
+  { id: 'sucker_arms', name: 'Sucker Arms', adj: 'Suckered', stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { cun: 1, str: 1 }, rarity: 2, desc: 'Soft arms lined with suckers that can open shells.' },
+  { id: 'smasher_club', name: 'Smasher Club', adj: 'Smashing', stage: 'creature', slot: 'hands', habitat: 'sea', mods: { str: 2 }, rarity: 2, desc: 'A folded club that punches faster than a bullet.' },
+  { id: 'feather_arms', name: 'Feather Arms', adj: 'Feathery', stage: 'creature', slot: 'hands', habitat: 'sea', mods: { forageBonus: 2 }, rarity: 3, desc: 'Feathery arms that comb food out of the current.' },
+  { id: 'stinging_arms', name: 'Stinging Arms', adj: 'Stinging', stage: 'creature', slot: 'hands', habitat: 'sea', keywords: ['venom'], mods: { str: 1, huntBonus: 1 }, pack: 'venom', rarity: 2, desc: 'Arms covered in tiny harpoons of venom.' },
+  // Underside
+  { id: 'walking_legs', name: 'Walking Legs', adj: 'Scuttling', stage: 'creature', slot: 'feet', habitat: 'sea', mods: { spd: 1, tou: 1 }, rarity: 3, desc: 'Jointed legs for walking the sea floor.' },
+  { id: 'sucker_pads', name: 'Sucker Pads', adj: 'Clinging', stage: 'creature', slot: 'feet', habitat: 'sea', mods: { tou: 2 }, rarity: 3, desc: 'Cling to rocks while storms rage above.' },
+  { id: 'tube_feet', name: 'Tube Feet', adj: 'Creeping', stage: 'creature', slot: 'feet', habitat: 'sea', mods: { tou: 1, cun: 1 }, rarity: 3, desc: 'Hundreds of tiny feet, like a starfish. Slow but unstoppable.' },
+  { id: 'crawling_fins', name: 'Crawling Fins', adj: 'Crawling', stage: 'creature', slot: 'feet', habitat: 'sea', mods: { spd: 1, forageBonus: 1 }, rarity: 3, desc: 'Stubby fins for shuffling along the bottom.' },
+  { id: 'belly_lights', name: 'Belly Lights', adj: 'Lantern-bellied', stage: 'creature', slot: 'feet', habitat: 'sea', keywords: ['glow'], mods: { cun: 1, cha: 1 }, pack: 'deep', rarity: 2, desc: 'Glowing dots that hide your shadow from hunters below.' },
+  { id: 'belly_plate', name: 'Belly Plate', adj: 'Plated', stage: 'creature', slot: 'feet', habitat: 'sea', keywords: ['armor'], mods: { tou: 2 }, pack: 'armored', rarity: 2, desc: 'A hard shield underneath.' },
+  // Dorsal
+  { id: 'spiral_shell', name: 'Spiral Shell', adj: 'Shelled', stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['armor'], mods: { tou: 2, cun: 1, spd: -1 }, rarity: 2, desc: 'A coiled shell full of air chambers, like a nautilus.' },
+  { id: 'sail_fin', name: 'Sail Fin', adj: 'Sailed', stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['swift'], mods: { spd: 2 }, rarity: 3, desc: 'A tall fin that folds down for bursts of speed.' },
+  { id: 'anemone_crown', name: 'Anemone Crown', adj: 'Crowned', stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['symbiont'], mods: { tou: 1, cha: 1 }, rarity: 2, desc: 'Anemones ride on your back and sting anything that comes close.' },
+  { id: 'angler_rod', name: 'Angler Rod', adj: 'Luring', stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['glow'], mods: { huntBonus: 2 }, pack: 'deep', rarity: 2, desc: 'A glowing bait dangling over your head.' },
+  // Skin
+  { id: 'color_skin', name: 'Color-changing Skin', adj: 'Shifting', stage: 'creature', slot: 'skin', habitat: 'sea', mods: { cun: 2, cha: 1 }, rarity: 2, desc: 'Waves of color ripple over you. Hide, dazzle or talk.' },
+  { id: 'ink_glands', name: 'Ink Glands', adj: 'Inky', stage: 'creature', slot: 'skin', habitat: 'sea', mods: { spd: 1, damageReduce: 1 }, rarity: 2, desc: 'A cloud of ink, and you are gone.' },
+  { id: 'electric_organ', name: 'Electric Organ', adj: 'Electric', stage: 'creature', slot: 'skin', habitat: 'sea', mods: { str: 2, huntBonus: 1 }, rarity: 1, desc: 'Muscles that make lightning.' },
+  { id: 'slime_skin', name: 'Slime Skin', adj: 'Slimy', stage: 'creature', slot: 'skin', habitat: 'sea', mods: { tou: 1, spd: 1 }, rarity: 3, desc: 'Slippery as a hagfish. Nothing can hold you.' },
+  { id: 'pressure_skin', name: 'Pressure Skin', adj: 'Deep', stage: 'creature', slot: 'skin', habitat: 'sea', mods: { tou: 1, cun: 1 }, rarity: 3, desc: 'Soft, tough skin built for the crushing deep.' },
+  // Tail
+  { id: 'jet_siphon', name: 'Jet Siphon', adj: 'Jetting', stage: 'creature', slot: 'tail', habitat: 'sea', keywords: ['swift'], mods: { spd: 3, tou: -1 }, rarity: 2, desc: 'Squirt water and shoot backwards like a squid.' },
+  { id: 'thresher_tail', name: 'Thresher Tail', adj: 'Whipping', stage: 'creature', slot: 'tail', habitat: 'sea', mods: { huntBonus: 2 }, rarity: 2, desc: 'A long whip that stuns whole schools of fish.' },
+  { id: 'paddle_tail', name: 'Paddle Tail', adj: 'Paddling', stage: 'creature', slot: 'tail', habitat: 'sea', mods: { spd: 1, tou: 1 }, rarity: 3, desc: 'Flat as an oar, like a sea snake.' },
 ];
 
 G.PART = {};
@@ -280,6 +330,31 @@ G.EVOLUTIONS = [
   { id: 'all_seeing_eyes', name: 'All-Seeing Eyes', adj: 'All-seeing', tier: 2, from: ['hunter_eyes', 'tremor_whiskers'], stage: 'creature', slot: 'senses', mods: { cun: 6, huntBonus: 2 }, desc: 'Legendary. Nothing escapes your notice.' },
   { id: 'masters_hands', name: "Maker's Hands", adj: "Maker's", tier: 2, habitat: 'land', from: ['clever_claws', 'soft_pads'], stage: 'creature', slot: 'hands', tags: ['grasp'], mods: { cun: 3, str: 2, insightPerTurn: 2 }, desc: 'Legendary. Hands that will one day build cities.' },
   { id: 'wind_legs', name: 'Wind Legs', adj: 'Wind-swift', tier: 2, habitat: 'land', from: ['sprinter_legs', 'hopping_legs'], stage: 'creature', slot: 'hindLimbs', keywords: ['swift'], mods: { spd: 6, str: 2 }, desc: 'Legendary. You outrun the wind.' },
+  // ----- The Deep -----
+  { id: 'shark_jaws', name: 'Shark Jaws', adj: 'Sharky', from: ['cookie_cutter', 'fangs'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 4, huntBonus: 1 }, desc: 'Rows of teeth that never run out. Carnivore.' },
+  { id: 'shell_cracker', name: 'Shell-cracker Beak', adj: 'Cracking', from: ['hidden_beak', 'crushing_jaws'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 3, tou: 1, forageBonus: 1 }, desc: 'No shell is safe. Carnivore.' },
+  { id: 'reef_grinder', name: 'Reef Grinder', adj: 'Grinding', from: ['coral_beak', 'grinding_beak'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'herb', mods: { forageBonus: 3, tou: 1 }, desc: 'Chews coral into sand. Herbivore.' },
+  { id: 'vacuum_maw', name: 'Vacuum Maw', adj: 'Gulping', from: ['suction_mouth', 'baleen'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'omni', mods: { forageBonus: 3, cun: 1 }, desc: 'Inhales everything in front of it. Omnivore.' },
+  { id: 'ripple_sense', name: 'Ripple Sense', adj: 'Feeling', from: ['lateral_line', 'electroreceptors'], stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 3, spd: 1, damageReduce: 1 }, desc: 'You feel a hunter coming long before it sees you.' },
+  { id: 'rainbow_eyes', name: 'Rainbow Eyes', adj: 'Rainbow', from: ['mantis_eyes', 'big_eyes'], stage: 'creature', slot: 'senses', habitat: 'sea', mods: { cun: 4, huntBonus: 1 }, desc: 'Sixteen kinds of color. The world is brighter for you.' },
+  { id: 'smasher_claws', name: 'Smasher Claws', adj: 'Smashing', from: ['pincers', 'smasher_club'], stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { str: 5 }, desc: 'Punch so fast the water boils, then grab what is left.' },
+  { id: 'clever_arms', name: 'Clever Arms', adj: 'Clever', from: ['sucker_arms', 'feeding_arms'], stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { cun: 3, str: 1, insightPerTurn: 1 }, desc: 'Every arm has a little mind of its own.' },
+  { id: 'sorting_claws', name: 'Sorting Claws', adj: 'Sorting', from: ['pincers', 'feather_arms'], stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { cun: 2, forageBonus: 2 }, desc: 'Pick, sort and carry. Nothing goes to waste.' },
+  { id: 'death_veil', name: 'Death Veil', adj: 'Veiled', from: ['stinging_arms', 'feeding_arms'], stage: 'creature', slot: 'hands', habitat: 'sea', keywords: ['venom'], mods: { str: 3, huntBonus: 2 }, desc: 'A curtain of stinging arms. Swimming into it is the last mistake.' },
+  { id: 'reef_walkers', name: 'Reef Walkers', adj: 'Striding', from: ['walking_legs', 'sucker_pads'], stage: 'creature', slot: 'feet', habitat: 'sea', mods: { spd: 1, tou: 2, forageBonus: 1 }, desc: 'Walk anywhere, cling to anything.' },
+  { id: 'thousand_feet', name: 'Thousand Feet', adj: 'Thousand-footed', from: ['tube_feet', 'sucker_pads'], stage: 'creature', slot: 'feet', habitat: 'sea', mods: { tou: 3, cun: 1 }, desc: 'Grips anything and never lets go.' },
+  { id: 'lantern_plate', name: 'Lantern Plate', adj: 'Lantern', from: ['belly_lights', 'belly_plate'], stage: 'creature', slot: 'feet', habitat: 'sea', keywords: ['glow', 'armor'], mods: { tou: 2, cha: 2 }, desc: 'Armored lights. Pretty and hard to bite.' },
+  { id: 'nautilus_shell', name: 'Nautilus Shell', adj: 'Chambered', from: ['spiral_shell', 'carapace'], stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['armor'], mods: { tou: 5, cun: 1 }, desc: 'Fill the chambers with air to rise, empty them to sink.' },
+  { id: 'living_reef', name: 'Living Reef', adj: 'Reef', from: ['anemone_crown', 'kelp_garden'], stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['symbiont'], mods: { foodPerTurn: 2, tou: 1, cha: 1 }, desc: 'A whole reef lives on you, and feeds you.' },
+  { id: 'great_sail', name: 'Great Sail', adj: 'Great-sailed', from: ['sail_fin', 'dorsal_fin'], stage: 'creature', slot: 'back', habitat: 'sea', keywords: ['swift'], mods: { spd: 4, cha: 1 }, desc: 'The fastest thing in the sea.' },
+  { id: 'color_storm', name: 'Color Storm', adj: 'Storming', from: ['color_skin', 'biolume_skin'], stage: 'creature', slot: 'skin', habitat: 'sea', keywords: ['glow'], mods: { cun: 3, cha: 3 }, desc: 'Waves of living color that speak, dazzle and hide.' },
+  { id: 'storm_body', name: 'Storm Body', adj: 'Thundering', from: ['electric_organ', 'slime_skin'], stage: 'creature', slot: 'skin', habitat: 'sea', mods: { str: 4, huntBonus: 2 }, desc: 'Living lightning.' },
+  { id: 'vanishing_skin', name: 'Vanishing Skin', adj: 'Vanishing', from: ['ink_glands', 'color_skin'], stage: 'creature', slot: 'skin', habitat: 'sea', mods: { cun: 2, spd: 1, damageReduce: 1 }, desc: 'Change color, squirt ink, and you were never there.' },
+  { id: 'jet_drive', name: 'Jet Drive', adj: 'Jet-driven', from: ['jet_siphon', 'fluke'], stage: 'creature', slot: 'tail', habitat: 'sea', keywords: ['swift'], mods: { spd: 5 }, desc: 'Fins and jets together. A torpedo with eyes.' },
+  { id: 'whip_lash', name: 'Whip Lash', adj: 'Lashing', from: ['thresher_tail', 'paddle_tail'], stage: 'creature', slot: 'tail', habitat: 'sea', mods: { str: 2, huntBonus: 2 }, desc: 'One crack and the school is stunned.' },
+  { id: 'builders_arms', name: "Builder's Arms", adj: "Builder's", tier: 2, from: ['clever_arms', 'pincers'], stage: 'creature', slot: 'hands', habitat: 'sea', tags: ['grasp'], mods: { cun: 3, str: 2, insightPerTurn: 2 }, desc: 'Legendary. Arms that will one day build cities under the sea.' },
+  { id: 'megalodon_jaws', name: 'Megalodon Jaws', adj: 'Megalodon', tier: 2, from: ['shark_jaws', 'bone_crusher'], stage: 'creature', slot: 'mouth', habitat: 'sea', diet: 'carn', mods: { str: 7, huntBonus: 1 }, desc: 'Legendary. The biggest bite there has ever been. Carnivore.' },
+  { id: 'abyss_lantern', name: 'Abyss Lantern', adj: 'Abyssal', tier: 2, from: ['color_storm', 'neon_warning'], stage: 'creature', slot: 'skin', habitat: 'sea', keywords: ['glow', 'venom'], mods: { cun: 3, cha: 5 }, desc: 'Legendary. You are the brightest light in the dark.' },
 ];
 
 // Advanced limbs are evolutions of basic limbs. They keep their own look.
@@ -302,6 +377,9 @@ G.LIMB_RECIPES = [
   ['pelvic_fins', 'stubby_rear_fins', 'long_rays_sh'],
   ['rear_flippers', 'stubby_rear_fins', 'thick_muscle_sh'],
   ['sea_tentacles', 'stubby_rear_fins', 'boneless_sh'],
+  ['gliding_fins', 'stubby_front_fins', 'wide_webbing_sf'],
+  ['lobe_fins', 'stubby_front_fins', 'lobe_bones_sf'],
+  ['lionfish_fins', 'stubby_rear_fins', 'spiny_rays_sh'],
 ];
 
 G.RECIPE = {};

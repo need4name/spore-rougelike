@@ -19,7 +19,9 @@
 //   check      { stat: 'spd', diff: 3 }  rolls against a stat, then uses success / fail
 //   result     outcome when there is no check
 //   success / fail / result:
-//     { text, pop, food, dna, insight, trait, loseTrait, opinion, randomPart, legacy, habitat, setback, anim }
+//     { text, pop, food, dna, insight, trait, loseTrait, opinion, randomPart, legacy, habitat, zone, setback, anim }
+//   zones      sea events only: list of home depths where it can happen (see G.SEA_ZONES)
+//   Words in braces change with your body: {herd} {Herd} {nests} {cover} {home} {move} {depth}
 //     anim: 'attack' | 'flee' | 'eat' | 'hurt' | 'mutate' | 'social' | 'rest' | 'grow' (picked automatically if left out)
 window.G = window.G || {};
 
@@ -237,26 +239,26 @@ G.EVENTS = [
     text: 'A group of {them} wanders into your feeding grounds and stops to watch you.',
     options: [
       { label: 'Approach peacefully', check: { stat: 'cha', diff: 3 }, success: { text: 'They let you feed beside them.', opinion: 25, dna: 2, anim: 'social' }, fail: { text: 'They back away, wary.', opinion: -10 } },
-      { label: 'Drive them off', check: { stat: 'str', diff: 3 }, success: { text: 'They will not come back soon.', food: 2, opinion: -30, anim: 'attack' }, fail: { text: 'They stand their ground.', pop: -1, opinion: -20 } },
+      { label: 'Drive them off', check: { stat: 'str', diff: 3 }, success: { text: 'They will not come back soon.', food: 2, opinion: -30, anim: 'attack' }, fail: { text: 'They hold firm.', pop: -1, opinion: -20 } },
       { label: 'Watch and learn', check: { stat: 'cun', diff: 2 }, success: { text: 'You learn where they find food.', dna: 2, food: 1 }, fail: { text: 'They notice you watching.', opinion: -5 } },
     ],
   },
   {
-    id: 'prey_herd', stage: 'creature', title: 'A Herd of {them}', tags: ['hunt'], species: 'prey', repeat: true,
-    text: 'A herd of {them} is passing through. Their young lag behind.',
+    id: 'prey_herd', stage: 'creature', title: 'A {Herd} of {them}', tags: ['hunt'], species: 'prey', repeat: true,
+    text: 'A {herd} of {them} is passing through. Their young lag behind.',
     options: [
       { label: 'Hunt them', req: { diet: ['carn', 'omni'] }, check: { stat: 'str', diff: 3 }, success: { text: 'A good hunt.', food: 5, dna: 1, opinion: -10 }, fail: { text: 'The adults turn on you.', pop: -2 } },
-      { label: 'Run one down', req: { diet: ['carn', 'omni'] }, check: { stat: 'spd', diff: 3 }, success: { text: 'It never had a chance.', food: 4, dna: 1, opinion: -10 }, fail: { text: 'They are faster than they look.', food: -1 } },
+      { label: 'Chase one down', req: { diet: ['carn', 'omni'] }, check: { stat: 'spd', diff: 3 }, success: { text: 'It never had a chance.', food: 4, dna: 1, opinion: -10 }, fail: { text: 'They are faster than they look.', food: -1 } },
       { label: 'Follow them to good grazing', req: { diet: ['herb', 'omni'] }, result: { text: 'They know where the best food is.', food: 3 } },
       { label: 'Let them go', result: { text: 'They pass in peace.', opinion: 5, anim: 'rest' } },
     ],
   },
   {
-    id: 'rival_contest', stage: 'creature', title: 'Contested Ground', tags: ['danger', 'food'], species: 'rival', repeat: true,
+    id: 'rival_contest', stage: 'creature', title: 'Contested Feeding Grounds', tags: ['danger', 'food'], species: 'rival', repeat: true,
     text: 'The {them} want the same feeding grounds you do. They have started pushing in.',
     options: [
-      { label: 'Defend your ground', check: { stat: 'tou', diff: 4 }, success: { text: 'They break against you and retreat.', dna: 2, trait: 'territorial', opinion: -15 }, fail: { text: 'They take the best of it.', food: -3 } },
-      { label: 'Strike first', check: { stat: 'str', diff: 4 }, success: { text: 'You drive them from the valley.', dna: 3, food: 2, opinion: -30 }, fail: { text: 'Your attack falls apart.', pop: -2, opinion: -15 } },
+      { label: 'Defend your feeding grounds', check: { stat: 'tou', diff: 4 }, success: { text: 'They break against you and retreat.', dna: 2, trait: 'territorial', opinion: -15 }, fail: { text: 'They take the best of it.', food: -3 } },
+      { label: 'Strike first', check: { stat: 'str', diff: 4 }, success: { text: 'You drive them out of {depth}.', dna: 3, food: 2, opinion: -30 }, fail: { text: 'Your attack falls apart.', pop: -2, opinion: -15 } },
       { label: 'Agree to share', check: { stat: 'cha', diff: 4 }, success: { text: 'An uneasy truce.', opinion: 30, dna: 1, anim: 'social' }, fail: { text: 'They take this as weakness.', food: -2, opinion: -10 } },
     ],
   },
@@ -280,12 +282,12 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'nest_raiders', prop: 'nest', stage: 'creature', title: 'Nest Raiders', tags: ['danger'], species: 'rival',
-    text: 'Something has been stealing from your nests at night. You find {them} tracks.',
+    id: 'nest_raiders', prop: 'nest', stage: 'creature', title: 'Raiders in the Night', tags: ['danger'], species: 'rival',
+    text: 'Something has been stealing from your {nests} at night. You find traces of {them}.',
     options: [
       { label: 'Chase them down', check: { stat: 'spd', diff: 3 }, success: { text: 'They will not be back.', food: 2, opinion: -20, anim: 'attack' }, fail: { text: 'They get away with plenty.', food: -2 } },
       { label: 'Leave a poisoned trap', req: { keyword: ['venom', 1] }, result: { text: 'They will not be back.', dna: 3, opinion: -30 } },
-      { label: 'Post guards', check: { stat: 'cun', diff: 2 }, success: { text: 'A watch rotation keeps everyone safe.', dna: 2, trait: 'cautious' }, fail: { text: 'The guards fall asleep.', food: -1 } },
+      { label: 'Post guards', check: { stat: 'cun', diff: 2 }, success: { text: 'Taking turns on watch keeps everyone safe.', dna: 2, trait: 'cautious' }, fail: { text: 'The guards fall asleep.', food: -1 } },
     ],
   },
   {
@@ -301,7 +303,7 @@ G.EVENTS = [
     text: 'A swarm of tiny {them} has started picking parasites off your hide.',
     options: [
       { label: 'Let them stay', check: { stat: 'cha', diff: 2 }, success: { text: 'A partnership that will last generations.', pop: 2, opinion: 30, anim: 'social' }, fail: { text: 'They pick too hard. You shake them off.', opinion: -5 } },
-      { label: 'Welcome them into your garden', req: { keyword: ['symbiont', 1] }, result: { text: 'They nest among your symbionts and keep you healthy.', pop: 3, dna: 2, opinion: 40, anim: 'social' } },
+      { label: 'Welcome them into your garden', req: { keyword: ['symbiont', 1] }, result: { text: 'They settle among your symbionts and keep you healthy.', pop: 3, dna: 2, opinion: 40, anim: 'social' } },
       { label: 'Eat them', req: { diet: ['carn', 'omni'] }, result: { text: 'They should have been more careful.', food: 2, opinion: -40 } },
     ],
   },
@@ -334,19 +336,19 @@ G.EVENTS = [
   },
   {
     id: 'trapped_neighbor', prop: 'tar', stage: 'creature', title: 'Trapped', tags: ['social'], species: 'neighbor',
-    text: 'One of the {them} is stuck fast and crying out. Its herd watches you.',
+    text: 'One of the {them} is stuck fast and crying out. The rest of its kind watch you.',
     options: [
       { label: 'Pull it free', check: { stat: 'str', diff: 2 }, success: { text: 'The {them} will remember your kindness.', opinion: 40, trait: 'gentle', anim: 'social' }, fail: { text: 'You nearly get stuck yourself.', pop: -1, opinion: 10 } },
       { label: 'Eat it', req: { diet: ['carn', 'omni'] }, result: { text: 'An easy meal, and the {them} saw everything.', food: 5, opinion: -40, anim: 'eat' } },
-      { label: 'Walk on', result: { text: 'Not your problem.', anim: 'rest' } },
+      { label: 'Move on', result: { text: 'Not your problem.', anim: 'rest' } },
     ],
   },
   {
     id: 'crowded', stage: 'creature', title: 'Too Many Mouths', tags: ['food'],
     when: (run) => run.pop >= G.maxPop(run) - 1,
-    text: 'Your kind has grown so numerous that the land can barely feed you all.',
+    text: 'Your kind has grown so numerous that {home} around you can barely feed you all.',
     options: [
-      { label: 'A group leaves to find new land', result: { text: 'They will become a new branch of the family tree.', pop: -2, dna: 4, anim: 'flee' } },
+      { label: 'A group sets off to find a new home', result: { text: 'They will become a new branch of the family.', pop: -2, dna: 4, anim: 'flee' } },
       { label: 'Push into new territory', check: { stat: 'str', diff: 3 }, success: { text: 'The territory grows to fit you.', food: 4, anim: 'attack' }, fail: { text: 'The neighbors push back.', pop: -1 } },
     ],
   },
@@ -481,10 +483,10 @@ G.EVENTS = [
   // ----- Age of Giants (era 2+) -----
   {
     id: 'apex_hunter', stage: 'creature', era: 2, title: 'The Apex', tags: ['danger'], species: 'predator',
-    text: 'A {them} the size of a hill has claimed your range. The ground shakes when it moves.',
+    text: 'A {them} as big as a hill has claimed your range. Everything goes quiet when it moves.',
     options: [
-      { label: 'Stand your ground', check: { stat: 'tou', diff: 5 }, success: { text: 'It finds you too much trouble.', dna: 4, trait: 'territorial' }, fail: { text: 'It feeds on your herd for days.', pop: -3 } },
-      { label: 'Gang up on it', check: { stat: 'str', diff: 5 }, success: { text: 'It falls. You feast for weeks.', food: 8, dna: 4, opinion: -40, trait: 'feared' }, fail: { text: 'It was not hungry enough to run.', pop: -4 } },
+      { label: 'Hold firm', check: { stat: 'tou', diff: 5 }, success: { text: 'It finds you too much trouble.', dna: 4, trait: 'territorial' }, fail: { text: 'It feeds on your {herd} for days.', pop: -3 } },
+      { label: 'Gang up on it', check: { stat: 'str', diff: 5 }, success: { text: 'It falls. You feast for weeks.', food: 8, dna: 4, opinion: -40, trait: 'feared' }, fail: { text: 'It was not hungry enough to give up.', pop: -4 } },
       { label: 'Stay out of its way', check: { stat: 'cun', diff: 3 }, success: { text: 'You learn its habits and avoid them.', dna: 2 }, fail: { text: 'You guess wrong.', pop: -2 } },
     ],
   },
@@ -510,14 +512,14 @@ G.EVENTS = [
   // ----- Dawn of Mind (era 3) -----
   {
     id: 'clever_young', prop: 'stick', stage: 'creature', era: 3, title: 'A Clever Youngster', tags: ['explore'],
-    text: 'One of your young is solving puzzles nobody taught it: cracking shells with stones, moving logs to reach fruit.',
+    text: 'One of your young is solving puzzles nobody taught it: cracking shells with stones, reaching food nobody else can get to.',
     options: [
       { label: 'Let the others copy it', check: { stat: 'cun', diff: 4 }, success: { text: 'Soon everyone is doing it.', insight: 4, dna: 2 }, fail: { text: 'The others do not get it.', insight: 1 } },
-      { label: 'Make it a leader', check: { stat: 'cha', diff: 4 }, success: { text: 'The herd follows it, and grows wiser.', insight: 3, trait: 'social', anim: 'social' }, fail: { text: 'The old leaders push it out.', pop: -1 } },
+      { label: 'Make it a leader', check: { stat: 'cha', diff: 4 }, success: { text: 'The {herd} follows it, and grows wiser.', insight: 3, trait: 'social', anim: 'social' }, fail: { text: 'The old leaders push it out.', pop: -1 } },
     ],
   },
   {
-    id: 'stick_tool', prop: 'stick', stage: 'creature', era: 3, title: 'A Curious Stick', tags: ['explore', 'food'],
+    id: 'stick_tool', habitat: 'land', prop: 'stick', stage: 'creature', era: 3, title: 'A Curious Stick', tags: ['explore', 'food'],
     text: 'One of your kind picks up a stick and pokes it into an insect nest. It comes out covered in food.',
     options: [
       { label: 'Pass it on', req: { tag: 'grasp' }, result: { text: 'Soon everyone fishes for insects.', food: 3, insight: 3, anim: 'eat' } },
@@ -564,7 +566,7 @@ G.EVENTS = [
     id: 'age_of_giants', stage: 'creature', milestone: true, title: 'The Age of Giants',
     text: 'The world has filled with life, and some of it has grown enormous. Every lineage faces the same question: grow huge, or stay small and many?',
     options: [
-      { label: 'Grow into giants', hint: 'Giant: +2 STR, +2 TOU, +2 max Pop, −1 SPD, eat 2 more', result: { text: 'Generation by generation, your kind grows. The ground shakes when you walk.', trait: 'giant', anim: 'grow' } },
+      { label: 'Grow into giants', hint: 'Giant: +2 STR, +2 TOU, +2 max Pop, −1 SPD, eat 2 more', result: { text: 'Generation by generation, your kind grows. Everything makes way for you.', trait: 'giant', anim: 'grow' } },
       { label: 'Stay mid-sized', hint: 'Mid-sized: +1 STR, +1 TOU', result: { text: 'Big enough to fight, small enough to hide.', trait: 'mid_sized', anim: 'grow' } },
       { label: 'Stay small and many', hint: 'Small: +2 SPD, +1 CUN, grow faster, eat 1 less', result: { text: 'Your kind becomes quick, clever and everywhere.', trait: 'small_many', anim: 'flee' } },
     ],
@@ -595,6 +597,8 @@ G.EVENTS = [
       { label: 'Sing the first song', check: { stat: 'cha', diff: 5 }, success: { text: 'A song that carries across whole oceans. You are the Deep Singers.', legacy: 'deep_singers', anim: 'social' }, fail: { text: 'The song falls apart. Not yet.', pop: -3, setback: 0 } },
       { label: 'Build a reef city', req: { innovation: 'shelters' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You shape the coral into homes. You are the Reef Builders.', legacy: 'reef_builders', anim: 'grow' }, fail: { text: 'The reef crumbles. Not yet.', pop: -3, setback: 0 } },
       { label: 'Rule the currents', check: { stat: 'str', diff: 5 }, success: { text: 'Every creature in the sea knows your name. You are the Tide Lords.', legacy: 'tide_lords', anim: 'attack' }, fail: { text: 'The sea does not bow so easily. Not yet.', pop: -3, setback: 0 } },
+      { label: 'Shape shell and stone into tools', req: { innovation: 'stone_tools' }, check: { stat: 'cun', diff: 5 }, success: { text: 'Shell blades, stone hammers, sponge gloves. You are the Shell Smiths.', legacy: 'shell_smiths', anim: 'mutate' }, fail: { text: 'The shells crack in your grip. Not yet.', pop: -3, setback: 0 } },
+      { label: 'Tame the heat of the vents', req: { zone: 'abyss' }, check: { stat: 'cun', diff: 5 }, success: { text: 'You learn to carry the deep warmth with you: the sea\'s own fire. You are the Vent Keepers.', legacy: 'vent_keepers', anim: 'mutate' }, fail: { text: 'The vent scalds you. Not yet.', pop: -3, setback: 0 } },
     ],
   },
 
@@ -650,11 +654,11 @@ G.EVENTS = [
   // ----- Creature (both habitats) -----
   {
     id: 'egg_thief', stage: 'creature', prop: 'nest', title: 'Egg Thief', tags: ['danger'], species: 'rival',
-    text: 'A {them} is sneaking toward your nests while your herd feeds.',
+    text: 'A {them} is sneaking toward your {nests} while your {herd} feeds.',
     options: [
       { label: 'Chase it off', check: { stat: 'spd', diff: 3 }, success: { text: 'It drops the egg and runs.', dna: 1, opinion: -10 }, fail: { text: 'It gets away with two eggs.', pop: -1 } },
-      { label: 'Lie in wait in the grass', req: { serpent: true }, result: { text: 'It never sees you coming. One strike and it is over.', food: 4, opinion: -25, anim: 'attack', mood: 'proud' } },
-      { label: 'Guard the nests in shifts', check: { stat: 'cha', diff: 3 }, success: { text: 'Your herd works together.', trait: 'social' }, fail: { text: 'Nobody wants the night shift.', pop: -1 } },
+      { label: 'Lie in wait in the {cover}', req: { serpent: true }, result: { text: 'It never sees you coming. One strike and it is over.', food: 4, opinion: -25, anim: 'attack', mood: 'proud' } },
+      { label: 'Guard the nests in shifts', check: { stat: 'cha', diff: 3 }, success: { text: 'Your {herd} works together.', trait: 'social' }, fail: { text: 'Nobody wants the night shift.', pop: -1 } },
     ],
   },
   {
@@ -668,11 +672,11 @@ G.EVENTS = [
   },
   {
     id: 'stampede', stage: 'creature', prop: 'dust', title: 'Stampede', tags: ['danger'], species: 'prey',
-    text: 'Something has panicked the {them}. Hundreds of them are thundering straight at you.',
+    text: 'Something has panicked the {them}. Hundreds of them are rushing straight at you.',
     options: [
-      { label: 'Run with them', check: { stat: 'spd', diff: 3 }, success: { text: 'You run until they tire.', dna: 2, anim: 'flee' }, fail: { text: 'You are trampled.', pop: -3 } },
+      { label: 'Go with the flow', check: { stat: 'spd', diff: 3 }, success: { text: 'You keep pace until they tire.', dna: 2, anim: 'flee' }, fail: { text: 'You are trampled.', pop: -3 } },
       { label: 'Scuttle aside on all your legs', req: { manyLegs: true }, result: { text: 'Dozens of legs carry you clear in a blink.', dna: 2, food: 3, anim: 'flee', mood: 'proud' } },
-      { label: 'Hold your ground', check: { stat: 'tou', diff: 4 }, success: { text: 'They part around you like a river around a rock.', food: 4, trait: 'territorial' }, fail: { text: 'They do not part.', pop: -3 } },
+      { label: 'Hold firm', check: { stat: 'tou', diff: 4 }, success: { text: 'They part around you like water around a rock.', food: 4, trait: 'territorial' }, fail: { text: 'They do not part.', pop: -3 } },
     ],
   },
   {
@@ -688,13 +692,13 @@ G.EVENTS = [
     id: 'scent_marking', stage: 'creature', title: 'Scent Lines', tags: ['social', 'danger'], species: 'rival', prop: 'dust',
     text: 'The {them} have marked a line of scent right through your feeding grounds.',
     options: [
-      { label: 'Mark over it', check: { stat: 'cha', diff: 3 }, success: { text: 'Your scent wins. They give ground.', food: 2, opinion: -10, trait: 'territorial' }, fail: { text: 'They ignore it.', food: -2 } },
+      { label: 'Mark over it', check: { stat: 'cha', diff: 3 }, success: { text: 'Your scent wins. They back off.', food: 2, opinion: -10, trait: 'territorial' }, fail: { text: 'They ignore it.', food: -2 } },
       { label: 'Cross it anyway', check: { stat: 'str', diff: 3 }, success: { text: 'Nobody stops you.', food: 3, opinion: -20, anim: 'attack' }, fail: { text: 'They do stop you.', pop: -2, opinion: -20 } },
       { label: 'Agree to share', result: { text: 'An uneasy border.', opinion: 25, food: -1, anim: 'social' } },
     ],
   },
   {
-    id: 'footprints', stage: 'creature', era: 2, prop: 'bones', title: 'Giant Footprints', tags: ['explore'],
+    id: 'footprints', habitat: 'land', stage: 'creature', era: 2, prop: 'bones', title: 'Giant Footprints', tags: ['explore'],
     text: 'Footprints bigger than your whole herd lead off into the mist.',
     options: [
       { label: 'Follow them', check: { stat: 'cun', diff: 4 }, success: { text: 'They lead to a feeding ground the giants have trampled open.', food: 5, dna: 2 }, fail: { text: 'They lead to the giant.', pop: -2 } },
@@ -703,7 +707,7 @@ G.EVENTS = [
     ],
   },
   {
-    id: 'under_leaves', stage: 'creature', title: 'Under the Leaves', tags: ['food', 'danger'], species: 'predator',
+    id: 'under_leaves', habitat: 'land', stage: 'creature', title: 'Under the Leaves', tags: ['food', 'danger'], species: 'predator',
     when: (run) => G.sizeOf(run) === 'small',
     text: 'A {them} prowls overhead. Your tiny kind is hiding in the leaf litter, where there is plenty to eat.',
     options: [
@@ -802,6 +806,204 @@ G.EVENTS = [
       { label: 'Wander', result: { text: 'New places, new ideas.', dna: 1, anim: 'flee' } },
     ],
   },
+  // ======================= THE DEEP (sea events) =======================
+  {
+    id: 'cleaning_station', stage: 'creature', habitat: 'sea', zones: ['reef'], prop: 'coral', title: 'The Cleaning Station', tags: ['social'], species: 'neighbor', repeat: true,
+    text: 'On the reef there is a rock where tiny {them} clean anyone who waits politely. Today there is a queue.',
+    options: [
+      { label: 'Wait your turn', check: { stat: 'cha', diff: 3 }, success: { text: 'You leave spotless and healthy. The {them} remember good manners.', pop: 2, opinion: 20, anim: 'social' }, fail: { text: 'A grouper pushes in and you give up.', opinion: -5 } },
+      { label: 'Eat the cleaners', req: { diet: ['carn', 'omni'] }, result: { text: 'Every creature on the reef saw that.', food: 3, opinion: -40, anim: 'eat' } },
+      { label: 'Open your own station', req: { anyPart: ['cleaner_skin', 'anemone_crown'] }, result: { text: 'Now they queue for you.', food: 2, dna: 2, opinion: 25, trait: 'social', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'empty_shell', stage: 'creature', habitat: 'sea', prop: 'bones', title: 'The Empty Shell', tags: ['explore'],
+    text: 'A huge, empty shell lies on the sea floor. Whatever lived in it is long gone.',
+    options: [
+      { label: 'Carry it as armor', req: { tag: 'grasp' }, result: { text: 'You drag it everywhere. Hunters bounce off.', dna: 3, trait: 'resilient', mood: 'proud' } },
+      { label: 'Hide inside it', check: { stat: 'cun', diff: 2 }, success: { text: 'A perfect den.', pop: 1, dna: 1, anim: 'rest' }, fail: { text: 'Something else already had the same idea.', pop: -1 } },
+      { label: 'Leave it', result: { text: 'Just an old shell.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'black_smokers', stage: 'creature', habitat: 'sea', zones: ['abyss'], prop: 'vent', title: 'The Black Smokers', tags: ['food', 'explore'],
+    text: 'Chimneys of rock pour out black, boiling water. Around them, in the dark, is a garden of tube worms, crabs and slime.',
+    options: [
+      { label: 'Graze the slime mats', req: { diet: ['herb', 'omni'] }, result: { text: 'Food grown without sunlight. Strange and plentiful.', food: 4, anim: 'eat' } },
+      { label: 'Hunt the tube worms', req: { diet: ['carn', 'omni'] }, check: { stat: 'spd', diff: 3 }, success: { text: 'They snap back into their tubes, but not fast enough.', food: 5 }, fail: { text: 'Every worm vanishes at once.', food: -1 } },
+      { label: 'Study the heat', check: { stat: 'cun', diff: 4 }, success: { text: 'Warm water rises, cold water sinks, and life gathers where they meet.', dna: 4, trait: 'curious' }, fail: { text: 'You get too close and scald yourself.', pop: -1 } },
+    ],
+  },
+  {
+    id: 'marine_snow', stage: 'creature', habitat: 'sea', zones: ['twilight', 'abyss'], prop: 'snow', title: 'Marine Snow', tags: ['food'], repeat: true,
+    text: 'Bits of dead things drift down from the bright water far above, like snow.',
+    options: [
+      { label: 'Sieve it from the water', req: { anyPart: ['baleen', 'feather_arms', 'krill_sieve', 'vacuum_maw', 'suction_mouth'] }, result: { text: 'A slow, steady feast.', food: 4, anim: 'eat' } },
+      { label: 'Wait for it to settle', result: { text: 'Patience is how the deep eats.', food: 2, anim: 'rest' } },
+      { label: 'Follow it up to its source', check: { stat: 'spd', diff: 3 }, success: { text: 'Richer water above.', food: 3, dna: 1 }, fail: { text: 'You meet what the snow was falling from.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'great_rising', stage: 'creature', habitat: 'sea', zones: ['twilight'], prop: 'night', title: 'The Great Rising', tags: ['hunt', 'food'], species: 'prey',
+    text: 'As night falls above, trillions of creatures rise from the dark to feed near the surface. The {them} are among them.',
+    options: [
+      { label: 'Rise with them', check: { stat: 'spd', diff: 3 }, success: { text: 'A night of feasting, back down before dawn.', food: 4, dna: 1 }, fail: { text: 'You are caught in the light at dawn.', pop: -2 } },
+      { label: 'Lure them in the dark', req: { keyword: ['glow', 1] }, result: { text: 'They swim straight to your light.', food: 5, opinion: -15, anim: 'eat' } },
+      { label: 'Stay down and wait', result: { text: 'The deep is safe, and a little hungry.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'storm_surge', stage: 'creature', habitat: 'sea', zones: ['shallows', 'reef'], prop: 'whirlpool', title: 'Storm Surge', tags: ['danger'],
+    text: 'A storm churns the shallows. Waves smash the reef and drag everything loose out to sea.',
+    options: [
+      { label: 'Cling to the rocks', req: { anyPart: ['sucker_pads', 'tube_feet', 'walking_legs'] }, result: { text: 'You hold on. Everything else is swept away.', dna: 2, food: 2, mood: 'proud' } },
+      { label: 'Dive deeper', check: { stat: 'spd', diff: 3 }, success: { text: 'Calm water below the storm.', dna: 1, anim: 'flee' }, fail: { text: 'The waves catch the slowest.', pop: -2 } },
+      { label: 'Ride it out', check: { stat: 'tou', diff: 4 }, success: { text: 'Battered, but here.', dna: 2 }, fail: { text: 'The sea takes its share.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'weed_raft', stage: 'creature', habitat: 'sea', zones: ['shallows', 'open'], prop: 'kelp', title: 'The Floating Forest', tags: ['explore'],
+    text: 'A raft of floating seaweed the size of a field drifts past, full of hiding places and little creatures.',
+    options: [
+      { label: 'Ride it to new waters', check: { stat: 'cun', diff: 3 }, success: { text: 'Weeks later it drops you somewhere new and rich.', dna: 3, food: 2, trait: 'migratory' }, fail: { text: 'It drifts somewhere empty.', food: -2 } },
+      { label: 'Hunt the hiders', req: { diet: ['carn', 'omni'] }, result: { text: 'The raft is a pantry.', food: 4, anim: 'eat' } },
+      { label: 'Let it pass', result: { text: 'It drifts out of sight.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'cornered', stage: 'creature', habitat: 'sea', prop: 'shadow', title: 'Cornered', tags: ['danger'], species: 'predator', repeat: true,
+    text: 'One of the {them} has trapped part of your {herd} in a crack in the rocks. It waits outside.',
+    options: [
+      { label: 'Squirt ink and dash', req: { anyPart: ['ink_glands'] }, result: { text: 'A black cloud, and you are gone.', dna: 2, anim: 'flee', mood: 'proud' } },
+      { label: 'Flash warning colors', req: { anyPart: ['color_skin', 'warning_skin'] }, check: { stat: 'cha', diff: 3 }, success: { text: 'It thinks you are poisonous and leaves.', dna: 2, opinion: -5 }, fail: { text: 'It is not fooled.', pop: -2 } },
+      { label: 'Squeeze deeper into the crack', check: { stat: 'cun', diff: 3 }, success: { text: 'It gives up and leaves.', dna: 1, anim: 'rest' }, fail: { text: 'The crack ends sooner than you hoped.', pop: -2 } },
+      { label: 'Fight your way out', check: { stat: 'str', diff: 4 }, success: { text: 'It did not expect that.', dna: 3, opinion: -20, anim: 'attack' }, fail: { text: 'It expected exactly that.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'sponge_nose', stage: 'creature', habitat: 'sea', era: 3, prop: 'stick', title: 'A Sponge on the Nose', tags: ['explore', 'food'],
+    text: 'One of your kind has put a sponge over its face so it can dig in sharp rubble for food without getting hurt.',
+    options: [
+      { label: 'Teach the young', check: { stat: 'cun', diff: 4 }, success: { text: 'Mothers teach daughters. The trick will last a thousand generations.', insight: 4, food: 2 }, fail: { text: 'The young would rather play.', insight: 1 } },
+      { label: 'Laugh at it', result: { text: 'It digs alone, and eats well.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'stone_and_shell', stage: 'creature', habitat: 'sea', era: 2, prop: 'stick', title: 'Stone and Shell', tags: ['explore', 'food'],
+    text: 'One of your kind is floating on its back, smashing a clam against a stone held on its belly.',
+    options: [
+      { label: 'Pass it on', req: { tag: 'grasp' }, result: { text: 'Soon every clam on the reef is in danger.', food: 3, insight: 3, anim: 'eat' } },
+      { label: 'Steal its clam', result: { text: 'Easier than learning.', food: 1, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'giant_wake', stage: 'creature', habitat: 'sea', era: 2, prop: 'current', title: 'A Giant Wake', tags: ['explore'],
+    text: 'The whole sea rocks. Something enormous has just swum past, and its wake is still spreading.',
+    options: [
+      { label: 'Follow the wake', check: { stat: 'cun', diff: 4 }, success: { text: 'It leads to the scraps of a giant meal.', food: 5, dna: 2 }, fail: { text: 'It leads to the giant.', pop: -2 } },
+      { label: 'Swim the other way', result: { text: 'Wise.', dna: 1, anim: 'flee' } },
+      { label: 'Follow it, being huge yourself', req: { size: 'giant' }, result: { text: 'Another giant. You circle each other and part peacefully.', dna: 3, insight: 1, mood: 'proud' } },
+    ],
+  },
+  {
+    id: 'in_the_sand', stage: 'creature', habitat: 'sea', title: 'Under the Sand', tags: ['food', 'danger'], species: 'predator',
+    when: (run) => G.sizeOf(run) === 'small',
+    text: 'One of the {them} cruises overhead. Your tiny kind is buried in the sand, where there is plenty to eat.',
+    options: [
+      { label: 'Feed without moving', check: { stat: 'cun', diff: 3 }, success: { text: 'You eat your fill right under its nose.', food: 4, anim: 'eat' }, fail: { text: 'It feels you move.', pop: -2 } },
+      { label: 'Burst out in every direction', result: { text: 'It cannot chase all of you.', pop: -1, dna: 2, anim: 'flee' } },
+    ],
+  },
+  {
+    id: 'live_wires', stage: 'creature', habitat: 'sea', prop: 'sparks', title: 'Live Wires', tags: ['danger'], species: 'rival',
+    text: 'The water tingles. The {them} have learned to make electricity, and they are stunning everything near your feeding grounds.',
+    options: [
+      { label: 'Shock it back', req: { anyPart: ['electric_organ'] }, result: { text: 'Two storms meet. It backs off with new respect.', dna: 3, opinion: 15, mood: 'proud' } },
+      { label: 'Slip past in your slime', req: { anyPart: ['slime_skin'] }, result: { text: 'The shocks slide right off you.', food: 3, dna: 1 } },
+      { label: 'Keep your distance', check: { stat: 'spd', diff: 3 }, success: { text: 'You find food elsewhere.', food: 1 }, fail: { text: 'You swim too close.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'long_migration', stage: 'creature', habitat: 'sea', era: 2, prop: 'current', title: 'The Long Migration', tags: ['explore'],
+    text: 'A great current runs across the whole ocean. Following it would take a lifetime, and lead somewhere new.',
+    options: [
+      { label: 'Follow it across the ocean', check: { stat: 'tou', diff: 4 }, success: { text: 'You reach rich water no one else knows about.', dna: 5, trait: 'migratory', anim: 'flee' }, fail: { text: 'The journey is longer than you are strong.', pop: -3 } },
+      { label: 'Sing the route to your young', req: { anyPart: ['echolocation', 'sonar'] }, result: { text: 'A map made of song, passed down forever.', dna: 3, insight: 2, trait: 'migratory', anim: 'social' } },
+      { label: 'Stay home', result: { text: 'Home is home.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'reef_bleaching', stage: 'creature', habitat: 'sea', zones: ['reef'], prop: 'bones', title: 'The Reef Turns White', tags: ['danger', 'food'],
+    text: 'The water has grown too warm. The coral is turning white, and the reef is starving.',
+    options: [
+      { label: 'Leave for open water', result: { text: 'You leave the dying reef behind.', dna: 2, zone: 'open', anim: 'flee' } },
+      { label: 'Tend the reef', req: { keyword: ['symbiont', 1] }, result: { text: 'Your helpers bring the coral back to life.', food: 3, dna: 3, mood: 'proud' } },
+      { label: 'Wait for it to recover', check: { stat: 'tou', diff: 4 }, success: { text: 'The coral comes back, slowly.', dna: 2 }, fail: { text: 'Lean seasons.', pop: -2, food: -2 } },
+    ],
+  },
+  {
+    id: 'red_tide', stage: 'creature', habitat: 'sea', zones: ['shallows', 'reef', 'open'], prop: 'bloom', title: 'Red Tide', tags: ['danger'],
+    text: 'A bloom of poisonous algae has turned the water red. Fish are floating belly-up.',
+    options: [
+      { label: 'Flee to deeper water', check: { stat: 'spd', diff: 3 }, success: { text: 'You outswim the tide.', dna: 1, anim: 'flee' }, fail: { text: 'Some of you swallow too much.', pop: -2 } },
+      { label: 'Eat the poison', req: { keyword: ['venom', 1] }, result: { text: 'Your body is used to poison. The dead fish are a feast.', food: 5, trait: 'toxic_affinity', anim: 'eat' } },
+      { label: 'Wait it out', check: { stat: 'tou', diff: 4 }, success: { text: 'Sick, but alive.', dna: 1 }, fail: { text: 'The tide stays for weeks.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'echo_caves', stage: 'creature', habitat: 'sea', prop: 'cave', title: 'The Echo Caves', tags: ['explore'],
+    text: 'A maze of underwater caves, pitch black. Something inside is calling back every sound you make.',
+    options: [
+      { label: 'Map it with sound', req: { anyPart: ['echolocation', 'sonar', 'lateral_line'] }, result: { text: 'You see every tunnel. One leads to a hidden lagoon.', dna: 4, food: 2, insight: 1, mood: 'proud' } },
+      { label: 'Feel your way in', check: { stat: 'cun', diff: 4 }, success: { text: 'A safe den, deep inside.', dna: 3, pop: 1 }, fail: { text: 'Some of you never find the way out.', pop: -2 } },
+      { label: 'Stay out', result: { text: 'Some places are better left alone.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'deep_dive', stage: 'creature', habitat: 'sea', zones: ['open', 'twilight'], era: 2, prop: 'night', title: 'The Deep Dive', tags: ['explore', 'danger'],
+    text: 'Below you the blue turns to black. Far down, something glows.',
+    options: [
+      { label: 'Dive all the way down', req: { anyPart: ['pressure_skin'] }, result: { text: 'Your skin holds. A new world opens in the abyss.', dna: 4, zone: 'abyss', mood: 'proud' } },
+      { label: 'Try anyway', check: { stat: 'tou', diff: 5 }, success: { text: 'You make it down and back, and you know the way now.', dna: 5 }, fail: { text: 'The pressure is too much.', pop: -3 } },
+      { label: 'Turn back', result: { text: 'Not today.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'stinging_home', stage: 'creature', habitat: 'sea', zones: ['reef', 'shallows'], prop: 'coral', title: 'A Stinging Home', tags: ['social'],
+    text: 'A big anemone waves its stinging arms at you. Small fish live safely inside it. Could you?',
+    options: [
+      { label: 'Move in', check: { stat: 'tou', diff: 3 }, success: { text: 'The stings stop hurting. Now nothing can reach you.', pop: 2, trait: 'cautious', anim: 'social' }, fail: { text: 'It stings, a lot.', pop: -1 } },
+      { label: 'Carry one on your back', req: { anyPart: ['anemone_crown'] }, result: { text: 'A new friend rides along.', dna: 3, food: 1, mood: 'proud' } },
+      { label: 'Eat it', req: { diet: ['carn', 'omni'] }, result: { text: 'Spicy.', food: 3, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'hatchlings', stage: 'creature', habitat: 'sea', zones: ['shallows'], prop: 'shore', title: 'Hatchlings', tags: ['hunt', 'social'], species: 'prey',
+    text: 'Baby {them} have hatched on the beach and are racing for the sea in their hundreds.',
+    options: [
+      { label: 'Feast', req: { diet: ['carn', 'omni'] }, result: { text: 'Easy food, and plenty of it.', food: 5, opinion: -15, anim: 'eat' } },
+      { label: 'Guard them to deep water', check: { stat: 'cha', diff: 3 }, success: { text: 'The {them} will not forget it.', opinion: 35, dna: 2, trait: 'gentle', anim: 'social' }, fail: { text: 'Most are eaten anyway.', opinion: 5 } },
+      { label: 'Watch', result: { text: 'Some make it. Most do not.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'lights_in_the_dark', stage: 'creature', habitat: 'sea', zones: ['twilight', 'abyss'], prop: 'stars', title: 'Lights in the Dark', tags: ['social'], species: 'neighbor',
+    text: 'Blinking lights in the black water: the {them}, signaling to each other.',
+    options: [
+      { label: 'Flash back', req: { keyword: ['glow', 1] }, result: { text: 'You do not share words, but you share light. A friendship begins.', opinion: 35, dna: 2, trait: 'social', anim: 'social' } },
+      { label: 'Approach slowly', check: { stat: 'cha', diff: 4 }, success: { text: 'They let you join their shoal.', opinion: 20, dna: 1 }, fail: { text: 'The lights go out all at once.', opinion: -10 } },
+      { label: 'Hunt the lights', req: { diet: ['carn', 'omni'] }, check: { stat: 'cun', diff: 3 }, success: { text: 'Lights are easy to follow.', food: 4, opinion: -30 }, fail: { text: 'They switch off and vanish.', food: -1 } },
+    ],
+  },
+  {
+    id: 'color_talk', stage: 'creature', habitat: 'sea', era: 2, prop: 'sparks', title: 'Talking in Color', tags: ['social', 'explore'],
+    when: (run) => G.partIds(run).some((id) => ['color_skin', 'color_storm', 'vanishing_skin'].includes(id)),
+    text: 'Your kind has started flashing patterns at each other: stripes for danger, spots for food, waves for come here.',
+    options: [
+      { label: 'Build a language of color', check: { stat: 'cun', diff: 4 }, success: { text: 'You can tell each other anything without a sound.', insight: 4, dna: 2, trait: 'cooperative' }, fail: { text: 'Everyone flashes at once and nobody understands.', insight: 1 } },
+      { label: 'Use it to fool others', result: { text: 'A flash of fake danger and the others scatter from the food.', food: 3, trait: 'calculating' } },
+    ],
+  },
 ];
 
 // Endings that a winning run can earn. Shown in the Codex.
@@ -813,6 +1015,8 @@ G.LEGACIES = {
   deep_singers: { name: 'The Deep Singers', desc: 'Your people will begin with a language that crosses oceans.' },
   reef_builders: { name: 'The Reef Builders', desc: 'Your people will begin with a city of coral.' },
   tide_lords: { name: 'The Tide Lords', desc: 'Your people will begin as masters of the sea.' },
+  shell_smiths: { name: 'The Shell Smiths', desc: 'Your people will begin with tools of shell and stone.' },
+  vent_keepers: { name: 'The Vent Keepers', desc: 'Your people will begin with the warmth of the deep vents, the sea\'s own fire.' },
 };
 
 G.EVENT = {};

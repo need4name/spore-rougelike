@@ -135,7 +135,7 @@ G.CARRY = {
   venom_stylet: { land: 'venom_fangs', sea: 'venom_fangs' },
   lure_mouth: { land: 'lure_jaw', sea: 'lure_jaw' },
   flagellum: { land: 'runner_legs', sea: 'fluke' },
-  cilia: { land: 'padded_paws', sea: 'pectoral_fins' },
+  cilia: { land: 'padded_paws', sea: 'tube_feet' },
   jet_vacuole: { land: 'hopping_legs', sea: 'swift_scales' },
   drift_sail: { land: 'display_frill', sea: 'dorsal_fin' },
   pseudopods: { land: 'digging_forelegs', sea: 'front_flippers' },
@@ -150,12 +150,12 @@ G.CARRY = {
   chemoreceptor: { land: 'antennae', sea: 'electroreceptors' },
   magnetosome: { land: 'great_ears', sea: 'echolocation' },
   glow_lure: { land: 'glow_eyes', sea: 'glow_eyes' },
-  stinging_cilia: { land: 'venom_barbs', sea: 'stinger_tail' },
+  stinging_cilia: { land: 'venom_barbs', sea: 'stinging_arms' },
   plated_eye: { land: 'horned_brow', sea: 'horned_brow' },
   fat_vacuole: { land: 'fat_hump', sea: 'blubber' },
   algae_chamber: { land: 'moss_garden', sea: 'kelp_garden' },
   stomach_chamber: { land: 'fat_hump', sea: 'fat_hump' },
-  neuron_cluster: { land: 'grasping_fingers', sea: 'sea_tentacles' },
+  neuron_cluster: { land: 'grasping_fingers', sea: 'sucker_arms' },
   toxin_gland: { land: 'venom_quills', sea: 'venom_quills' },
   photocyte_cluster: { land: 'lumen_sail', sea: 'lumen_sail' },
   calcium_core: { land: 'pillar_legs', sea: 'armored_fins' },
@@ -214,7 +214,7 @@ G.ARCHETYPES = [
     start: {
       cell: { mouth: 'tiny_jaw', motion: 'flagellum' },
       land: { mouth: 'fangs', hands: 'sharp_claws', senses: 'antennae' },
-      sea: { mouth: 'fangs', senses: 'electroreceptors' },
+      sea: { mouth: 'fangs', hands: 'smasher_club', senses: 'electroreceptors' },
     },
   },
   {
@@ -249,9 +249,9 @@ G.ORIGINS = [
 
 // Mutation packs add parts to the draft pool.
 G.PACKS = [
-  { id: 'deep', name: 'Abyssal Light', cost: 35, desc: 'Adds 10 Glow parts: lures, photophores and living light.' },
+  { id: 'deep', name: 'Abyssal Light', cost: 35, desc: 'Adds 12 Glow parts: lures, photophores and living light.' },
   { id: 'armored', name: 'Ironclad', cost: 35, desc: 'Adds 6 Armor parts: plates, carapaces and horned brows.' },
-  { id: 'venom', name: 'Venom Glands', cost: 45, needsEvo: 1, desc: 'Adds 7 Venom parts: stylets, barbs, spurs and stingers.' },
+  { id: 'venom', name: 'Venom Glands', cost: 45, needsEvo: 1, desc: 'Adds 8 Venom parts: stylets, barbs, spurs, stingers and stinging arms.' },
 ];
 
 // Permanent upgrades bought with Genetic Memory. Each level costs the next price.
@@ -294,14 +294,21 @@ G.SYMMETRY = {
 G.RESHAPE_COST = 4; // DNA per step in the Body Plan tab
 
 // What each segment count does for bilateral creatures (leg pairs).
-G.legPlan = (n) => {
+// At sea the same pairs are fins: same trade-offs, different names.
+const SEA_LEG_NAMES = ['Eel', 'One fin pair', 'Two fin pairs', 'Three fin pairs', 'Many fins', 'Many fins', 'Fin fringe', 'Fin fringe', 'Fin fringe'];
+const SEA_LEG_DESC = ['No fins at all. Wriggles through cracks and strikes from cover, but has no fin slots.', 'Only one pair of fins. Nimble and clever, but less sturdy.', 'The classic fish. No bonus, no cost.', 'Extra fins for steady swimming, but they need feeding.', 'Rows of fins rippling along the body. Fast and stable, but hungry.', 'Rows of fins rippling along the body. Fast and stable, but hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.'];
+G.legPlan = (n, habitat) => {
+  const plan = landLegPlan(n);
+  return habitat === 'sea' ? { ...plan, name: SEA_LEG_NAMES[n], desc: SEA_LEG_DESC[n] } : plan;
+};
+function landLegPlan(n) {
   if (n === 0) return { name: 'Serpent', desc: 'No legs at all. Slithers, hides in burrows and strikes from cover, but has no limb slots.', mods: { cun: 2, spd: 1, huntBonus: 1, str: -1 }, off: ['frontLimbs', 'hindLimbs', 'hands', 'feet'] };
   if (n === 1) return { name: 'Two legs', desc: 'Stands on its hind legs; the front pair is gone.', mods: { cun: 1, insightPerTurn: 1, tou: -1 }, off: ['frontLimbs', 'hands'] };
   if (n === 2) return { name: 'Four legs', desc: 'The classic body. No bonus, no cost.', mods: {} };
   if (n === 3) return { name: 'Six legs', desc: 'Stable and quick, but every leg needs feeding.', mods: { tou: 1, spd: 1, upkeep: 1 } };
   if (n <= 5) return { name: 'Many legs', desc: 'A long, segmented crawler. Fast and hard to topple, but hungry.', mods: { tou: 1, spd: 2, upkeep: 2, cha: -1 } };
   return { name: 'Centipede', desc: 'Dozens of legs. Terrifyingly fast and tough, but always hungry and hard to love.', mods: { tou: 2, spd: 3, upkeep: 3, cha: -2 } };
-};
+}
 G.armPlan = (n) => (n <= 4 ? { name: `${n} arms`, desc: 'Light and nimble for a radial creature.', mods: { spd: 1 } } : n === 5 ? { name: '5 arms', desc: 'The classic starfish.', mods: {} } : { name: `${n} arms`, desc: 'More arms to grab and hold, more mouths to feed.', mods: { str: 1, tou: 1, upkeep: n - 5 } });
 G.podPlan = (n) => (n <= 3 ? { name: `${n} pseudopods`, desc: 'Slow and steady.', mods: {} } : { name: `${n} pseudopods`, desc: 'Oozes faster, eats more.', mods: { spd: Math.floor((n - 2) / 2), upkeep: Math.floor((n - 2) / 2) } });
 
@@ -317,10 +324,14 @@ G.APPEARANCE = {
   shape: [
     { id: 'round', name: 'Round' },
     { id: 'slim', name: 'Slim' },
-    { id: 'flat', name: 'Flat' },
-    { id: 'pear', name: 'Pear' },
-    { id: 'tall', name: 'Tall' },
-    { id: 'hunched', name: 'Hunched', need: { stat: ['str', 5] }, why: 'Needs Strength 5' },
+    { id: 'flat', name: 'Flat', only: 'land' },
+    { id: 'pear', name: 'Pear', only: 'land' },
+    { id: 'tall', name: 'Tall', only: 'land' },
+    { id: 'hunched', name: 'Hunched', only: 'land', need: { stat: ['str', 5] }, why: 'Needs Strength 5' },
+    { id: 'torpedo', name: 'Torpedo', only: 'sea' },
+    { id: 'deep', name: 'Deep-bodied', only: 'sea' },
+    { id: 'ray', name: 'Ray wings', only: 'sea', need: { stat: ['spd', 5] }, why: 'Needs Speed 5' },
+    { id: 'puffer', name: 'Puffer', only: 'sea', need: { stat: ['tou', 5] }, why: 'Needs Toughness 5' },
     { id: 'long', name: 'Long', need: { era: 2 }, why: 'Opens in the Age of Giants' },
   ],
   head: [
@@ -329,6 +340,14 @@ G.APPEARANCE = {
     { id: 'flat', name: 'Flat' },
     { id: 'big', name: 'Big brain', need: { stat: ['cun', 6] }, why: 'Needs Cunning 6' },
     { id: 'crest', name: 'Crest', need: { keyword: 'armor' }, why: 'Needs an Armor part' },
+    { id: 'hammer', name: 'Hammerhead', only: 'sea', need: { stat: ['cun', 5] }, why: 'Needs Cunning 5' },
+    { id: 'sword', name: 'Sword nose', only: 'sea', need: { keyword: 'swift' }, why: 'Needs a Swift part' },
+  ],
+  fins: [
+    { id: 'plain', name: 'Plain', only: 'sea' },
+    { id: 'spiky', name: 'Spiky', only: 'sea' },
+    { id: 'flowing', name: 'Flowing', only: 'sea', need: { stat: ['cha', 4] }, why: 'Needs Charm 4' },
+    { id: 'sharp', name: 'Sharp', only: 'sea', need: { stat: ['spd', 5] }, why: 'Needs Speed 5' },
   ],
   neck: [
     { id: 'short', name: 'Short' },
@@ -345,6 +364,18 @@ G.APPEARANCE = {
     { id: 'two', name: 'On two legs', need: { tag: 'biped' }, why: 'Needs Upright or Striding Legs' },
   ],
 };
+
+// Sea creatures live at a home depth. Each zone has trade-offs, its own events and its own
+// place on the map (x and y are fractions of the map, y from the surface down).
+//   need  a part id or keyword needed to live there
+G.SEA_ZONES = [
+  { id: 'shallows', name: 'Sunlit Shallows', desc: 'Warm, bright and full of food, but there is nowhere to hide.', mods: { forageBonus: 2, damageReduce: -1 }, x: [0.06, 0.94], y: [0.07, 0.2] },
+  { id: 'reef', name: 'The Reef', desc: 'Crowded, colorful and full of hiding places. Friends are easy to make.', mods: { cha: 1, tou: 1, spd: -1 }, x: [0.04, 0.3], y: [0.25, 0.33] },
+  { id: 'open', name: 'Open Water', desc: 'Endless blue. The fast and the hungry hunt here.', mods: { spd: 1, huntBonus: 1, tou: -1 }, x: [0.42, 0.94], y: [0.27, 0.47] },
+  { id: 'twilight', name: 'Twilight Zone', desc: 'Dim blue light. Every night its creatures rise to feed. Sharp senses rule.', mods: { cun: 1, forageBonus: -1 }, x: [0.6, 0.94], y: [0.53, 0.71], need: { any: ['glow', 'big_eyes', 'lateral_line', 'echolocation', 'electroreceptors', 'pressure_skin'] }, why: 'Needs a Glow part or sharp senses (Big Eyes, Lateral Line, Echolocation, Electroreceptors) or Pressure Skin' },
+  { id: 'abyss', name: 'The Abyss', desc: 'Black, cold and crushing, with warm vents full of strange life. Few hunters ever come here.', mods: { cun: 1, tou: 1, damageReduce: 1, forageBonus: -2 }, x: [0.64, 0.95], y: [0.77, 0.89], need: { any: ['glow', 'pressure_skin'] }, why: 'Needs a Glow part or Pressure Skin' },
+];
+G.MOVE_COST = 3; // DNA to move to a new depth
 
 // Real time: seconds per turn at each speed.
 G.SPEEDS = [0, 2.4, 1.2, 0.6];
@@ -378,4 +409,18 @@ G.ROLES = {
   prey: 'Prey',
   rival: 'Rival',
   neighbor: 'Neighbor',
+};
+
+// The "What's new" note on the title screen. Update it with every release.
+G.VERSION = '6';
+G.WHATS_NEW = {
+  title: 'Update 6: The Deep',
+  items: [
+    'Sea creatures get two new slots: Arms (pincers, tentacles, clubs) and Underside (walking legs, suckers, belly lights).',
+    'About 30 new sea parts and 23 new sea evolutions, from shark jaws and ink clouds to electric organs and nautilus shells.',
+    'The sea map now shows depth. Choose a home in the Instinct tab: sunlit shallows, the reef, open water, the twilight zone or the abyss.',
+    '20 new sea events, some only at certain depths, and two new sea endings: the Shell Smiths and the Vent Keepers.',
+    'Shared events now read naturally at sea (schools, egg beds, weed).',
+    'New sea looks: torpedo, deep-bodied, ray and puffer shapes, hammerhead and sword noses, and fin styles.',
+  ],
 };

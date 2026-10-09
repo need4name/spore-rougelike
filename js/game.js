@@ -75,7 +75,7 @@ window.G = window.G || {};
   G.segments = (run) => (run.segments != null ? run.segments : G.SYMMETRY[G.symmetry(run)].start);
   G.segmentPlan = (run) => {
     const sym = G.symmetry(run); const n = G.segments(run);
-    return sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n);
+    return sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n, run.habitat);
   };
   // Slots this body plan has no use for (creature stage only).
   G.offSlots = (run) => {
@@ -94,6 +94,26 @@ window.G = window.G || {};
     run.segments = n;
     run.pop = Math.min(run.pop, G.maxPop(run));
     log(run, `Your body plan changed: ${G.segmentPlan(run).name}.`);
+    G.saveRun();
+  };
+
+  // Home depth for sea creatures.
+  G.SEA_ZONE = {}; G.SEA_ZONES.forEach((z) => { G.SEA_ZONE[z.id] = z; });
+  G.zone = (run) => (run.zone && G.SEA_ZONE[run.zone] ? run.zone : 'reef');
+  G.zoneState = (run, id) => {
+    const z = G.SEA_ZONE[id];
+    if (!z.need) return { ok: true };
+    const counts = G.keywordCounts(run); const ids = G.partIds(run);
+    const ok = z.need.any.some((x) => counts[x] > 0 || ids.some((pid) => pid === x || ((G.PART[pid].from || []).includes(x))));
+    return ok ? { ok: true } : { ok: false, why: z.why };
+  };
+  G.setZone = function (id) {
+    const run = G.run;
+    if (!run || run.stage !== 'creature' || run.habitat !== 'sea' || !G.SEA_ZONE[id] || G.zone(run) === id) return;
+    if (run.dna < G.MOVE_COST || !G.zoneState(run, id).ok) return;
+    run.dna -= G.MOVE_COST;
+    run.zone = id;
+    log(run, `Your kind moved to ${G.SEA_ZONE[id].name}.`);
     G.saveRun();
   };
 
@@ -133,6 +153,7 @@ window.G = window.G || {};
   // ---------- Appearance ----------
   G.lookOptionState = (run, opt) => {
     const n = opt.need;
+    if (opt.only && run.habitat !== opt.only) return { ok: false, why: opt.why, hidden: true };
     if (!n) return { ok: true };
     if (run.stage !== 'creature') return { ok: false, why: opt.why };
     if (n.keyword && !(G.keywordCounts(run)[n.keyword] > 0)) return { ok: false, why: opt.why };
@@ -145,7 +166,7 @@ window.G = window.G || {};
   };
   // The look actually shown: choices that are no longer allowed fall back to the first option.
   G.effectiveLook = (run) => {
-    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four' }, run.look || {});
+    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four', head: 'round', fins: 'plain' }, run.look || {});
     Object.keys(G.APPEARANCE).forEach((k) => {
       const opt = G.APPEARANCE[k].find((o) => o.id === l[k]);
       if (!opt || !G.lookOptionState(run, opt).ok) l[k] = G.APPEARANCE[k][0].id;
@@ -208,6 +229,7 @@ window.G = window.G || {};
     if (allies) list.push({ foodPerTurn: allies });
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
     if (run.stage === 'creature') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
+    if (run.stage === 'creature' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
     if (run.hostility >= 2) list.push({ upkeep: 1 });
     if (run.hostility >= 4) list.push({ maxPop: -2 });
     return list;
@@ -266,9 +288,18 @@ window.G = window.G || {};
 
   function sub(text, run, speciesIdx) {
     const s = speciesIdx != null && speciesIdx >= 0 ? run.species[speciesIdx] : null;
-    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others');
+    const words = G.wordsFor(run);
+    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others').replace(/\{(\w+)\}/g, (m, k) => (words[k] != null ? words[k] : m));
   }
   G.sub = sub;
+  // Words that change with your body, so shared events read right on land and at sea.
+  G.wordsFor = (run) => {
+    const sea = run.stage === 'cell' || run.habitat === 'sea';
+    const herd = run.stage === 'cell' || (run.stage === 'creature' && G.symmetry(run) === 'colonial') ? 'colony' : sea ? 'school' : 'herd';
+    const w = { herd, nests: sea ? 'egg beds' : 'nests', cover: sea ? 'weed' : 'grass', home: sea ? 'the water' : 'the land', move: sea ? 'swim' : 'walk', depth: run.habitat === 'sea' ? G.SEA_ZONE[G.zone(run)].name : 'the valley' };
+    w.Herd = herd[0].toUpperCase() + herd.slice(1);
+    return w;
+  };
 
   function log(run, text) {
     const st = G.STAGES[run.stage];
@@ -306,6 +337,13 @@ window.G = window.G || {};
   // How big each kind of species' population can grow.
   const SPECIES_CAP = { prey: 30, neighbor: 18, rival: 16, predator: 8 };
 
+  // Where a sea species lives: glowing ones deep down, hunters in open water, prey on the reef.
+  function speciesZone(role, body) {
+    const glows = Object.values(body.parts || {}).some((sl) => sl && [sl.id, sl.merged].some((id) => id && (G.PART[id].keywords || []).includes('glow')));
+    if (glows) return pick(['twilight', 'abyss']);
+    return pick({ predator: ['open', 'open', 'twilight'], prey: ['reef', 'shallows'], rival: ['reef', 'open', 'shallows'], neighbor: ['reef', 'shallows', 'twilight'] }[role]);
+  }
+
   function makeSpecies(world, roles) {
     const names = G.SPECIES_NAMES[world];
     const used = new Set();
@@ -318,7 +356,8 @@ window.G = window.G || {};
       const body = makeBody(world, diet);
       const cap = Math.round(SPECIES_CAP[role] * (world === 'cell' ? 1.5 : 1));
       const sizeBase = { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (world === 'cell' ? 1 : 0.6 + rand() * 0.9);
-      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(sizeBase * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), ...body };
+      const zone = world === 'sea' ? speciesZone(role, body) : undefined;
+      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(sizeBase * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), zone, ...body };
     });
   }
 
@@ -512,6 +551,10 @@ window.G = window.G || {};
       const options = G.partPool(run).filter((p) => !ids.includes(p.id));
       if (options.length) lines.push({ t: installPart(run, pick(options), 'merge'), good: true });
     }
+    if (eff.zone && run.habitat === 'sea' && G.zone(run) !== eff.zone) {
+      run.zone = eff.zone;
+      lines.push({ t: `New home: ${G.SEA_ZONE[eff.zone].name}`, good: true });
+    }
     if (eff.legacy) run.legacy = eff.legacy;
     if (eff.setback != null) {
       if (run.stage === 'cell' && eff.setback) {
@@ -591,6 +634,7 @@ window.G = window.G || {};
     if (e.finale || e.milestone) return false;
     if (e.stage !== run.stage && e.stage !== 'any') return false;
     if (e.habitat && e.habitat !== run.habitat) return false;
+    if (e.zones && !(run.habitat === 'sea' && e.zones.includes(G.zone(run)))) return false;
     if (e.era && run.era < e.era) return false;
     if (e.multi === true && !run.multicellular) return false;
     if (e.multi === false && run.multicellular) return false;
@@ -638,6 +682,8 @@ window.G = window.G || {};
     else if (req.serpent && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) === 0)) reason = 'Needs a legless, serpent body';
     else if (req.manyLegs && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) >= 4)) reason = 'Needs 4 or more pairs of legs';
     else if (req.size && G.sizeOf(run) !== req.size) reason = `Only for ${req.size} creatures`;
+    else if (req.zone && !(run.habitat === 'sea' && G.zone(run) === req.zone)) reason = `Only in ${G.SEA_ZONE[req.zone].name}`;
+    else if (req.anyPart && !req.anyPart.some((id) => G.partIds(run).some((pid) => pid === id || (G.PART[pid].from || []).includes(id)))) reason = `Needs ${req.anyPart.map((id) => G.PART[id].name).join(' or ')}`;
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
     const out = { ok: !reason, reason };
     if (opt.check) out.chance = G.chance(run, opt.check.stat, opt.check.diff);
