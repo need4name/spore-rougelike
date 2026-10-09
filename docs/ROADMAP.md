@@ -25,7 +25,7 @@ The causes go deeper than the numbers:
 2. **There is only one kind of mind, and it's a primate's.** The Mind tree is grooming, food caching, shelters, stone tools and fire. Every route to a "thinking" ending runs through hands.
 3. **The default body is a mammal.** Everyone has an inside skeleton, gives birth to live young, is warm-blooded and lives in a herd. Neck and posture looks exist only on land.
 4. **The shared events are written for land.** 17 of the 37 events that both habitats can get talk about the ground, nests, trees or running.
-5. **The later stages would make it worse.** As first planned, Tribe meant huts and fire, Civilization meant kings and castles, and Space meant rockets. None of that works for whales, octopuses or ant colonies.
+5. **The later stages would make it worse.** As first planned, Tribe meant huts and fire, and Civilization meant kings and castles. None of that works for whales, octopuses or ant colonies.
 
 ## The fix: four design rules
 
@@ -73,9 +73,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 15 | Neighbours | Society stage, part 2: Hive, Den and Grove, plus rival societies | Large |
 | 16 | Crowns | **Civilization stage**, part 1: land and sea nations | Large |
 | 17 | Empires | Civilization stage, part 2: the other paths, wars, faiths, wonders | Large |
-| 18 | Lift-off | **Space stage**, part 1: leaving home, in very different ships | Large |
-| 19 | The Galaxy | Space stage, part 2: aliens from your past runs, the true ending | Medium |
-| 20 | The Final Polish | Balance, art, sound, tutorial, offline app, challenges and achievements | Large |
+| 18 | The Final Polish | Balance, art, sound, tutorial, offline app, challenges and achievements | Large |
 
 **Why this order.** The playtest after Update 6 showed that the foundations matter more than new content right now.
 
@@ -106,7 +104,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 
 - **One theme per update.** Ideas that don't fit go on the "waiting" list at the bottom.
 - **Each update is playable on its own.** Nothing is left half-built between updates.
-- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 20. Between updates we only fix what blocks testing or is clearly broken.
+- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 18. Between updates we only fix what blocks testing or is clearly broken.
 - **Saves.** Unlocks and the Codex always carry over. A run in progress may restart when a new stage arrives; the game will say so.
 - **What's new.** From Update 6 on, the title screen shows a short "What's new" note.
 - **Every update is tested on land and in the sea**, and with at least one creature that isn't bilateral.
@@ -356,40 +354,12 @@ Alongside the choices:
 - **Rival nations** of any kind, plus wars, treaties and betrayals.
 - **Faiths** that spread, split and clash.
 - **Wonders and disasters:** plague, famine, rebellion and the sea turning to acid.
-- **Civilization endings** that lead into the Space stage, plus a few "dead end" endings that still earn Genetic Memory.
+- **The true endings.** Civilization is the final stage. Each path has its own grand ending, which unlocks **New Game+**: a new world that starts with echoes of your old ones. There are also a few "dead end" endings that still earn Genetic Memory.
+- **Rival nations descended from your past lineages:** creatures from your Fossil Record can appear as rival civilizations.
 
 **You'll test:** whether the late game stays tense, and whether every path's civilization holds up.
 
-## Update 18: Lift-off (Space stage, part 1)
-
-*Leave home, each in its own way.*
-
-Each path leaves its world differently:
-
-- **Toolmakers:** rockets.
-- **Singers and sea civilizations:** ships filled with water, carrying a piece of their ocean.
-- **Swarm:** seed-ships that grow a new hive wherever they land.
-- **Gardeners:** grown, living ships.
-- **Many Minds:** ships that change shape.
-
-The stage itself:
-
-- **A star map** with planets to scan, settle or reshape. Water worlds and ice moons matter as much as rocky planets.
-- **Space events:** strange signals, derelict ships, living planets.
-
-**You'll test:** whether space feels like a new frontier, and whether your path still shapes how you play.
-
-## Update 19: The Galaxy (Space stage, part 2)
-
-*Everyone you've ever been is out there.*
-
-- **Aliens from your past runs:** lineages from your fossil record show up as alien empires, with the bodies and paths you gave them.
-- **Galactic diplomacy:** alliances, wars and trade between empires.
-- **The true ending:** reach the galactic core. Beating it unlocks **New Game+**, where a new world starts with echoes of your old ones.
-
-**You'll test:** whether meeting your old creatures is a fun surprise, and whether the ending feels big enough.
-
-## Update 20: The Final Polish
+## Update 18: The Final Polish
 
 *Everything we've been saving for the end.*
 
@@ -406,6 +376,10 @@ The stage itself:
 **You'll test:** the whole game, from start to finish, with fresh eyes.
 
 ---
+
+## Scrapped
+
+- **The Space stage** (was Updates 18–19). The game now ends with the Civilization stage. Its best ideas moved: the true ending and New Game+ go to Update 17, and past lineages returning as rivals go to Updates 10 and 17.
 
 ## Ideas waiting for a home
 

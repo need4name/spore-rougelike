@@ -2,7 +2,7 @@
 
 ## Pitch
 
-Spore's arc from cell to space, rebuilt for phones: no movement, just decisions. Time flows on a living world map like Crusader Kings 3 (pause and three speeds), and events pop up and happen *to* your lineage. Mutation drafts build a body, parts merge into hybrids, and the right pairs evolve (like Ball x Pit). Extinction ends the run, but Genetic Memory and the Codex carry over and unlock more variety.
+Spore's arc from a single cell to a civilization, rebuilt for phones: no movement, just decisions. Time flows on a living world map like Crusader Kings 3 (pause and three speeds), and events pop up and happen *to* your lineage. Mutation drafts build a body, parts merge into hybrids, and the right pairs evolve (like Ball x Pit). Extinction ends the run, but Genetic Memory and the Codex carry over and unlock more variety.
 
 ## The run
 
@@ -10,7 +10,7 @@ Spore's arc from cell to space, rebuilt for phones: no movement, just decisions.
 |---|---|---|---|
 | Cell | Epoch | Single cell → **Many Become One** (multicellularity) → **The Edge of the Sea** (land or sea) | Playable |
 | Creature | Generation | First Steps → **Age of Giants** (size choice) → **Spark of Mind** (Mind tree) → First Tribe / First Pod finale | Playable |
-| Tribe, Civilization, Space | — | — | Planned |
+| Society, Civilization | — | — | Planned (Civilization is the final stage) |
 
 **Time:** every tick (2.4 s at normal speed) is one Epoch or Generation: Food is gathered and eaten, Population grows, DNA and Insight arrive, and every other species grows, starves or is hunted. Drafts, milestones and finales pause time when DNA reaches them. Random events also pop up and pause time; after choosing, a scene acts out what happened.
 
