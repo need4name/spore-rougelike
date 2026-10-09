@@ -37,6 +37,10 @@ Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and
 
 ## Archetypes (each breaks one rule for the whole run)
 
+Difficulty (shown on the setup screen): **Gentle**: Drifter. **Tricky**: Predator, Symbiote, Mimic. **Hard**: Grazer, Parasite, Colony.
+
+**Hidden power** (`G.power`, never shown): 75% from the share of the Evolution Tree bought and 25% from wins (up to 8), fixed in `run.power` when a run starts. It adds up to +3 harshness to every non-finale check (`G.harsh`) and makes predators up to 25% more likely to strike.
+
 | Archetype | Gimmick |
 |---|---|
 | Drifter | The current picks your Instinct (forage or hunt, by diet). Every 8 turns it carries you on: your worst enemy is replaced by a new species, and half the time you can absorb one of its parts. |

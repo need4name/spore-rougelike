@@ -205,6 +205,7 @@ window.G = window.G || {};
         <span class="choice-head"><span class="swatch" style="--h:${item.color != null ? item.color : item.hue}"></span><strong>${esc(item.name)}</strong>${unlocked ? '' : `<span class="lock">${ICON.gene} ${item.cost} in Unlocks</span>`}</span>
         <span class="choice-desc">${esc(item.desc)}</span>
         ${item.rule ? `<span class="choice-rule"><b>${esc(item.rule)}.</b> ${esc(item.ruleDesc)}</span>` : ''}
+        ${item.difficulty ? `<span class="choice-diff d${item.difficulty}">${'★'.repeat(item.difficulty)}${'☆'.repeat(3 - item.difficulty)} ${G.DIFFICULTY_NAMES[item.difficulty]}</span>` : ''}
       </button>`;
     const hostility = m.maxHostility > 0 ? `
       <section class="setup-group">
@@ -410,7 +411,8 @@ window.G = window.G || {};
         out.push(`<div class="cmp-row"><span>Swap out ${esc(G.PART[sl.id].name)}</span>${result(sl.merged, pid)}</div>`);
         out.push(`<div class="cmp-row"><span>Swap out ${esc(G.PART[sl.merged].name)}</span>${result(sl.id, pid)}</div>`);
       } else if (G.canMerge(run)) out.push(`<div class="cmp-row"><span>Merge</span>${result(sl.id, pid)}</div>`);
-      out.push(`<div class="cmp-row"><span>Replace</span><span>${modDiff(modsOf(pid), now)}${dietNote(pid)}</span></div>`);
+      // A merged part can only have one half swapped out, so there is no "replace" for it.
+      if (!sl.merged) out.push(`<div class="cmp-row"><span>Replace it</span><span>${modDiff(modsOf(pid), now)}${dietNote(pid)}</span></div>`);
       return out.join('');
     });
     return `<div class="part-compare">${rows.join('')}</div>`;
@@ -1006,22 +1008,30 @@ window.G = window.G || {};
       <p class="note">Change your body's proportions, limbs, head, colors and patterns as often as you like, for free. Looks never change your stats. How many legs and arms you have is part of your Body plan.</p>`;
   }
 
-  // The Creature Editor: a live preview with four tabs of controls.
+  // The Creature Editor: a live preview, with tabs and sliders that fit the kind of body you have.
   function editor(run) {
     if (!G.ui.editor || !run || run.stage !== 'creature') return '';
-    const tab = G.ui.editorTab || 'body';
+    const kind = G.editorBody(run);
     const sea = run.habitat === 'sea';
-    const bilateral = G.symmetry(run) === 'bilateral';
-    const legs = bilateral && G.segments(run) > 0;
-    const sliders = (group) => G.SCULPT.filter((sl) => sl.group === group && (!sl.only || sl.only === run.habitat)).map((sl) => sculptSlider(run, sl)).join('');
+    const labelKey = kind === 'radial' && sea ? 'radialSea' : kind;
+    const sliders = (group) => G.SCULPT.filter((sl) => sl.group === group && sl.bodies.includes(kind) && (!sl.part || G.hasVisiblePart(run, sl.part)))
+      .map((sl) => sculptSlider(run, { ...sl, name: (sl.labels && (sl.labels[labelKey] || sl.labels[kind])) || sl.name, ends: (sl.endsBy && sl.endsBy[kind]) || sl.ends })).join('');
     const hue = G.bodyOf(run).hue;
     const panels = {
-      body: () => `${lookGroup(run, 'shape', 'Body shape')}${sliders('body')}`,
-      limbs: () => `${legs || !bilateral ? sliders('limbs') : '<p class="empty">Your body has no limbs. Change that in the Body plan tab.</p>'}${sea && legs ? lookGroup(run, 'fins', 'Fins') : ''}`,
-      head: () => `${lookGroup(run, 'head', 'Head shape')}${!sea && bilateral ? lookGroup(run, 'headPos', 'Head position') : ''}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
+      body: () => `${kind === 'land' || kind === 'sea' ? lookGroup(run, 'shape', 'Body shape') : ''}${sliders('body')}${kind === 'colonial' ? sliders('limbs') : ''}`,
+      limbs: () => `${sliders('limbs')}${kind === 'sea' ? lookGroup(run, 'fins', 'Fins') : ''}`,
+      head: () => `${lookGroup(run, 'head', 'Head shape')}${kind === 'land' ? lookGroup(run, 'headPos', 'Head position') : ''}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
       color: () => `${hueSlider(run, 'hue', 'Body color', hue)}${hueSlider(run, 'belly', 'Belly color', hue)}${hueSlider(run, 'accent', 'Pattern color', (hue + 40) % 360)}${hueSlider(run, 'accent2', 'Second pattern color', (hue + 70) % 360)}${lookGroup(run, 'pattern', 'Pattern')}${sliders('color')}${lookGroup(run, 'finish', 'Finish')}`,
     };
-    const tabs = [['body', 'Body'], ['limbs', sea ? 'Fins' : 'Limbs'], ['head', 'Head'], ['color', 'Colors']];
+    const TABS = {
+      land: [['body', 'Body'], ['limbs', 'Limbs'], ['head', 'Head'], ['color', 'Colors']],
+      sea: [['body', 'Body'], ['limbs', 'Fins'], ['head', 'Head'], ['color', 'Colors']],
+      serpent: [['body', 'Body'], ['head', 'Head'], ['color', 'Colors']],
+      radial: [['body', sea ? 'Bell' : 'Disc'], ['limbs', sea ? 'Tentacles' : 'Arms'], ['color', 'Colors']],
+      colonial: [['body', 'Body'], ['color', 'Colors']],
+    };
+    const tabs = TABS[kind];
+    const tab = tabs.some(([id]) => id === G.ui.editorTab) ? G.ui.editorTab : 'body';
     return `<div class="editor" role="dialog" aria-modal="true" aria-label="Creature Editor">
       <header class="editor-head"><h2>Creature Editor</h2><button class="btn small primary" data-act="editor-done">Done</button></header>
       <div class="editor-preview"><canvas class="editor-canvas"></canvas></div>

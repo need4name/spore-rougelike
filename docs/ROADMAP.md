@@ -337,6 +337,18 @@ From the second playtest notes:
 - 10 signature events, two for each Path.
 - Lineages that reached the Spark before this update choose a Path when they next play.
 
+## Patch 13.1: A firmer footing ✅
+
+From the playtest after Update 13, to make a solid platform for the Tribe stage:
+
+- **The editor fits the body.** Tabs, sliders and their names depend on whether you are a land creature, a sea creature, a serpent, a radial body (starfish or jellyfish) or a shapeless colony. Tails, back parts and wings get size sliders when you have them.
+- **Difficulty is shown for every start:**
+  - **Gentle:** Drifter.
+  - **Tricky:** Predator, Symbiote and Mimic.
+  - **Hard:** Grazer, Parasite and Colony.
+- **Hidden power.** A measure the player is never shown tracks how much of the Evolution Tree you have bought and how many lineages have won. It is fixed when a run starts, and the world quietly gets harsher to match it (up to +3 on every check, and predators up to 25% more aggressive). An upgraded player is never left with an easy game.
+- **Small fixes:** tips darken the screen behind them; no "replace" line for merged parts; cell sizes spelled out; a simpler Drifter tip.
+
 ## Update 14: First Fires (Tribe stage, part 1)
 
 *Your creatures become a band.*

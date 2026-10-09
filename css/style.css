@@ -579,3 +579,10 @@ button.rival:hover { border-color: var(--accent); }
 .ending-grid ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 3px; font-size: 0.82rem; }
 .ending-grid ul li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
 .ending-grid ul li.got b { color: var(--good); }
+
+.choice-diff { font-size: 0.78rem; letter-spacing: 0.04em; color: var(--muted); }
+.choice-diff.d1 { color: var(--good); }
+.choice-diff.d2 { color: var(--accent); }
+.choice-diff.d3 { color: var(--bad); }
+/* A tip darkens everything behind it, so it is clear which window to read. */
+#tip:not(:empty) { top: 0; align-items: flex-end; background: rgba(4, 10, 12, 0.66); pointer-events: auto; }

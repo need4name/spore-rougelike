@@ -288,10 +288,10 @@ G.CARRY = {
 // Starting kits. Each archetype sets the parts you begin each body plan with.
 G.ARCHETYPES = [
   {
-    id: 'drifter', name: 'Drifter', cost: 0, color: 190, gimmick: 'drifter',
+    id: 'drifter', name: 'Drifter', cost: 0, color: 190, difficulty: 1, gimmick: 'drifter',
     desc: 'A balanced omnivore that goes where the current takes it.',
     rule: 'Carried by the current',
-    ruleDesc: 'In the water you cannot choose your Instinct: the current decides. Every 8 turns it carries you somewhere new: you leave your worst enemy behind, meet a new species, and may absorb one of its parts. On land the current becomes wanderlust, and you choose your Instinct again (as you do anywhere once your kind can think).',
+    ruleDesc: 'You cannot choose your Instinct: the current decides. Every 8 turns it carries you somewhere new: you leave your worst enemy behind, meet a new species, and may absorb one of its parts.',
     mods: { tou: 1 },
     start: {
       cell: { mouth: 'proboscis', motion: 'cilia' },
@@ -300,7 +300,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'grazer', name: 'Grazer', cost: 0, color: 110, gimmick: 'grazer',
+    id: 'grazer', name: 'Grazer', cost: 0, color: 110, difficulty: 3, gimmick: 'grazer',
     desc: 'A sturdy plant-eater that lives as a vast herd.',
     rule: 'The vast herd',
     ruleDesc: 'Your herds grow 60% bigger, and DNA comes from the size of your herd instead of from time. You can never hunt or grow a meat-eating mouth, and every blow kills 50% more of you.',
@@ -312,7 +312,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'predator', name: 'Predator', cost: 30, color: 8, gimmick: 'predator',
+    id: 'predator', name: 'Predator', cost: 30, color: 8, difficulty: 2, gimmick: 'predator',
     desc: 'Fast and hungry. Hunting is the only way you eat.',
     rule: 'You are what you eat',
     ruleDesc: 'No foraging: hunting only feeds you on a kill, and food spoils twice as fast. Go 5 turns without a kill and you starve. Every kill can let you devour a part from the species you ate.',
@@ -324,7 +324,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'symbiote', name: 'Symbiote', cost: 50, needsEvo: 2, color: 150, gimmick: 'symbiote',
+    id: 'symbiote', name: 'Symbiote', cost: 50, needsEvo: 2, color: 150, difficulty: 2, gimmick: 'symbiote',
     desc: 'Two bodies, one life.',
     rule: 'Two bodies, one life',
     ruleDesc: 'You live joined to a partner species. You share a sixth of its stats and can swap parts with it, but you suffer when it struggles, and lose half your kind if it dies out.',
@@ -336,7 +336,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'parasite', name: 'Parasite', cost: 70, needsEvo: 5, color: 280, gimmick: 'parasite',
+    id: 'parasite', name: 'Parasite', cost: 70, needsEvo: 5, color: 280, difficulty: 3, gimmick: 'parasite',
     desc: 'Lives inside other species. High risk, high reward.',
     rule: 'Inside a host',
     ruleDesc: 'You live inside a host species and feed on it. Your Population can never outgrow your host, and you can steal its parts. Your host weakens and turns on you, so you must jump to a new one before it dies out.',
@@ -348,7 +348,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'colony', name: 'Colony', cost: 40, color: 40, gimmick: 'colony',
+    id: 'colony', name: 'Colony', cost: 40, color: 40, difficulty: 3, gimmick: 'colony',
     desc: 'A shapeless colony that spreads by splitting.',
     mods: { maxPop: 2, spd: -1 },
     rule: 'Spread by splitting',
@@ -360,7 +360,7 @@ G.ARCHETYPES = [
     },
   },
   {
-    id: 'mimic', name: 'Mimic', cost: 60, needsEvo: 3, color: 320, gimmick: 'mimic',
+    id: 'mimic', name: 'Mimic', cost: 60, needsEvo: 3, color: 320, difficulty: 2, gimmick: 'mimic',
     desc: 'A master of disguise.',
     mods: { cha: 1 },
     rule: 'Pass as one of them',
@@ -569,23 +569,30 @@ G.MOVE_COST = 3; // DNA to move to a new depth
 
 // The Creature Editor's sliders. Values are multipliers (1 = normal) unless noted.
 //   group  which editor tab     cap  optional function(run) giving a lower maximum, with capWhy
+// Sculpt sliders. Each body type gets its own set (`bodies`) and its own words (`labels`):
+// land, sea, serpent (no limbs), radial (starfish or jellyfish) and colonial (a shapeless blob).
+// `part` sliders only show when you have that kind of visible part.
+const ALL_BODIES = ['land', 'sea', 'serpent', 'radial', 'colonial'];
 G.SCULPT = [
-  { id: 'bodyLen', name: 'Body length', group: 'body', min: 0.7, max: 1.5, step: 0.05, def: 1 },
-  { id: 'bodyHeight', name: 'Body height', group: 'body', min: 0.7, max: 1.5, step: 0.05, def: 1 },
-  { id: 'spine', name: 'Back slope', group: 'body', min: -1, max: 1, step: 0.1, def: 0, ends: ['Head up', 'Head down'] },
-  { id: 'neckLen', name: 'Neck length', group: 'body', min: 0, max: 1, step: 0.05, def: 0, only: 'land', cap: (run) => (run.era >= 2 ? 1 : 0.4), capWhy: 'Longer necks open in the Age of Giants' },
-  { id: 'legLen', name: 'Hind limb length', group: 'limbs', min: 0.6, max: 1.6, step: 0.05, def: 1 },
-  { id: 'armLen', name: 'Front limb length', group: 'limbs', only: 'land', min: 0.6, max: 1.8, step: 0.05, def: 1, ends: ['Short (leans back)', 'Long (leans forward)'] },
-  { id: 'legThick', name: 'Limb thickness', group: 'limbs', min: 0.6, max: 1.8, step: 0.05, def: 1 },
-  { id: 'legSpread', name: 'Limb spacing', group: 'limbs', min: 0.5, max: 1.5, step: 0.05, def: 1, ends: ['Bunched', 'Far apart'] },
-  { id: 'legShift', name: 'Limb position', group: 'limbs', min: -0.5, max: 0.5, step: 0.05, def: 0, ends: ['Toward the tail', 'Toward the head'] },
-  { id: 'headTilt', name: 'Head angle', group: 'head', only: 'land', min: -0.6, max: 0.6, step: 0.05, def: 0, ends: ['Nose up', 'Nose down'] },
-  { id: 'headSize', name: 'Head size', group: 'head', min: 0.7, max: 1.6, step: 0.05, def: 1 },
-  { id: 'eyeCount', name: 'Number of eyes', group: 'head', min: 1, max: 6, step: 1, def: 1 },
-  { id: 'eyeSize', name: 'Eye size', group: 'head', min: 0.6, max: 1.8, step: 0.05, def: 1 },
-  { id: 'jaw', name: 'Jaw size', group: 'head', min: 0.6, max: 1.6, step: 0.05, def: 1 },
-  { id: 'patScale', name: 'Pattern size', group: 'color', min: 0.5, max: 2, step: 0.05, def: 1 },
-  { id: 'patDensity', name: 'Pattern density', group: 'color', min: 0.5, max: 2, step: 0.05, def: 1 },
+  { id: 'bodyLen', name: 'Body length', group: 'body', bodies: ALL_BODIES, min: 0.7, max: 1.5, step: 0.05, def: 1, labels: { serpent: 'Length', radial: 'Disc size', radialSea: 'Bell size', colonial: 'Width' } },
+  { id: 'bodyHeight', name: 'Body height', group: 'body', bodies: ['land', 'sea', 'serpent', 'colonial'], min: 0.7, max: 1.5, step: 0.05, def: 1, labels: { serpent: 'Thickness', colonial: 'Height' } },
+  { id: 'spine', name: 'Back slope', group: 'body', bodies: ['land', 'serpent'], min: -1, max: 1, step: 0.1, def: 0, ends: ['Head up', 'Head down'], labels: { serpent: 'Slither' }, endsBy: { serpent: ['Gentle', 'Wild'] } },
+  { id: 'neckLen', name: 'Neck length', group: 'body', bodies: ['land'], min: 0, max: 1, step: 0.05, def: 0, only: 'land', cap: (run) => (run.era >= 2 ? 1 : 0.4), capWhy: 'Longer necks open in the Age of Giants' },
+  { id: 'tailSize', name: 'Tail size', group: 'body', bodies: ['land', 'sea'], part: 'tail', min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'backSize', name: 'Back part size', group: 'body', bodies: ['land', 'sea'], part: 'back', min: 0.6, max: 1.6, step: 0.05, def: 1, labels: { sea: 'Dorsal size' } },
+  { id: 'wingSize', name: 'Wing size', group: 'body', bodies: ['land'], part: 'wings', min: 0.7, max: 1.5, step: 0.05, def: 1 },
+  { id: 'legLen', name: 'Hind limb length', group: 'limbs', bodies: ['land', 'sea', 'radial', 'colonial'], min: 0.6, max: 1.6, step: 0.05, def: 1, labels: { sea: 'Fin size', radial: 'Arm length', radialSea: 'Tentacle length', colonial: 'Pseudopod size' } },
+  { id: 'armLen', name: 'Front limb length', group: 'limbs', bodies: ['land'], only: 'land', min: 0.6, max: 1.8, step: 0.05, def: 1, ends: ['Short (leans back)', 'Long (leans forward)'] },
+  { id: 'legThick', name: 'Limb thickness', group: 'limbs', bodies: ['land'], min: 0.6, max: 1.8, step: 0.05, def: 1 },
+  { id: 'legSpread', name: 'Limb spacing', group: 'limbs', bodies: ['land'], min: 0.5, max: 1.5, step: 0.05, def: 1, ends: ['Bunched', 'Far apart'] },
+  { id: 'legShift', name: 'Limb position', group: 'limbs', bodies: ['land'], min: -0.5, max: 0.5, step: 0.05, def: 0, ends: ['Toward the tail', 'Toward the head'] },
+  { id: 'headTilt', name: 'Head angle', group: 'head', bodies: ['land'], only: 'land', min: -0.6, max: 0.6, step: 0.05, def: 0, ends: ['Nose up', 'Nose down'] },
+  { id: 'headSize', name: 'Head size', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 0.7, max: 1.6, step: 0.05, def: 1 },
+  { id: 'eyeCount', name: 'Number of eyes', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 1, max: 6, step: 1, def: 1 },
+  { id: 'eyeSize', name: 'Eye size', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 0.6, max: 1.8, step: 0.05, def: 1 },
+  { id: 'jaw', name: 'Jaw size', group: 'head', bodies: ['land', 'serpent'], min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'patScale', name: 'Pattern size', group: 'color', bodies: ALL_BODIES, min: 0.5, max: 2, step: 0.05, def: 1 },
+  { id: 'patDensity', name: 'Pattern density', group: 'color', bodies: ALL_BODIES, min: 0.5, max: 2, step: 0.05, def: 1 },
 ];
 G.SCULPT_BY_ID = {}; G.SCULPT.forEach((x) => { G.SCULPT_BY_ID[x.id] = x; });
 G.COLOR_KEYS = ['hue', 'belly', 'accent', 'accent2']; // hue sliders, 0-359
@@ -702,16 +709,16 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '13';
+G.VERSION = '13.1';
 G.WHATS_NEW = {
-  title: 'Update 13: Other Minds',
+  title: 'Patch 13.1: A firmer footing',
   items: [
-    'Intelligence comes in many shapes. At the Spark of Mind your kind chooses one of five Paths of Mind: Toolmakers, Singers, Many Minds, the Swarm or Gardeners. Your body and history decide which are open, and your choice is fixed for the lineage.',
-    'A new Mind tree, built from your own story: roots from your starting cell (each archetype has its own temperament), ideas from land or sea and from where you live, then your Path, and an Awakening at the top.',
-    '10 new endings, one for each Path on land and at sea, and each named by your temperament: 70 in all. A deep-sea predator that becomes Many Minds is the Lantern Court; a grazer on land that becomes a Toolmaker is the Firekeepers.',
-    'The Codex of Endings tracks every start and ending you have reached. Each new one is worth +10 Genetic Memory.',
-    'Radial and shapeless bodies finally have a real road to intelligence, through Many Minds and the Swarm.',
-    '10 signature events, two for each Path: song duels, blights, a colony that splits, words of color and more.',
+    'The Creature Editor now fits your kind of body. Jellyfish get a bell and tentacles, starfish a disc and arms, blobs width and pseudopods, serpents length, thickness and slither, and fish their fins. Tails, back parts and wings get size sliders when you have them.',
+    'Every starting archetype now shows how hard it is: Gentle, Tricky or Hard. Harder starts are there for when you are ready, not to be avoided.',
+    'Tips now darken everything behind them, so it is always clear what to read.',
+    'Drafts no longer show a "replace" line for merged parts (they can only have one half swapped out).',
+    'Cell sizes are spelled out (micrometres), and the map labels in the Cell stage just show how many there are.',
+    'Update 13 (Other Minds): five Paths of Mind, a Mind tree built from your own story, and 70 named endings in the Codex of Endings.',
   ],
 };
 
@@ -769,3 +776,6 @@ G.AFFINITIES = [
 ];
 G.AFFINITY_COSTS = [30, 60, 100];
 G.AFFINITY = {}; G.AFFINITIES.forEach((a) => { G.AFFINITY[a.id] = a; });
+
+// How hard each start is (shown on the setup screen). Harder starts are meant for later, not avoided.
+G.DIFFICULTY_NAMES = { 1: 'Gentle', 2: 'Tricky', 3: 'Hard' };

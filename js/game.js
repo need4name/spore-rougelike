@@ -114,6 +114,19 @@ window.G = window.G || {};
   G.symmetry = (run) => (run.traits.includes('radial_plan') ? 'radial' : run.traits.includes('sessile_plan') ? 'colonial' : 'bilateral');
   G.segments = (run) => (run.segments != null ? run.segments : G.SYMMETRY[G.symmetry(run)].start);
   // How many limb pairs are arms (land, bilateral only). Old saves used the "On two legs" posture.
+  // Which kind of body the editor and renderer are dealing with.
+  G.editorBody = (run) => {
+    const sym = G.symmetry(run);
+    if (sym === 'radial' || sym === 'colonial') return sym;
+    if (G.segments(run) === 0) return 'serpent';
+    return run.habitat === 'sea' ? 'sea' : 'land';
+  };
+  // Does this body show a part the editor can resize?
+  G.hasVisiblePart = (run, kind) => {
+    const off = G.offSlots(run);
+    if (kind === 'wings') return ['feathered_wings', 'true_wings', 'insect_wings'].some((id) => G.partIds(run).includes(id) || G.partIds(run).some((pid) => (G.PART[pid].from || []).includes(id)));
+    return !!run.parts[kind] && !off.includes(kind);
+  };
   G.eyeCount = (run) => (run.stage === 'creature' && run.look && run.look.eyeCount) || 1;
   G.armPairs = (run) => {
     if (run.stage !== 'creature' || run.habitat !== 'land' || G.symmetry(run) !== 'bilateral') return 0;
@@ -186,7 +199,7 @@ window.G = window.G || {};
     const base = { small: 0.45, mid: run.era >= 2 ? 1.25 : 1, giant: 2.8 }[G.sizeOf(run)];
     return base * (G.segments(run) >= 5 && G.symmetry(run) === 'bilateral' ? 1.2 : 1) * (G.symmetry(run) === 'colonial' ? 1.3 : 1);
   };
-  G.sizeLabel = (size, stage) => (stage === 'cell' ? `${Math.round(size * 30)} µm` : size * 1.2 >= 1 ? `${(size * 1.2).toFixed(1)} m` : `${Math.round(size * 120)} cm`);
+  G.sizeLabel = (size, stage) => (stage === 'cell' ? `${Math.round(size * 30)} micrometres` : size * 1.2 >= 1 ? `${(size * 1.2).toFixed(1)} m` : `${Math.round(size * 120)} cm`);
 
   // Slots available right now (cell slots marked `multi` wait for multicellularity).
   // Twin sockets: an Evolution Tree upgrade lets one slot hold a second part ("hands2").
@@ -392,10 +405,20 @@ window.G = window.G || {};
   // Primordia is harsh: a fresh lineage struggles, and the Evolution Tree is how later runs get further.
   // Every failed finale attempt teaches you something: the next try is a little easier.
   // Finales have their own difficulty, so the extra harshness does not apply to them.
-  const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.HARSH : 0);
+  // A hidden measure of how strong the player has become between runs (Evolution Tree and wins),
+  // fixed when a run starts. The world quietly grows harsher to match it, so an upgraded player is
+  // never left with an easy game. It is never shown to the player.
+  G.power = () => {
+    const m = G.meta;
+    let spent = 0; let total = 0;
+    G.BOONS.forEach((b) => { b.costs.forEach((c, i) => { total += c; if (i < G.boonLevel(b.id)) spent += c; }); });
+    return Math.min(1, 0.75 * (total ? spent / total : 0) + 0.25 * Math.min(1, (m.stats.wins || 0) / 8));
+  };
+  G.harsh = (run) => G.HARSH + Math.round(3 * (run.power || 0));
+  const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
-  G.difficulty = (run, base) => base + G.HARSH - finaleEase(run) - disguise(run) + (run.stage === 'creature' ? 0.5 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage === 'creature' ? 0.5 + (run.era - 1) * 1.5 : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   G.chance = (run, stat, base) => clamp(50 + (G.stat(run, stat) - G.difficulty(run, base)) * 12, 5, 95);
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
@@ -583,6 +606,7 @@ window.G = window.G || {};
       baseMaxPop: G.BASE_POP + (b.hardy || 0),
       baseFoodCap: G.FOOD_CAP + 2 * (b.pantry || 0),
       pop: G.START_POP, food: G.BASE_FOOD + 3 * (b.pantry || 0),
+      power: G.power(),
       dna: 3 * (b.memory || 0), totalDna: 0, insight: 0,
       parts: {}, multicellular: false, mind: false, innovations: [], fascination: null,
       instinct: 'forage',
@@ -1618,11 +1642,11 @@ window.G = window.G || {};
       if (s === G.mimicOf(run) && rand() < 0.4) return;
       const hostile = G.speciesStatus(s) === 'hostile';
       if (s.role !== 'predator' && !hostile) return;
-      const atk = G.speciesStat(s, 'str') + Math.floor(G.HARSH / 2) + (run.stage === 'creature' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
+      const atk = G.speciesStat(s, 'str') + Math.floor(G.harsh(run) / 2) + (run.stage === 'creature' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
-      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1);
+      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.25 * (run.power || 0));
       if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1)) return;
       const n = clamp(1 + Math.floor(gap / 3), 1, 3);
       lines.push({ t: `The ${s.name} hunted you: −${damage(run, n)} Population`, bad: true });
