@@ -28,7 +28,7 @@ window.G = window.G || {};
       maxHostility: 0,
       codex: { events: [], parts: [], legacies: [], evolutions: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
-      fossils: [], history: [], tips: [], tipsOff: false,
+      fossils: [], history: [], tips: [], tipsOff: false, affinity: {},
     };
   }
   function mergeMeta(saved) {
@@ -41,6 +41,7 @@ window.G = window.G || {};
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
     // Players from before tips existed have already learned the basics.
+    m.affinity = saved.affinity || {};
     m.tips = saved.tips || ((saved.stats && saved.stats.runs >= 3) ? ['welcome', 'event', 'draft', 'instinct', 'arch_drifter', 'arch_grazer'] : []);
     m.tipsOff = !!saved.tipsOff;
     m.maxHostility = saved.maxHostility || 0;
@@ -83,10 +84,13 @@ window.G = window.G || {};
   G.GIMMICK_COST = 3; // DNA for gimmick actions (steal, jump, swap, mimic)
   G.HUNGER_LIMIT = 5;
   G.DRIFT_EVERY = 8;
+  // Drifters are pushed by the current while they live in water; on land it becomes wanderlust,
+  // and once the Mind awakens they choose for themselves.
+  G.drifterFree = (run) => !!run.mind || (run.stage === 'creature' && run.habitat === 'land');
   // Which Instincts this archetype may choose.
   G.instinctAllowed = (run, id) => {
     const g = G.gimmick(run);
-    if (g === 'drifter') return { ok: false, why: 'The current decides your Instinct' };
+    if (g === 'drifter' && !G.drifterFree(run)) return { ok: false, why: 'The current decides your Instinct (until you reach land or your kind can think)' };
     if (g === 'grazer' && id === 'hunt') return { ok: false, why: 'Grazers never hunt' };
     if (g === 'predator' && id === 'forage') return { ok: false, why: 'Predators only eat what they kill' };
     return { ok: true };
@@ -107,9 +111,17 @@ window.G = window.G || {};
   // ---------- Body plan: symmetry and segments ----------
   G.symmetry = (run) => (run.traits.includes('radial_plan') ? 'radial' : run.traits.includes('sessile_plan') ? 'colonial' : 'bilateral');
   G.segments = (run) => (run.segments != null ? run.segments : G.SYMMETRY[G.symmetry(run)].start);
+  // How many limb pairs are arms (land, bilateral only). Old saves used the "On two legs" posture.
+  G.eyeCount = (run) => (run.stage === 'creature' && run.look && run.look.eyeCount) || 1;
+  G.armPairs = (run) => {
+    if (run.stage !== 'creature' || run.habitat !== 'land' || G.symmetry(run) !== 'bilateral') return 0;
+    const n = G.segments(run);
+    const legacy = n === 2 && run.look && run.look.posture === 'two' ? 1 : 0;
+    return Math.max(0, Math.min(n, run.armPairs != null ? run.armPairs : legacy));
+  };
   G.segmentPlan = (run) => {
     const sym = G.symmetry(run); const n = G.segments(run);
-    return sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n, run.habitat);
+    return sym === 'radial' ? G.armPlan(n) : sym === 'colonial' ? G.podPlan(n) : G.legPlan(n, run.habitat, G.armPairs(run));
   };
   // Slots this body plan has no use for (creature stage only).
   G.offSlots = (run) => {
@@ -126,9 +138,22 @@ window.G = window.G || {};
     const n = G.segments(run) + delta;
     const cost = G.reshapeCost(run);
     if (n < sym.min || n > sym.max || run.dna < cost) return;
+    const arms = G.armPairs(run);
     run.dna -= cost;
     run.segments = n;
+    run.armPairs = Math.min(arms, n);
     run.pop = Math.min(run.pop, G.maxPop(run));
+    log(run, `Your body plan changed: ${G.segmentPlan(run).name}.`);
+    G.saveRun();
+  };
+  // Turn a pair of legs into arms, or back.
+  G.setArms = function (delta) {
+    const run = G.run;
+    if (!run || run.stage !== 'creature' || run.habitat !== 'land' || G.symmetry(run) !== 'bilateral') return;
+    const arms = G.armPairs(run) + delta; const cost = G.reshapeCost(run);
+    if (arms < 0 || arms > G.segments(run) || run.dna < cost) return;
+    run.dna -= cost;
+    run.armPairs = arms;
     log(run, `Your body plan changed: ${G.segmentPlan(run).name}.`);
     G.saveRun();
   };
@@ -194,7 +219,7 @@ window.G = window.G || {};
   };
 
   // What the renderer needs to draw a body. Other species have the same shape.
-  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, symmetry: G.symmetry(run), segments: G.segments(run), off: G.offSlots(run), hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
+  G.bodyOf = (run) => ({ stage: run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, symmetry: G.symmetry(run), segments: G.segments(run), armPairs: G.armPairs(run), off: G.offSlots(run), hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
 
   // ---------- Appearance ----------
   G.lookOptionState = (run, opt) => {
@@ -241,7 +266,7 @@ window.G = window.G || {};
 
   // The Creature Editor opens for free when you become a creature and after the Age of Giants and the Spark of Mind;
   // in between it costs a little DNA.
-  G.editorCost = (run) => (run.freeEdit ? 0 : G.EDITOR_COST);
+  G.editorCost = () => 0; // the editor is always free: looks never change stats
   G.startEditing = function () {
     const run = G.run;
     if (!run || run.stage !== 'creature' || run.phase !== 'map') return false;
@@ -460,6 +485,8 @@ window.G = window.G || {};
     } else if (body.skeleton === 'soft' && rand() < 0.4) { // a sea slug
       body.segments = 0; set('skin', pick(['slime_skin', 'warning_skin'])); set('tail', 'seahorse_tail');
     }
+    // A few land species walk on some pairs and hold others up as arms.
+    if (world === 'land' && body.segments >= 2 && rand() < 0.2) body.armPairs = 1;
     // A mouth must still match the diet.
     if (P.mouth && G.PART[P.mouth.id].diet && diet !== 'omni' && G.PART[P.mouth.id].diet !== diet) P.mouth.id = G.PARTS.find((p) => p.slot === 'mouth' && p.stage === 'creature' && p.diet === diet && (!p.habitat || p.habitat === world) && !p.evolved).id;
   }
@@ -539,8 +566,9 @@ window.G = window.G || {};
   G.speciesBody = (s) => {
     const sym = s.symmetry || 'bilateral';
     const n = s.segments != null ? s.segments : 2;
-    const off = s.stage === 'creature' ? (G.SYMMETRY[sym].off || []).concat(sym === 'bilateral' ? (G.legPlan(n).off || []) : []) : [];
-    return { stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2.5 ? ['giant'] : [], symmetry: sym, segments: n, off, look: s.look || null };
+    const arms = s.world === 'land' && sym === 'bilateral' ? Math.min(n, s.armPairs != null ? s.armPairs : (n === 2 && s.look && s.look.posture === 'two' ? 1 : 0)) : 0;
+    const off = s.stage === 'creature' ? (G.SYMMETRY[sym].off || []).concat(sym === 'bilateral' ? (G.legPlan(n, s.world, arms).off || []) : []) : [];
+    return { stage: s.stage, habitat: s.world === 'cell' ? null : s.world, multicellular: s.multicellular, parts: s.parts || {}, hue: s.hue, traits: s.size >= 2.5 ? ['giant'] : [], symmetry: sym, segments: n, armPairs: arms, skeleton: s.skeleton, off, look: s.look || null };
   };
 
   // ---------- Starting and ending runs ----------
@@ -671,8 +699,9 @@ window.G = window.G || {};
   function drift(run) {
     run.nextDrift = run.turn + G.DRIFT_EVERY;
     // The current pushes you to forage or hunt, whichever suits your mouth best (omnivores get either).
+    const free = G.drifterFree(run);
     const diet = G.diet(run);
-    run.instinct = diet === 'herb' ? 'forage' : diet === 'carn' ? 'hunt' : pick(['forage', 'hunt']);
+    if (!free) run.instinct = diet === 'herb' ? 'forage' : diet === 'carn' ? 'hunt' : pick(['forage', 'hunt']);
     // You leave your worst enemy behind and meet someone new.
     const movable = run.species.filter((s) => !s.extinct && !s.bud).sort((a, b) => a.opinion - b.opinion);
     let met = null;
@@ -683,8 +712,10 @@ window.G = window.G || {};
       met = fresh;
     }
     run.food += 1;
-    run.notices.push(`The current carries you to new waters${met ? `, where you meet the ${met.name}` : ''}. It now pushes you to ${G.INSTINCT[run.instinct].name.toLowerCase()}.`);
-    log(run, `The current carried your kind somewhere new.`);
+    const land = run.stage === 'creature' && run.habitat === 'land';
+    run.notices.push(land ? `Wanderlust carries your herds to new ground${met ? `, where you meet the ${met.name}` : ''}.`
+      : `The current carries you to new waters${met ? `, where you meet the ${met.name}` : ''}.${free ? '' : ` It now pushes you to ${G.INSTINCT[run.instinct].name.toLowerCase()}.`}`);
+    log(run, land ? 'Wanderlust carried your kind somewhere new.' : 'The current carried your kind somewhere new.');
     const source = met || pick(run.species.filter((s) => !s.extinct));
     if (source && rand() < 0.5) run.pendingSpecial = { name: source.name, source: 'absorb' };
   }
@@ -912,7 +943,7 @@ window.G = window.G || {};
     if (eff.partnerPop && partner) { partner.pop = Math.max(0, partner.pop + eff.partnerPop); lines.push({ t: `Your partners ${eff.partnerPop > 0 ? '+' : '−'}${Math.abs(eff.partnerPop)}`, bad: eff.partnerPop < 0 }); }
     if (eff.hostPop && host) { host.pop = Math.max(0, host.pop + eff.hostPop); host.opinion = clamp(host.opinion + (eff.hostPop < 0 ? -10 : 5), -100, 100); lines.push({ t: `Your host ${eff.hostPop > 0 ? '+' : '−'}${Math.abs(eff.hostPop)}`, bad: eff.hostPop > 0 }); }
     if (eff.fed) { run.hunger = 0; lines.push({ t: 'Your hunger is sated', good: true }); }
-    if (eff.drift && G.gimmick(run) === 'drifter') { drift(run); lines.push({ t: 'The current carries you somewhere new', good: true }); }
+    if (eff.drift && G.gimmick(run) === 'drifter') { drift(run); lines.push({ t: run.habitat === 'land' && run.stage === 'creature' ? 'Wanderlust carries you somewhere new' : 'The current carries you somewhere new', good: true }); }
     if (eff.unmask && run.mimic) { lines.push({ t: `You are no longer disguised as the ${run.mimic}` }); run.mimic = null; }
     if (eff.newHost && G.gimmick(run) === 'parasite') {
       const next = run.species.filter((x) => !x.extinct && x.name !== run.host).sort((a, b) => b.pop - a.pop)[0];
@@ -1071,7 +1102,10 @@ window.G = window.G || {};
     else if (req.innovation && !run.innovations.includes(req.innovation)) reason = `Needs the ${G.INNOVATION[req.innovation].name} innovation`;
     else if (req.symmetry && G.symmetry(run) !== req.symmetry) reason = `Needs ${G.SYMMETRY[req.symmetry].name.toLowerCase()} symmetry`;
     else if (req.serpent && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) === 0)) reason = 'Needs a legless, serpent body';
-    else if (req.manyLegs && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) >= 4)) reason = 'Needs 4 or more pairs of legs';
+    else if (req.manyLegs && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) - G.armPairs(run) >= 4)) reason = run.habitat === 'sea' ? 'Needs 4 or more pairs of fins' : 'Needs 4 or more pairs of legs';
+    else if (req.eyes && G.eyeCount(run) < req.eyes) reason = `Needs ${req.eyes} or more eyes (set them in the Creature Editor)`;
+    else if (req.arms && G.armPairs(run) < req.arms) reason = 'Needs arms (turn a pair of legs into arms in the Body plan)';
+    else if (req.upright && !(run.stage === 'creature' && G.symmetry(run) === 'bilateral' && G.segments(run) - G.armPairs(run) === 1)) reason = 'Needs to stand on two legs';
     else if (req.size && G.sizeOf(run) !== req.size) reason = `Only for ${req.size} creatures`;
     else if (req.zone && !(run.habitat === 'sea' && G.zone(run) === req.zone)) reason = `Only in ${G.SEA_ZONE[req.zone].name}`;
     else if (req.anyPart && !req.anyPart.some((id) => G.partIds(run).some((pid) => pid === id || (G.PART[pid].from || []).includes(id)))) reason = `Needs ${req.anyPart.map((id) => G.PART[id].name).join(' or ')}`;
@@ -1687,7 +1721,8 @@ window.G = window.G || {};
       const p = weightedPick(pool, (x) => (x.evolved ? (x.limbEvo ? 2 : x.evolved === 2 ? 0.4 : 1) : (x.rarity || 2))
         * (boost && (x.keywords || []).includes(boost) ? 3 : 1)
         * (empty.includes(x.slot) ? 2 : 1)
-        * (x.biome ? 3 : 1));
+        * (x.biome ? 3 : 1)
+        * G.affinityWeight(x));
       out.push(p.id);
       pool = pool.filter((x) => x.id !== p.id && (out.length >= 2 || x.slot !== p.slot));
     }
@@ -1862,6 +1897,16 @@ window.G = window.G || {};
   G.boonCost = (b) => b.costs[G.boonLevel(b.id)];
   G.boonOpen = (b) => (b.req || []).every((id) => G.boonLevel(id) > 0);
 
+  // Gene Affinities: favoured mutation families turn up more often.
+  G.affinityLevel = (id) => (G.meta.affinity && G.meta.affinity[id]) || 0;
+  G.affinityOpen = () => G.meta.stats.wins >= 1;
+  G.affinityWeight = (part) => 1 + G.AFFINITIES.reduce((sum, a) => sum + (G.affinityLevel(a.id) && a.match(part) ? G.affinityLevel(a.id) : 0), 0);
+  G.buyAffinity = function (id) {
+    const m = G.meta; const lvl = G.affinityLevel(id); const cost = G.AFFINITY_COSTS[lvl];
+    if (!G.AFFINITY[id] || cost == null || m.genes < cost || !G.affinityOpen()) return false;
+    m.genes -= cost; m.affinity[id] = lvl + 1; G.saveMeta();
+    return true;
+  };
   G.buy = function (kind, id) {
     const m = G.meta;
     let cost;

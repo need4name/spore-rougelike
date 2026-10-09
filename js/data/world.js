@@ -203,7 +203,7 @@ G.ARCHETYPES = [
     id: 'drifter', name: 'Drifter', cost: 0, color: 190, gimmick: 'drifter',
     desc: 'A balanced omnivore that goes where the current takes it.',
     rule: 'Carried by the current',
-    ruleDesc: 'You cannot choose your Instinct: the current decides. Every 8 turns it carries you somewhere new: you leave your worst enemy behind, meet a new species, and may absorb one of its parts.',
+    ruleDesc: 'In the water you cannot choose your Instinct: the current decides. Every 8 turns it carries you somewhere new: you leave your worst enemy behind, meet a new species, and may absorb one of its parts. On land the current becomes wanderlust, and you choose your Instinct again (as you do anywhere once your kind can think).',
     mods: { tou: 1 },
     start: {
       cell: { mouth: 'proboscis', motion: 'cilia' },
@@ -370,10 +370,21 @@ G.RESHAPE_COST = 4; // DNA per step in the Body Plan tab
 // At sea the same pairs are fins: same trade-offs, different names.
 const SEA_LEG_NAMES = ['Eel', 'One fin pair', 'Two fin pairs', 'Three fin pairs', 'Many fins', 'Many fins', 'Fin fringe', 'Fin fringe', 'Fin fringe'];
 const SEA_LEG_DESC = ['No fins at all. Wriggles through cracks and strikes from cover, but has no fin slots.', 'Only one pair of fins. Nimble and clever, but less sturdy.', 'The classic fish. No bonus, no cost.', 'Extra fins for steady swimming, but they need feeding.', 'Rows of fins rippling along the body. Fast and stable, but hungry.', 'Rows of fins rippling along the body. Fast and stable, but hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.', 'A fringe of fins all along the body. Terrifyingly fast, always hungry.'];
-G.legPlan = (n, habitat) => {
-  const plan = landLegPlan(n);
-  return habitat === 'sea' ? { ...plan, name: SEA_LEG_NAMES[n], desc: SEA_LEG_DESC[n] } : plan;
+G.legPlan = (n, habitat, arms) => {
+  if (habitat === 'sea') return { ...landLegPlan(n), name: SEA_LEG_NAMES[n], desc: SEA_LEG_DESC[n] };
+  return arms ? landArmPlan(n, arms) : landLegPlan(n);
 };
+// On land, some limb pairs can be arms: hands-free walkers, centaurs, or arm-crawlers with no legs at all.
+function landArmPlan(n, arms) {
+  const legs = n - arms;
+  const add = (a, b) => { const o = { ...a }; Object.entries(b).forEach(([k, v]) => { o[k] = (o[k] || 0) + v; }); return o; };
+  const armMods = { cun: 1, str: arms - 1, upkeep: arms - 1 };
+  const word = (k, what) => `${k * 2} ${what}`;
+  if (legs === 0) return { name: `Arm-crawler, ${word(arms, 'arms')}`, desc: 'No legs at all: it hauls itself along on its arms. Slow, but its hands are never idle.', mods: add(armMods, { spd: -2, str: 1 }), off: ['hindLimbs', 'feet'] };
+  if (legs === 1) return { name: `Two legs and ${word(arms, 'arms')}`, desc: 'Stands upright on its hind legs with its hands free, like an ape. Long arms let it knuckle-walk.', mods: add(armMods, { insightPerTurn: 1 }) };
+  const base = landLegPlan(legs);
+  return { name: `${word(legs, 'legs')} and ${word(arms, 'arms')}`, desc: 'Walks on its legs and holds its front pairs up as arms, like a centaur or a mantis.', mods: add(add(base.mods, armMods), { upkeep: 1 }) };
+}
 function landLegPlan(n) {
   if (n === 0) return { name: 'Serpent', desc: 'No legs at all. Slithers, hides in burrows and strikes from cover, but has no limb slots.', mods: { cun: 2, spd: 1, huntBonus: 1, str: -1 }, off: ['frontLimbs', 'hindLimbs', 'hands', 'feet'] };
   if (n === 1) return { name: 'Two legs', desc: 'Stands on its hind legs; the front pair is gone.', mods: { cun: 1, insightPerTurn: 1, tou: -1 }, off: ['frontLimbs', 'hands'] };
@@ -475,10 +486,12 @@ G.SCULPT = [
   { id: 'bodyHeight', name: 'Body height', group: 'body', min: 0.7, max: 1.5, step: 0.05, def: 1 },
   { id: 'spine', name: 'Back slope', group: 'body', min: -1, max: 1, step: 0.1, def: 0, ends: ['Head up', 'Head down'] },
   { id: 'neckLen', name: 'Neck length', group: 'body', min: 0, max: 1, step: 0.05, def: 0, only: 'land', cap: (run) => (run.era >= 2 ? 1 : 0.4), capWhy: 'Longer necks open in the Age of Giants' },
-  { id: 'legLen', name: 'Limb length', group: 'limbs', min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'legLen', name: 'Hind limb length', group: 'limbs', min: 0.6, max: 1.6, step: 0.05, def: 1 },
+  { id: 'armLen', name: 'Front limb length', group: 'limbs', only: 'land', min: 0.6, max: 1.8, step: 0.05, def: 1, ends: ['Short (leans back)', 'Long (leans forward)'] },
   { id: 'legThick', name: 'Limb thickness', group: 'limbs', min: 0.6, max: 1.8, step: 0.05, def: 1 },
   { id: 'legSpread', name: 'Limb spacing', group: 'limbs', min: 0.5, max: 1.5, step: 0.05, def: 1, ends: ['Bunched', 'Far apart'] },
   { id: 'legShift', name: 'Limb position', group: 'limbs', min: -0.5, max: 0.5, step: 0.05, def: 0, ends: ['Toward the tail', 'Toward the head'] },
+  { id: 'headTilt', name: 'Head angle', group: 'head', only: 'land', min: -0.6, max: 0.6, step: 0.05, def: 0, ends: ['Nose up', 'Nose down'] },
   { id: 'headSize', name: 'Head size', group: 'head', min: 0.7, max: 1.6, step: 0.05, def: 1 },
   { id: 'eyeCount', name: 'Number of eyes', group: 'head', min: 1, max: 6, step: 1, def: 1 },
   { id: 'eyeSize', name: 'Eye size', group: 'head', min: 0.6, max: 1.8, step: 0.05, def: 1 },
@@ -601,16 +614,19 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '12.1';
+G.VERSION = '12.2';
 G.WHATS_NEW = {
-  title: 'Patch 12.1: Playtest fixes',
+  title: 'Patch 12.2: Bodies that make sense',
   items: [
-    'Mutation drafts now compare each new part with what is in its slot: both halves of a merged part, and exactly what merging, swapping or replacing would change, including your diet. The Body tab shows what each half of a merged part gives.',
-    'Fixed: the Creature Editor could get stuck on phones, with its Done button hidden under the status bar. There is now a big Done button at the bottom too.',
-    'Tips: each feature is explained the first time it appears, whichever run that is, and never again. Turn them off from any tip, or bring them back from How to play.',
-    'Extinction now has a proper scene: the last of your kind falls, its spirit rises, and the earth closes over it as a fossil.',
-    'Lineages that die as cells now earn at least 6 Genetic Memory, plus 1 for every 4 turns they survived, so early runs can still buy the first upgrades.',
-    'Update 12 (Shells, Scales and Soft Bodies): choose your Frame, Young and Blood; 29 new parts and 17 evolutions; 20 new events; rival bugs, snails, birds, lizards and crabs.',
+    'Arms: in the Body plan you choose how many limb pairs are arms. Walk on two legs with your hands free, be a six-legged centaur, or drop your legs entirely and haul yourself along on ten arms.',
+    'Bodies balance themselves: separate front and hind limb lengths tilt the body (long hind legs lean forward; long arms knuckle-walk like a gorilla), there is a head angle, legs always sit under the body, and everything on your back now moves with it.',
+    'Tails are no longer automatic: you need a tail part to have one.',
+    'The Creature Editor is free whenever you like, big creatures are framed to fit, and on phones the buttons stay clear of the status bar even inside the Claude app.',
+    'Checks build tension: a needle swings across your odds while your creature sweats, then the result lands. Every action has a wind-up, bigger movements, and hits freeze with a screen shake.',
+    'Seasons and weather show on the map: spring showers, summer haze, autumn leaves, winter snow; plankton blooms, storms and drifting ice at sea.',
+    'Eyes and limbs matter: new events reward (and sometimes punish) many eyes, arms, standing upright and many legs.',
+    'Drifters choose their own Instinct on land or once their kind can think; on land the current becomes wanderlust.',
+    'Gene Affinities: after your first win, spend Genetic Memory to make wings, venom, armor or other mutations turn up more often.',
   ],
 };
 
@@ -650,3 +666,19 @@ G.TUTORIALS = [
     text: 'Each milestone leaves a fossil. Keep your favourites in amber, and you can revive one later to play on from that moment (it earns a little less Genetic Memory).' },
 ];
 G.TUTORIAL = {}; G.TUTORIALS.forEach((t) => { G.TUTORIAL[t.id] = t; });
+
+// Gene Affinities (late game): spend Genetic Memory to make a family of mutations turn up more
+// often in drafts. Each level doubles, triples, then quadruples the family's draft weight.
+G.FLIGHT_PARTS = ['skin_flaps_f', 'flight_feathers', 'wing_membranes', 'feathered_wings', 'true_wings', 'insect_wings', 'gliding_fins', 'down_feathers', 'tail_feathers'];
+G.AFFINITIES = [
+  { id: 'flight', name: 'Wings', desc: 'Flaps, feathers and every kind of wing.', match: (p) => (p.tags || []).includes('flight') || G.FLIGHT_PARTS.includes(p.id) },
+  { id: 'venom', name: 'Venom', desc: 'Venomous fangs, stings, quills and glands.', match: (p) => (p.keywords || []).includes('venom') },
+  { id: 'armor', name: 'Armor', desc: 'Plates, shells, scales and spines.', match: (p) => (p.keywords || []).includes('armor') },
+  { id: 'swift', name: 'Speed', desc: 'Fast legs, fins and tails.', match: (p) => (p.keywords || []).includes('swift') },
+  { id: 'glow', name: 'Glow', desc: 'Lights, lures and shining skin.', match: (p) => (p.keywords || []).includes('glow') },
+  { id: 'grasp', name: 'Hands', desc: 'Anything that can grab: hands, arms, tentacles and trunks.', match: (p) => (p.tags || []).includes('grasp') },
+  { id: 'senses', name: 'Senses', desc: 'Eyes, ears, whiskers and stranger senses.', match: (p) => p.slot === 'senses' },
+  { id: 'limbs', name: 'Limbs', desc: 'The limb mutations that grow legs, arms and fins.', match: (p) => !!p.limbMod || !!p.limbEvo },
+];
+G.AFFINITY_COSTS = [30, 60, 100];
+G.AFFINITY = {}; G.AFFINITIES.forEach((a) => { G.AFFINITY[a.id] = a; });

@@ -377,6 +377,120 @@ G.EVENTS = [
 
   // ----- Land only -----
   // ---------- Shells, Scales and Soft Bodies ----------
+  // ---------- Eyes, arms and legs ----------
+  {
+    id: 'eyes_behind', prop: 'night', stage: 'creature', title: 'From Behind', tags: ['danger'], species: 'predator',
+    text: 'The {them} have learned to creep up from behind, where your {herd} cannot see.',
+    options: [
+      { label: 'See them coming', req: { eyes: 3 }, result: { text: 'With eyes all around your head, there is no "behind". You are long gone before they pounce.', dna: 2, anim: 'flee' } },
+      { label: 'Post lookouts', check: { stat: 'cun', diff: 4 }, success: { text: 'Taking turns facing backward works.', dna: 2 }, fail: { text: 'The lookouts look the wrong way.', pop: -2 } },
+      { label: 'Run at the first sound', check: { stat: 'spd', diff: 4 }, success: { text: 'Away before they strike.', dna: 1, anim: 'flee' }, fail: { text: 'Not fast enough.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'eye_blight', prop: 'sickness', stage: 'creature', title: 'Eye Blight', tags: ['danger'],
+    when: (run) => G.eyeCount(run) >= 3,
+    text: 'A crusty blight is spreading from eye to eye. The more eyes a body has, the worse it gets.',
+    options: [
+      { label: 'Close most of them for a while', check: { stat: 'tou', diff: 4 }, success: { text: 'Half-blind for a season, but the blight passes.', food: -2, dna: 2, anim: 'rest' }, fail: { text: 'It spreads anyway.', pop: -2, food: -1 } },
+      { label: 'Wash them in the river', req: { food: 2 }, result: { text: 'Cold water and rest. Most recover.', food: -2, dna: 1, anim: 'rest' } },
+      { label: 'Ignore it', result: { text: 'It hits your many-eyed young hardest.', pop: -2, anim: 'hurt' } },
+    ],
+  },
+  {
+    id: 'blinding_glare', prop: 'sun', stage: 'creature', title: 'The Glare', tags: ['danger', 'explore'],
+    text: 'The sun blazes off the water and the white rocks. Everything is light.',
+    options: [
+      { label: 'Squint with few eyes', check: { stat: 'cun', diff: 3 }, success: { text: 'One or two eyes are easy to shade. You keep feeding.', food: 2 }, fail: { text: 'Dazzled, you wander into thorns.', pop: -1 } },
+      { label: 'Use every eye at once', req: { eyes: 4 }, check: { stat: 'tou', diff: 5 }, success: { text: 'So many eyes catch every shadow. You spot hidden food.', food: 3, dna: 2 }, fail: { text: 'Too much light, through too many eyes. You are blind for days.', pop: -2, food: -2 } },
+      { label: 'Hide until dusk', result: { text: 'A lost day, but a safe one.', food: -1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'high_fruit', prop: 'tree', stage: 'creature', habitat: 'land', title: 'Out of Reach', tags: ['food'],
+    text: 'The ripest fruit hangs just out of reach, and every year fewer of you can get to it.',
+    options: [
+      { label: 'Stand up and stretch', req: { upright: true }, result: { text: 'On two legs you simply reach up and pick it.', food: 3, dna: 1, anim: 'eat' } },
+      { label: 'Pull the branch down with your hands', req: { arms: 1 }, result: { text: 'Hands make everything easier.', food: 3, dna: 2, anim: 'eat' } },
+      { label: 'Jump for it', check: { stat: 'spd', diff: 4 }, success: { text: 'Snatched!', food: 2 }, fail: { text: 'You land in a heap.', pop: -1 } },
+      { label: 'Wait for windfalls', result: { text: 'A few fall. Most rot.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'carry_the_young', prop: 'fire', stage: 'creature', habitat: 'land', title: 'Carry Them Out', tags: ['danger'],
+    text: 'Smoke on the wind, and the young cannot run fast enough.',
+    options: [
+      { label: 'Scoop them up and run', req: { arms: 1 }, result: { text: 'Every parent carries a child. Nobody is left behind.', dna: 3, anim: 'flee' } },
+      { label: 'Herd them along', check: { stat: 'cha', diff: 4 }, success: { text: 'Calls and nudges keep them moving.', dna: 2, anim: 'flee' }, fail: { text: 'Some are lost in the smoke.', pop: -3 } },
+      { label: 'Outrun it', check: { stat: 'spd', diff: 5 }, success: { text: 'The fastest of you make it.', pop: -1, dna: 1, anim: 'flee' }, fail: { text: 'It catches the slow.', pop: -3 } },
+    ],
+  },
+  {
+    id: 'cliff_climb', prop: 'cave', stage: 'creature', habitat: 'land', title: 'The Cliff', tags: ['explore'],
+    text: 'A sheer cliff. At the top, a ledge full of nests and berries no one else can reach.',
+    options: [
+      { label: 'Swarm up on many legs', req: { manyLegs: true }, result: { text: 'Dozens of feet find dozens of holds. Up you go.', food: 3, dna: 2, anim: 'flee' } },
+      { label: 'Climb hand over hand', req: { arms: 1 }, check: { stat: 'str', diff: 3 }, success: { text: 'Strong arms haul you up.', food: 3, dna: 2 }, fail: { text: 'A hand slips.', pop: -1 } },
+      { label: 'Scramble up', check: { stat: 'spd', diff: 5 }, success: { text: 'Somehow, you make it.', food: 2, dna: 1 }, fail: { text: 'A long fall.', pop: -2 } },
+      { label: 'Leave it', result: { text: 'Some things are not worth falling for.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'tangled_legs', prop: 'tree', stage: 'creature', habitat: 'land', title: 'Tangled', tags: ['danger'],
+    when: (run) => G.symmetry(run) === 'bilateral' && G.segments(run) - G.armPairs(run) >= 4,
+    text: 'So many legs, and the creepers here grab every one of them.',
+    options: [
+      { label: 'Cut yourselves free', check: { stat: 'str', diff: 4 }, success: { text: 'Snip, snip, snip, a hundred times.', dna: 2 }, fail: { text: 'Some are stuck for good.', pop: -2 } },
+      { label: 'Move one leg at a time', check: { stat: 'cun', diff: 4 }, success: { text: 'Slow and careful. Everyone gets out.', food: -1, dna: 2, anim: 'rest' }, fail: { text: 'You tie yourselves in knots.', pop: -1, food: -2 } },
+      { label: 'Go around the thicket', result: { text: 'A long detour on a lot of tired legs.', food: -2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'two_legs_tall_grass', prop: 'dust', stage: 'creature', habitat: 'land', biome: ['plains', 'shore', 'swamp'], title: 'Tall Grass', tags: ['danger', 'explore'], species: 'predator',
+    text: 'The grass is taller than your {herd}. Somewhere in it, the {them} are hunting.',
+    options: [
+      { label: 'Stand up and look over it', req: { upright: true }, result: { text: 'Up on two legs, you see them coming from far away.', dna: 3, anim: 'flee' } },
+      { label: 'Lie low and still', check: { stat: 'cun', diff: 4 }, success: { text: 'They pass a few steps away.', dna: 2, anim: 'rest' }, fail: { text: 'They find you.', pop: -2 } },
+      { label: 'Run for open ground', check: { stat: 'spd', diff: 4 }, success: { text: 'Out into the open, and away.', dna: 1, anim: 'flee' }, fail: { text: 'The grass slows you down.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'arm_crawl_mud', prop: 'pond', stage: 'creature', habitat: 'land', title: 'Deep Mud', tags: ['explore'],
+    when: (run) => G.armPairs(run) > 0,
+    text: 'A wide bog of sucking mud lies between you and better feeding grounds.',
+    options: [
+      { label: 'Haul yourselves across by the arms', req: { arms: 1 }, check: { stat: 'str', diff: 3 }, success: { text: 'Grabbing roots and branches, you pull through.', food: 3, dna: 1 }, fail: { text: 'Exhausted, some sink.', pop: -1 } },
+      { label: 'Wade', check: { stat: 'tou', diff: 4 }, success: { text: 'Muddy, but across.', food: 2 }, fail: { text: 'The mud wins.', pop: -2 } },
+      { label: 'Stay where you are', result: { text: 'Better hungry than drowned.', food: -1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'many_eyes_deep', prop: 'shadow', stage: 'creature', habitat: 'sea', title: 'Shapes Below', tags: ['danger'], species: 'predator',
+    text: 'Something big rises from the dark water beneath your {herd}. The {them}.',
+    options: [
+      { label: 'Watch every direction at once', req: { eyes: 3 }, result: { text: 'Eyes above, below and behind. You scatter before it is close.', dna: 2, anim: 'flee' } },
+      { label: 'Dive for the bottom', check: { stat: 'spd', diff: 4 }, success: { text: 'You hide in the rocks.', dna: 1, anim: 'flee' }, fail: { text: 'It takes the slowest.', pop: -2 } },
+      { label: 'Ball up tight', check: { stat: 'cha', diff: 4 }, success: { text: 'A tight school confuses it.', dna: 2, anim: 'social' }, fail: { text: 'The ball breaks apart.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'kelp_tangle', prop: 'kelp', stage: 'creature', habitat: 'sea', title: 'Caught in the Kelp', tags: ['danger'],
+    text: 'A storm has wound the kelp into great knots, and some of your {herd} are caught inside.',
+    options: [
+      { label: 'Pull them free with your arms', req: { tag: 'grasp' }, result: { text: 'Arms and tentacles untangle every one.', dna: 2, anim: 'social' } },
+      { label: 'Bite through the kelp', check: { stat: 'str', diff: 4 }, success: { text: 'Chewed free.', food: 1, dna: 1 }, fail: { text: 'Some stay trapped.', pop: -2 } },
+      { label: 'Wait for the tide', result: { text: 'The tide loosens the knots, slowly.', food: -2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'current_race', prop: 'current', stage: 'creature', habitat: 'sea', title: 'The Fast Current', tags: ['explore'],
+    text: 'A strong current sweeps past, full of drifting food. Swimming into it takes strong fins.',
+    options: [
+      { label: 'Ride it on many fins', req: { manyLegs: true }, result: { text: 'All those fins hold you steady. You feast.', food: 4, anim: 'eat' } },
+      { label: 'Dart in and out', check: { stat: 'spd', diff: 4 }, success: { text: 'In, grab, out.', food: 3 }, fail: { text: 'It sweeps some of you away.', pop: -1 } },
+      { label: 'Feed at its edge', result: { text: 'Scraps, but safe.', food: 1, anim: 'eat' } },
+    ],
+  },
   {
     id: 'clutch_of_eggs', prop: 'nest', stage: 'creature', title: 'A Clutch of Eggs', tags: ['growth'],
     when: (run) => run.traits.includes('young_eggs'),

@@ -4,6 +4,8 @@ window.G = window.G || {};
 
 (function () {
   const app = document.getElementById('app');
+  // Framed on a phone (e.g. an artifact viewer): the notch size isn't passed in, so guess it.
+  try { if (window.self !== window.top && window.matchMedia('(pointer: coarse)').matches) document.documentElement.classList.add('notch-guess'); } catch (e) { document.documentElement.classList.add('notch-guess'); }
   G.ui = { screen: 'title', setup: null, confirmAbandon: false, confirmReset: false, sheet: null, speed: 1, viewer: null };
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -185,7 +187,7 @@ window.G = window.G || {};
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>This is a roguelike: your first lineages will die young. Spend the Genetic Memory they earn on the <b>Evolution Tree</b> (stats, more DNA, lower DNA goals, Twin sockets that let a slot hold two parts) so every lineage gets further.</li>
             <li>The <b>Activities</b> tab lets your kind migrate, go to war, court, avoid or hunt a species, or scout. Each plays out over several turns.</li>
-            <li>When you become a creature, at the Age of Giants and at the Spark of Mind, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns.</li>
+            <li>When you become a creature, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns. Open it again from the Look tab whenever you like, for free.</li>
             <li>Each milestone leaves a fossil. Keep a favourite in amber in the <b>Fossil Record</b> and you can revive it later, so a build you love is never lost.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
             <li>Every run earns Genetic Memory, win or lose. Spend it on archetypes, home worlds, part packs and permanent boosts.</li>
@@ -261,7 +263,7 @@ window.G = window.G || {};
     if (g === 'predator') { const h = run.hunger || 0; t = `Hunger ${h}/${G.HUNGER_LIMIT}`; warn = h >= G.HUNGER_LIMIT - 1; tip = 'Turns since your last kill. At the limit you starve.'; }
     if (g === 'parasite') { const h = G.hostOf(run); t = h ? `Host: ${h.name} ${Math.round(h.pop)}` : 'No host'; warn = !h || h.pop < 6 || h.opinion <= -50; tip = 'Your Population can never outgrow your host.'; }
     if (g === 'symbiote') { const p = G.partnerOf(run); t = p ? `Partner: ${p.name} ${Math.round(p.pop)}` : 'No partner'; warn = !p || p.pop < p.cap * 0.3; }
-    if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); t = `Current: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = 'Turns until the current carries you somewhere new.'; }
+    if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); const land = run.stage === 'creature' && run.habitat === 'land'; t = `${land ? 'Wanderlust' : 'Current'}: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = land ? 'Turns until wanderlust carries you somewhere new.' : 'Turns until the current carries you somewhere new.'; }
     if (g === 'grazer') { t = `Herd DNA +${G.dnaPerTurn(run)}`; tip = 'Bigger herds earn more DNA.'; }
     if (g === 'colony') t = `Offshoots ${G.budsOf(run).length}/3`;
     if (g === 'mimic') { const m = G.mimicOf(run); t = m ? `Disguised: ${m.name}` : 'Undisguised'; }
@@ -348,7 +350,7 @@ window.G = window.G || {};
     else if (sc.finale && sc.won) cta = run.stage === 'cell' ? (sc.habitat === 'sea' ? 'Into the open sea' : 'Onto the land') : 'Begin the age of peoples';
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
-      <article class="card outcome">
+      <article class="card outcome ${sc.stat && sc.success != null ? 'suspense' : ''}">
         <p class="eyebrow">${esc(sc.title)}</p>
         <h2>${esc(sc.label)} ${tag}</h2>
         ${sc.text ? `<p class="event-text">${esc(sc.text)}</p>` : ''}
@@ -652,8 +654,8 @@ window.G = window.G || {};
     });
     const foundCard = `<div class="plan-found"><h3>Foundations</h3><ul>${found.join('')}</ul></div>`;
     const n = G.segments(run);
-    const unit = symId === 'bilateral' && run.habitat === 'sea' ? 'fin pairs' : sym.unit;
-    const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k, run.habitat));
+    const unit = symId === 'bilateral' ? (run.habitat === 'sea' ? 'fin pairs' : 'limb pairs') : sym.unit;
+    const planFor = (k) => (symId === 'radial' ? G.armPlan(k) : symId === 'colonial' ? G.podPlan(k) : G.legPlan(k, run.habitat, Math.min(G.armPairs(run), k)));
     const cur = planFor(n);
     const canDown = n > sym.min && run.dna >= G.reshapeCost(run);
     const canUp = n < sym.max && run.dna >= G.reshapeCost(run);
@@ -669,10 +671,24 @@ window.G = window.G || {};
         <div><b>${n} ${esc(unit)}</b>${cur.name !== `${n} ${unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
         <button class="btn small" ${canUp ? 'data-act="reshape" data-arg="1"' : 'disabled'} aria-label="More ${esc(unit)}">+</button>
       </div>
+      ${armsRow(run, n)}
       <p class="plan-desc">${esc(cur.desc)}${Object.keys(cur.mods).length ? ` <span class="pmods">${esc(G.describeMods(cur.mods))}</span>` : ''}</p>
       <p class="note">Each change costs ${G.reshapeCost(run)} DNA (you have ${run.dna}).${off.length ? ` This body has no use for: ${off.map((id) => esc(G.slotName(run, id))).join(', ')}. Parts there are kept but do nothing.` : ''}</p>
       <ol class="plan-ladder">${ladder.join('')}</ol>
       <p class="size-line">Size: <b>${G.SIZES[G.sizeOf(run)].name}</b> · about ${G.sizeLabel(G.bodySize(run), run.stage)}</p>`;
+  }
+
+  // On land, choose how many limb pairs are arms: a centipede could have ten arms and no legs.
+  function armsRow(run, n) {
+    if (run.habitat !== 'land' || G.symmetry(run) !== 'bilateral' || n < 1) return '';
+    const arms = G.armPairs(run); const cost = G.reshapeCost(run);
+    const canDown = arms > 0 && run.dna >= cost; const canUp = arms < n && run.dna >= cost;
+    const legs = n - arms;
+    return `<div class="plan-now arms">
+        <button class="btn small" ${canDown ? 'data-act="arms" data-arg="-1"' : 'disabled'} aria-label="Fewer arms">−</button>
+        <div><b>${arms * 2} arms</b><span>${legs ? `${legs * 2} legs` : 'no legs: crawls on its arms'}</span></div>
+        <button class="btn small" ${canUp ? 'data-act="arms" data-arg="1"' : 'disabled'} aria-label="More arms">+</button>
+      </div>`;
   }
 
   // Symbiotes can swap parts with their partner species.
@@ -962,12 +978,11 @@ window.G = window.G || {};
 
   // The Look tab: a preview and the way into the Creature Editor.
   function lookTab(run) {
-    const cost = G.editorCost(run);
-    const can = run.phase === 'map' && run.dna >= cost;
+    const can = run.phase === 'map';
     return `
       <div class="look-preview"><canvas class="portrait huge"></canvas></div>
-      <button class="btn primary wide" ${can ? 'data-act="editor-open"' : 'disabled'}>Open the Creature Editor${cost ? ` (${cost} DNA)` : ' (free now)'}</button>
-      <p class="note">Change your body's proportions, limbs, head, colors and patterns. The editor is free when you become a creature, at the Age of Giants and at the Spark of Mind; in between it costs ${G.EDITOR_COST} DNA. Looks never change your stats.</p>`;
+      <button class="btn primary wide" ${can ? 'data-act="editor-open"' : 'disabled'}>Open the Creature Editor</button>
+      <p class="note">Change your body's proportions, limbs, head, colors and patterns as often as you like, for free. Looks never change your stats. How many legs and arms you have is part of your Body plan.</p>`;
   }
 
   // The Creature Editor: a live preview with four tabs of controls.
@@ -980,7 +995,7 @@ window.G = window.G || {};
     const sliders = (group) => G.SCULPT.filter((sl) => sl.group === group && (!sl.only || sl.only === run.habitat)).map((sl) => sculptSlider(run, sl)).join('');
     const hue = G.bodyOf(run).hue;
     const panels = {
-      body: () => `${lookGroup(run, 'shape', 'Body shape')}${sliders('body')}${!sea && legs && G.segments(run) === 2 ? lookGroup(run, 'posture', 'Posture') : ''}`,
+      body: () => `${lookGroup(run, 'shape', 'Body shape')}${sliders('body')}`,
       limbs: () => `${legs || !bilateral ? sliders('limbs') : '<p class="empty">Your body has no limbs. Change that in the Body plan tab.</p>'}${sea && legs ? lookGroup(run, 'fins', 'Fins') : ''}`,
       head: () => `${lookGroup(run, 'head', 'Head shape')}${!sea && bilateral ? lookGroup(run, 'headPos', 'Head position') : ''}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
       color: () => `${hueSlider(run, 'hue', 'Body color', hue)}${hueSlider(run, 'belly', 'Belly color', hue)}${hueSlider(run, 'accent', 'Pattern color', (hue + 40) % 360)}${hueSlider(run, 'accent2', 'Second pattern color', (hue + 70) % 360)}${lookGroup(run, 'pattern', 'Pattern')}${sliders('color')}${lookGroup(run, 'finish', 'Finish')}`,
@@ -1040,6 +1055,7 @@ window.G = window.G || {};
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Evolution</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
         <p class="note">Genetic Memory is earned from every lineage, even ones that go extinct. Spend it on the Evolution Tree to make every later run stronger and get further.</p>
         <section><h2>Evolution Tree</h2>${evolutionTree()}</section>
+        <section><h2>Gene Affinities</h2>${affinitySection()}</section>
         <section><h2>Archetypes</h2><ul class="shop-list">${G.ARCHETYPES.filter((a) => a.cost).map((a) => item('archetypes', a)).join('')}</ul></section>
         <section><h2>Home worlds</h2><ul class="shop-list">${G.ORIGINS.filter((o) => o.cost).map((o) => item('origins', o)).join('')}</ul></section>
         <section><h2>Mutation packs</h2><ul class="shop-list">${G.PACKS.map((p) => item('packs', p)).join('')}</ul></section>
@@ -1047,6 +1063,18 @@ window.G = window.G || {};
           ? '<span>Erase all progress, unlocks and the current lineage?</span><button class="btn small danger" data-act="reset-yes">Erase everything</button><button class="btn small ghost" data-act="reset-no">Cancel</button>'
           : '<button class="btn small ghost" data-act="reset">Reset all progress</button>'}</section>
       </main>`;
+  }
+
+  // Gene Affinities: make a favourite family of mutations more common in drafts.
+  function affinitySection() {
+    const m = G.meta;
+    if (!G.affinityOpen()) return '<p class="note">Opens after your first lineage becomes a people. Then you can make the mutations you love (wings, venom, armor and more) turn up more often.</p>';
+    return `<p class="note">Each level makes that family of mutations turn up more often in drafts (×2, ×3, ×4).</p><ul class="shop-list">${G.AFFINITIES.map((a) => {
+      const lvl = G.affinityLevel(a.id); const cost = G.AFFINITY_COSTS[lvl];
+      const afford = cost != null && m.genes >= cost;
+      return `<li class="shop-item ${cost == null ? 'owned' : ''}"><div><strong>${esc(a.name)} ${'●'.repeat(lvl)}${'○'.repeat(G.AFFINITY_COSTS.length - lvl)}</strong><p>${esc(a.desc)}</p></div>
+        ${cost == null ? '<span class="owned-tag">Max</span>' : `<button class="btn small ${afford ? 'primary' : ''}" ${afford ? `data-act="affinity" data-arg="${a.id}"` : 'disabled'}>${ICON.gene} ${cost}</button>`}</li>`;
+    }).join('')}</ul>`;
   }
 
   // The Evolution Tree, drawn like the Mind tree.
@@ -1172,6 +1200,7 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
+      case 'affinity': G.buyAffinity(arg); break;
       case 'tips-reset': G.meta.tips = []; G.meta.tipsOff = false; G.saveMeta(); break;
       case 'continue': if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); } G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
       case 'setup':
@@ -1208,6 +1237,7 @@ window.G = window.G || {};
       case 'act-start': G.startActivity(arg, el.dataset.target || null, el.dataset.dest || null); G.ui.actPick = null; G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'act-stop': G.stopActivity(); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'arms': G.setArms(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;

@@ -294,6 +294,20 @@ From the first playtest notes:
 - **Early Genetic Memory:** a lineage that dies as a cell earns at least 6, plus 1 per 4 turns survived, so the first upgrades are reachable before you can reach the Creature stage.
 - **Still to do from the notes:** a wider animation pass (more scene variety for everything that has been added since Update 6) belongs with Update 18's polish, but the most important moment, death, is done now.
 
+## Patch 12.2: Bodies that make sense ✅
+
+From the second playtest notes:
+
+- **Arms vs legs:** the Body plan sets how many limb pairs are arms (0 to all of them). One leg pair stands upright with hands free; more leg pairs make a centaur; no legs makes an arm-crawler. Replaces the old Posture option.
+- **Self-balancing bodies:** front and hind limb lengths are separate sliders and tilt the body to match; long arms on an upright body knuckle-walk; a head angle slider; legs are kept under the body (no more floating backs); every back, skin and tail part follows the tilt.
+- **Tails** are only drawn with a tail part.
+- **Editor:** always free; big creatures are framed to fit (portraits, scenes, viewer and map sprites too); safe areas are guessed when the game runs in a frame on a phone.
+- **Tension and emphasis:** checks show a swinging needle over the odds before the result is revealed; actions get a wind-up, bigger moves, freeze-frames and screen shake.
+- **Seasons and weather** are drawn on the world map.
+- **Eyes and limbs matter:** 12 events reward or punish many eyes, arms, standing upright and many legs (or fins).
+- **Drifters** choose their Instinct on land and once the Mind awakens.
+- **Gene Affinities:** a late-game shop (after the first win) that makes chosen families of mutations more common in drafts.
+
 ## Update 13: Other Minds
 
 *Intelligence comes in many shapes.*

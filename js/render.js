@@ -226,10 +226,16 @@ window.G = window.G || {};
     const hue = b.hue;
     const { p, accent, L, H, E } = look(b);
     const nSeg = b.segments != null ? b.segments : 2;
-    const biped = nSeg === 1 || (nSeg === 2 && (b.look ? L.posture === 'two' : H.has('upright_legs')));
+    // Some limb pairs can be arms. Old bodies used the "on two legs" posture for one pair of arms.
+    const legacyArms = nSeg === 2 && (b.look ? L.posture === 'two' : H.has('upright_legs')) ? 1 : 0;
+    const arms = Math.max(0, Math.min(nSeg, b.armPairs != null ? b.armPairs : legacyArms));
+    const legPairs = nSeg - arms;
+    const biped = legPairs === 1; // stands upright on one pair
+    const crawler = legPairs === 0; // no legs: hauls itself along on its arms
     // Long bones and evolved limbs make taller creatures; stubby legs make squat ones.
     const longLegs = (H.has('long_bones_h') ? 1.15 : 1) * (E.hindLimbs ? 1.18 + 0.12 * (E.hindLimbs - 1) : 1) * (p.hindLimbs === 'stubby_hindlegs' && !E.hindLimbs ? 0.75 : 1);
     const legLen = S * (H.has('pillar_legs') ? 0.17 : biped ? 0.26 : 0.21) * longLegs * (L.legLen || 1);
+    const armLenK = L.armLen || 1;
     const legThick = L.legThick || 1;
     const flying = H.has('feathered_wings') || H.has('true_wings') || H.has('insect_wings');
     const frame = skel(b);
@@ -238,7 +244,53 @@ window.G = window.G || {};
     // Extra leg pairs stretch the body into a segmented crawler.
     const segLen = nSeg >= 3 ? 1 + 0.2 * (nSeg - 2) : 1;
     const rx = S * (biped ? 0.17 : 0.27) * shapeX * segLen / Math.sqrt(segLen) * (L.bodyLen || 1); const ry = S * (biped ? 0.24 : 0.15) * shapeY / Math.sqrt(segLen) * (L.bodyHeight || 1);
-    const cy = ground - legLen - ry * 0.8 + Math.sin(t * 1.6) * 1.5;
+    // Where the legs join the body (body frame, before any tilt).
+    let hindX; let frontX;
+    if (crawler) { hindX = []; frontX = []; }
+    else if (biped) { hindX = [cx]; frontX = []; }
+    else if (arms) { hindX = Array.from({ length: legPairs }, (_, i) => cx - rx * 0.72 + (i / Math.max(1, legPairs - 1)) * rx * 1.0); frontX = []; }
+    else if (nSeg >= 3) {
+      // One pair of legs per segment, spread along the body.
+      const xs = Array.from({ length: nSeg }, (_, i) => cx - rx * 0.72 + (i / (nSeg - 1)) * rx * 1.4);
+      frontX = p.frontLimbs ? [xs[xs.length - 1]] : [];
+      hindX = p.frontLimbs ? xs.slice(0, -1) : xs;
+    } else {
+      hindX = [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
+      frontX = [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
+    }
+    // The editor moves legs closer together or apart, and toward the head or tail,
+    // but never so far that the body would float with nothing under it.
+    const spread = L.legSpread || 1; const shift = (L.legShift || 0) * rx;
+    const clampX = (x, lo, hi) => Math.max(cx + lo * rx, Math.min(cx + hi * rx, x));
+    if (biped) hindX = hindX.map((x) => clampX(x + shift * 0.3, -0.15, 0.15));
+    else {
+      hindX = hindX.map((x) => cx + (x - cx) * spread + shift);
+      frontX = frontX.map((x) => cx + (x - cx) * spread + shift);
+      if (hindX.length) { const lo = Math.min(...hindX); if (lo > cx - rx * 0.35) hindX = hindX.map((x) => x - (lo - (cx - rx * 0.35))); }
+      if (frontX.length) { const hi = Math.max(...frontX); if (hi < cx + rx * 0.35) frontX = frontX.map((x) => x + (cx + rx * 0.35 - hi)); }
+    }
+    // Arms: where they join, and whether they are long enough to walk on (knuckle-walking).
+    const armReach = S * 0.2 * armLenK;
+    const knuckle = biped && arms > 0 && armLenK >= 1.35 && !flying;
+    // The body tilts to match its limbs: long hind legs tip it forward, long front legs lift the head.
+    let tilt = (L.spine || 0) * 0.22;
+    if (biped) tilt += knuckle ? 0.5 : -0.15;
+    else if (!crawler && arms) tilt -= 0.1;
+    let frontLen = legLen;
+    if (!biped && !crawler && !arms && frontX.length && hindX.length) {
+      frontLen = legLen * armLenK;
+      const span = Math.max(rx * 0.6, Math.max(...frontX) - Math.min(...hindX));
+      tilt += Math.max(-0.45, Math.min(0.45, Math.asin(Math.max(-0.9, Math.min(0.9, (legLen - frontLen) / span)))));
+    }
+    const sinT = Math.sin(tilt); const cosT = Math.cos(tilt);
+    const dxh = hindX.length ? Math.min(...hindX) - cx : 0;
+    const bob = Math.sin(t * 1.6) * 1.5;
+    const cy = crawler ? ground - ry * 0.95 + bob * 0.5
+      : biped ? ground - legLen - ry * 0.8 + bob
+      : ground - legLen - ry * 0.8 - dxh * sinT + bob;
+    // Body frame → screen, and drawing inside the tilted body frame.
+    const R = (x, y) => [cx + (x - cx) * cosT - (y - cy) * sinT, cy + (x - cx) * sinT + (y - cy) * cosT];
+    const inBody = (fn) => { ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt); ctx.translate(-cx, -cy); fn(); ctx.restore(); };
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 70);
     const wob = frame === 'soft' ? 1 + Math.sin(t * 3.2) * 0.05 : 1;
     // Neck length is a slider; the old "long neck" option counts as most of the way.
@@ -247,9 +299,12 @@ window.G = window.G || {};
     const pos = L.headPos || 'neck';
     let hx = biped ? cx + rx * 0.4 : cx + rx * 0.95 + neck * S * 0.08;
     let hy = biped ? cy - ry * 1.15 : cy - ry * 0.6 - neck * S * 0.2;
+    if (crawler) { hx = cx + rx * 1.05 + neck * S * 0.06; hy = cy - ry * 0.35 - neck * S * 0.12; }
     if (pos === 'forward' && !biped) { hx += S * 0.06; hy = cy + ry * 0.05 - neck * S * 0.05; }
     if (pos === 'high') { hy -= S * 0.06; hx -= S * 0.02; }
     if (pos === 'tucked') { hx = biped ? cx + rx * 0.55 : cx + rx * 0.9; hy = biped ? cy - ry * 0.85 : cy - ry * 0.25; }
+    const neckBase = R(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4);
+    [hx, hy] = R(hx, hy);
     const hr = S * 0.1 * (E.mouth ? 1.15 + 0.1 * E.mouth : 1) * (E.senses ? 1.05 : 1) * (L.headSize || 1);
 
     if (!NO_SHADOW) { ctx.beginPath(); ctx.ellipse(cx + rx * 0.2, ground + 2, rx * 1.3, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
@@ -280,24 +335,28 @@ window.G = window.G || {};
       if (H.has('true_wings')) for (let i = 0; i < 4; i++) line(0, 0, -span * (0.3 + i * 0.22), -span * (0.45 - i * 0.12), dark, 2);
       ctx.restore();
     }
-    if (flying) wing(false);
+    if (flying) inBody(() => wing(false));
 
+    // Tail, back parts and the body itself all live in the tilted body frame.
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt); ctx.translate(-cx, -cy);
     // Tail
-    const tx = cx - rx * 0.85; const ty = biped ? cy + ry * 0.5 : cy - ry * 0.2;
-    const tEnd = [cx - rx * (biped ? 2.2 : 1.8), ty - ry * (biped ? -0.3 : 1.0) - Math.sin(t * 2) * 5];
-    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx - rx * 1.5, ty - ry * 0.1, tEnd[0], tEnd[1]);
-    ctx.strokeStyle = body; ctx.lineWidth = S * (H.has('club_tail') ? 0.06 : 0.045); ctx.lineCap = 'round'; ctx.stroke();
-    if (E.tail) for (let k = 1; k <= E.tail; k++) { const fx = tEnd[0] + 8 * k; const fy = tEnd[1] + 22 * k; ctx.beginPath(); ctx.moveTo(cx - rx * 1.2, ty - ry * 0.3); ctx.quadraticCurveTo(cx - rx * 1.5, ty + ry * 0.4 * k, fx, fy); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.stroke(); dot(fx, fy, S * 0.025, accent || body); }
-    if (H.has('club_tail')) dot(tEnd[0], tEnd[1], S * 0.05, SHELL);
-    if (H.has('display_tail')) ['#f2c14e', '#e46a5c', '#6fd3c7'].forEach((c, i) => { ctx.beginPath(); ctx.ellipse(tEnd[0] - i * 6, tEnd[1] - i * 8, S * 0.025, S * 0.09, -0.6 + i * 0.3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); });
-    if (H.has('stinger_tail')) { tri(tEnd[0], tEnd[1], tEnd[0] + 12, tEnd[1] - 4, tEnd[0] + 4, tEnd[1] + 8, VENOM); }
-    if (H.has('glow_tail')) glow(GLOW, 16, () => dot(tEnd[0], tEnd[1], S * 0.03, GLOW));
-    if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.arc(tEnd[0], tEnd[1] + 6, 7, Math.PI, Math.PI * 2.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.03; ctx.stroke(); }
-    if (H.has('drop_tail')) for (let k = 1; k <= 3; k++) { const u = k / 4; dot(tx + (tEnd[0] - tx) * u, ty + (tEnd[1] - ty) * u - Math.sin(u * Math.PI) * ry * 0.15, S * 0.024, k % 2 ? dark : light); }
-    if (H.has('rattle_tail')) { const sh = Math.sin(t * 30) * 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(tEnd[0] - k * 6 + sh, tEnd[1] - k * 2, S * 0.022, S * 0.016, 0.3, 0, Math.PI * 2); ctx.fillStyle = k % 2 ? '#c9b38a' : '#a8916a'; ctx.fill(); } }
-    if (H.has('tail_feathers')) for (let k = -2; k <= 2; k++) { ctx.save(); ctx.translate(tEnd[0], tEnd[1]); ctx.rotate(Math.PI + k * 0.28 - 0.2); ctx.beginPath(); ctx.ellipse(S * 0.08, 0, S * 0.09, S * 0.022, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 20 + k * 12, 55, 60); ctx.fill(); line(0, 0, S * 0.16, 0, hsl(hue, 30, 35), 1); ctx.restore(); }
-    if (H.has('spinneret')) { ctx.beginPath(); ctx.moveTo(tEnd[0], tEnd[1]); ctx.quadraticCurveTo(tEnd[0] - S * 0.05, tEnd[1] + S * 0.1, tEnd[0] - S * 0.02 + Math.sin(t) * 4, ground); ctx.strokeStyle = 'rgba(240,240,250,0.7)'; ctx.lineWidth = 1; ctx.stroke(); }
-    if (H.has('web_weaver')) { const wx = tEnd[0] - S * 0.12; const wy = tEnd[1] + S * 0.04; ctx.strokeStyle = 'rgba(240,240,250,0.45)'; ctx.lineWidth = 0.8; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * S * 0.12, wy + Math.sin(a) * S * 0.12); ctx.stroke(); } for (let r = 1; r <= 3; r++) { ctx.beginPath(); for (let k = 0; k <= 8; k++) { const a = k * Math.PI / 4; ctx.lineTo(wx + Math.cos(a) * S * 0.04 * r, wy + Math.sin(a) * S * 0.04 * r); } ctx.stroke(); } }
+    if (p.tail) {
+      const tx = cx - rx * 0.85; const ty = biped ? cy + ry * 0.5 : cy - ry * 0.2;
+      const tEnd = [cx - rx * (biped ? 2.2 : 1.8), ty - ry * (biped ? -0.3 : 1.0) - Math.sin(t * 2) * 5];
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx - rx * 1.5, ty - ry * 0.1, tEnd[0], tEnd[1]);
+      ctx.strokeStyle = body; ctx.lineWidth = S * (H.has('club_tail') ? 0.06 : 0.045); ctx.lineCap = 'round'; ctx.stroke();
+      if (E.tail) for (let k = 1; k <= E.tail; k++) { const fx = tEnd[0] + 8 * k; const fy = tEnd[1] + 22 * k; ctx.beginPath(); ctx.moveTo(cx - rx * 1.2, ty - ry * 0.3); ctx.quadraticCurveTo(cx - rx * 1.5, ty + ry * 0.4 * k, fx, fy); ctx.strokeStyle = body; ctx.lineWidth = S * 0.035; ctx.stroke(); dot(fx, fy, S * 0.025, accent || body); }
+      if (H.has('club_tail')) dot(tEnd[0], tEnd[1], S * 0.05, SHELL);
+      if (H.has('display_tail')) ['#f2c14e', '#e46a5c', '#6fd3c7'].forEach((c, i) => { ctx.beginPath(); ctx.ellipse(tEnd[0] - i * 6, tEnd[1] - i * 8, S * 0.025, S * 0.09, -0.6 + i * 0.3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); });
+      if (H.has('stinger_tail')) { tri(tEnd[0], tEnd[1], tEnd[0] + 12, tEnd[1] - 4, tEnd[0] + 4, tEnd[1] + 8, VENOM); }
+      if (H.has('glow_tail')) glow(GLOW, 16, () => dot(tEnd[0], tEnd[1], S * 0.03, GLOW));
+      if (H.has('prehensile_tail')) { ctx.beginPath(); ctx.arc(tEnd[0], tEnd[1] + 6, 7, Math.PI, Math.PI * 2.6); ctx.strokeStyle = body; ctx.lineWidth = S * 0.03; ctx.stroke(); }
+      if (H.has('drop_tail')) for (let k = 1; k <= 3; k++) { const u = k / 4; dot(tx + (tEnd[0] - tx) * u, ty + (tEnd[1] - ty) * u - Math.sin(u * Math.PI) * ry * 0.15, S * 0.024, k % 2 ? dark : light); }
+      if (H.has('rattle_tail')) { const sh = Math.sin(t * 30) * 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(tEnd[0] - k * 6 + sh, tEnd[1] - k * 2, S * 0.022, S * 0.016, 0.3, 0, Math.PI * 2); ctx.fillStyle = k % 2 ? '#c9b38a' : '#a8916a'; ctx.fill(); } }
+      if (H.has('tail_feathers')) for (let k = -2; k <= 2; k++) { ctx.save(); ctx.translate(tEnd[0], tEnd[1]); ctx.rotate(Math.PI + k * 0.28 - 0.2); ctx.beginPath(); ctx.ellipse(S * 0.08, 0, S * 0.09, S * 0.022, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 20 + k * 12, 55, 60); ctx.fill(); line(0, 0, S * 0.16, 0, hsl(hue, 30, 35), 1); ctx.restore(); }
+      if (H.has('spinneret')) { ctx.beginPath(); ctx.moveTo(tEnd[0], tEnd[1]); ctx.quadraticCurveTo(tEnd[0] - S * 0.05, tEnd[1] + S * 0.1, tEnd[0] - S * 0.02 + Math.sin(t) * 4, ground); ctx.strokeStyle = 'rgba(240,240,250,0.7)'; ctx.lineWidth = 1; ctx.stroke(); }
+      if (H.has('web_weaver')) { const wx = tEnd[0] - S * 0.12; const wy = tEnd[1] + S * 0.04; ctx.strokeStyle = 'rgba(240,240,250,0.45)'; ctx.lineWidth = 0.8; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * S * 0.12, wy + Math.sin(a) * S * 0.12); ctx.stroke(); } for (let r = 1; r <= 3; r++) { ctx.beginPath(); for (let k = 0; k <= 8; k++) { const a = k * Math.PI / 4; ctx.lineTo(wx + Math.cos(a) * S * 0.04 * r, wy + Math.sin(a) * S * 0.04 * r); } ctx.stroke(); } }
+    }
 
     // Back parts behind body
     const backTopX = cx - rx * 0.1; const backTopY = cy - ry * 0.85;
@@ -320,6 +379,8 @@ window.G = window.G || {};
       for (let i = 1; i < 5; i++) { const x = cx - rx + (i / 5) * rx * 2; line(x, cy - ry * 0.2, x - (x - cx) * 0.2, cy - ry * 1.3, '#7f8c93', S * 0.01); }
     }
     if (H.has('egg_sac')) for (let k = 0; k < 7; k++) { const ex = cx - rx * 0.45 + (k % 4) * rx * 0.2 + (k > 3 ? rx * 0.1 : 0); const ey = cy - ry * (k > 3 ? 1.25 : 0.95); dot(ex, ey, S * 0.03, '#f1ead2'); dot(ex - 2, ey - 2, S * 0.01, 'rgba(255,255,255,0.8)'); }
+
+    ctx.restore();
 
     // Limbs
     function leg(x, top, len, kind, foot, col, swing, front) {
@@ -389,29 +450,30 @@ window.G = window.G || {};
       else dot(x + 2, y - 1, 4, col);
     }
     const backCol = hsl(hue, 35, 25);
-    let hindX; let frontX;
-    if (biped) { hindX = [cx]; frontX = []; }
-    else if (nSeg >= 3) {
-      // One pair of legs per segment, spread along the body.
-      const xs = Array.from({ length: nSeg }, (_, i) => cx - rx * 0.72 + (i / (nSeg - 1)) * rx * 1.4);
-      frontX = p.frontLimbs ? [xs[xs.length - 1]] : [];
-      hindX = p.frontLimbs ? xs.slice(0, -1) : xs;
-    } else {
-      hindX = [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
-      frontX = [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
-    }
-    // The editor moves legs closer together or apart, and toward the head or tail.
-    const spread = L.legSpread || 1; const shift = (L.legShift || 0) * rx;
-    hindX = hindX.map((x) => cx + (x - cx) * spread + shift);
-    frontX = frontX.map((x) => cx + (x - cx) * spread + shift);
     // far side
-    hindX.forEach((x, i) => p.hindLimbs && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, backCol, Math.sin(t * 2 + i) * 3, false));
-    frontX.forEach((x) => p.frontLimbs && !H.has('wing_membranes') && leg(x - S * 0.02, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, backCol, Math.sin(t * 2 + 1) * 3, true));
+    // Legs hang from where they join the tilted body and always reach the ground.
+    const plant = (x, front, dx, col, swing, kind, foot) => { const [ax, ay] = R(x + dx, cy + ry * 0.5); leg(ax, ay, Math.max(S * 0.03, ground - ay), kind, foot, col, swing, front); };
+    hindX.forEach((x, i) => p.hindLimbs && plant(x, false, -S * 0.02, backCol, Math.sin(t * 2 + i) * 3, p.hindLimbs, p.feet));
+    frontX.forEach((x) => p.frontLimbs && !H.has('wing_membranes') && plant(x, true, -S * 0.02, backCol, Math.sin(t * 2 + 1) * 3, p.frontLimbs, p.hands));
+    // Arms: from the shoulders, hanging free, planted as knuckles, or pulling a legless body along.
+    const shoulder = (k) => (biped ? [cx + rx * 0.5, cy - ry * (0.45 - k * 0.28)] : crawler ? [cx + rx * (0.65 - k * 0.3), cy + ry * 0.3] : [cx + rx * (0.72 - k * 0.2), cy - ry * 0.05]);
+    const drawArms = (near) => {
+      if (!arms || !p.frontLimbs) return;
+      for (let k = 0; k < arms; k++) {
+        const [bx, by] = shoulder(k); const [sx, sy] = R(bx + (near ? S * 0.02 : -S * 0.02), by);
+        const col = near ? dark : backCol; const sw = Math.sin(t * 1.5 + k + (near ? 0 : 1)) * 4;
+        if (H.has('wing_membranes')) { if (near) tri(sx, sy, sx - S * 0.3, sy + S * 0.05, sx - S * 0.05, sy + S * 0.25, hsl(hue, 50, 65, 0.5)); continue; }
+        if (knuckle || crawler) leg(sx, sy, Math.max(S * 0.03, ground - sy), p.frontLimbs, p.hands, col, sw * 0.5, true);
+        else leg(sx, sy, armReach, p.frontLimbs, p.hands, col, sw, true);
+      }
+    };
+    drawArms(false);
 
     // Body
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt); ctx.translate(-cx, -cy);
     if (L.shape === 'pear') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.45, cy + ry * 0.15, rx * 0.6, ry * 1.05, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     if (L.shape === 'hunched') { ctx.beginPath(); ctx.ellipse(cx - rx * 0.05, cy - ry * 0.55, rx * 0.6, ry * 0.75, 0, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22); ctx.scale(2 - wob, wob);
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(2 - wob, wob);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(0.55, body); grad.addColorStop(1, bellyCol(L, hue) || body);
     ctx.fillStyle = grad; ctx.fill();
@@ -436,7 +498,7 @@ window.G = window.G || {};
     if (frame === 'shell') for (let i = 1; i < 6; i++) { const x = -rx + (i / 6) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.08, 0, x, ry); ctx.strokeStyle = hsl(hue, 30, 25, 0.55); ctx.lineWidth = 2; ctx.stroke(); }
     finish(L, 0, 0, rx, ry);
     ctx.restore();
-    if (frame === 'shell') { ctx.save(); ctx.translate(cx, cy); ctx.rotate((biped ? -0.15 : 0) + (L.spine || 0) * 0.22); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 35, 22); ctx.lineWidth = Math.max(2, S * 0.012); ctx.stroke(); ctx.restore(); }
+    if (frame === 'shell') { ctx.save(); ctx.translate(cx, cy); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 35, 22); ctx.lineWidth = Math.max(2, S * 0.012); ctx.stroke(); ctx.restore(); }
     if (H.has('exoskeleton')) { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.01, ry * 1.01, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.strokeStyle = SHELL; ctx.lineWidth = 3; ctx.stroke(); }
     if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.02, ry * 1.02, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
     if (E.back) for (let i = 0; i < 5 + E.back * 2; i++) {
@@ -454,35 +516,37 @@ window.G = window.G || {};
     if (H.has('moss_garden')) for (let i = 0; i < 6; i++) dot(cx - rx * 0.6 + i * rx * 0.22, cy - ry * 0.95 + Math.abs(i - 2.5) * 3, S * 0.025, PLANT);
     if (H.has('segment_plates')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.75 + i * rx * 0.3; ctx.beginPath(); ctx.ellipse(x, cy - ry * 0.35, rx * 0.2, ry * 0.75, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.lineTo(x, cy - ry * 0.35); ctx.closePath(); ctx.fillStyle = hsl(hue, 22, 48 - (i % 2) * 6); ctx.fill(); ctx.strokeStyle = hsl(hue, 25, 25); ctx.lineWidth = 1.2; ctx.stroke(); }
     if (H.has('snail_shell')) {
-      const big = H.has('citadel_shell') ? 1.3 : 1; const sx0 = cx - rx * 0.1; const sy0 = cy - ry * 0.95; const R0 = ry * 1.15 * big;
+      const big = H.has('citadel_shell') ? 1.3 : 1; const sx0 = biped ? cx - rx * 0.75 : cx - rx * 0.1; const sy0 = biped ? cy - ry * 0.15 : cy - ry * 0.95; const R0 = (biped ? Math.min(ry * 0.75, rx * 1.1) : ry * 1.15) * big;
       dot(sx0, sy0, R0, '#e3cfa6'); ctx.beginPath();
       for (let a = 0; a < Math.PI * 5; a += 0.2) { const r = R0 * (1 - a / (Math.PI * 5.5)); ctx.lineTo(sx0 + Math.cos(a) * r, sy0 + Math.sin(a) * r); }
       ctx.strokeStyle = '#8f6a43'; ctx.lineWidth = 2.2; ctx.stroke();
       if (H.has('citadel_shell')) for (let k = 0; k < 6; k++) { const a = Math.PI * 1.1 + k * 0.17; tri(sx0 + Math.cos(a) * R0 * 0.95 - 4, sy0 + Math.sin(a) * R0 * 0.95, sx0 + Math.cos(a) * R0 * 1.3, sy0 + Math.sin(a) * R0 * 1.3, sx0 + Math.cos(a) * R0 * 0.95 + 4, sy0 + Math.sin(a) * R0 * 0.95, SHELL); }
     }
     if (H.has('rolling_armor')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.75 + i * rx * 0.3; tri(x - 4, cy - ry * 1.05, x, cy - ry * 1.6, x + 4, cy - ry * 1.05, BONE); }
+    ctx.restore();
 
     // Near side legs
-    hindX.forEach((x, i) => p.hindLimbs && leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, p.hindLimbs, p.feet, dark, Math.sin(t * 2 + i + 1) * 3, false));
-    if (biped) {
-      // Arms hang free from the shoulder
-      const sx = cx + rx * 0.5; const sy = cy - ry * 0.45;
-      if (H.has('wing_membranes')) { tri(sx, sy, sx - S * 0.3, sy + S * 0.05, sx - S * 0.05, sy + S * 0.25, hsl(hue, 50, 65, 0.5)); }
-      else if (p.frontLimbs) leg(sx, sy, S * 0.2, p.frontLimbs, p.hands, dark, Math.sin(t * 1.5) * 4, true);
-    } else {
-      frontX.forEach((x) => {
-        if (H.has('wing_membranes')) { tri(x, cy - ry * 0.2, x - S * 0.35, cy - ry * 1.6, x - S * 0.1, cy + ry * 0.2, hsl(hue, 50, 65, 0.5)); leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, 'slender_forelegs', p.hands, dark, 0, true); }
-        else if (p.frontLimbs) leg(x + S * 0.03, cy + ry * 0.5, ground - cy - ry * 0.5, p.frontLimbs, p.hands, dark, Math.sin(t * 2 + 2) * 3, true);
-      });
-    }
-    if (!p.hindLimbs && !p.frontLimbs) { /* a legless slug: body rests low */ }
+    hindX.forEach((x, i) => p.hindLimbs && plant(x, false, S * 0.03, dark, Math.sin(t * 2 + i + 1) * 3, p.hindLimbs, p.feet));
+    frontX.forEach((x) => {
+      if (H.has('wing_membranes')) { inBody(() => tri(x, cy - ry * 0.2, x - S * 0.35, cy - ry * 1.6, x - S * 0.1, cy + ry * 0.2, hsl(hue, 50, 65, 0.5))); plant(x, true, S * 0.03, dark, 0, 'slender_forelegs', p.hands); }
+      else if (p.frontLimbs) plant(x, true, S * 0.03, dark, Math.sin(t * 2 + 2) * 3, p.frontLimbs, p.hands);
+    });
+    drawArms(true);
 
-    if (flying) wing(true);
+    if (flying) inBody(() => wing(true));
 
     // Neck and head
-    if (pos !== 'tucked') { ctx.beginPath(); ctx.moveTo(biped ? cx + rx * 0.2 : cx + rx * 0.6, biped ? cy - ry * 0.7 : cy - ry * 0.4); ctx.lineTo(hx, hy);
+    if (pos !== 'tucked') { ctx.beginPath(); ctx.moveTo(neckBase[0], neckBase[1]); ctx.lineTo(hx, hy);
       ctx.strokeStyle = body; ctx.lineWidth = S * (longNeck ? 0.075 : 0.09) * Math.max(0.8, Math.min(1.3, L.headSize || 1)); ctx.lineCap = 'round'; ctx.stroke(); }
+    // The head mostly stays level as the body tilts, plus the editor's head angle.
+    const headAngle = (L.headTilt || 0) - tilt * 0.6;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(headAngle); ctx.translate(-hx, -hy);
     drawHead(p, hx, hy, hr, hue, body, dark, t, S, L);
+    ctx.restore();
+    if (FACE && headAngle) {
+      const rot = (x, y) => [hx + (x - hx) * Math.cos(headAngle) - (y - hy) * Math.sin(headAngle), hy + (x - hx) * Math.sin(headAngle) + (y - hy) * Math.cos(headAngle)];
+      [FACE.x, FACE.y] = rot(FACE.x, FACE.y); [FACE.mx, FACE.my] = rot(FACE.mx, FACE.my); FACE.top = rot(FACE.x, FACE.top)[1];
+    }
   }
 
   function drawHead(p, hx, hy, hr, hue, body, dark, t, S, L) {
@@ -1057,6 +1121,60 @@ window.G = window.G || {};
     flee: ['ZOOM!', 'BOING!', 'EEK!'], social: ['HI!', 'YAY!'], mutate: ['WOAH!', 'ZAP!'], grow: ['BOING!'], rest: ['', ''],
   };
 
+  // Make every move bigger, and add anticipation: a crouch (and a lean back) before the action.
+  function exaggerate(T, anim, windup) {
+    const X = { dx: T.dx * 1.4, dy: T.dy * 1.4, rot: T.rot * 1.3, sx: 1 + (T.sx - 1) * 1.6, sy: 1 + (T.sy - 1) * 1.6 };
+    if (windup < 1) {
+      const e = Math.sin(windup * Math.PI * 0.5);
+      X.sy *= 1 - 0.18 * e; X.sx *= 1 + 0.12 * e;
+      if (anim === 'attack' || anim === 'flee') { X.dx -= 16 * e; X.rot -= 0.08 * e; }
+      if (anim === 'mutate' || anim === 'grow') X.dx += Math.sin(windup * 70) * 3;
+    }
+    return X;
+  }
+
+  // The odds of a check: green for success, red for failure, and a needle that swings, slows and lands.
+  function oddsBar(sc, w, h, pos, alpha) {
+    const x0 = w * 0.14; const x1 = w * 0.86; const y = h * 0.08; const bh = Math.max(10, h * 0.035);
+    const split = x0 + (x1 - x0) * (sc.chance / 100);
+    ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.fillStyle = 'rgba(12, 26, 29, 0.75)'; ctx.fillRect(x0 - 6, y - 6, x1 - x0 + 12, bh + 12);
+    ctx.fillStyle = '#5fae4e'; ctx.fillRect(x0, y, split - x0, bh);
+    ctx.fillStyle = '#c4553f'; ctx.fillRect(split, y, x1 - split, bh);
+    const target = sc.success ? sc.chance * 0.5 / 100 : (sc.chance + (100 - sc.chance) * 0.5) / 100;
+    const nx = x0 + (x1 - x0) * Math.max(0, Math.min(1, pos === 1 ? target : pos));
+    tri(nx - 8, y - 12, nx + 8, y - 12, nx, y + 2, '#f2ecd8'); line(nx, y, nx, y + bh, '#f2ecd8', 3);
+    const stat = (G.STATS.find((x) => x.id === sc.stat) || {}).short || '';
+    ctx.font = `700 ${Math.round(Math.max(11, bh * 0.9))}px 'Atkinson Hyperlegible', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#e8efe4'; ctx.fillText(`${stat} check · ${sc.chance}%`, w / 2, y + bh + 8);
+    ctx.restore();
+  }
+
+  // Before a check resolves: the needle swings back and forth, slowing, while you tremble.
+  function suspenseFrame(run, me, sc, w, h, t, el, dur) {
+    ctx.clearRect(0, 0, w, h);
+    drawBackground(run, w, h, t);
+    const S = Math.min(w * 0.72, h * 1.05);
+    const cx = w * 0.45; const cy = h * 0.5;
+    drawAmbient(run, w, h, t, S, sc.species);
+    drawHerd(run, cx, cy, S, t, w, h);
+    const land = run.stage === 'creature' && run.habitat === 'land';
+    const pivotY = land ? cy + S * 0.36 : cy;
+    const settle = dur - 0.35; const p = Math.min(1, el / settle);
+    const tremble = Math.sin(el * 55) * 2.5 * (0.4 + p);
+    ctx.save(); ctx.translate(cx + tremble, pivotY); ctx.scale(1 + 0.03 * p, 1 - 0.05 * p); ctx.translate(-cx, -pivotY);
+    const f = fitBody(me, S, cx, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
+    drawBody(me, f.x, f.y, f.S, t);
+    drawFace(p > 0.6 ? 'scared' : 'worried', t);
+    ctx.restore();
+    const target = sc.success ? sc.chance * 0.5 / 100 : (sc.chance + (100 - sc.chance) * 0.5) / 100;
+    const amp = 0.55 * Math.pow(1 - p, 1.4);
+    const pos = el >= settle ? target : target + amp * Math.sin(el * (16 - 9 * p));
+    oddsBar(sc, w, h, Math.max(0, Math.min(1, pos)), 1);
+    if (el >= settle) { const q = Math.min(1, (el - settle) / 0.15); comic(sc.success ? 'YES!' : 'NO!', w * 0.5, h * 0.24, S * 0.1 * (0.6 + 0.6 * q), 1, sc.success ? '#8fd16a' : '#ef7d6b', -0.08); }
+    else if (Math.floor(el * 4) % 2 === 0) comic('...', cx + S * 0.3, cy - S * 0.42, S * 0.07, 0.8, '#e8efe4');
+  }
+
   // Squash, stretch, hop and spin. Returns an offset and scale for this moment.
   function animTransform(anim, v, k, w) {
     const p = Math.min(1, k);
@@ -1136,7 +1254,8 @@ window.G = window.G || {};
     ctx.clearRect(0, 0, w, h);
     const land = b.stage === 'creature' && b.habitat !== 'sea';
     const S = Math.min(w, h) * (b.stage === 'cell' ? 1.15 : land ? 0.95 : 1.1) / sizeScale(b);
-    drawBody(b, land ? w * 0.42 : w * 0.5, h * (land ? 0.45 : 0.5), S * (land ? 0.92 : 1), 0.6);
+    const f = b.stage === 'cell' ? { S: S, x: w * 0.5, y: h * 0.5 } : fitBody(b, S * (land ? 0.92 : 1), land ? w * 0.42 : w * 0.5, h * (land ? 0.45 : 0.5), { x0: w * 0.04, y0: h * 0.04, x1: w * 0.96, y1: h * 0.96 });
+    drawBody(b, f.x, f.y, f.S, 0.6);
   };
 
   let sceneFrame = null;
@@ -1235,13 +1354,28 @@ window.G = window.G || {};
     const ghosts = Math.min(5, Math.max(0, -(sc.popDelta || 0)));
     const food = sc.foodDelta || 0;
     const dying = sc.title === 'end';
+    // Tension: a check first swings a needle across the odds while your creature sweats it out.
+    const SUSPENSE = !reduceMotion && sc.chance != null && sc.success != null && sc.stat ? 1.7 : 0;
+    // Timing: a wind-up before the action, and a freeze-frame with screen shake on impact.
+    const ANT = anim === 'hurt' || anim === 'rest' ? 0 : 0.22;
+    const IMPACT = anim === 'attack' ? 0.42 : anim === 'hurt' ? 0.06 : null;
+    const STOP = 0.09;
     function frame(now) {
       if (!canvas.isConnected) { sceneFrame = null; return; }
       if (dying) { deathFrame(canvas, run, me, reduceMotion ? 6 : (now - start) / 1000, reduceMotion ? 0 : now / 1000); sceneFrame = reduceMotion ? null : requestAnimationFrame(frame); return; }
       const { w, h } = fit(canvas);
       const t = reduceMotion ? 0 : now / 1000;
-      const k = reduceMotion ? 2 : (now - start) / 1000 / DUR;
+      const el = (now - start) / 1000;
+      if (SUSPENSE && el < SUSPENSE) { suspenseFrame(run, me, sc, w, h, t, el, SUSPENSE); sceneFrame = requestAnimationFrame(frame); return; }
+      const kRaw = reduceMotion ? 2 : (el - SUSPENSE) / DUR;
+      const windup = ANT && kRaw < ANT ? kRaw / ANT : 1;
+      let k = Math.max(0, kRaw - ANT);
+      if (IMPACT != null && k > IMPACT) k = k < IMPACT + STOP ? IMPACT : k - STOP;
+      const sinceHit = IMPACT != null && sc.success !== false ? Math.max(-1, kRaw - ANT - IMPACT) : -1;
+      const shakeAmt = sinceHit >= 0 && sinceHit < 0.4 ? (1 - sinceHit / 0.4) * (anim === 'hurt' ? 10 : 7) : 0;
       ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      if (shakeAmt) ctx.translate((Math.random() - 0.5) * shakeAmt * 2, (Math.random() - 0.5) * shakeAmt * 2);
       drawBackground(run, w, h, t);
       const S = Math.min(w * 0.72, h * 1.05);
       const cx = w * (story ? 0.36 : 0.45); const cy = h * 0.5;
@@ -1269,14 +1403,16 @@ window.G = window.G || {};
         }
         if (story === 'chase' && k > 0.95) drawProp('bones', 'back', { ...P, ground: land ? ground : cy + S * 0.25, w: (baseX + w * 0.2) / 0.78 });
       }
-      // You.
-      const T = st ? st.you : animTransform(anim, v, k, w);
+      // You: bigger moves, plus a crouch before you spring.
+      const T = st ? st.you : exaggerate(animTransform(anim, v, k, w), anim, windup);
+      if (!st && (anim === 'flee' || anim === 'attack') && windup >= 1 && k > 0.03 && k < 0.6) for (let i = 0; i < 5; i++) { const ly = cy - S * 0.2 + i * S * 0.1; const lx = cx + T.dx - S * 0.45 - (i % 2) * S * 0.12; line(lx - S * 0.3, ly, lx, ly, `rgba(255,255,255,${0.45 * Math.sin(k / 0.6 * Math.PI)})`, 2.5); }
       const sink = sc.prop === 'tar' && (sc.success === false || anim === 'hurt') ? Math.min(1, k) * S * 0.12 : 0;
       const spin = sc.prop === 'whirlpool' && anim === 'hurt' && k < 1 ? k * Math.PI * 4 : 0;
       const pivotY = land ? ground : cy;
       ctx.save();
       ctx.translate(cx + T.dx, pivotY + T.dy + sink); ctx.rotate(T.rot + spin); ctx.scale(T.sx, T.sy); ctx.translate(-cx, -pivotY);
-      drawBody(me, cx, cy, S, t);
+      const fm = fitBody(me, S, cx, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
+      drawBody(me, fm.x, fm.y, fm.S, t);
       drawFace((st && st.youMood) || sc.mood, t);
       ctx.restore();
       if (sc.prop) drawProp(sc.prop, 'front', P);
@@ -1304,6 +1440,8 @@ window.G = window.G || {};
         for (let i = 0; i < 16; i++) { const a2 = i * Math.PI / 8 + k; line(cx + Math.cos(a2) * S * 0.2 * q, cy + Math.sin(a2) * S * 0.2 * q, cx + Math.cos(a2) * S * 0.55 * q, cy + Math.sin(a2) * S * 0.55 * q, hsl((i * 40 + k * 200) % 360, 90, 70, Math.max(0, 0.6 - k * 0.2)), 3); }
         comic('EVOLVED!', w * 0.5, h * 0.14, S * 0.11 * (0.7 + 0.3 * q), Math.min(1, (2.5 - k) * 1.5), '#f2c14e', -0.06);
       }
+      if (SUSPENSE && kRaw < 0.9) oddsBar(sc, w, h, 1, 1 - kRaw / 0.9);
+      ctx.restore();
       sceneFrame = reduceMotion ? null : requestAnimationFrame(frame);
     }
     sceneFrame = requestAnimationFrame(frame);
@@ -1371,9 +1509,49 @@ window.G = window.G || {};
 
   // ======================= SPRITES =======================
   // Bodies drawn once to an offscreen canvas, so the world map can show many creatures cheaply.
+  // How far a body actually reaches (drawn once offscreen at S = 100, anchored at 0,0), so big or
+  // oddly shaped bodies can be framed to fit instead of spilling out of their box.
+  const extentCache = new Map();
+  const bodyKey = (b) => JSON.stringify([b.stage, b.habitat, b.multicellular, b.parts, b.hue, b.traits, b.look, b.symmetry, b.segments, b.armPairs, b.skeleton, b.off]);
+  function bodyExtent(b) {
+    const key = bodyKey(b);
+    let e = extentCache.get(key);
+    if (e) return e;
+    const c = document.createElement('canvas'); c.width = 400; c.height = 400;
+    const prev = ctx; const prevFace = FACE;
+    ctx = c.getContext('2d'); ctx.translate(200, 230);
+    try { drawBody(b, 0, 0, 100, 0.6); } catch (err) { /* measure what we can */ }
+    ctx = prev; FACE = prevFace;
+    const data = c.getContext('2d').getImageData(0, 0, 400, 400).data;
+    let x0 = 400; let y0 = 400; let x1 = 0; let y1 = 0;
+    for (let y = 0; y < 400; y += 2) for (let x = 0; x < 400; x += 2) if (data[(y * 400 + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    e = x1 > x0 ? { minX: x0 - 200, maxX: x1 - 200, minY: y0 - 230, maxY: y1 - 230 } : { minX: -50, maxX: 50, minY: -50, maxY: 40 };
+    extentCache.set(key, e);
+    if (extentCache.size > 80) extentCache.delete(extentCache.keys().next().value);
+    return e;
+  }
+  // Shrink (never grow) a body drawn at size S anchored at (ax, ay) so it fits inside the box.
+  // Land bodies keep their feet where they were; the result is { S, x, y } to pass to drawBody.
+  function fitBody(b, S, ax, ay, box) {
+    const e = bodyExtent(b); const u = S / 100;
+    const land = b.stage === 'creature' && b.habitat !== 'sea' && b.symmetry !== 'radial' && b.symmetry !== 'colonial';
+    let k = 1;
+    k = Math.min(k, (box.x1 - box.x0) / Math.max(1, (e.maxX - e.minX) * u));
+    if (land) { const feet = ay + 36 * u; k = Math.min(k, (feet - box.y0) / Math.max(1, (36 - e.minY) * u)); }
+    else k = Math.min(k, (box.y1 - box.y0) / Math.max(1, (e.maxY - e.minY) * u));
+    k = Math.max(0.35, Math.min(1, k));
+    const S2 = S * k; const u2 = S2 / 100;
+    // Keep it horizontally inside the box.
+    let x = ax; const left = x + e.minX * u2; const right = x + e.maxX * u2;
+    if (right > box.x1) x -= right - box.x1; if (x + e.minX * u2 < box.x0) x += box.x0 - (x + e.minX * u2);
+    let y = land ? ay + 36 * (u - u2) : ay;
+    if (!land) { const top = y + e.minY * u2; const bot = y + e.maxY * u2; if (top < box.y0) y += box.y0 - top; else if (bot > box.y1) y -= bot - box.y1; }
+    return { S: S2, x, y };
+  }
+
   const spriteCache = new Map();
   function spriteFor(b) {
-    const key = JSON.stringify([b.stage, b.habitat, b.multicellular, b.parts, b.hue, b.traits, b.look, b.symmetry, b.segments, b.off]);
+    const key = bodyKey(b);
     let c = spriteCache.get(key);
     if (c) return c;
     c = document.createElement('canvas');
@@ -1382,7 +1560,8 @@ window.G = window.G || {};
     const prev = ctx;
     ctx = c.getContext('2d');
     const land = b.stage === 'creature' && b.habitat !== 'sea';
-    drawBody(b, size * (land ? 0.44 : 0.5), size * (land ? 0.46 : 0.5), (size * (land ? 0.82 : 0.9)) / sizeScale(b), 0.6);
+    const f = fitBody(b, (size * (land ? 0.82 : 0.9)) / sizeScale(b), size * (land ? 0.44 : 0.5), size * (land ? 0.46 : 0.5), { x0: 2, y0: 2, x1: size - 2, y1: size - 2 });
+    drawBody(b, f.x, f.y, f.S, 0.6);
     ctx = prev;
     spriteCache.set(key, c);
     if (spriteCache.size > 60) spriteCache.delete(spriteCache.keys().next().value);
@@ -1594,6 +1773,42 @@ window.G = window.G || {};
     if (o === 'toxic') drawProp('plume', 'back', P);
   }
 
+  // Seasons and weather tint the world and fill the air: spring showers and petals, summer haze,
+  // falling leaves, winter snow; at sea plankton blooms, storms with rain and lightning, and ice.
+  function drawWeather(run, w, h, t, top, land, seaMap) {
+    const se = G.season && G.season(run);
+    const biome = G.biomeMatters(run) ? G.biome(run).id : null;
+    const id = se ? se.id : null;
+    const tint = (c) => { ctx.fillStyle = c; ctx.fillRect(0, 0, w, h); };
+    const fall = (n, speed, drift, draw) => { for (let i = 0; i < n; i++) { const r1 = prand(i + 3); const r2 = prand(i + 41); const y = ((t * speed * (0.6 + r2 * 0.6) + r1 * h) % (h + 20)) - 10; const x = ((r2 * w + Math.sin(t * 0.7 + i) * drift + t * drift * 0.3) % (w + 20) + w + 20) % (w + 20) - 10; draw(x, y, i); } };
+    if (land) {
+      if (id === 'spring') { tint('rgba(150, 220, 140, 0.06)'); fall(26, 210, 6, (x, y) => line(x, y, x - 2, y + 9, 'rgba(200, 225, 255, 0.45)', 1.2)); fall(8, 25, 30, (x, y, i) => dot(x, y, 2.4, i % 2 ? 'rgba(255, 190, 215, 0.85)' : 'rgba(255, 255, 255, 0.8)')); }
+      if (id === 'summer') { tint('rgba(255, 210, 120, 0.08)'); const g = ctx.createRadialGradient(w * 0.85, 0, 4, w * 0.85, 0, h * 0.5); g.addColorStop(0, 'rgba(255, 230, 150, 0.35)'); g.addColorStop(1, 'rgba(255, 230, 150, 0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 4; i++) { ctx.beginPath(); for (let x = 0; x <= w; x += 12) ctx.lineTo(x, top + h * 0.1 * i + Math.sin(x * 0.05 + t * 2 + i) * 2); ctx.strokeStyle = 'rgba(255, 240, 200, 0.07)'; ctx.lineWidth = 3; ctx.stroke(); } }
+      if (id === 'autumn') { tint('rgba(220, 120, 40, 0.09)'); fall(18, 30, 40, (x, y, i) => { ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + i); ctx.beginPath(); ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2); ctx.fillStyle = ['#d9822b', '#b5451b', '#e8b33a'][i % 3]; ctx.fill(); ctx.restore(); }); }
+      if (id === 'winter' || biome === 'tundra') {
+        tint('rgba(190, 215, 255, 0.10)');
+        ctx.fillStyle = 'rgba(245, 250, 255, 0.22)'; ctx.fillRect(0, top, w, h - top);
+        for (let i = 0; i < 14; i++) { ctx.beginPath(); ctx.ellipse(prand(i + 7) * w, top + prand(i + 19) * (h - top), 18 + prand(i) * 26, 4, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); }
+        fall(id === 'winter' ? 40 : 18, 40, 20, (x, y, i) => dot(x, y, 1.5 + (i % 3) * 0.7, 'rgba(255,255,255,0.85)'));
+      }
+      if (biome === 'desert' && id !== 'winter') for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, top + 20 + i * 30 + Math.sin(x * 0.04 + t * 3 + i * 2) * 3); ctx.strokeStyle = 'rgba(255, 220, 160, 0.08)'; ctx.lineWidth = 4; ctx.stroke(); }
+    } else if (run.stage === 'creature') {
+      if (id === 'bloom') { tint('rgba(110, 200, 90, 0.10)'); fall(40, 6, 12, (x, y, i) => dot(x, y, 1.2 + (i % 3) * 0.6, 'rgba(160, 230, 120, 0.55)')); }
+      if (id === 'storms') {
+        tint('rgba(10, 20, 35, 0.22)');
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let x = 0; x <= w; x += 8) ctx.lineTo(x, h * 0.02 + i * 5 + Math.sin(x * 0.03 + t * 4 + i) * 6); ctx.strokeStyle = 'rgba(220, 235, 255, 0.35)'; ctx.lineWidth = 2; ctx.stroke(); }
+        fall(30, 260, 4, (x, y) => line(x, y, x - 3, y + 12, 'rgba(200, 220, 255, 0.25)', 1));
+        if (Math.sin(t * 0.9) > 0.985) tint('rgba(230, 240, 255, 0.35)');
+      }
+      if (id === 'cold' || biome === 'polar') {
+        tint('rgba(170, 210, 255, 0.10)');
+        for (let i = 0; i < 6; i++) { const x = ((prand(i + 2) * w + t * 6) % (w + 80)) - 40; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 50, 0); ctx.lineTo(x + 40, 12 + (i % 2) * 6); ctx.lineTo(x + 8, 10); ctx.closePath(); ctx.fillStyle = 'rgba(240, 250, 255, 0.75)'; ctx.fill(); }
+        fall(22, 12, 8, (x, y) => dot(x, y, 1.3, 'rgba(255,255,255,0.6)'));
+      }
+      if (id === 'calm') tint('rgba(120, 200, 255, 0.04)');
+    }
+  }
+
   G.startMap = function (canvas, onTap) {
     if (mapFrame) cancelAnimationFrame(mapFrame);
     let last = performance.now();
@@ -1617,7 +1832,7 @@ window.G = window.G || {};
       const seaMap = isSeaMap(run);
       const top = land ? h * 0.3 : seaMap ? h * 0.05 : h * 0.12; const bottom = seaMap ? h * 0.98 : h * 0.93;
       const base = Math.min(w, h) * 0.12;
-      const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
+      const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings', 'insect_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
       // Keep the herd list in sync with the world.
       const live = [{ key: 'you', s: null, pop: run.pop, body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
       [...herds.keys()].forEach((k) => { if (!live.find((l) => l.key === k)) herds.delete(k); });
@@ -1688,6 +1903,7 @@ window.G = window.G || {};
         } });
       });
       drawables.sort((p1, p2) => p1.y - p2.y).forEach((d2) => d2.draw());
+      drawWeather(run, w, h, t, top, land, seaMap);
       labelDraws.forEach((d2) => d2());
       mapFrame = requestAnimationFrame(frame);
     }
@@ -1717,7 +1933,8 @@ window.G = window.G || {};
       const T = animTransform(anims[cycle], 0, k, w * 0.2);
       const pivotY = land ? cy + S * sizeScale(b) * 0.36 : cy;
       ctx.save(); ctx.translate(cx + T.dx * 0.4, pivotY + T.dy); ctx.rotate(T.rot); ctx.scale(T.sx, T.sy); ctx.translate(-cx, -pivotY);
-      drawBody(b, cx, cy, S, t);
+      const f = fitBody(b, S, cx, cy, { x0: w * 0.03, y0: h * 0.04, x1: w * 0.97, y1: h * 0.97 });
+      drawBody(b, f.x, f.y, f.S, t);
       drawFace(moods[cycle], t);
       ctx.restore();
       viewFrame = reduceMotion ? null : requestAnimationFrame(frame);
@@ -1739,7 +1956,8 @@ window.G = window.G || {};
       const b = G.bodyOf(run);
       const land = b.habitat !== 'sea';
       const S = Math.min(w * 0.8, h * 1.05) / sizeScale(b);
-      drawBody(b, w * (land ? 0.45 : 0.5), h * (land ? 0.36 : 0.5), S, t);
+      const f = fitBody(b, S, w * (land ? 0.45 : 0.5), h * (land ? 0.36 : 0.5), { x0: w * 0.03, y0: h * 0.04, x1: w * 0.97, y1: h * 0.97 });
+      drawBody(b, f.x, f.y, f.S, t);
       drawFace('happy', t);
       editFrame = requestAnimationFrame(frame);
     }
