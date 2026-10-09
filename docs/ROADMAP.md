@@ -346,7 +346,7 @@ From the playtest after Update 13, to make a solid platform for the Tribe stage:
   - **Gentle:** Drifter.
   - **Tricky:** Predator, Symbiote and Mimic.
   - **Hard:** Grazer, Parasite and Colony.
-- **Hidden power.** A measure the player is never shown tracks how much of the Evolution Tree you have bought and how many lineages have won. It is fixed when a run starts, and the world quietly gets harsher to match it (up to +3 on every check, and predators up to 25% more aggressive). An upgraded player is never left with an easy game.
+- **Hidden power.** A measure the player is never shown tracks how much of the Evolution Tree you have bought and how many lineages have won. It is fixed when a run starts, and the world quietly gets harsher to match it (up to +4 on every check, and predators up to 40% more aggressive). An upgraded player is never left with an easy game.
 - **Small fixes:** tips darken the screen behind them; no "replace" line for merged parts; cell sizes spelled out; a simpler Drifter tip.
 
 ## Update 14: First Fires (Tribe stage, part 1)
