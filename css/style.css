@@ -484,3 +484,26 @@ button.rival:hover { border-color: var(--accent); }
 .sculpt output { color: var(--muted); font-weight: 400; }
 .sculpt input[type=range] { width: 100%; accent-color: var(--accent); min-height: 32px; }
 .sculpt .ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }
+
+/* Living World */
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
+.tag { font-size: 0.72rem; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--fg); }
+.tag.bad { background: rgba(239,125,107,0.25); color: #ffd2c9; }
+.tag.good { background: rgba(143,209,106,0.22); color: #d9f5c8; }
+.tag.act { background: rgba(242,181,68,0.25); color: #ffe7b3; }
+.season-line { background: var(--panel); border-radius: var(--radius); padding: 8px 12px; }
+.ages { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.ages li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 10px; background: var(--panel); font-size: 0.9rem; }
+.ages li.now { outline: 1px solid rgba(242,181,68,0.6); }
+.ages li.you b { color: var(--accent); }
+.ages li span { color: var(--muted); white-space: nowrap; }
+.act-current { display: grid; gap: 6px; background: var(--panel); border-radius: var(--radius); padding: 12px; outline: 1px solid rgba(242,181,68,0.5); }
+.act-current .btn { justify-self: start; }
+.act-bar, .war-bar { position: relative; display: block; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.act-bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 999px; }
+.war-bar { background: linear-gradient(90deg, rgba(239,125,107,0.5), rgba(255,255,255,0.1) 50%, rgba(143,209,106,0.5)); overflow: visible; }
+.war-bar span { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; background: #fff; border-radius: 2px; }
+.act-card { background: var(--panel); border-radius: var(--radius); padding: 10px 12px; margin: 8px 0; }
+.act-card.open { outline: 1px solid rgba(242,181,68,0.5); }
+.act-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.act-card .chips { margin-top: 8px; }

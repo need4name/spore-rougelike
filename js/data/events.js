@@ -21,6 +21,10 @@
 //   success / fail / result:
 //     { text, pop, food, dna, insight, trait, loseTrait, opinion, randomPart, legacy, habitat, zone, setback, anim }
 //     archetype gimmicks: partnerPop, hostPop, fed, drift, unmask, newHost, budGoes, budBack
+//     living world: chain + chainIn (a follow-up event, marked chained: true), endActivity, warScore, nemesis
+//   activity   only while that Activity is under way ('war', 'court', ...)
+//   season     only in that season ('winter', 'bloom', ...)
+//   species    also 'target' (the Activity's target), 'nemesis', 'sworn', 'migrant'
 //   zones      sea events only: list of home depths where it can happen (see G.SEA_ZONES)
 //   Words in braces change with your body: {herd} {Herd} {nests} {cover} {home} {move} {depth}
 //     anim: 'attack' | 'flee' | 'eat' | 'hurt' | 'mutate' | 'social' | 'rest' | 'grow' (picked automatically if left out)
@@ -1080,6 +1084,186 @@ G.EVENTS = [
       { label: 'Bluff', check: { stat: 'cha', diff: 4 }, success: { text: 'It shrugs and moves on.', dna: 2, mood: 'proud' }, fail: { text: 'It raises the alarm. Your disguise is ruined.', unmask: true, pop: -2 } },
       { label: 'Slip away', check: { stat: 'spd', diff: 3 }, success: { text: 'Gone before it can be sure.', dna: 1, anim: 'flee' }, fail: { text: 'It chases you off.', unmask: true, pop: -1 } },
       { label: 'Drop the disguise', result: { text: 'You were getting tired of it anyway.', unmask: true, dna: 2 } },
+    ],
+  },
+  // ======================= THE LIVING WORLD =======================
+  // ---- Activities ----
+  {
+    id: 'war_ambush', stage: 'any', activity: 'war', species: 'target', title: 'Ambush at the Border', tags: ['danger'], repeat: true,
+    text: 'A band of {them} lies in wait where your territories meet.',
+    options: [
+      { label: 'Charge them', check: { stat: 'str', diff: 3 }, success: { text: 'They break and run.', warScore: 30, opinion: -10, anim: 'attack' }, fail: { text: 'It was a trap.', warScore: -25, pop: -2 } },
+      { label: 'Go around them', check: { stat: 'cun', diff: 3 }, success: { text: 'You strike their home while they wait.', warScore: 25, food: 2 }, fail: { text: 'They see you coming.', warScore: -10 } },
+      { label: 'Offer peace', check: { stat: 'cha', diff: 4 }, success: { text: 'Both sides are tired. The war ends.', endActivity: true, opinion: 30, anim: 'social' }, fail: { text: 'They laugh at you.', warScore: -10, opinion: -10 } },
+    ],
+  },
+  {
+    id: 'war_champions', stage: 'any', activity: 'war', species: 'target', title: 'Champions', tags: ['danger'],
+    text: 'The biggest of the {them} steps forward, roaring a challenge.',
+    options: [
+      { label: 'Send your strongest', check: { stat: 'str', diff: 4 }, success: { text: 'Your champion wins. The {them} lose heart.', warScore: 40, dna: 2, mood: 'proud' }, fail: { text: 'Your champion falls.', warScore: -30, pop: -1 } },
+      { label: 'Refuse the challenge', result: { text: 'No glory, no losses.', warScore: -5, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'court_gift', stage: 'any', activity: 'court', species: 'target', title: 'A Gift for the {them}', tags: ['social'], repeat: true,
+    text: 'The {them} are watching to see what you bring.',
+    options: [
+      { label: 'Share your best food', req: { food: 3 }, result: { text: 'They accept, warmly.', food: -3, opinion: 25, anim: 'social' } },
+      { label: 'Put on a display', check: { stat: 'cha', diff: 3 }, success: { text: 'They are charmed.', opinion: 20, mood: 'love' }, fail: { text: 'Awkward.', opinion: -5 } },
+      { label: 'Groom their young', check: { stat: 'cun', diff: 2 }, success: { text: 'Trust grows.', opinion: 15, anim: 'social' }, fail: { text: 'The parents are not pleased.', opinion: -10 } },
+    ],
+  },
+  {
+    id: 'court_rival_suitor', stage: 'any', activity: 'court', species: 'target', title: 'A Rival Suitor', tags: ['social', 'danger'],
+    text: 'Another species is courting the {them} too, and it does not like you.',
+    options: [
+      { label: 'Outshine them', check: { stat: 'cha', diff: 4 }, success: { text: 'The {them} choose you.', opinion: 25, dna: 2 }, fail: { text: 'The {them} drift toward your rival.', opinion: -15 } },
+      { label: 'Drive the rival off', check: { stat: 'str', diff: 4 }, success: { text: 'The {them} are impressed, and a little scared.', opinion: 10 }, fail: { text: 'An ugly scene in front of the {them}.', pop: -1, opinion: -10 } },
+    ],
+  },
+  {
+    id: 'avoid_cornered', stage: 'any', activity: 'avoid', species: 'target', title: 'Nowhere Left to Hide', tags: ['danger'],
+    text: 'Your long detour has led you straight into the {them}.',
+    options: [
+      { label: 'Freeze', check: { stat: 'cun', diff: 3 }, success: { text: 'They pass by without seeing you.', dna: 2, anim: 'rest' }, fail: { text: 'They see you.', pop: -2 } },
+      { label: 'Run for it', check: { stat: 'spd', diff: 3 }, success: { text: 'Gone before they notice.', dna: 1, anim: 'flee' }, fail: { text: 'Some of you are caught.', pop: -2 } },
+    ],
+  },
+  {
+    id: 'hunt_stampede', stage: 'any', activity: 'hunt', species: 'target', title: 'The {them} Turn on You', tags: ['hunt', 'danger'],
+    text: 'You have hunted the {them} too often. Today the whole herd turns and charges.',
+    options: [
+      { label: 'Stand and fight', check: { stat: 'str', diff: 4 }, success: { text: 'A feast, and a lesson for them.', food: 6, opinion: -15, anim: 'attack' }, fail: { text: 'They trample you.', pop: -3 } },
+      { label: 'Scatter', check: { stat: 'spd', diff: 3 }, success: { text: 'You slip away.', anim: 'flee' }, fail: { text: 'Not everyone is fast enough.', pop: -2 } },
+      { label: 'Stop hunting them', result: { text: 'You let the {them} be.', endActivity: true, opinion: 15, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'hunt_trail', stage: 'any', activity: 'hunt', species: 'target', title: 'A Fresh Trail', tags: ['hunt'], repeat: true,
+    text: 'A trail of {them} tracks, still warm.',
+    options: [
+      { label: 'Follow it', check: { stat: 'cun', diff: 3 }, success: { text: 'It leads to a whole family.', food: 5, opinion: -8 }, fail: { text: 'The trail goes cold.', food: -1 } },
+      { label: 'Set a trap', req: { tag: 'grasp' }, result: { text: 'Patience pays.', food: 4, insight: 1 } },
+    ],
+  },
+  {
+    id: 'migrate_river', stage: 'any', activity: 'migrate', title: 'The Crossing', tags: ['explore', 'danger'],
+    text: 'Your migration reaches a wide, fast {crossing}. Something waits on the other side.',
+    options: [
+      { label: 'Cross together', check: { stat: 'tou', diff: 3 }, success: { text: 'Everyone makes it.', dna: 2 }, fail: { text: 'The current takes some of you.', pop: -2 } },
+      { label: 'Search for a safer way', check: { stat: 'cun', diff: 3 }, success: { text: 'A shallow ford. Easy.', dna: 1 }, fail: { text: 'You lose days, and food.', food: -3 } },
+    ],
+  },
+  {
+    id: 'scout_discovery', stage: 'any', activity: 'scout', title: 'What the Scouts Saw', tags: ['explore'],
+    text: 'One of your scouts comes back breathless, with news of something strange far away.',
+    options: [
+      { label: 'Go and see', check: { stat: 'spd', diff: 3 }, success: { text: 'A world full of new food.', food: 4, dna: 2 }, fail: { text: 'It was a long way for nothing.', food: -2 } },
+      { label: 'Listen and remember', result: { text: 'The story is passed down.', dna: 2, insight: 1, anim: 'social' } },
+    ],
+  },
+  // ---- Seasons ----
+  {
+    id: 'deep_winter', stage: 'creature', season: 'winter', title: 'Deep Winter', tags: ['food', 'danger'],
+    text: 'Snow covers everything. Food is buried and the weak are struggling.',
+    options: [
+      { label: 'Huddle together', check: { stat: 'tou', diff: 3 }, success: { text: 'You keep each other warm.', trait: 'resilient', dna: 1, anim: 'rest' }, fail: { text: 'The cold takes the weakest.', pop: -2 } },
+      { label: 'Dig for buried food', check: { stat: 'str', diff: 3 }, success: { text: 'Roots under the snow.', food: 4 }, fail: { text: 'Frozen solid.', food: -1 } },
+      { label: 'Sleep through it', req: { trait: 'hoarder' }, result: { text: 'You wake in spring, thin but alive.', food: -2, dna: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'spring_rush', stage: 'creature', season: 'spring', title: 'The Spring Rush', tags: ['social', 'food'],
+    text: 'Everything is born at once. The world is full of young, yours and everyone else\'s.',
+    options: [
+      { label: 'Raise as many as you can', result: { text: 'A crowded, noisy spring.', pop: 2, food: -2, anim: 'grow' } },
+      { label: 'Feast on the newborns of others', req: { diet: ['carn', 'omni'] }, result: { text: 'Easy pickings.', food: 5, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'bloom_feast', stage: 'creature', season: 'bloom', title: 'The Great Bloom', tags: ['food'],
+    text: 'The water has turned thick and green with life. Every filter-feeder in the sea is gathering.',
+    options: [
+      { label: 'Gorge yourselves', result: { text: 'You have never been so full.', food: 5, anim: 'eat' } },
+      { label: 'Hunt the feeders', req: { diet: ['carn', 'omni'] }, check: { stat: 'spd', diff: 3 }, success: { text: 'They are too busy eating to notice.', food: 6 }, fail: { text: 'They scatter.', food: 1 } },
+    ],
+  },
+  {
+    id: 'storm_season', stage: 'creature', season: 'storms', title: 'The Long Storm', tags: ['danger'],
+    text: 'Storm after storm churns the sea. Nothing can feed in this.',
+    options: [
+      { label: 'Go deep and wait', check: { stat: 'tou', diff: 3 }, success: { text: 'Calm below.', dna: 1, anim: 'rest' }, fail: { text: 'The storm finds you even down here.', pop: -2 } },
+      { label: 'Feed on what the storm stirs up', check: { stat: 'spd', diff: 3 }, success: { text: 'Stunned fish everywhere.', food: 4 }, fail: { text: 'The waves throw you about.', pop: -1 } },
+    ],
+  },
+  // ---- Nemesis, sworn allies and migrants ----
+  {
+    id: 'nemesis_raid', stage: 'any', species: 'nemesis', title: 'The {them} Remember', tags: ['danger'], repeat: true,
+    text: 'The {them} have never forgotten what passed between you. Tonight they come for revenge.',
+    options: [
+      { label: 'Meet them head on', check: { stat: 'str', diff: 4 }, success: { text: 'They are beaten back again.', dna: 3, opinion: -10, anim: 'attack' }, fail: { text: 'Their revenge is bloody.', pop: -3 } },
+      { label: 'Hide your young', check: { stat: 'cun', diff: 3 }, success: { text: 'They find nothing.', dna: 1, anim: 'rest' }, fail: { text: 'They find some.', pop: -2 } },
+      { label: 'Try to make peace', check: { stat: 'cha', diff: 5 }, success: { text: 'Old wounds begin to heal.', opinion: 40, anim: 'social' }, fail: { text: 'It is too late for that.', pop: -1, opinion: -5 } },
+    ],
+  },
+  {
+    id: 'sworn_gift', stage: 'any', species: 'sworn', title: 'Sworn Allies', tags: ['social'], repeat: true,
+    text: 'The {them} arrive with food and news. Old friends look after each other.',
+    options: [
+      { label: 'Feast together', result: { text: 'A night to remember.', food: 4, opinion: 5, anim: 'social' } },
+      { label: 'Learn from them', result: { text: 'They show you their tricks.', dna: 3, insight: 1, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'passing_herd', stage: 'creature', species: 'migrant', title: 'The Passing Herd', tags: ['hunt', 'social'],
+    text: 'The migrating {them} are passing right through your territory.',
+    options: [
+      { label: 'Pick off the stragglers', req: { diet: ['carn', 'omni'] }, check: { stat: 'spd', diff: 3 }, success: { text: 'Easy meat.', food: 5, opinion: -10 }, fail: { text: 'The herd closes ranks.', food: -1 } },
+      { label: 'Travel with them a while', check: { stat: 'cha', diff: 3 }, success: { text: 'They show you places you never knew.', dna: 3, opinion: 15, anim: 'social' }, fail: { text: 'They do not want company.', opinion: -5 } },
+      { label: 'Let them pass', result: { text: 'The ground shakes for a day, then they are gone.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  // ---- Story chains ----
+  {
+    id: 'strange_egg', stage: 'creature', title: 'A Strange Egg', tags: ['explore'],
+    text: 'You find an egg, bigger than any of yours, lying alone. It is warm. Something inside moves.',
+    options: [
+      { label: 'Keep it warm', result: { text: 'You take turns keeping it warm. Something will hatch soon.', chain: 'strange_egg_hatch', chainIn: 4, anim: 'rest' } },
+      { label: 'Eat it', req: { diet: ['carn', 'omni'] }, result: { text: 'A rich meal.', food: 4, anim: 'eat' } },
+      { label: 'Leave it', result: { text: 'Not your problem.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'strange_egg_hatch', stage: 'creature', chained: true, title: 'The Egg Hatches', tags: ['social'],
+    text: 'The egg cracks open. The hatchling looks nothing like you, but it thinks you are its family.',
+    options: [
+      { label: 'Raise it as one of your own', result: { text: 'It grows up among you. One day it will repay you.', chain: 'strange_egg_grown', chainIn: 8, trait: 'gentle', anim: 'social' } },
+      { label: 'Send it away', result: { text: 'It wanders off, looking back.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'strange_egg_grown', stage: 'creature', chained: true, title: 'The Foundling Returns', tags: ['social'],
+    text: 'The hatchling you raised is grown now, and huge. It has come back to you with others of its kind.',
+    options: [
+      { label: 'Welcome them', result: { text: 'They guard you as their own family. Something about them rubs off on you.', randomPart: true, pop: 2, anim: 'social', mood: 'love' } },
+      { label: 'Ask them to teach you', result: { text: 'They show you their ways.', dna: 5, insight: 2, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'plea_for_help', stage: 'any', species: 'neighbor', title: 'A Plea for Help', tags: ['social'],
+    text: 'The {them} are starving. Their young are crying. They come to you, heads low.',
+    options: [
+      { label: 'Share what you have', req: { food: 4 }, result: { text: 'They will not forget this.', food: -4, opinion: 30, chain: 'plea_repaid', chainIn: 6, anim: 'social' } },
+      { label: 'Turn them away', result: { text: 'They leave quietly.', opinion: -15, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'plea_repaid', stage: 'any', chained: true, title: 'A Debt Repaid', tags: ['social'],
+    text: 'The {them} you once fed have come back. Times are good for them now, and they have not forgotten.',
+    options: [
+      { label: 'Accept their gifts', result: { text: 'Food, and friendship.', food: 6, opinion: 20, anim: 'social', mood: 'love' } },
+      { label: 'Ask them to stand with you', result: { text: 'They swear to fight beside you.', opinion: 60, anim: 'social' } },
     ],
   },
 ];

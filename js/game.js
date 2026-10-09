@@ -286,6 +286,8 @@ window.G = window.G || {};
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
     if (run.stage === 'creature') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
     if (run.stage === 'creature' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
+    const season = G.season(run);
+    if (season) list.push(season.mods);
     // Symbiotes share a third of their partner's strengths.
     const partner = G.partnerOf(run);
     if (partner) { const m = {}; G.STATS.forEach((st) => { m[st.id] = Math.floor(G.speciesStat(partner, st.id) / 6); }); list.push(m); }
@@ -326,6 +328,7 @@ window.G = window.G || {};
     const crew = Math.floor(run.pop / 4);
     if (run.instinct === 'forage') parts.push({ label: 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0) });
     if (run.instinct === 'hunt') parts.push({ label: g === 'predator' ? 'Hunting (on a kill)' : 'Hunting', v: 2 + crew + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) + (g === 'predator' ? 1 : 0), hunt: true });
+    if (run.bonusFood && run.turn < run.bonusFood.until) parts.push({ label: 'Hidden feeding ground', v: run.bonusFood.v });
     if (G.hostOf(run)) parts.push({ label: 'Feeding on your host', v: run.stage === 'creature' ? 3 : 2 });
     const partner = G.partnerOf(run);
     if (g === 'symbiote' && run.partner && (!partner || partner.pop < partner.cap * 0.3)) parts.push({ label: 'Your partner is struggling', v: -2 });
@@ -373,7 +376,7 @@ window.G = window.G || {};
   G.wordsFor = (run) => {
     const sea = run.stage === 'cell' || run.habitat === 'sea';
     const herd = run.stage === 'cell' || (run.stage === 'creature' && G.symmetry(run) === 'colonial') ? 'colony' : sea ? 'school' : 'herd';
-    const w = { herd, nests: sea ? 'egg beds' : 'nests', cover: sea ? 'weed' : 'grass', home: sea ? 'the water' : 'the land', move: sea ? 'swim' : 'walk', depth: run.habitat === 'sea' ? G.SEA_ZONE[G.zone(run)].name : 'the valley' };
+    const w = { herd, nests: sea ? 'egg beds' : 'nests', cover: sea ? 'weed' : 'grass', home: sea ? 'the water' : 'the land', move: sea ? 'swim' : 'walk', crossing: sea ? 'current' : 'river', depth: run.habitat === 'sea' ? G.SEA_ZONE[G.zone(run)].name : 'the valley' };
     w.Herd = herd[0].toUpperCase() + herd.slice(1);
     return w;
   };
@@ -439,22 +442,38 @@ window.G = window.G || {};
     return pick({ predator: ['open', 'open', 'twilight'], prey: ['reef', 'shallows'], rival: ['reef', 'open', 'shallows'], neighbor: ['reef', 'shallows', 'twilight'] }[role]);
   }
 
-  function makeSpecies(world, roles) {
+  G.NICHE = {}; G.NICHES.forEach((n) => { G.NICHE[n.id] = n; });
+  const nicheForRole = (role) => pick(G.NICHES.filter((n) => n.role === role)).id;
+  function uniqueName(world, taken) {
     const names = G.SPECIES_NAMES[world];
-    const used = new Set();
-    return roles.map((role) => {
-      let name;
-      do { name = pick(names.first) + pick(names.last); } while (used.has(name));
-      used.add(name);
-      const opinion = { predator: -35, prey: -10, rival: -5, neighbor: 10 }[role] + Math.round(rand() * 20) - 10;
-      const diet = role === 'predator' ? 'carn' : role === 'prey' ? 'herb' : pick(['herb', 'carn', 'omni']);
-      const body = makeBody(world, diet);
-      const cap = Math.round(SPECIES_CAP[role] * (world === 'cell' ? 1.5 : 1));
-      const sizeBase = { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (world === 'cell' ? 1 : 0.6 + rand() * 0.9);
-      const zone = world === 'sea' ? speciesZone(role, body) : undefined;
-      body.look = world === 'cell' ? null : randomLook(world);
-      return { name, role, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(sizeBase * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), zone, ...body };
-    });
+    let name; let guard = 0;
+    do { name = pick(names.first) + pick(names.last); } while (taken.has(name) && guard++ < 50);
+    taken.add(name);
+    return name;
+  }
+  // One species filling a niche.
+  function makeOne(world, nicheId, taken) {
+    const niche = G.NICHE[nicheId];
+    const role = niche.role;
+    const name = uniqueName(world, taken);
+    const opinion = { predator: -35, prey: -10, rival: -5, neighbor: 10 }[role] + Math.round(rand() * 20) - 10;
+    const diet = niche.diet === 'omni' ? pick(['herb', 'carn', 'omni']) : niche.diet;
+    const body = makeBody(world, diet);
+    const cap = Math.round(niche.cap * (world === 'cell' ? 1.5 : 1));
+    const size = world === 'cell' ? { predator: 1.5, prey: 0.6, rival: 1, neighbor: 0.9 }[role] * (0.7 + rand() * 0.6) : niche.size[0] + rand() * (niche.size[1] - niche.size[0]);
+    const zone = world === 'sea' ? speciesZone(role, body) : undefined;
+    body.look = world === 'cell' ? null : randomLook(world);
+    return { name, role, niche: nicheId, diet, opinion, hue: Math.floor(rand() * 360), size: Math.round(size * 100) / 100, seed: Math.floor(rand() * 1000), world, cap, pop: Math.round(cap * (0.5 + rand() * 0.3)), zone, ...body };
+  }
+  const takenNames = (run) => new Set(run ? run.species.map((x) => x.name) : []);
+  function makeSpecies(world, roles, run) {
+    const taken = takenNames(run);
+    return roles.map((role) => makeOne(world, nicheForRole(role), taken));
+  }
+  // A whole new world, one species per starting niche.
+  function makeWorld(world) {
+    const taken = new Set();
+    return G.WORLD_NICHES[world === 'cell' ? 'cell' : 'creature'].map((n) => makeOne(world, n, taken));
   }
 
   const ROLE_BONUS = { predator: { str: 2, spd: 1 }, prey: { spd: 2, cun: 1 }, rival: { str: 1, tou: 1 }, neighbor: { cha: 2 } };
@@ -484,7 +503,7 @@ window.G = window.G || {};
       dna: 3 * (b.memory || 0), totalDna: 0, insight: 0,
       parts: {}, multicellular: false, mind: false, innovations: [], fascination: null,
       instinct: 'forage',
-      traits: [], species: makeSpecies('cell', ['predator', 'prey', 'rival', 'neighbor']),
+      traits: [], species: makeWorld('cell'), ages: [], chains: [], openNiches: [], activity: null,
       seen: [], log: [], notices: [],
       draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0,
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
@@ -603,7 +622,7 @@ window.G = window.G || {};
     let met = null;
     if (movable.length) {
       const gone = movable[0];
-      const fresh = makeSpecies(run.stage === 'cell' ? 'cell' : run.habitat, [gone.role])[0];
+      const fresh = makeOne(run.stage === 'cell' ? 'cell' : run.habitat, gone.niche || nicheForRole(gone.role), takenNames(run));
       run.species[run.species.indexOf(gone)] = fresh;
       met = fresh;
     }
@@ -818,6 +837,8 @@ window.G = window.G || {};
       const s = run.species[speciesIdx];
       const before = G.speciesStatus(s);
       s.opinion = clamp(s.opinion + eff.opinion, -100, 100);
+      if (s.opinion <= -90 && !s.nemesis) { s.nemesis = true; lines.push({ t: `The ${s.name} are now your nemesis`, bad: true }); }
+      if (s.opinion >= 90 && !s.sworn) { s.sworn = true; lines.push({ t: `The ${s.name} are now your sworn allies`, good: true }); }
       const after = G.speciesStatus(s);
       lines.push({ t: `${s.name} opinion ${eff.opinion > 0 ? '+' : '−'}${Math.abs(eff.opinion)}`, bad: eff.opinion < 0 });
       if (before !== after && (after === 'allied' || after === 'hostile')) {
@@ -852,6 +873,10 @@ window.G = window.G || {};
       run.zone = eff.zone;
       lines.push({ t: `New home: ${G.SEA_ZONE[eff.zone].name}`, good: true });
     }
+    if (eff.chain) (run.chains = run.chains || []).push({ id: eff.chain, at: run.turn + (eff.chainIn || 4), species: speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx] ? run.species[speciesIdx].name : null });
+    if (eff.endActivity && run.activity) { lines.push({ t: `${G.ACTIVITY[run.activity.id].name} is over` }); run.activity = null; }
+    if (eff.warScore && run.activity && run.activity.id === 'war') { run.activity.score = clamp(run.activity.score + eff.warScore, -100, 100); lines.push({ t: `War score ${eff.warScore > 0 ? '+' : '−'}${Math.abs(eff.warScore)}`, good: eff.warScore > 0, bad: eff.warScore < 0 }); }
+    if (eff.nemesis && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) run.species[speciesIdx].nemesis = true;
     if (eff.legacy) run.legacy = eff.legacy;
     if (eff.setback != null) {
       if (run.stage === 'cell' && eff.setback) {
@@ -923,6 +948,11 @@ window.G = window.G || {};
       const st = G.speciesStatus(s);
       if (role === 'any') return true;
       if (role === 'hostile' || role === 'allied') return st === role;
+      if (role === 'target') return run.activity && run.activity.target === s.name;
+      if (role === 'nemesis') return !!s.nemesis;
+      if (role === 'sworn') return !!s.sworn || s.opinion >= 90;
+      if (role === 'migrant') return !!s.migrant;
+      if (run.activity && run.activity.id === 'avoid' && run.activity.target === s.name && rand() < 0.7) return false;
       return s.role === role;
     });
     return idx.length ? pick(idx) : -1;
@@ -933,6 +963,9 @@ window.G = window.G || {};
     if (e.stage !== run.stage && e.stage !== 'any') return false;
     if (e.habitat && e.habitat !== run.habitat) return false;
     if (e.zones && !(run.habitat === 'sea' && e.zones.includes(G.zone(run)))) return false;
+    if (e.chained) return false;
+    if (e.activity && !(run.activity && run.activity.id === e.activity)) return false;
+    if (e.season && !(G.season(run) && G.season(run).id === e.season)) return false;
     if (e.era && run.era < e.era) return false;
     if (e.multi === true && !run.multicellular) return false;
     if (e.multi === false && run.multicellular) return false;
@@ -949,11 +982,12 @@ window.G = window.G || {};
     if ((e.tags || []).some((t) => focus.includes(t))) w *= 2.2;
     if (run.instinct === 'hide' && (e.tags || []).includes('danger')) w *= 0.5;
     if (!e.repeat) w *= 1.5; // prefer fresh events over repeatable ones
+    if (e.activity || e.season) w *= 2.5; // what you are doing right now drives the story
     return w;
   }
 
-  function setEvent(run, ev) {
-    const s = speciesFor(run, ev.species);
+  function setEvent(run, ev, forced) {
+    const s = forced != null ? forced : speciesFor(run, ev.species);
     run.event = { id: ev.id, species: s === -1 ? null : s };
     run.lastEvent = ev.id;
     run.phase = 'event';
@@ -1077,7 +1111,7 @@ window.G = window.G || {};
     }
     if (id === 'age_of_giants') {
       run.era = 2; run.eraTurn = 1;
-      const apex = makeSpecies(run.habitat, ['predator'])[0];
+      const apex = makeOne(run.habitat, 'apex', takenNames(run));
       apex.size = 3.2; apex.opinion = -45; apex.cap = 4; apex.pop = 3;
       run.species.push(apex);
       run.notices.push(`The Age of Giants begins. A huge new predator, the ${apex.name}, has arrived.`);
@@ -1102,32 +1136,242 @@ window.G = window.G || {};
     save();
   };
 
+  // The world turns: species grow, compete with others in their niche, hunt, evolve and die out.
+  // Empty niches are filled by descendants of survivors or by newcomers, and ages rise and fall.
   function worldTick(run) {
-    const prey = run.species.filter((s) => !s.extinct && s.role === 'prey');
-    run.species.forEach((s) => {
-      if (s.extinct) return;
-      s.pop += 0.14 * s.pop * (1 - s.pop / s.cap) + (rand() - 0.5) * s.cap * 0.04;
+    const world = run.stage === 'cell' ? 'cell' : run.habitat;
+    const alive = () => run.species.filter((s) => !s.extinct);
+    const prey = alive().filter((s) => s.role === 'prey');
+    alive().forEach((s) => {
+      // Species in the same niche share its room to grow.
+      const crowd = alive().filter((o) => o.niche && o.niche === s.niche).reduce((a, o) => a + o.pop, 0) || s.pop;
+      s.pop += 0.14 * s.pop * (1 - crowd / s.cap) + (rand() - 0.5) * s.cap * 0.04;
       if (s.role === 'predator') {
         const food = prey.reduce((a, p) => a + p.pop, 0);
         if (food < 4) s.pop -= s.pop * 0.08;
-        prey.forEach((p) => { p.pop -= s.pop * 0.03; });
+        prey.forEach((p) => { p.pop -= s.pop * 0.03 / Math.max(1, prey.length / 2); });
       }
       s.pop = Math.min(s.cap * 1.1, s.pop);
       if (s.pop < 0.6) {
         s.extinct = true; s.pop = 0;
-        run.notices.push(`The ${s.name} have died out.`);
+        run.notices.push(`The ${s.name} have died out. Their place in the world is empty.`);
         log(run, `The ${s.name} went extinct.`);
+        if (!s.left && !s.bud) (run.openNiches = run.openNiches || []).push({ niche: s.niche || nicheForRole(s.role), at: run.turn + 3 + Math.floor(rand() * 4), was: s.name });
       }
     });
-    // Newcomers drift in when the world has room.
-    const alive = run.species.filter((s) => !s.extinct).length;
-    if (alive < 4 && rand() < 0.08) {
-      const roles = ['prey', 'rival', 'neighbor', 'predator'];
-      const n = makeSpecies(run.stage === 'cell' ? 'cell' : run.habitat, [pick(roles)])[0];
+    // Migrating herds move on after a few turns.
+    alive().forEach((s) => {
+      if (s.migrant && run.turn >= s.leaveAt && s.name !== run.host && s.name !== run.partner) {
+        s.extinct = true; s.left = true; s.pop = 0;
+        run.notices.push(`The ${s.name} have moved on.`);
+        log(run, `The ${s.name} migrated away.`);
+      }
+    });
+    // Empty niches fill up: a survivor evolves into the gap, or newcomers arrive.
+    const due = (run.openNiches || []).filter((o) => run.turn >= o.at);
+    run.openNiches = (run.openNiches || []).filter((o) => run.turn < o.at);
+    due.forEach((o) => {
+      if (alive().length >= 12) return;
+      const parents = alive().filter((x) => !x.bud && !x.migrant && x.world === world);
+      const child = makeOne(world, o.niche, takenNames(run));
+      child.pop = Math.max(2, Math.round(child.cap * 0.35));
+      if (parents.length && rand() < 0.55) {
+        const parent = pick(parents);
+        child.parts = JSON.parse(JSON.stringify(parent.parts || {}));
+        child.symmetry = parent.symmetry; child.segments = parent.segments; child.multicellular = parent.multicellular;
+        child.hue = (parent.hue + 20 + Math.floor(rand() * 40)) % 360;
+        if (parent.look && child.look) child.look = { ...parent.look, bodyLen: child.look.bodyLen, headSize: child.look.headSize, pattern: child.look.pattern };
+        mutateSpecies(child);
+        child.parent = parent.name;
+        run.notices.push(`The ${child.name} evolved from the ${parent.name} and took the place of the ${o.was} (${G.NICHE[o.niche].name.toLowerCase()}).`);
+        log(run, `The ${child.name} evolved from the ${parent.name} to fill the ${o.was}' niche.`);
+      } else {
+        run.notices.push(`The ${child.name} arrived to fill the niche left by the ${o.was} (${G.NICHE[o.niche].name.toLowerCase()}).`);
+        log(run, `The ${child.name} moved into the ${o.was}' old niche.`);
+      }
+      run.species.push(child);
+    });
+    // Species keep evolving too.
+    if (rand() < 0.05) {
+      const s = pick(alive().filter((x) => !x.bud));
+      if (s) { const what = mutateSpecies(s); if (what) log(run, `The ${s.name} evolved ${what}.`); }
+    }
+    // Migrating herds pass through now and then (creature stage).
+    if (run.stage === 'creature' && !alive().some((x) => x.migrant) && alive().length < 12 && rand() < 0.05) {
+      const m = makeOne(world, pick(['big_grazer', 'small_grazer', 'browser']), takenNames(run));
+      m.migrant = true; m.leaveAt = run.turn + 5; m.pop = Math.round(m.cap * 0.8); m.opinion = 0;
+      run.species.push(m);
+      run.notices.push(`A migrating herd of ${m.name} is passing through. They will move on in 5 turns.`);
+      log(run, `The ${m.name} passed through on their migration.`);
+    }
+    // A world that has emptied out fills again.
+    if (alive().length < 4 && rand() < 0.1) {
+      const n = makeOne(world, pick(G.NICHES).id, takenNames(run));
       n.pop = Math.max(2, Math.round(n.cap * 0.3));
       run.species.push(n);
       run.notices.push(`A new species has arrived: the ${n.name} (${G.ROLES[n.role].toLowerCase()}).`);
       log(run, `The ${n.name} arrived.`);
+    }
+    updateAge(run);
+  }
+
+  // Give a species a new part (and a nudge in size). Returns a short description.
+  function mutateSpecies(s) {
+    const stage = s.stage || (s.world === 'cell' ? 'cell' : 'creature');
+    const plan = s.world === 'cell' ? 'cell' : s.world;
+    const slots = G.SLOTS[plan].filter((sl) => (!sl.multi || s.multicellular) && sl.id !== 'mouth');
+    const slot = pick(slots);
+    if (!slot) return '';
+    const pool = G.PARTS.filter((p) => p.stage === stage && (!p.evolved || p.limbEvo) && !p.limbMod && p.slot === slot.id && (stage === 'cell' || !p.habitat || p.habitat === s.world));
+    if (!pool.length) return '';
+    const part = pick(pool);
+    s.parts = s.parts || {};
+    s.parts[slot.id] = { id: part.id, merged: null };
+    if (s.niche && stage === 'creature') { const n = G.NICHE[s.niche]; s.size = Math.round(clamp(s.size * (0.9 + rand() * 0.2), n.size[0], n.size[1]) * 100) / 100; }
+    return part.name.toLowerCase();
+  }
+
+  // The age is named after whoever dominates the world: most numerous and biggest.
+  function updateAge(run) {
+    if (run.turn % 4 !== 0) return;
+    const yours = run.pop * G.bodySize(run);
+    let best = { name: 'your kind', you: true, v: yours };
+    run.species.filter((s) => !s.extinct && !s.migrant).forEach((s) => { const v = s.pop * s.size * (s.role === 'predator' ? 1.4 : 1); if (v > best.v) best = { name: s.name, you: false, v }; });
+    run.ages = run.ages || [];
+    const cur = run.ages[run.ages.length - 1];
+    if (cur && cur.name === best.name && cur.stage === run.stage) { run.ageRival = null; return; }
+    // A new age needs its rising power to stay on top for two checks in a row.
+    if (cur && cur.stage === run.stage) {
+      if (!run.ageRival || run.ageRival !== best.name) { run.ageRival = best.name; return; }
+      run.ageRival = null;
+    }
+    const label = best.you ? 'The Age of Your Kind' : `The Age of the ${best.name}`;
+    run.ages.push({ turn: run.turn, stage: run.stage, name: best.name, you: best.you, label });
+    run.ages = run.ages.slice(-20);
+    if (cur) {
+      run.notices.push(`A new age dawns: ${label}.`);
+      log(run, `${label} began.`);
+    }
+  }
+
+  // Seasons turn in the creature stage.
+  G.season = (run) => {
+    if (run.stage !== 'creature') return null;
+    const list = G.SEASONS[run.habitat];
+    return list[Math.floor((run.stageTurn - 1) / G.SEASON_LENGTH) % list.length];
+  };
+
+  // ---------- Activities ----------
+  G.ACTIVITY = {}; G.ACTIVITIES.forEach((a) => { G.ACTIVITY[a.id] = a; });
+  G.activityTarget = (run) => (run.activity && run.activity.target ? run.species.find((s) => s.name === run.activity.target && !s.extinct) || null : null);
+  // Can this activity start now (and against this species)?
+  G.activityState = (run, id, target) => {
+    const a = G.ACTIVITY[id];
+    if (!a || run.phase === 'end') return { ok: false, why: '' };
+    if (a.target) {
+      const s = target && run.species.find((x) => x.name === target && !x.extinct);
+      if (!s) return { ok: false, why: 'Choose a species' };
+      if ((id === 'war' || id === 'hunt') && (s.name === run.partner || s.bud)) return { ok: false, why: 'Not your own partners or offshoots' };
+      if (id === 'hunt' && G.gimmick(run) === 'grazer') return { ok: false, why: 'Grazers never hunt' };
+      if (id === 'court' && G.speciesStatus(s) === 'allied') return { ok: false, why: 'They are already your allies' };
+    }
+    if (id === 'migrate' && G.gimmick(run) === 'parasite') return { ok: false, why: 'A parasite goes where its host goes' };
+    if (id === 'war' && run.turn < (run.warReadyAt || 0)) return { ok: false, why: `Your kind is tired of war: ready in ${run.warReadyAt - run.turn} turns` };
+    if (id === 'scout' && run.turn < (run.scoutReadyAt || 0)) return { ok: false, why: `Your scouts need rest: ready in ${run.scoutReadyAt - run.turn} turns` };
+    if (id === 'migrate' && run.turn < (run.migrateReadyAt || 0)) return { ok: false, why: `Too soon to move again: ready in ${run.migrateReadyAt - run.turn} turns` };
+    return { ok: true };
+  };
+  G.startActivity = function (id, target) {
+    const run = G.run;
+    if (!run || !G.activityState(run, id, target).ok) return;
+    run.activity = { id, target: target || null, turns: 0, score: 0 };
+    const a = G.ACTIVITY[id];
+    run.notices.push(`Activity begun: ${a.name}${target ? ` (the ${target})` : ''}.`);
+    log(run, `Your kind began to ${a.name.toLowerCase()}${target ? `: the ${target}` : ''}.`);
+    G.saveRun();
+  };
+  G.stopActivity = function () {
+    const run = G.run;
+    if (!run || !run.activity) return;
+    log(run, `Your kind gave up: ${G.ACTIVITY[run.activity.id].name}.`);
+    run.activity = null;
+    G.saveRun();
+  };
+  function finishActivity(run, text, good) {
+    run.notices.push(text);
+    log(run, text);
+    run.activity = null;
+    return { t: text, good, bad: !good };
+  }
+  // One turn of the current activity.
+  function activityTurn(run, lines) {
+    const act = run.activity;
+    if (!act) return;
+    const a = G.ACTIVITY[act.id];
+    act.turns += 1;
+    const t = G.activityTarget(run);
+    if (a.target && !t) { lines.push(finishActivity(run, `The ${act.target} are gone. ${a.name} is over.`, true)); return; }
+    if (act.id === 'migrate') {
+      run.food = Math.max(0, run.food - 1);
+      if (act.turns >= a.turns) {
+        const world = run.stage === 'cell' ? 'cell' : run.habitat;
+        const movable = run.species.filter((s) => !s.extinct && !s.bud && s.name !== run.partner && s.name !== run.host).sort(() => rand() - 0.5).slice(0, 3);
+        movable.forEach((s) => { s.extinct = true; s.left = true; s.pop = 0; const n = makeOne(world, s.niche || nicheForRole(s.role), takenNames(run)); run.species.push(n); });
+        run.food += 3; gainDna(run, 3);
+        run.migrateReadyAt = run.turn + 10;
+        lines.push(finishActivity(run, `You reached new territory: ${movable.length} new neighbours, +3 Food and +3 DNA.`, true));
+      } else lines.push({ t: `Migrating (${act.turns}/${a.turns}): −1 Food` });
+    }
+    if (act.id === 'war') {
+      const power = (x) => x;
+      const mine = power(G.stat(run, 'str') + Math.floor(G.stat(run, 'tou') / 2) + Math.floor(run.pop / 5));
+      const theirs = power(G.speciesStat(t, 'str') + Math.floor(G.speciesStat(t, 'tou') / 2) + Math.floor(t.pop / 8));
+      const delta = Math.round(16 + (mine - theirs) * 5 + (rand() - 0.5) * 34);
+      act.score = clamp(act.score + delta, -100, 100);
+      t.pop = Math.max(0, t.pop - t.cap * 0.05);
+      t.opinion = clamp(t.opinion - 6, -100, 100);
+      run.food = Math.max(0, run.food - 1);
+      lines.push({ t: `War with the ${t.name}: ${delta >= 0 ? '+' : '−'}${Math.abs(delta)} (score ${act.score})`, good: delta > 0, bad: delta < 0 });
+      if (rand() < (delta < 0 ? 0.4 : 0.15)) lines.push({ t: `War dead: −${damage(run, 1)} Population`, bad: true });
+      if (act.score >= 100) {
+        t.pop = Math.max(0.5, t.pop * 0.35); t.opinion = -100; t.nemesis = true;
+        run.food += 6; gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
+        lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 DNA. They will not forget.`, true));
+      } else if (act.score <= -100) {
+        t.opinion = -100; t.nemesis = true; addUnique(run.traits, 'scarred');
+        lines.push({ t: `Defeat: −${damage(run, 2)} Population`, bad: true });
+        run.warReadyAt = run.turn + 8;
+        lines.push(finishActivity(run, `Defeat. The ${t.name} drove you back.`, false));
+      }
+    }
+    if (act.id === 'court') {
+      const chance = clamp(42 + (G.stat(run, 'cha') - 2) * 8, 15, 90);
+      if (rand() * 100 < chance) { t.opinion = clamp(t.opinion + 12, -100, 100); lines.push({ t: `Courting the ${t.name}: opinion +12`, good: true }); }
+      else { t.opinion = clamp(t.opinion - 2, -100, 100); lines.push({ t: `The ${t.name} were not impressed: opinion −2` }); }
+      if (t.opinion >= 60) { if (t.opinion >= 90) t.sworn = true; gainDna(run, 3); lines.push(finishActivity(run, `The ${t.name} are now your allies. +3 DNA.`, true)); }
+      else if (act.turns >= 12) lines.push(finishActivity(run, `The ${t.name} will not be won over, for now.`, false));
+    }
+    if (act.id === 'avoid') { run.food = Math.max(0, run.food - 2); lines.push({ t: `Keeping away from the ${t.name}: −2 Food` }); }
+    if (act.id === 'hunt') {
+      const chance = clamp(45 + (Math.max(G.stat(run, 'str'), G.stat(run, 'spd')) - G.speciesStat(t, 'spd')) * 8 + G.mod(run, 'huntBonus') * 4, 10, 90);
+      if (rand() * 100 < chance) {
+        const food = 2 + Math.floor(run.pop / 8);
+        run.food += food; t.pop = Math.max(0, t.pop - t.cap * 0.08); t.opinion = clamp(t.opinion - 6, -100, 100);
+        if (G.gimmick(run) === 'predator') { run.hunger = 0; if (rand() < 0.15) run.pendingSpecial = { name: t.name, source: 'devour' }; }
+        lines.push({ t: `You hunted the ${t.name}: +${food} Food`, good: true });
+      } else if (G.speciesStat(t, 'str') > G.stat(run, 'tou') && rand() < 0.5) lines.push({ t: `The ${t.name} fought back: −${damage(run, 1)} Population`, bad: true });
+      else lines.push({ t: `The ${t.name} got away` });
+    }
+    if (act.id === 'scout') {
+      run.food = Math.max(0, run.food - 1);
+      lines.push({ t: `Scouting (${act.turns}/${a.turns}): −1 Food` });
+      if (act.turns >= a.turns) {
+        run.scoutReadyAt = run.turn + 12;
+        const r = rand();
+        if (r < 0.35) { run.bonusFood = { v: 2, until: run.turn + 10 }; lines.push(finishActivity(run, 'Your scouts found a hidden feeding ground: +2 Food a turn for 10 turns.', true)); }
+        else if (r < 0.7) { const s = pick(run.species.filter((x) => !x.extinct)); if (s) run.pendingSpecial = { name: s.name, source: 'absorb' }; lines.push(finishActivity(run, `Your scouts studied the ${s ? s.name : 'world'} up close. You may borrow one of their parts.`, true)); }
+        else { gainDna(run, 3); if (run.mind) run.insight += 2; lines.push(finishActivity(run, `Your scouts came back full of stories: +3 DNA${run.mind ? ', +2 Insight' : ''}.`, true)); }
+      }
     }
   }
 
@@ -1155,6 +1399,9 @@ window.G = window.G || {};
     run.food += gathered - up;
     lines.push({ t: `Food +${gathered} gathered, −${up} eaten` });
     gimmickTurn(run, lines);
+    activityTurn(run, lines);
+    const season = G.season(run);
+    if (season && run.seasonId !== season.id) { if (run.seasonId) run.notices.push(`${season.name}: ${season.desc}`); run.seasonId = season.id; }
     if (run.food < 0) {
       const starve = -run.food;
       run.food = 0;
@@ -1169,8 +1416,11 @@ window.G = window.G || {};
     }
     // Predators and hostile species pick off your weakest. Toughness and Speed keep them at bay,
     // and the longer you linger in a stage, the hungrier the world gets.
+    const hunters = run.species.filter((x) => !x.extinct && (x.role === 'predator' || G.speciesStatus(x) === 'hostile')).length;
+    const crowdEase = 1 / Math.sqrt(Math.max(1, hunters));
     run.species.forEach((s) => {
       if (s.extinct || run.pop <= 0 || s.bud || s.name === run.partner) return;
+      if (run.activity && run.activity.id === 'avoid' && run.activity.target === s.name && rand() < 0.7) return;
       if (s === G.mimicOf(run) && rand() < 0.4) return;
       const hostile = G.speciesStatus(s) === 'hostile';
       if (s.role !== 'predator' && !hostile) return;
@@ -1179,7 +1429,7 @@ window.G = window.G || {};
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
       const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1);
-      if (rand() >= hit) return;
+      if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1)) return;
       const n = clamp(1 + Math.floor(gap / 3), 1, 3);
       lines.push({ t: `The ${s.name} hunted you: −${damage(run, n)} Population`, bad: true });
     });
@@ -1265,6 +1515,13 @@ window.G = window.G || {};
       const id = run.stage === 'cell' ? 'cell_finale' : run.habitat === 'sea' ? 'creature_finale_sea' : 'creature_finale';
       setEvent(run, G.EVENT[id]);
       return;
+    }
+    // Story chains: a follow-up event comes due.
+    const chain = allowEvent && (run.chains || []).find((c) => run.turn >= c.at);
+    if (chain) {
+      run.chains = run.chains.filter((c) => c !== chain);
+      const idx = chain.species ? run.species.findIndex((x) => x.name === chain.species && !x.extinct) : -1;
+      if (!chain.species || idx >= 0) { run.quietTicks = 0; setEvent(run, G.EVENT[chain.id], idx >= 0 ? idx : null); return; }
     }
     // Events pop up at random, more likely the longer it has been quiet.
     if (allowEvent && rand() < 0.38 + 0.2 * run.quietTicks) { run.quietTicks = 0; drawEvent(run); return; }
@@ -1377,7 +1634,8 @@ window.G = window.G || {};
     // Everyone starts with basic limbs, which grow into better ones by merging.
     const basic = run.habitat === 'sea' ? { frontLimbs: 'stubby_front_fins', hindLimbs: 'stubby_rear_fins' } : { frontLimbs: 'stubby_forelegs', hindLimbs: 'stubby_hindlegs' };
     Object.entries(basic).forEach(([slot, id]) => { if (!run.parts[slot]) run.parts[slot] = { id, merged: null }; });
-    run.species = makeSpecies(run.habitat, ['predator', 'prey', 'rival', 'neighbor']);
+    run.species = makeWorld(run.habitat);
+    run.openNiches = []; run.chains = []; run.activity = null;
     setupGimmick(run);
     run.pop = G.maxPop(run);
     run.lastEvent = null;

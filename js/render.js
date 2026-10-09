@@ -1262,7 +1262,29 @@ window.G = window.G || {};
       } else if (s.role === 'prey') {
         const pred = others.find(([k2]) => { const t2 = run.species.find((x) => x.name === k2); return t2 && t2.role === 'predator' && !t2.extinct; });
         if (pred && Math.hypot(pred[1].x - h.x, pred[1].y - h.y) < 0.25) { tx = h.x + (h.x > pred[1].x ? 0.3 : -0.3); }
+        else if (Math.random() < 0.35) {
+          // Plant-eaters graze together.
+          const mates = others.filter(([k2]) => { const t2 = run.species.find((x) => x.name === k2 && !x.extinct); return t2 && t2 !== s && (t2.role === 'prey' || t2.role === 'neighbor') && t2.niche !== s.niche; });
+          if (mates.length) { const m = mates[Math.floor(Math.random() * mates.length)][1]; tx = m.x + (Math.random() - 0.5) * 0.15; ty = m.y + (Math.random() - 0.5) * 0.15; }
+        }
       }
+      // Species that share a niche are rivals and keep apart.
+      const rival = others.find(([k2]) => { const t2 = run.species.find((x) => x.name === k2 && !x.extinct); return t2 && t2 !== s && t2.niche && t2.niche === s.niche; });
+      if (rival && Math.hypot(rival[1].x - tx, rival[1].y - ty) < 0.2) { tx += tx > rival[1].x ? 0.2 : -0.2; }
+      // Migrants cross the whole map.
+      if (s.migrant) { tx = h.x < 0.5 ? 0.92 : 0.08; ty = h.y + (Math.random() - 0.5) * 0.2; }
+      // Your Activity pulls its target toward or away from you.
+      const act = run.activity;
+      if (act && act.target === s.name && you) {
+        if (act.id === 'war' || act.id === 'court') { tx = you.x + (Math.random() - 0.5) * 0.15; ty = you.y + (Math.random() - 0.5) * 0.15; }
+      }
+    } else {
+      // Your own herd follows your Activity.
+      const act = run.activity;
+      const th = act && act.target && herds.get(act.target);
+      if (th && (act.id === 'hunt' || act.id === 'war')) { tx = th.x + (Math.random() - 0.5) * 0.1; ty = th.y + (Math.random() - 0.5) * 0.1; }
+      if (th && act.id === 'avoid') { tx = th.x > 0.5 ? 0.12 : 0.88; ty = th.y > 0.5 ? 0.15 : 0.85; }
+      if (act && (act.id === 'migrate' || act.id === 'scout')) { tx = Math.random() < 0.5 ? 0.1 : 0.9; ty = Math.random(); }
     }
     h.tx = Math.max(0.06, Math.min(0.94, tx)); h.ty = Math.max(0, Math.min(1, ty));
   }
@@ -1437,6 +1459,7 @@ window.G = window.G || {};
       const depthOf = (y) => (land ? 0.55 + 0.45 * y : seaMap ? 0.85 : 0.7 + 0.3 * y);
       const drawables = makeScenery(run).map((it) => ({ y: it.y, draw: () => { const k = base * depthOf(it.y) * it.r; drawScenery(it, it.x * w, top + it.y * (bottom - top), k, t); } }));
       mapHits = [];
+      const labelBoxes = []; const labelDraws = [];
       live.forEach((l) => {
         const hd = herds.get(l.key);
         drawables.push({ y: hd.y, draw: () => {
@@ -1464,16 +1487,25 @@ window.G = window.G || {};
           ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
           const lx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, hx));
-          const ly = hy - spread * 0.35 - size * 0.55;
+          let ly = hy - spread * 0.35 - size * 0.55;
+          // Labels step aside when they would overlap another herd's label.
+          for (let k = 0; k < 5 && labelBoxes.some((bx) => Math.abs(bx.x - lx) < (bx.w + tw) / 2 && Math.abs(bx.y - ly) < 18); k++) ly -= 19;
+          labelBoxes.push({ x: lx, y: ly, w: tw });
           const st = l.s ? G.speciesStatus(l.s) : 'you';
-          ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
-          ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(lx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(lx - tw / 2, ly - 9, tw, 18); ctx.fill();
-          ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx, ly + 1);
+          const font = ctx.font;
+          // Labels go on top of everything, after all herds are drawn.
+          labelDraws.push(() => {
+            ctx.font = font;
+            ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
+            ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(lx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(lx - tw / 2, ly - 9, tw, 18); ctx.fill();
+            ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx, ly + 1);
+          });
           mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
         } });
       });
       drawables.sort((p1, p2) => p1.y - p2.y).forEach((d2) => d2.draw());
+      labelDraws.forEach((d2) => d2());
       mapFrame = requestAnimationFrame(frame);
     }
     mapFrame = requestAnimationFrame(frame);

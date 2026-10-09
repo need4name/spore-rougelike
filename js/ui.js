@@ -159,6 +159,7 @@ window.G = window.G || {};
             <li>DNA brings mutations. Mutations can <b>merge</b> with the part already in a slot. The right pairs <b>evolve</b> into powerful new parts. Creatures start with stubby limbs: merge them with limb mutations to grow legs, arms, wings and fins.</li>
             <li>Every evolution you discover is saved: in future runs it can turn up in mutation drafts. Discoveries also unlock archetypes and worlds.</li>
             <li>This is a roguelike: your first lineages will die young. Spend the Genetic Memory they earn on the <b>Evolution Tree</b> (stats, more DNA, lower DNA goals, Twin sockets that let a slot hold two parts) so every lineage gets further.</li>
+            <li>The <b>Activities</b> tab lets your kind migrate, go to war, court, avoid or hunt a species, or scout. Each plays out over several turns.</li>
             <li>When you become a creature, and after each milestone, the <b>Creature Editor</b> opens: shape your body, limbs, head, colors and patterns.</li>
             <li>Each milestone leaves a fossil. Keep a favourite in amber in the <b>Fossil Record</b> and you can revive it later, so a build you love is never lost.</li>
             <li>Milestones change everything: becoming multicellular, leaving the sea (or not), the Age of Giants, and the Spark of Mind.</li>
@@ -215,6 +216,8 @@ window.G = window.G || {};
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${run.mind ? `<span class="res insight" title="Insight toward ${fasc ? fasc.name : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
             ${gimmickChip(run)}
+            ${run.activity ? `<span class="res gimmick" title="Your current Activity">${esc({ war: 'War', court: 'Courting', avoid: 'Avoiding', hunt: 'Hunting', migrate: 'Migrating', scout: 'Scouting' }[run.activity.id])}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
+            ${G.season(run) ? `<span class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
           <div class="evo" title="DNA">
             <span class="evo-label">${ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
@@ -647,20 +650,70 @@ window.G = window.G || {};
       <p class="note">Moving to a new depth costs ${G.MOVE_COST} DNA (you have ${run.dna}). Some events only happen at certain depths.</p>`;
   }
 
+  // Tags that mark a species' place in your story.
+  function speciesTags(run, s) {
+    const t = [];
+    if (s.nemesis) t.push('<span class="tag bad">Nemesis</span>');
+    if (s.sworn) t.push('<span class="tag good">Sworn ally</span>');
+    if (s.migrant) t.push('<span class="tag">Passing through</span>');
+    if (s.parent) t.push(`<span class="tag">Descended from the ${esc(s.parent)}</span>`);
+    if (run.activity && run.activity.target === s.name) t.push(`<span class="tag act">${esc(G.ACTIVITY[run.activity.id].name)}</span>`);
+    return t.join('');
+  }
+
   function worldTab(run) {
     if (G.ui.speciesView != null && run.species[G.ui.speciesView]) return speciesSheet(run, G.ui.speciesView);
-    return `<ul class="rivals">${run.species.map((s, i) => {
-      if (s.extinct) return `<li class="extinct-row"><span>The ${esc(s.name)}</span><small>Extinct</small></li>`;
+    const gone = run.species.filter((s) => s.extinct);
+    const ages = (run.ages || []).filter((a) => a.stage === run.stage).slice().reverse();
+    const season = G.season(run);
+    return `${season ? `<p class="season-line"><b>${esc(season.name)}</b> · ${esc(season.desc)}</p>` : ''}
+      <ul class="rivals">${run.species.map((s, i) => {
+      if (s.extinct) return '';
       const st = G.speciesStatus(s);
       const pct = (s.opinion + 100) / 2;
+      const niche = s.niche && G.NICHE[s.niche] ? G.NICHE[s.niche].name : G.ROLES[s.role];
       return `<li><button class="rival ${st}" data-act="species" data-arg="${i}">
         <canvas class="portrait mini" data-species="${i}"></canvas>
         <span class="rival-info">
-          <span class="rival-name">${esc(s.name)}<small>${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${G.sizeLabel(s.size, run.stage)} · ${Math.round(s.pop)}</small></span>
+          <span class="rival-name">${esc(s.name)}<small>${esc(niche)} · ${G.DIET_NAMES[s.diet]} · ${G.sizeLabel(s.size, run.stage)} · ${Math.round(s.pop)}</small></span>
+          ${speciesTags(run, s) ? `<span class="tags">${speciesTags(run, s)}</span>` : ''}
           <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
         </span>
       </button></li>`;
-    }).join('')}</ul><p class="note">Tap a species to see it up close. Allied species (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>`;
+    }).join('')}</ul>
+      ${gone.length ? `<p class="note">Gone: ${gone.map((s) => `${esc(s.name)} (${s.left ? 'moved on' : 'died out'})`).join(', ')}.</p>` : ''}
+      <p class="note">Tap a species to see it up close and to choose an Activity against it. Allies (+50) give +1 Food per turn. Hostile species (−50) attack you.</p>
+      ${ages.length ? `<h3>World history</h3><ol class="ages">${ages.map((a, i) => `<li class="${i === 0 ? 'now' : ''} ${a.you ? 'you' : ''}"><b>${esc(a.label)}</b><span>from turn ${a.turn}${i === 0 ? ' · now' : ''}</span></li>`).join('')}</ol>` : ''}`;
+  }
+
+  // Activities: long actions, like CK3's.
+  function activitiesTab(run) {
+    const act = run.activity;
+    const t = G.activityTarget(run);
+    let current = '<p class="empty">Your kind is not busy with anything. Pick an Activity below.</p>';
+    if (act) {
+      const a = G.ACTIVITY[act.id];
+      let progress = '';
+      if (a.turns) progress = `<span class="act-bar"><span style="width:${Math.min(100, (act.turns / a.turns) * 100)}%"></span></span><small>${act.turns} of ${a.turns} turns</small>`;
+      if (act.id === 'war') progress = `<span class="war-bar"><span style="left:${(act.score + 100) / 2}%"></span></span><small>War score ${act.score > 0 ? '+' : ''}${act.score}: +100 wins, −100 loses</small>`;
+      if (act.id === 'court' && t) progress = `<span class="act-bar"><span style="width:${Math.max(0, Math.min(100, ((t.opinion + 100) / 160) * 100))}%"></span></span><small>Opinion ${t.opinion} of 60 · turn ${act.turns} of 12</small>`;
+      if (act.id === 'avoid' || act.id === 'hunt') progress = `<small>${act.turns} turn${act.turns === 1 ? '' : 's'} so far · until you stop</small>`;
+      current = `<div class="act-current"><strong>${esc(a.name)}${t ? `: the ${esc(t.name)}` : ''}</strong>${progress}<button class="btn small ghost" data-act="act-stop">Stop</button></div>`;
+    }
+    const alive = run.species.filter((s) => !s.extinct);
+    const list = G.ACTIVITIES.map((a) => {
+      const picking = G.ui.actPick === a.id;
+      const plain = !a.target && G.activityState(run, a.id).ok;
+      return `<div class="act-card ${picking ? 'open' : ''}">
+        <div class="act-head"><strong>${esc(a.name)}</strong>${a.target
+          ? `<button class="btn small" data-act="act-pick" data-arg="${picking ? '' : a.id}">${picking ? 'Cancel' : 'Choose a species'}</button>`
+          : `<button class="btn small primary" ${plain ? `data-act="act-start" data-arg="${a.id}"` : 'disabled'}>Start</button>`}</div>
+        <p class="note">${esc(a.desc)}</p>
+        ${!a.target && !plain ? `<span class="reason">${esc(G.activityState(run, a.id).why)}</span>` : ''}
+        ${picking ? `<div class="chips">${alive.map((s) => { const st2 = G.activityState(run, a.id, s.name); return `<button class="chip" ${st2.ok ? `data-act="act-start" data-arg="${a.id}" data-target="${esc(s.name)}"` : 'disabled'} title="${esc(st2.ok ? s.name : st2.why)}">${esc(s.name)}</button>`; }).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<h3>Now</h3>${current}<h3>Activities</h3><p class="note">One at a time. Starting a new one ends the old one. Each plays out over several turns, with its own events.</p>${list}`;
   }
 
   // How this species is tied to you by your archetype's gimmick.
@@ -713,6 +766,8 @@ window.G = window.G || {};
       ${speciesBond(run, s)}
       <p>${esc(roleText)} ${esc(attitude)}</p>
       ${speciesActions(run, s)}
+      ${!s.extinct && run.phase !== 'end' ? `<div class="row tight">${['war', 'court', 'avoid', 'hunt'].map((id) => { const st2 = G.activityState(run, id, s.name); const on = run.activity && run.activity.id === id && run.activity.target === s.name; return `<button class="btn small ${on ? 'primary' : ''}" ${st2.ok && !on ? `data-act="act-start" data-arg="${id}" data-target="${esc(s.name)}"` : 'disabled'} title="${esc(st2.ok ? G.ACTIVITY[id].desc : st2.why)}">${on ? '✓ ' : ''}${esc(G.ACTIVITY[id].name)}</button>`; }).join('')}</div>` : ''}
+      ${speciesTags(run, s) ? `<p class="tags">${speciesTags(run, s)}</p>` : ''}
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
       <h3>Compared with you</h3>
       <div class="compare">${G.STATS.map((k) => {
@@ -733,8 +788,8 @@ window.G = window.G || {};
   function sheet(run) {
     const tab = G.ui.sheet;
     if (!tab) return '';
-    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
+    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
+    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
@@ -1024,6 +1079,9 @@ window.G = window.G || {};
       case 'jump': G.jumpHost(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'mimic': G.mimicSpecies(arg); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'swap': G.swapWithPartner(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'act-pick': G.ui.actPick = arg || null; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'act-start': G.startActivity(arg, el.dataset.target || null); G.ui.actPick = null; G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'act-stop': G.stopActivity(); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;

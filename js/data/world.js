@@ -491,6 +491,52 @@ G.GROWTH_COST = 3;   // spare Food needed for +1 Population
 G.MAX_HOSTILITY = 5;
 
 // Species names are built from these.
+// Every species fills a niche. When one dies out, its niche opens and something new fills it.
+//   size: range of body sizes (1 = ordinary)   cap: how big its population can grow
+G.NICHES = [
+  { id: 'apex', name: 'Apex predator', role: 'predator', diet: 'carn', size: [1.6, 2.4], cap: 6 },
+  { id: 'hunter', name: 'Small hunter', role: 'predator', diet: 'carn', size: [0.6, 1.1], cap: 12 },
+  { id: 'big_grazer', name: 'Big grazer', role: 'prey', diet: 'herb', size: [1.3, 2.2], cap: 14 },
+  { id: 'small_grazer', name: 'Small grazer', role: 'prey', diet: 'herb', size: [0.35, 0.7], cap: 34 },
+  { id: 'scavenger', name: 'Scavenger', role: 'rival', diet: 'omni', size: [0.6, 1.1], cap: 16 },
+  { id: 'forager', name: 'Forager', role: 'rival', diet: 'omni', size: [0.8, 1.3], cap: 16 },
+  { id: 'browser', name: 'Browser', role: 'neighbor', diet: 'herb', size: [0.7, 1.4], cap: 18 },
+  { id: 'gentle_giant', name: 'Gentle giant', role: 'neighbor', diet: 'herb', size: [1.6, 2.6], cap: 8 },
+];
+// Which niches a new world starts with.
+G.WORLD_NICHES = {
+  cell: ['hunter', 'small_grazer', 'big_grazer', 'scavenger', 'forager', 'browser'],
+  creature: ['apex', 'hunter', 'big_grazer', 'small_grazer', 'small_grazer', 'scavenger', 'forager', 'browser', 'gentle_giant'],
+};
+
+// Seasons turn every 6 turns in the creature stage (the cell stage lives by a steady vent).
+G.SEASONS = {
+  land: [
+    { id: 'spring', name: 'Spring', mods: { popPerTurn: 1 }, desc: 'Young everywhere: +1 Population per turn.' },
+    { id: 'summer', name: 'Summer', mods: { forageBonus: 1 }, desc: 'Plenty: +1 Food while foraging.' },
+    { id: 'autumn', name: 'Autumn', mods: { huntBonus: 1 }, desc: 'Fat prey: +1 Food while hunting.' },
+    { id: 'winter', name: 'Winter', mods: { foodPerTurn: -2 }, desc: 'Lean times: −2 Food per turn.' },
+  ],
+  sea: [
+    { id: 'bloom', name: 'Plankton bloom', mods: { forageBonus: 2 }, desc: 'The water turns green with food: +2 Food while foraging.' },
+    { id: 'calm', name: 'Calm seas', mods: {}, desc: 'Nothing special.' },
+    { id: 'storms', name: 'Storm season', mods: { spd: -1, huntBonus: 1 }, desc: 'Rough water: −1 Speed, but stunned prey: +1 Food while hunting.' },
+    { id: 'cold', name: 'Cold currents', mods: { foodPerTurn: -1, tou: 1 }, desc: 'Cold and lean: −1 Food per turn, +1 Toughness.' },
+  ],
+};
+G.SEASON_LENGTH = 6;
+
+// Activities: long actions that play out over several turns, like CK3's.
+//   target: 'species' needs a species to aim at   turns: fixed length (null = until done or stopped)
+G.ACTIVITIES = [
+  { id: 'migrate', name: 'Migrate', turns: 4, desc: 'Lead your kind to new territory. Costs 1 Food a turn on the road; when you arrive, several neighbours are new, and you find food and DNA. You can move again after 10 turns.' },
+  { id: 'war', name: 'Go to war', target: 'species', desc: 'Fight a species for its territory. Each turn your armies clash and the war score moves. Win and they are crushed; lose and you are.' },
+  { id: 'court', name: 'Court', target: 'species', desc: 'Win a species over, turn by turn, with Charm, until they become your allies.' },
+  { id: 'avoid', name: 'Avoid', target: 'species', desc: 'Keep out of a species\' way. While you avoid them they rarely attack you, but taking the long way round costs 2 Food a turn.' },
+  { id: 'hunt', name: 'Hunt them', target: 'species', desc: 'Make one species your prey. Each turn you hunt them for food; big or fast prey can hurt you.' },
+  { id: 'scout', name: 'Scout', turns: 3, desc: 'Send scouts far and wide for 3 turns (−1 Food a turn). They always come back with something: a feeding ground, a part to borrow, or DNA. Scouts need 12 turns of rest afterwards.' },
+];
+
 G.SPECIES_NAMES = {
   cell: {
     first: ['Glimmer', 'Hook', 'Spiral', 'Murk', 'Vesicle', 'Thread', 'Bloom', 'Pip', 'Coil', 'Silt', 'Fizz', 'Wisp'],
@@ -515,15 +561,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '9';
+G.VERSION = '10';
 G.WHATS_NEW = {
-  title: 'Update 9: The Creature Editor',
+  title: 'Update 10: The Living World',
   items: [
-    'When your lineage leaves the cell stage, the Creature Editor opens. It opens again, free, after every milestone, and costs 2 DNA in between (from the Look tab).',
-    'Body: shape, length, height, back slope and neck length.',
-    'Limbs: length, thickness, spacing, and how far forward or back they sit.',
-    'Head: shape, position (on the neck, low and forward, held high or tucked in), size, up to 6 eyes, eye size and jaw size.',
-    'Colors: body, belly and two pattern colors; 12 patterns with size and density sliders; matte, glossy or glowing finishes.',
-    'Every rival species now gets its own random proportions, head and pattern, so the world looks far more varied.',
+    'Activities (new tab, or from any species\' page): Migrate, Go to war, Court, Avoid, Hunt them or Scout. Each plays out over several turns, with its own events.',
+    'A crowded world: 6 species in the cell stage and 9 as a creature, each filling a niche (apex predator, small grazer, scavenger, gentle giant...).',
+    'Species compete with others in their niche, keep evolving, and die out. Their empty niche is filled by a descendant of a survivor or by newcomers.',
+    'World history: the age is named after whoever dominates, and you can watch ages rise and fall in the World tab.',
+    'Seasons in the creature stage (spring, summer, autumn and winter on land; blooms, calm, storms and cold currents at sea), migrating herds, nemesis and sworn-ally species, and story chains that continue over several events.',
+    'The map shows who likes whom: grazers mix, rivals in the same niche keep apart, and your herd follows your Activity.',
   ],
 };

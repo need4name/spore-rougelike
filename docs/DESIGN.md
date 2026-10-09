@@ -72,6 +72,28 @@ Each archetype has a status chip in the top bar (Hunger, Host, Partner, Current,
 
 The map gives every herd a home territory spread across it, with scenery (trees, bushes, rocks and a pond on land; kelp, coral and rocks at sea). Flyers soar above the ground with shadows beneath. Every stage has named species with roles (predator, prey, rival, neighbor), an opinion of you and a population. Other species have their own symmetry and body plan too (starfish, jellyfish, snakes, centipedes, colonies). Their herds roam the world map: crowd size shows population, sprite size scales with real body size, and each label reads name · population · size. Predators chase prey, hostile species drift toward you, allies stay close. Populations rise and fall each tick; species can go extinct and newcomers arrive. Tap a herd (or a species in the World tab) to see its sheet, and tap its portrait to view it full screen. Hunting or beating a species thins its numbers.
 
+## The Living World
+
+- **Niches.** Every species fills a niche (`G.NICHES`: apex predator, small hunter, big grazer, small grazer, scavenger, forager, browser, gentle giant). The cell stage starts with 6 species and the creature stage with 9. Species in the same niche share its room to grow.
+- **Extinction and successors.** When a species dies out, its niche opens. 3–6 turns later, a survivor's descendant evolves into it (inheriting its body, with a mutation) or newcomers arrive. Species also keep mutating. Migrating herds pass through for 5 turns.
+- **Ages.** Every 4 turns the dominant species (population × size, predators count extra), or your kind, names the age. A new power must stay on top for two checks in a row. The World tab shows the history.
+- **Seasons** (creature stage, 6 turns each; `G.SEASONS`) change food and stats and have their own events.
+- **Activities** (`G.ACTIVITIES`), one at a time:
+
+  | Activity | Effect |
+  |---|---|
+  | Migrate | 4 turns at −1 Food; arrive among 3 new neighbours with +3 Food and +3 DNA. 10-turn rest. |
+  | War | War score moves each turn with strength and numbers; ±100 ends it. Victory crushes them; defeat costs Population. Either way they become your nemesis. 8-turn rest. |
+  | Court | A Charm roll each turn; allies at opinion 60. |
+  | Avoid | −2 Food a turn; they attack 70% less. |
+  | Hunt them | A hunt roll each turn: food, but big or fast prey fights back. |
+  | Scout | 3 turns at −1 Food, then a feeding ground, a part to borrow, or DNA. 12-turn rest. |
+
+  Activity events (`activity:` in events.js) only happen while that Activity is under way.
+- **Nemesis and sworn allies.** Opinion −90 (or a war) makes a nemesis, which raids you and hunts you more often. Opinion +90 makes a sworn ally, which brings gifts.
+- **Story chains.** An event result with `chain` schedules a follow-up event (`chained: true`) a few turns later, for example the Strange Egg and the Plea for Help.
+- **Predators share the hunt.** Each predator's chance to strike shrinks with the number of predators, so a crowded world isn't automatically deadlier.
+
 ## Scenes
 
 After every choice, a scene acts out what happened. When another species is involved, both sides play a story: you chase and eat prey, win or lose a brawl, get mauled, escape while the predator looks confused, befriend them, or get snubbed. Babies pop into your herd when it grows; ghosts float up when it shrinks; food flies in or away. Props come from the event (ice, fire, fruit, tar, whirlpools, viruses and more), with cartoon faces and comic words.
