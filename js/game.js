@@ -663,7 +663,8 @@ window.G = window.G || {};
     const tribe = run.stage === 'tribe';
     // In the Tribe stage the Creature ending has already been paid out (see checkpoint), so only the new stage counts.
     const progress = tribe ? 5 + Math.min(10, (run.discoveries || []).length * 2) : (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
-    const winBonus = victory ? 40 : 0;
+    // The Founding is worth less than a Creature ending, which the Tribe stage has already paid out.
+    const winBonus = victory ? (tribe ? 25 : 40) : 0;
     // Each new square in the Codex of Endings (a start against an ending) is worth a bonus.
     const endKey = victory && (tribe ? (run.tribeEnding ? `${run.path}|${run.habitat === 'sea' ? 'sea' : 'land'}|${run.tribeEnding}` : null)
       : run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null);
