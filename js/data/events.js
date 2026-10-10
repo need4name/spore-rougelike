@@ -1863,7 +1863,7 @@ G.ENDINGS.forEach((id) => { const l = G.LEGACIES[id]; (G.ENDING_FOR[l.path] = G.
 // The Spark of Mind: choose your Path. Paths your body can't support are shown locked.
 (function () {
   const pathOptions = () => G.PATHS.map((p) => ({
-    label: `${p.icon} ${p.name}`, hint: p.desc, req: { path: p.id },
+    label: `${p.icon} ${p.name}`, hint: `${p.desc} ${G.TRIBE_PATHS.includes(p.id) ? 'Goes on to the Tribe stage.' : 'Its Tribe stage comes in Update 15; for now the run ends at its Creature ending.'}`, req: { path: p.id },
     result: { text: `Your kind begins to think as ${p.name} do. This is your path now, for good.`, path: p.id, anim: 'mutate' },
   }));
   const spark = G.EVENTS.find((e) => e.id === 'spark_of_mind');

@@ -991,11 +991,13 @@ window.G = window.G || {};
       if (a.turns) progress = `<span class="act-bar"><span style="width:${Math.min(100, (act.turns / a.turns) * 100)}%"></span></span><small>${act.turns} of ${a.turns} turns</small>`;
       if (act.id === 'war') progress = `<span class="war-bar"><span style="left:${(act.score + 100) / 2}%"></span></span><small>War score ${act.score > 0 ? '+' : ''}${act.score}: +100 wins, −100 loses</small>`;
       if (act.id === 'court' && t) progress = `<span class="act-bar"><span style="width:${Math.max(0, Math.min(100, ((t.opinion + 100) / 160) * 100))}%"></span></span><small>Opinion ${t.opinion} of 60 · turn ${act.turns} of 12</small>`;
+      if (act.id === 'tame') progress = `<span class="act-bar"><span style="width:${Math.min(100, (act.score / 3) * 100)}%"></span></span><small>Trust ${act.score} of 3 · turn ${act.turns} of 10</small>`;
       if (act.id === 'avoid' || act.id === 'hunt') progress = `<small>${act.turns} turn${act.turns === 1 ? '' : 's'} so far · until you stop</small>`;
       current = `<div class="act-current"><strong>${esc(a.name)}${t ? `: the ${esc(t.name)}` : ''}</strong>${progress}<button class="btn small ghost" data-act="act-stop">Stop</button></div>`;
     }
     const alive = run.species.filter((s) => !s.extinct);
-    const list = G.ACTIVITIES.filter((a) => !G.activityState(run, a.id).hidden).map((a) => {
+    // This stage's own Activities come first.
+    const list = G.ACTIVITIES.filter((a) => !G.activityState(run, a.id).hidden).sort((a, b) => (b.stage === run.stage) - (a.stage === run.stage)).map((a) => {
       const picking = G.ui.actPick === a.id;
       const plain = !a.target && G.activityState(run, a.id).ok;
       return `<div class="act-card ${picking ? 'open' : ''}">
