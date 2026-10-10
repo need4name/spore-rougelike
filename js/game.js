@@ -426,7 +426,8 @@ window.G = window.G || {};
   G.TRIBE_HARSH = 5;
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
   G.RAID_BELOW = 20;
-  G.TRIBE_THREAT = null; // see predation // bands raid you while their opinion is below this
+  G.TRIBE_THREAT = null; // see predation
+  G.TRIBE_CHILD_COST = 2; // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1700,9 +1701,11 @@ window.G = window.G || {};
       lines.push({ t: `Starving: −${starve} Population`, bad: true });
     } else {
       // Spare Food becomes young: bigger herds can raise more at once.
-      const cost = G.growthCost(run);
+      // A people raises its young slowly: one a year, and each costs more.
+      const tribe = run.stage === 'tribe';
+      const cost = G.growthCost(run) + (tribe ? G.TRIBE_CHILD_COST : 0);
       let born = 0;
-      const birthCap = run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run)) * (run.traits.includes('young_eggs') ? 2 : 1);
+      const birthCap = tribe || run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run)) * (run.traits.includes('young_eggs') ? 2 : 1);
       while (run.food >= cost && run.pop < G.maxPop(run) && born < birthCap) { run.food -= cost; run.pop += 1; born += 1; }
       if (born) lines.push({ t: `+${born} Population (used ${born * cost} spare Food)`, good: true });
     }
