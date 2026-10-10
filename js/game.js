@@ -425,7 +425,8 @@ window.G = window.G || {};
   // A new stage is hard: your first Tribe should usually fail. Ancestral Wisdom pays it back.
   G.TRIBE_HARSH = 5;
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
-  G.RAID_BELOW = 20; // bands raid you while their opinion is below this
+  G.RAID_BELOW = 20;
+  G.TRIBE_THREAT = null; // see predation // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1722,7 +1723,10 @@ window.G = window.G || {};
       const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 1 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
       // In the Tribe stage the wild grows more dangerous with the years.
       const yearsAtk = run.stage === 'tribe' ? Math.floor(run.stageTurn / 8) : 0;
-      const atk = G.speciesStat(s, 'str') + bandAtk + yearsAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
+      // ...and its hunters keep pace with a strong people: never more than G.TRIBE_THREAT below your defence.
+      const def0 = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
+      const paceAtk = run.stage === 'tribe' && !s.band && G.TRIBE_THREAT != null ? Math.max(0, def0 - G.TRIBE_THREAT - Math.floor(G.harsh(run) / 2) - G.speciesStat(s, 'str')) : 0;
+      const atk = G.speciesStat(s, 'str') + bandAtk + yearsAtk + paceAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
