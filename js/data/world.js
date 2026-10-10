@@ -711,21 +711,18 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '14';
+G.VERSION = '15';
 G.WHATS_NEW = {
-  title: 'Update 14: First Fires',
+  title: 'Update 15: Many Kinds',
   items: [
-    'The Tribe stage. Toolmakers and Singers no longer end at their Creature ending: they become a people. Toolmakers become a Tribe on land or a Shell Clan at sea; Singers become a Choir on land or a Pod at sea.',
-    'Your Creature ending is now a checkpoint. It pays out its Genetic Memory straight away, so you keep it even if your people die out.',
-    'Ideas replace DNA. Each goal brings a Discovery, 1 of 3, from your Path, your home and what your body can do (hands, voice, glow, venom, armor, wings, eyes, speed). The right pairs combine into greater discoveries.',
-    'Leaders. Your people have a leader with two traits. Leaders grow old and die, and then you choose the next one from three.',
-    'Fire and Song. Toolmakers keep Fire (or Vent-heat at sea): it warms you through the cold, keeps hunters away, and crafts gear. Singers keep Song: it makes you charming and clever, but if many die at once, verses are lost, and discoveries with them.',
-    'New Activities: Tame a species, Revere one as your totem, hold a Ceremony, Craft gear (Toolmakers) or Teach the songs (Singers).',
-    'Strangers: your old nemesis, or a rival, learns to think too, and its band remembers how you treated it.',
-    'Your starting archetype still matters: each temperament has its own Tribe rule (hunters hunt better, bonders tame faster, takers steal knowledge, wanderers learn on the road).',
-    'The Founding: choose to Settle, Roam or Conquer. 12 Tribe endings to find.',
-    'Stage Select: start a new run at the beginning of any Tribe you have founded, for free.',
-    'Other Paths (Many Minds, Swarm, Garden) still end at their Creature ending until Update 15.',
+    'Every Path of Mind now goes on to the Tribe stage. Many Minds become a Den (Light), the Swarm a Hive or Reef-colony (Brood), and Gardeners a Grove or Kelp Garden (Growth).',
+    'Dens are few but brilliant: +2 Cunning and +1 Idea a turn, hidden from hunters by their Light, and they copy discoveries by watching rival bands.',
+    'Hives and Reef-colonies have a Queen instead of a leader, castes you choose (workers, soldiers or nurses), Brood that hatches into new members, and a great home that keeps growing.',
+    'Groves and Kelp Gardens are fed by their Growth and their tamed species, but big gardens attract Blight.',
+    'Ancestral Wisdom: a new tree on the Evolution screen, just for the Tribe stage. A people\'s first Tribe is now much harder; Wisdom makes every later one easier.',
+    'Rival bands: a second band arrives later on, and every band has its own way of thinking. When two bands feud, you can take sides.',
+    '79 discoveries, about 85 Tribe events and 30 Tribe endings to find.',
+    'Update 14 (First Fires): the Tribe stage, leaders, Discoveries, taming and totems, and Stage Select.',
   ],
 };
 

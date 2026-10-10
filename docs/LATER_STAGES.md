@@ -215,7 +215,7 @@ The same game engine runs both. But the trees, resources, rules, myths and story
 |---|---|---|
 | 13 | **Other Minds** | The Creature-stage Mind tree rebuilt from roots (your start), a trunk (land or sea plus your zone), Path branches and 10 capstone endings with temperament flavours. Choosing your Path at the Spark of Mind. The Codex of Endings. |
 | 14 | **First Fires** ✅ | The Tribe stage engine, with Toolmakers (the Tribe on land, the Shell Clan at sea) and Singers (the Choir on land, the Pod at sea). Leaders, Discoveries, taming and totems, a first rival band. Stage Select. See DESIGN.md for how it shipped. |
-| 15 | **Many Kinds** | Tribe stage, part 2: the Hive and Reef-colony, the Den and the Grove and Kelp Garden. Rival bands. The Ancestral Wisdom tree. |
+| 15 | **Many Kinds** ✅ | Tribe stage, part 2: the Hive and Reef-colony, the Den and the Grove and Kelp Garden. Rival bands. The Ancestral Wisdom tree. See DESIGN.md for how it shipped. |
 | 16 | **Peoples** | The Society stage engine, with Toolmakers and Singers on land and at sea. Settlements, the council, Traditions and Laws, and neighbour peoples. |
 | 17 | **Faith and Neighbours** | Society stage, part 2: the other kinds, faiths built from your own history, deeper diplomacy, the four society endings, and the Heritage tree. |
 | 18 | **Crowns** | The Empire stage engine: the world as a realm, dynasty, council, and land and sea technology, for the first two kinds. |
