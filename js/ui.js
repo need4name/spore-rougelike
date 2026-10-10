@@ -279,7 +279,7 @@ window.G = window.G || {};
   function tribeChips(run) {
     if (run.stage !== 'tribe') return '';
     const k = G.kind(run);
-    const sp = run.specialOn ? `<span class="res gimmick ${run.path === 'tool' && (run.special || 0) < 3 ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b>${run.gear ? ` · Gear ${run.gear}` : ''}</span>` : '';
+    const sp = run.specialOn ? `<span class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
     const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
     const ld = `<span class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
     return sp + ld;
@@ -492,10 +492,11 @@ window.G = window.G || {};
     const band = run.species.find((s) => s.band && !s.extinct);
     return `
       <div class="callout"><strong>${k.icon} The ${esc(k.name)}</strong><span>${esc(G.sub(G.KINDS[run.path].desc, run))}</span></div>
-      <h3>Leader</h3>
+      <h3>${esc(G.ruler(run))}</h3>
       ${l ? `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} years; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span></div>` : '<p class="empty">No leader. One will be chosen soon.</p>'}
       <h3>${esc(k.resource)}</h3>
       <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}`}</p>
+      ${kindPanel(run)}
       <h3>Your temperament: ${esc(tm.name)}</h3>
       <p class="note">${tt ? `${esc(tt.rule)} (${esc(G.describeMods(tt.mods))})` : ''}</p>
       <h3>Talents</h3>
@@ -504,6 +505,21 @@ window.G = window.G || {};
       <h3>Wildlife</h3>
       <p class="note">${run.totem ? `Totem: the ${esc(run.totem)}. ` : 'No totem yet (Activities: Revere). '}${tamed.length ? `Tamed: ${esc(listJoin(tamed.map((s) => `the ${s.name}`)))}.` : 'Nothing tamed yet (Activities: Tame).'}</p>
       ${band ? `<h3>Strangers</h3><p class="note">The ${esc(band.name)}: opinion ${band.opinion}${band.nemesis ? ', and they remember the old feud' : ''}.</p>` : ''}`;
+  }
+  // What only your kind has: castes and the great home, Blight, Light.
+  function kindPanel(run) {
+    if (run.path === 'swarm') {
+      const ready = run.turn >= (run.casteReadyAt || 0);
+      return `<h3>Castes</h3><p class="note">Your ${esc(G.ruler(run).toLowerCase())} decides what the next broods become.${ready ? '' : ` You can change again in ${run.casteReadyAt - run.turn} turns.`}</p>
+        <div class="chips">${Object.entries(G.CASTES).map(([id, c]) => `<button class="chip ${run.caste === id ? 'on' : ''}" ${ready && run.caste !== id ? `data-act="caste" data-arg="${id}"` : 'disabled'} aria-pressed="${run.caste === id}" title="${esc(G.describeMods(c.mods))}">${esc(c.name)}</button>`).join('')}</div>
+        <p class="note">${esc(G.CASTES[run.caste || 'workers'].name)}: ${esc(G.describeMods(G.CASTES[run.caste || 'workers'].mods))}. Your ${esc(G.kind(run).camp)} is level ${run.mound || 0} of 6. At 6 Brood or more, a new member hatches each turn.</p>`;
+    }
+    if (run.path === 'garden') {
+      const safe = Math.max(0, (run.blightSafeUntil || 0) - run.turn);
+      return `<h3>The gardens</h3><p class="note">+${Math.min(4, Math.floor((run.special || 0) / 4))} Food a turn from Growth, and tamed species feed you twice as well. ${safe ? `Safe from Blight for ${safe} more turns.` : (run.special || 0) >= 8 ? 'At 8 Growth or more, Blight can strike. Tend the gardens to keep it away.' : 'Below 8 Growth, Blight cannot strike.'}</p>`;
+    }
+    if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (two thirds the members), but every one of you gets +2 Cunning and +1 Idea a turn. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 40% rarer.' : 'At 3 Light or more, you hide: attacks are 40% rarer.'} Migrating costs nothing.</p>`;
+    return '';
   }
   function discoveriesTab(run) {
     const known = run.discoveries || [];
@@ -1226,6 +1242,7 @@ window.G = window.G || {};
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Evolution</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
         <p class="note">Genetic Memory is earned from every lineage, even ones that go extinct. Spend it on the Evolution Tree to make every later run stronger and get further.</p>
         <section><h2>Evolution Tree</h2>${evolutionTree()}</section>
+        <section><h2>Ancestral Wisdom</h2>${wisdomSection()}</section>
         <section><h2>Gene Affinities</h2>${affinitySection()}</section>
         <section><h2>Archetypes</h2><ul class="shop-list">${G.ARCHETYPES.filter((a) => a.cost).map((a) => item('archetypes', a)).join('')}</ul></section>
         <section><h2>Home worlds</h2><ul class="shop-list">${G.ORIGINS.filter((o) => o.cost).map((o) => item('origins', o)).join('')}</ul></section>
@@ -1249,9 +1266,16 @@ window.G = window.G || {};
   }
 
   // The Evolution Tree, drawn like the Mind tree.
-  function evolutionTree() {
+  function evolutionTree() { return skillTree(G.BOONS, G.ui.treeSel, 'tree-sel', ''); }
+  // Ancestral Wisdom: the Tribe stage's tree, built the same way.
+  function wisdomSection() {
+    if (!G.wisdomOpen()) return '<p class="note">Opens once one of your lineages becomes a people (reaches the Tribe stage). Its upgrades only work in the Tribe stage.</p>';
+    return `<p class="note">Upgrades for the Tribe stage. A people's first Tribe is hard; these make every later one easier.</p>${skillTree(G.WISDOM, G.ui.wisSel, 'wis-sel', 'short')}`;
+  }
+  function skillTree(LIST, selId, act, extra) {
     const m = G.meta;
-    const sel = G.BOON[G.ui.treeSel] || G.BOONS.find((b) => G.boonOpen(b) && G.boonCost(b) != null) || G.BOONS[0];
+    const sel = G.BOON[selId] && LIST.includes(G.BOON[selId]) ? G.BOON[selId] : (LIST.find((b) => G.boonOpen(b) && G.boonCost(b) != null) || LIST[0]);
+    const tiers = Math.max(...LIST.map((b) => b.tier));
     const state = (b) => {
       const lvl = G.boonLevel(b.id);
       if (G.boonCost(b) == null) return 'done';
@@ -1259,9 +1283,9 @@ window.G = window.G || {};
       return lvl ? 'current' : 'open';
     };
     const X = (b) => 9 + b.col * 16.4;
-    const Y = (b) => 11 + (b.tier - 1) * 26;
+    const Y = (b) => (tiers > 2 ? 11 + (b.tier - 1) * 26 : 22 + (b.tier - 1) * 56);
     const edges = [];
-    G.BOONS.forEach((b) => (b.req || []).forEach((rid) => {
+    LIST.forEach((b) => (b.req || []).forEach((rid) => {
       const par = G.BOON[rid];
       const cls = G.boonLevel(par.id) && G.boonLevel(b.id) ? 'done' : G.boonLevel(par.id) ? 'lit' : 'dim';
       edges.push(`<path class="edge ${cls}" d="M${X(par)} ${Y(par) + 5} C ${X(par)} ${Y(par) + 15}, ${X(b)} ${Y(b) - 15}, ${X(b)} ${Y(b) - 5}" vector-effect="non-scaling-stroke"/>`);
@@ -1272,11 +1296,11 @@ window.G = window.G || {};
     const cost = G.boonCost(sel);
     const afford = cost != null && m.genes >= cost && G.boonOpen(sel);
     return `
-      <div class="skill-tree evo-tree">
+      <div class="skill-tree evo-tree ${extra}">
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
-        ${G.BOONS.map((b) => {
+        ${LIST.map((b) => {
           const s2 = state(b); const l2 = G.boonLevel(b.id);
-          return `<button class="node ${s2} ${sel.id === b.id ? 'sel' : ''} ${b.twin ? 'twin' : ''}" style="left:${X(b)}%;top:${Y(b)}%" data-act="tree-sel" data-arg="${b.id}" aria-pressed="${sel.id === b.id}" aria-label="${esc(b.name)}"><span>${esc(b.name)}</span>${b.costs.length > 1 && l2 ? `<i aria-hidden="true">${l2}/${b.costs.length}</i>` : icon[s2] ? `<i aria-hidden="true">${icon[s2]}</i>` : ''}</button>`;
+          return `<button class="node ${s2} ${sel.id === b.id ? 'sel' : ''} ${b.twin ? 'twin' : ''}" style="left:${X(b)}%;top:${Y(b)}%" data-act="${act}" data-arg="${b.id}" aria-pressed="${sel.id === b.id}" aria-label="${esc(b.name)}"><span>${esc(b.name)}</span>${b.costs.length > 1 && l2 ? `<i aria-hidden="true">${l2}/${b.costs.length}</i>` : icon[s2] ? `<i aria-hidden="true">${icon[s2]}</i>` : ''}</button>`;
         }).join('')}
       </div>
       <div class="inv-detail">
@@ -1434,6 +1458,8 @@ window.G = window.G || {};
       case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'buy': G.buy(el.dataset.kind, arg); break;
       case 'tree-sel': G.ui.treeSel = arg; break;
+      case 'wis-sel': G.ui.wisSel = arg; break;
+      case 'caste': G.setCaste(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'amber-on': G.setAmber(arg, true); break;
       case 'amber-off': G.setAmber(arg, false); break;
       case 'revive':

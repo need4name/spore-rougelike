@@ -749,6 +749,12 @@ G.TUTORIALS = [
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
   { id: 'tribe', title: 'The Tribe stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe',
     text: 'Your kind is a people now. Population is now your members, and Ideas replace DNA: each goal brings a Discovery. Your body no longer changes, but what it can do decides which discoveries come. The People tab shows your leader, your Fire or Song, and your talents. Reach the Founding to choose your people\'s future.' },
+  { id: 'kind_many', title: 'Many Minds', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'many',
+    text: 'Your den is small, but every member is clever. Keep 3 Light or more and you are hidden: hunters and raiders find you far less often. Watch and learn copies discoveries from rival bands.' },
+  { id: 'kind_swarm', title: 'The Swarm', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'swarm',
+    text: 'You have a Queen instead of a leader. Choose your castes in the People tab, let Brood hatch into new members, and spend Brood to grow your home.' },
+  { id: 'kind_garden', title: 'Gardeners', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'garden',
+    text: 'Growth feeds you, and tamed species feed you twice as well. But big gardens attract Blight: Tend the gardens now and then to keep it away.' },
   { id: 'discoveries', title: 'Discoveries', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'tribe',
     text: 'Learn a discovery, or combine it with one you know. Combining keeps only the result, but the result is stronger. New combinations go in your Codex and earn Genetic Memory.' },
   { id: 'succession', title: 'Leaders', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && run.event.id === 'succession',
@@ -801,10 +807,10 @@ G.DIFFICULTY_NAMES = { 1: 'Gentle', 2: 'Tricky', 3: 'Hard' };
 G.STAGES.tribe = {
   name: 'Tribe Stage', turnName: 'Year',
   drafts: [5, 13, 22, 32, 43, 55, 68, 82, 97, 112],
-  milestones: [{ at: 0, event: 'first_{path}' }, { at: 34, event: 'strangers' }, { at: 70, event: 'elders' }],
+  milestones: [{ at: 0, event: 'first_{path}' }, { at: 34, event: 'strangers' }, { at: 70, event: 'elders' }, { at: 88, event: 'more_strangers' }],
   evolveAt: 120,
 };
-G.TRIBE_PATHS = ['tool', 'song'];
+G.TRIBE_PATHS = ['tool', 'song', 'many', 'swarm', 'garden'];
 
 // Each kind of people: its name, its special resource and the keepers who tend it.
 G.KINDS = {
@@ -818,6 +824,28 @@ G.KINDS = {
     sea: { name: 'Pod', band: 'pod', resource: 'Song', icon: '🎵', keeper: 'songkeeper', camp: 'gathering', first: 'First Song' },
     desc: 'Singers remember in songs. Your Song is your people\'s memory: it makes you charming and clever, but when many of you die at once, verses are lost, and with them, discoveries (Activities: Teach the songs).',
   },
+  many: {
+    land: { name: 'Den', band: 'den', resource: 'Light', icon: '✨', keeper: 'lightkeeper', camp: 'lair', first: 'First Light' },
+    sea: { name: 'Deep Den', band: 'den', resource: 'Light', icon: '✨', keeper: 'lightkeeper', camp: 'lair', first: 'First Light' },
+    desc: 'Many Minds are few, but each one is brilliant. Your Light is color and glow: at 3 or more it hides you (attacks are much rarer). You learn by watching others (Activities: Watch and learn), and moving your lair costs nothing.',
+  },
+  swarm: {
+    land: { name: 'Hive', band: 'hive', resource: 'Brood', icon: '🥚', keeper: 'nurse', camp: 'mound', first: 'First Queen', leader: 'Queen' },
+    sea: { name: 'Reef-colony', band: 'colony', resource: 'Brood', icon: '🥚', keeper: 'nurse', camp: 'reef', first: 'First Queen', leader: 'Queen' },
+    desc: 'The Swarm has a Queen, not a leader, and castes, not individuals (choose them in the People tab). Brood hatches into new members, and your one great building keeps growing (Activities: Grow your home).',
+  },
+  garden: {
+    land: { name: 'Grove', band: 'grove', resource: 'Growth', icon: '🌱', keeper: 'gardener', camp: 'grove', first: 'First Harvest' },
+    sea: { name: 'Kelp Garden', band: 'garden', resource: 'Growth', icon: '🌱', keeper: 'gardener', camp: 'garden', first: 'First Harvest' },
+    desc: 'Gardeners farm. Every 4 Growth feeds you 1 Food a turn, and tamed species feed you twice as well. But the more you grow, the likelier Blight becomes (Activities: Tend the gardens keeps it away).',
+  },
+};
+
+// The Swarm's castes: chosen in the People tab.
+G.CASTES = {
+  workers: { name: 'Workers', mods: { foodPerTurn: 2, forageBonus: 1 }, desc: 'More food.' },
+  soldiers: { name: 'Soldiers', mods: { str: 2, tou: 1 }, desc: 'Stronger and tougher.' },
+  nurses: { name: 'Nurses', mods: { maxPop: 3, specialPerTurn: 1 }, desc: 'More members and more Brood.' },
 };
 
 // Leaders: a name and two traits. When a leader dies, you choose the next one.
@@ -891,6 +919,27 @@ G.DISCOVERIES = [
   { id: 'chorus_hunts', name: 'Chorus Hunts', path: 'song', mods: { huntBonus: 2 }, desc: 'Drive the prey with song.' },
   { id: 'teaching_songs', name: 'Teaching Songs', path: 'song', mods: { ideasPerTurn: 1 }, desc: 'Everything worth knowing, set to a tune.' },
   { id: 'mourning_song', name: 'Mourning Song', path: 'song', mods: { cha: 1, tou: 1 }, desc: 'Sung for those who are gone.' },
+  // ----- Many Minds -----
+  { id: 'color_speech', name: 'Color Speech', path: 'many', mods: { cha: 1, cun: 1 }, desc: 'Whole sentences in a ripple of skin.' },
+  { id: 'mimicry', name: 'Mimicry', path: 'many', mods: { cun: 2 }, desc: 'Look like a rock, a weed, or something with teeth.' },
+  { id: 'puzzle_minds', name: 'Puzzle Minds', path: 'many', mods: { ideasPerTurn: 1 }, desc: 'Every lid, latch and knot, opened.' },
+  { id: 'hidden_lairs', name: 'Hidden Lairs', path: 'many', mods: { tou: 1, damageReduce: 1 }, desc: 'A home nobody else can find.' },
+  { id: 'climbing_paths', name: 'Climbing Paths', path: 'many', habitat: 'land', mods: { spd: 1, exploreBonus: 2 }, desc: 'Routes through the treetops.' },
+  { id: 'ink_clouds', name: 'Ink Clouds', path: 'many', habitat: 'sea', mods: { spd: 1, tou: 1 }, desc: 'Vanish in a cloud of dark.' },
+  // ----- The Swarm -----
+  { id: 'tunnels', name: 'Tunnels', path: 'swarm', habitat: 'land', mods: { maxPop: 3, tou: 1 }, desc: 'Down and down, room for everyone.' },
+  { id: 'coral_vaults', name: 'Coral Vaults', path: 'swarm', habitat: 'sea', mods: { maxPop: 3, tou: 1 }, desc: 'Chambers grown in living stone.' },
+  { id: 'scent_trails', name: 'Scent Trails', path: 'swarm', mods: { forageBonus: 2 }, desc: 'Follow the scent to the food.' },
+  { id: 'royal_jelly', name: 'Royal Jelly', path: 'swarm', mods: { specialPerTurn: 1 }, desc: 'Food fit for a queen, and her brood.' },
+  { id: 'swarm_tactics', name: 'Swarm Tactics', path: 'swarm', mods: { str: 2 }, desc: 'Everywhere at once.' },
+  { id: 'nurseries', name: 'Nurseries', path: 'swarm', mods: { popPerTurn: 1, growthCost: -1 }, desc: 'The young are raised by everyone.' },
+  // ----- Gardeners -----
+  { id: 'seed_saving', name: 'Seed Saving', path: 'garden', habitat: 'land', mods: { foodPerTurn: 1, foodCap: 3 }, desc: 'Keep the best for next year.' },
+  { id: 'spore_beds', name: 'Spore Beds', path: 'garden', habitat: 'sea', mods: { foodPerTurn: 1, foodCap: 3 }, desc: 'Plant the reef with what you want to grow.' },
+  { id: 'compost', name: 'Compost', path: 'garden', mods: { specialPerTurn: 1 }, desc: 'Nothing is wasted.' },
+  { id: 'weeding', name: 'Weeding', path: 'garden', mods: { tou: 1, cun: 1 }, desc: 'Pull out the bad before it spreads.' },
+  { id: 'living_fences', name: 'Living Fences', path: 'garden', mods: { tou: 2 }, desc: 'Thorns, or stinging weed, grown in a ring.' },
+  { id: 'herding', name: 'Herding', path: 'garden', mods: { foodPerTurn: 1, cha: 1 }, desc: 'Other species, kept and cared for.' },
   // ----- Combinations -----
   { id: 'hafted_axes', name: 'Hafted Axes', from: ['stone_tools', 'spears'], mods: { str: 3, forageBonus: 1 }, desc: 'Stone, bound to wood.' },
   { id: 'shell_lances', name: 'Shell Lances', from: ['shell_tools', 'spears'], mods: { str: 3, forageBonus: 1 }, desc: 'A shell blade on a long stalk.' },
@@ -909,6 +958,16 @@ G.DISCOVERIES = [
   { id: 'song_school', name: 'Song School', from: ['lullabies', 'teaching_songs'], mods: { ideasPerTurn: 2, growthCost: -1 }, desc: 'The young learn everything in song.' },
   { id: 'singing_lure', name: 'Singing Lure', from: ['chorus_hunts', 'lure_lights'], mods: { huntBonus: 4 }, desc: 'Prey come to the song, and the light.' },
   { id: 'herbal_healers', name: 'Healers', from: ['herb_lore', 'grief_rites'], mods: { popPerTurn: 2, cha: 1 }, desc: 'Some of your people know how to mend others.' },
+  { id: 'living_paint', name: 'Living Paint', from: ['color_speech', 'mimicry'], mods: { cun: 3, cha: 1 }, desc: 'Your skin can say anything, or nothing at all.' },
+  { id: 'lantern_lures', name: 'Lantern Lures', from: ['lure_lights', 'color_speech'], mods: { huntBonus: 4, cha: 1 }, desc: 'Lights that speak, and lights that lie.' },
+  { id: 'vanishing', name: 'The Vanishing', from: ['hidden_lairs', 'mimicry'], mods: { damageReduce: 2, cun: 1 }, desc: 'Hunters never see you twice.' },
+  { id: 'great_mound', name: 'Great Galleries', from: ['tunnels', 'nurseries'], mods: { maxPop: 6, popPerTurn: 1 }, desc: 'A city beneath the ground.' },
+  { id: 'living_reef', name: 'Living Vaults', from: ['coral_vaults', 'nurseries'], mods: { maxPop: 6, popPerTurn: 1 }, desc: 'A city grown from coral.' },
+  { id: 'army_columns', name: 'Army Columns', from: ['swarm_tactics', 'scent_trails'], mods: { str: 3, forageBonus: 2 }, desc: 'A river of bodies, going where it likes.' },
+  { id: 'orchards', name: 'Orchards', from: ['seed_saving', 'compost'], mods: { foodPerTurn: 3, specialPerTurn: 1 }, desc: 'Trees planted for grandchildren.' },
+  { id: 'kelp_fields', name: 'Kelp Fields', from: ['spore_beds', 'compost'], mods: { foodPerTurn: 3, specialPerTurn: 1 }, desc: 'Rows of kelp, as far as you can see.' },
+  { id: 'herd_gardens', name: 'Pastures', from: ['herding', 'living_fences'], mods: { foodPerTurn: 2, tou: 2 }, desc: 'Fenced, fed and safe.' },
+  { id: 'medicine_garden', name: 'Medicine Garden', from: ['herb_lore', 'weeding'], mods: { popPerTurn: 2, tou: 1 }, desc: 'Every cure, grown on purpose.' },
 ];
 G.DISCOVERY = {}; G.DISCOVERIES.forEach((d) => { G.DISCOVERY[d.id] = d; });
 
@@ -922,7 +981,36 @@ G.TRIBE_ENDINGS = {
     land: { settle: { name: 'The Singing Hills', desc: 'A home where every stone has a song.' }, roam: { name: 'The Wandering Choir', desc: 'A people whose home is the song itself.' }, conquer: { name: 'The Howling Host', desc: 'Your song drowns out every other.' } },
     sea: { settle: { name: 'The Calving Grounds', desc: 'Warm waters where the songs are born.' }, roam: { name: 'The Great Migration', desc: 'A pod that sings its way around the world.' }, conquer: { name: 'The Thunder Pod', desc: 'The ocean falls silent when you sing.' } },
   },
+  many: {
+    land: { settle: { name: 'The Hidden City', desc: 'Lairs nobody has ever found, linked by secret paths.' }, roam: { name: 'The Shifting Lairs', desc: 'A den that is never in the same place twice.' }, conquer: { name: 'The Masked Court', desc: 'Every band obeys, and none of them knows who rules.' } },
+    sea: { settle: { name: 'The Lantern Grottoes', desc: 'Caves in the deep, lit by a thousand living lights.' }, roam: { name: 'The Drifting Court', desc: 'A court that moves between the vent fields.' }, conquer: { name: 'The Ink Throne', desc: 'The deep answers to minds it cannot see.' } },
+  },
+  swarm: {
+    land: { settle: { name: 'The Great Mound', desc: 'A mound taller than the trees, and still growing.' }, roam: { name: 'The Marching Hive', desc: 'A hive that moves like a river across the land.' }, conquer: { name: 'The Endless Column', desc: 'Nothing stands in the swarm\'s way.' } },
+    sea: { settle: { name: 'The Reef-City', desc: 'A reef so vast it changes the tides.' }, roam: { name: 'The Drifting Reef', desc: 'A colony that rides the currents and seeds new reefs.' }, conquer: { name: 'The Stinging Wall', desc: 'Every reef in the sea belongs to one colony.' } },
+  },
+  garden: {
+    land: { settle: { name: 'The Orchard Valley', desc: 'Every tree in the valley planted by your people.' }, roam: { name: 'The Seed-Walkers', desc: 'A people who plant a forest wherever they go.' }, conquer: { name: 'The Thorn Wardens', desc: 'Every grove in the land is yours to tend, or to burn.' } },
+    sea: { settle: { name: 'The Kelp Commons', desc: 'Kelp forests tended by many kinds together.' }, roam: { name: 'The Seed Current', desc: 'A garden that drifts and plants the whole sea.' }, conquer: { name: 'The Weed Wall', desc: 'Your gardens choke every rival reef.' } },
+  },
 };
+
+// Ancestral Wisdom: the Tribe stage's own tree on the Evolution screen. Opens once you have founded a Tribe.
+// Stored with the Evolution Tree's levels (meta.boons), but kept out of its hidden power.
+G.WISDOM = [
+  { id: 'w_stories', name: 'Old Stories', col: 0, tier: 1, costs: [15, 35], desc: 'Every Tribe begins with +6 Ideas per level.' },
+  { id: 'w_blood', name: 'Strong Blood', col: 1, tier: 1, costs: [15, 35, 60], desc: '+2 max members per level in the Tribe stage.' },
+  { id: 'w_keepers', name: 'Born Keepers', col: 2, tier: 1, costs: [20, 45], desc: 'Start with +3 of your Fire, Song, Light, Brood or Growth per level.' },
+  { id: 'w_elders', name: 'Elders\' Counsel', col: 3, tier: 1, costs: [25, 50, 80], desc: 'Every Tribe-stage check is 1 easier per level.' },
+  { id: 'w_peace', name: 'Peacemakers', col: 4, tier: 1, costs: [20, 45], desc: 'Rival bands start 20 friendlier per level.' },
+  { id: 'w_watch', name: 'Watchfires', col: 5, tier: 1, costs: [25, 55], desc: 'Hunters and raiders strike 15% less often per level.' },
+  { id: 'w_choosing', name: 'Wise Choosing', col: 0, tier: 2, req: ['w_stories'], costs: [40], desc: 'Choose from 4 leader candidates, and leaders live 5 years longer.' },
+  { id: 'w_hardy', name: 'Hardy Folk', col: 1, tier: 2, req: ['w_blood'], costs: [35, 70], mods: { tou: 1 }, desc: '+1 Toughness per level in the Tribe stage.' },
+  { id: 'w_ways', name: 'Remembered Ways', col: 2, tier: 2, req: ['w_keepers'], costs: [50], desc: 'Every Tribe begins with one discovery already known.' },
+  { id: 'w_founding', name: 'The Founders\' Path', col: 3, tier: 2, req: ['w_elders'], costs: [60], desc: 'The Founding is 2 easier.' },
+  { id: 'w_kin', name: 'Kinship', col: 4, tier: 2, req: ['w_peace'], costs: [45], desc: 'Taming and courting succeed more often (+15%).' },
+  { id: 'w_stand', name: 'Last Stand', col: 5, tier: 2, req: ['w_watch'], costs: [50], desc: 'Once per Tribe, when your people would die out, a few survive.' },
+];
 
 // Activities only for the Tribe stage.
 G.ACTIVITIES.push(
@@ -931,4 +1019,7 @@ G.ACTIVITIES.push(
   { id: 'ceremony', name: 'Ceremony', stage: 'tribe', turns: 2, desc: 'Gather everyone for two turns of dance and story (−1 Food a turn): +2 of your special resource and +1 Idea each turn. Needs 8 turns between ceremonies.' },
   { id: 'craft', name: 'Craft', stage: 'tribe', path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
   { id: 'teach', name: 'Teach the songs', stage: 'tribe', path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
+  { id: 'watch', name: 'Watch and learn', target: 'species', stage: 'tribe', path: 'many', turns: 3, desc: 'Spend three turns secretly watching a species. Watch a rival band and you copy one of its discoveries; watch any other species and you learn +4 Ideas and +2 Light.' },
+  { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +2 max members and +1 Toughness per level.' },
+  { id: 'tend', name: 'Tend the gardens', stage: 'tribe', path: 'garden', turns: 3, desc: 'Three turns of weeding and planting (−1 Food a turn): +2 Growth each turn, and Blight cannot strike for 12 turns after.' },
 );

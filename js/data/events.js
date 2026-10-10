@@ -1955,11 +1955,12 @@ G.EVENTS.push(
   },
   {
     id: 'succession', stage: 'tribe', chained: true, prop: 'stars', title: 'A New Leader',
-    text: 'Your leader is gone, and your {band} gathers to choose another. Three step forward.',
+    text: 'Your {ruler} is gone, and your {band} gathers to choose another. They step forward.',
     options: [
       { label: '{cand0}', result: { text: 'The {band} follows a new voice.', leaderPick: 0, anim: 'social' } },
       { label: '{cand1}', result: { text: 'The {band} follows a new voice.', leaderPick: 1, anim: 'social' } },
       { label: '{cand2}', result: { text: 'The {band} follows a new voice.', leaderPick: 2, anim: 'social' } },
+      { label: '{cand3}', req: { cand: 3 }, result: { text: 'The {band} follows a new voice.', leaderPick: 3, anim: 'social' } },
     ],
   },
 
@@ -2360,6 +2361,208 @@ G.EVENTS.push(
   },
 );
 
+// ---------- Tribe stage, part 2 (Update 15): Many Minds, the Swarm and Gardeners ----------
+G.EVENTS.push(
+  {
+    id: 'first_many', stage: 'tribe', milestone: true, path: 'many', prop: 'night', title: 'First Light',
+    text: 'One of your kind has learned to hold a color on purpose, a slow, steady glow that says "here, safe, come". Others are copying it. Who will keep the Light?',
+    options: [
+      { label: 'The one who glows brightest', hint: 'More Light to start', result: { text: 'A beacon in the dark. Everyone knows where home is.', specialOn: true, special: 3, anim: 'social' } },
+      { label: 'The one who can hide it best', hint: '+2 Ideas', result: { text: 'Light, and then none. Your kind learns that hiding is a kind of speech too.', specialOn: true, dna: 2, anim: 'mutate' } },
+      { label: '{leader}, so the light means "follow"', hint: 'Your leader becomes Keeper-born', result: { text: 'Where the leader glows, the den goes.', specialOn: true, leaderTrait: 'keen', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'first_swarm', stage: 'tribe', milestone: true, path: 'swarm', prop: 'swarm', title: 'The First Queen',
+    text: 'One among you has grown larger than the rest, and she has begun to lay. The whole {band} gathers around her. Your kind has a Queen.',
+    options: [
+      { label: 'Feed her everything', hint: 'More Brood to start', result: { text: 'She lays and lays. The {camp} fills with brood.', specialOn: true, special: 4, food: -2, anim: 'grow' } },
+      { label: 'Build her a chamber', hint: 'The {camp} grows a level', result: { text: 'Deep, warm and safe. The first room of a great building.', specialOn: true, mound: 1, anim: 'rest' } },
+      { label: 'Let her choose her own workers', hint: 'She becomes Keeper-born', result: { text: 'She knows best. She always will.', specialOn: true, leaderTrait: 'keen', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'first_garden', stage: 'tribe', milestone: true, path: 'garden', prop: 'fruit', title: 'The First Harvest',
+    text: 'The patch your kind has tended for generations is ready. For the first time, there is more food than anyone can eat. Who will keep the gardens?',
+    options: [
+      { label: 'The one with the greenest touch', hint: 'More Growth to start', result: { text: 'Everything they plant comes up.', specialOn: true, special: 3, anim: 'grow' } },
+      { label: 'Store the harvest', hint: '+4 Food', result: { text: 'Full stores, for the first time ever.', specialOn: true, food: 4, anim: 'rest' } },
+      { label: '{leader}, so everyone eats from the same hand', hint: 'Your leader becomes Keeper-born', result: { text: 'The leader feeds the people. The people follow the leader.', specialOn: true, leaderTrait: 'keen', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'more_strangers', stage: 'tribe', milestone: true, prop: 'shadow', title: 'More Strangers',
+    text: 'Another band has arrived at the edge of your land. They think, they talk, and they want the same things you do.',
+    options: [
+      { label: 'Welcome them', check: { stat: 'cha', diff: 5 }, success: { text: 'Gifts are given. They seem pleased, for now.', band2: true, bandOpinion: 30, anim: 'social' }, fail: { text: 'Your welcome was taken as an insult.', band2: true, bandOpinion: -20 } },
+      { label: 'Drive them off', check: { stat: 'str', diff: 5 }, success: { text: 'They keep their distance. They will remember.', band2: true, bandOpinion: -15, dna: 2, anim: 'attack' }, fail: { text: 'They do not leave. They are angry.', band2: true, bandOpinion: -35, pop: -2 } },
+      { label: 'Learn from them first', check: { stat: 'cun', diff: 5 }, success: { text: 'You watch, and learn how they live.', band2: true, dna: 4, anim: 'mutate' }, fail: { text: 'They catch you spying.', band2: true, bandOpinion: -20 } },
+    ],
+  },
+  {
+    id: 't_bands_feud', stage: 'tribe', prop: 'shadow', title: 'Two Bands', tags: ['social', 'danger'],
+    when: (run) => run.species.filter((s) => s.band && !s.extinct).length >= 2,
+    text: 'The two other bands are at each other\'s throats, and both want you on their side.',
+    options: [
+      { label: 'Side with the stronger', check: { stat: 'str', diff: 5 }, success: { text: 'The weaker band scatters. Your new friends are grateful.', food: 3, dna: 2, anim: 'attack' }, fail: { text: 'You picked wrong.', pop: -3 } },
+      { label: 'Make peace between them', check: { stat: 'cha', diff: 6 }, success: { text: 'Three bands, one fire. A remarkable night.', dna: 4, anim: 'social' }, fail: { text: 'Now both of them blame you.', pop: -2 } },
+      { label: 'Let them wear each other out', check: { stat: 'cun', diff: 4 }, success: { text: 'They fight. You grow.', food: 2, dna: 3, anim: 'mutate' }, fail: { text: 'They notice you watching, and stop fighting each other.', pop: -2 } },
+    ],
+  },
+
+  // ----- Many Minds -----
+  {
+    id: 't_many_puzzle', stage: 'tribe', path: 'many', prop: 'cave', title: 'The Locked Shell', tags: ['explore'],
+    text: 'A great sealed shell, too hard to break. Three of your kind have been working at it for days, each in their own way.',
+    options: [
+      { label: 'Let them work together', check: { stat: 'cun', diff: 4 }, success: { text: 'Together, three minds open it. Inside: food, and an idea.', food: 3, discovery: true, anim: 'mutate' }, fail: { text: 'They argue in colors nobody else can read.', dna: 1 } },
+      { label: 'Let them compete', result: { text: 'The winner is smug for weeks. Everyone learns something.', dna: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_many_disguise', stage: 'tribe', path: 'many', prop: 'shadow', title: 'Borrowed Skins', tags: ['danger'], species: 'predator',
+    text: 'The {them} are hunting near the {camp}. Your kind could take on their colors and walk among them.',
+    options: [
+      { label: 'Walk among them', check: { stat: 'cun', diff: 5 }, success: { text: 'They never knew. You learned where they sleep, and they hunt elsewhere now.', dna: 3, opinion: 10, anim: 'mutate' }, fail: { text: 'They knew.', pop: -2 } },
+      { label: 'Go dark and wait', hint: 'Needs 3 Light', req: { special: 3 }, result: { text: 'Every glow goes out. The {them} pass by.', special: -2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_many_alone', stage: 'tribe', path: 'many', prop: 'night', title: 'The Loner', tags: ['social'],
+    text: 'One of your kind has left the den to live alone, as your ancestors did. They say thinking is easier without everyone else.',
+    options: [
+      { label: 'Let them go', result: { text: 'They come back a year later with strange new ideas.', pop: -1, dna: 4, anim: 'rest' } },
+      { label: 'Persuade them to stay', check: { stat: 'cha', diff: 4 }, success: { text: 'They stay, and share what they were thinking.', dna: 2, anim: 'social' }, fail: { text: 'They leave anyway, and not kindly.', pop: -1 } },
+    ],
+  },
+  {
+    id: 't_many_copycat', stage: 'tribe', path: 'many', prop: 'sparks', title: 'The Copycat', tags: ['explore'], species: 'band',
+    text: 'A young one has been watching the {them} and can now do everything they do, a little better.',
+    options: [
+      { label: 'Teach it to everyone', hint: 'A new discovery', result: { text: 'You learn their ways. They are not pleased.', discovery: true, opinion: -10, anim: 'mutate' } },
+      { label: 'Show the {them} what you learned', check: { stat: 'cha', diff: 4 }, success: { text: 'They are flattered. Trade begins.', opinion: 25, food: 2, anim: 'social' }, fail: { text: 'They think you are mocking them.', opinion: -20 } },
+    ],
+  },
+  {
+    id: 't_many_lights', stage: 'tribe', path: 'many', habitat: 'sea', prop: 'night', title: 'The Lantern Shoal', tags: ['explore'],
+    text: 'A shoal of glowing fish passes through the deep, flashing in patterns that look almost like your own speech.',
+    options: [
+      { label: 'Speak to them', check: { stat: 'cha', diff: 4 }, success: { text: 'Nonsense, mostly. But beautiful nonsense, and some of it useful.', special: 3, dna: 2, anim: 'social' }, fail: { text: 'They scatter.', dna: 1 } },
+      { label: 'Hunt them', check: { stat: 'spd', diff: 4 }, success: { text: 'A feast of light.', food: 4, anim: 'attack' }, fail: { text: 'Too fast.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_many_canopy', stage: 'tribe', path: 'many', habitat: 'land', prop: 'tree', title: 'The Canopy Road', tags: ['explore'],
+    text: 'High in the trees, branches touch across the whole forest. Your kind could travel without ever touching the ground.',
+    options: [
+      { label: 'Map the canopy', check: { stat: 'cun', diff: 4 }, success: { text: 'Secret roads above every hunter.', discovery: true, anim: 'mutate' }, fail: { text: 'A long fall for someone.', pop: -1 } },
+      { label: 'Move the lair up there', result: { text: 'Safer, if windier.', special: 2, food: -1, anim: 'rest' } },
+    ],
+  },
+
+  // ----- The Swarm -----
+  {
+    id: 't_swarm_new_queen', stage: 'tribe', path: 'swarm', prop: 'swarm', title: 'A Second Queen', tags: ['social', 'danger'],
+    when: (run) => !!run.leader,
+    text: 'A second queen has hatched. Half the {band} is gathering around her instead of {leader}.',
+    options: [
+      { label: 'Let her found a new {camp}', hint: '−3 members, +4 Ideas', result: { text: 'She leaves with her followers. The swarm spreads.', pop: -3, dna: 4, anim: 'rest' } },
+      { label: '{leader} fights her', check: { stat: 'str', diff: 5 }, success: { text: 'There is only one queen.', leaderTrait: 'cruel', anim: 'attack' }, fail: { text: 'There is a new queen.', leaderDies: true } },
+    ],
+  },
+  {
+    id: 't_swarm_flood', stage: 'tribe', path: 'swarm', prop: 'pond', title: 'The Chambers Flood', tags: ['danger'],
+    text: 'Water is pouring into the lower chambers of the {camp}, where the brood is kept.',
+    options: [
+      { label: 'Carry the brood up', check: { stat: 'spd', diff: 4 }, success: { text: 'Every egg is saved.', anim: 'grow' }, fail: { text: 'Not every egg.', special: -5 } },
+      { label: 'Seal the chambers', check: { stat: 'tou', diff: 4 }, success: { text: 'Bodies against the water. It holds.', pop: -1, anim: 'rest' }, fail: { text: 'It does not hold.', pop: -2, special: -3 } },
+    ],
+  },
+  {
+    id: 't_swarm_forage', stage: 'tribe', path: 'swarm', prop: 'fruit', title: 'The Great Find', tags: ['food'],
+    text: 'A scout has found a fallen fruit tree. In an hour, the whole {band} knows the way.',
+    options: [
+      { label: 'Send everyone', hint: '+5 Food', result: { text: 'A column of bodies stripping it bare.', food: 5, anim: 'grow' } },
+      { label: 'Feed it to the brood', hint: '+4 Brood', result: { text: 'The nurseries are full.', special: 4, anim: 'grow' } },
+    ],
+  },
+  {
+    id: 't_swarm_war', stage: 'tribe', path: 'swarm', prop: 'shadow', title: 'Soldiers', tags: ['danger'], species: 'band',
+    text: 'The {them} have come too close to the {camp}. Your soldiers are ready to pour out.',
+    options: [
+      { label: 'Release the soldiers', check: { stat: 'str', diff: 5 }, success: { text: 'A living flood. The {them} run.', opinion: -25, food: 3, dna: 2, anim: 'attack' }, fail: { text: 'Many soldiers do not come back.', pop: -3 } },
+      { label: 'Seal the entrances', result: { text: 'They wait outside for a while, then leave.', food: -1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_swarm_mound', stage: 'tribe', path: 'swarm', habitat: 'land', prop: 'dust', title: 'The Chimney', tags: ['explore'],
+    text: 'Workers have built a tall chimney on top of the mound. Cool air flows down into the deepest chambers.',
+    options: [
+      { label: 'Build more', check: { stat: 'cun', diff: 4 }, success: { text: 'The mound breathes. It can grow much bigger now.', mound: 1, anim: 'mutate' }, fail: { text: 'It collapses in the rain.', food: -1 } },
+      { label: 'Use the cool chambers for food', hint: '+3 Food', result: { text: 'Food keeps for twice as long.', food: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_swarm_spawning', stage: 'tribe', path: 'swarm', habitat: 'sea', prop: 'coral', title: 'The Spawning Night', tags: ['food'],
+    text: 'On one night of the year, the whole colony releases its spawn at once. The water turns to snow.',
+    options: [
+      { label: 'Spawn with everything you have', hint: '+5 Brood, −2 Food', result: { text: 'The colony grows by half.', special: 5, food: -2, anim: 'grow' } },
+      { label: 'Seed a new reef', check: { stat: 'spd', diff: 4 }, success: { text: 'A new reef takes root nearby. The {camp} grows.', mound: 1, anim: 'grow' }, fail: { text: 'The current takes it all away.', special: -2 } },
+    ],
+  },
+
+  // ----- Gardeners -----
+  {
+    id: 't_garden_blight', stage: 'tribe', path: 'garden', prop: 'sickness', title: 'Spots on the Leaves', tags: ['danger', 'food'],
+    text: 'Dark spots are spreading on the plants nearest the {camp}. The {keeper} says it is the start of Blight.',
+    options: [
+      { label: 'Burn the sick plants', result: { text: 'It hurts to do. It works.', special: -3, anim: 'attack' } },
+      { label: 'Try to cure them', check: { stat: 'cun', diff: 5 }, success: { text: 'A paste of ash and bitter leaves. The spots fade.', dna: 3, anim: 'mutate' }, fail: { text: 'It spreads.', special: -6, food: -2 } },
+    ],
+  },
+  {
+    id: 't_garden_graft', stage: 'tribe', path: 'garden', prop: 'tree', title: 'The Graft', tags: ['explore'],
+    text: 'A {keeper} has bound a cutting from one plant onto another. Both are thriving.',
+    options: [
+      { label: 'Try it on everything', check: { stat: 'cun', diff: 4 }, success: { text: 'Plants nobody has ever seen before.', discovery: true, anim: 'mutate' }, fail: { text: 'Lots of dead cuttings.', special: -1 } },
+      { label: 'Keep it simple', result: { text: 'One good plant is plenty.', special: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_garden_pests', stage: 'tribe', path: 'garden', prop: 'swarm', title: 'Pests', tags: ['food'], species: 'wild',
+    text: 'The {them} have been raiding your gardens every night.',
+    options: [
+      { label: 'Tame them to guard the gardens', check: { stat: 'cha', diff: 4 }, success: { text: 'Now they chase the other pests away.', tame: true, anim: 'social' }, fail: { text: 'They eat even more.', special: -2 } },
+      { label: 'Drive them off', check: { stat: 'str', diff: 4 }, success: { text: 'They do not come back.', opinion: -20, anim: 'attack' }, fail: { text: 'They come back with friends.', special: -3 } },
+      { label: 'Plant extra for them', result: { text: 'They eat the extra and leave the rest.', special: -1, opinion: 20, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_garden_season', stage: 'tribe', path: 'garden', prop: 'sun', title: 'A Perfect Season', tags: ['food'],
+    text: 'Rain at the right time, sun at the right time. Everything is growing at once.',
+    options: [
+      { label: 'Harvest it all', hint: '+6 Food', result: { text: 'More than you can carry.', food: 6, anim: 'grow' } },
+      { label: 'Let it seed', hint: '+5 Growth', result: { text: 'Next year will be even better.', special: 5, anim: 'grow' } },
+    ],
+  },
+  {
+    id: 't_garden_fungus', stage: 'tribe', path: 'garden', habitat: 'land', prop: 'cave', title: 'The Fungus Cave', tags: ['explore'],
+    text: 'Deep in a cave, a pale fungus grows on everything. It is good to eat, and it grows in the dark.',
+    options: [
+      { label: 'Farm the cave', check: { stat: 'cun', diff: 4 }, success: { text: 'Food that grows in winter, in the dark.', special: 3, food: 2, anim: 'mutate' }, fail: { text: 'It sickens anyone who eats it raw.', pop: -1 } },
+      { label: 'Leave it', result: { text: 'Some caves are best left alone.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_garden_urchins', stage: 'tribe', path: 'garden', habitat: 'sea', prop: 'kelp', title: 'The Urchin Tide', tags: ['danger', 'food'],
+    text: 'Spiny urchins are marching across the sea floor, eating the kelp down to bare rock.',
+    options: [
+      { label: 'Pick them off one by one', check: { stat: 'tou', diff: 4 }, success: { text: 'Spines in every hand, but the kelp is saved. And urchins are good to eat.', food: 3, anim: 'attack' }, fail: { text: 'There are too many.', special: -5 } },
+      { label: 'Bring in something that eats urchins', check: { stat: 'cha', diff: 5 }, success: { text: 'The otters, or whatever lives here, are delighted.', special: 2, dna: 2, anim: 'social' }, fail: { text: 'Nothing comes.', special: -3 } },
+    ],
+  },
+);
+
 // Founding: the Tribe stage's finale. Each option leads to one of three endings: Settle, Roam or Conquer.
 (function () {
   const F = {
@@ -2371,12 +2574,24 @@ G.EVENTS.push(
       land: { title: 'The Founding Song', prop: 'notes', text: 'Your {band} knows a song for everything now. The elders say there is one song left to write: what your people will become.' },
       sea: { title: 'The Founding Song', prop: 'notes', text: 'Your {band} sings across whole oceans now. The elders say there is one song left to write: what your people will become.' },
     },
+    many: {
+      land: { title: 'The Founding Light', prop: 'night', text: 'Your den glows with a hundred quiet lights. Each one is a mind, and tonight they must agree on what your people will become.' },
+      sea: { title: 'The Founding Light', prop: 'night', text: 'In the deep, your lights flicker in council. Tonight they must agree on what your people will become.' },
+    },
+    swarm: {
+      land: { title: 'The Founding Swarm', prop: 'swarm', text: 'The mound hums with a single thought. The {ruler} is ready to decide what the {band} will become.' },
+      sea: { title: 'The Founding Swarm', prop: 'coral', text: 'The reef pulses with a single thought. The {ruler} is ready to decide what the {band} will become.' },
+    },
+    garden: {
+      land: { title: 'The Founding Harvest', prop: 'fruit', text: 'The gardens have never been so full. At the harvest feast, the elders say it is time to decide what your people will become.' },
+      sea: { title: 'The Founding Harvest', prop: 'kelp', text: 'The kelp fields stretch out of sight. At the harvest feast, the elders say it is time to decide what your people will become.' },
+    },
   };
   const ROADS = [['settle', 'tou', 'Stay and build'], ['roam', 'spd', 'Keep moving'], ['conquer', 'str', 'Rule the others']];
   Object.entries(F).forEach(([path, byHab]) => Object.entries(byHab).forEach(([hab, f]) => {
     G.EVENTS.push({ id: `founding_${path}_${hab}`, stage: 'tribe', finale: true, habitat: hab, path, prop: f.prop, title: f.title, text: f.text,
       options: ROADS.map(([road, stat, verb]) => { const e = G.TRIBE_ENDINGS[path][hab][road]; return { label: `${verb}: ${e.name}`, hint: e.desc, check: { stat, diff: 5 },
-        success: { text: `${e.desc} Your ${hab === 'sea' && path === 'tool' ? 'clan' : '{band}'} becomes a people.`, tribeEnding: road, anim: stat === 'str' ? 'attack' : stat === 'spd' ? 'grow' : 'social' },
+        success: { text: `${e.desc} Your {band} becomes a people.`, tribeEnding: road, anim: stat === 'str' ? 'attack' : stat === 'spd' ? 'grow' : 'social' },
         fail: { text: 'Not yet. Your people are not ready to agree.', pop: -3, setback: 0 } }; }) });
   }));
 }());
