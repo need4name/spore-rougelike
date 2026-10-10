@@ -1631,7 +1631,7 @@ window.G = window.G || {};
       }
     } else {
       // A Tribe stays close to its camp.
-      if (run.stage === 'tribe') { tx = h.hx + (Math.random() - 0.3) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
+      if (run.stage === 'tribe') { tx = h.hx + (Math.random() - (h.hx < 0.35 ? 0.7 : 0.3)) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
       // Your own herd follows your Activity.
       const act = run.activity;
       const th = act && act.target && herds.get(act.target);
@@ -1915,7 +1915,7 @@ window.G = window.G || {};
       const drawables = makeScenery(run).map((it) => ({ y: it.y, draw: () => { const k = base * depthOf(it.y) * it.r; drawScenery(it, it.x * w, top + it.y * (bottom - top), k, t); } }));
       // A Tribe's camp: its fire, its warm vent or its singing stones, where your people always come back to.
       const youHd = herds.get('you');
-      if (run.stage === 'tribe' && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx - 0.13) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
+      if (run.stage === 'tribe' && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx + (youHd.hx < 0.35 ? 0.13 : -0.13)) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
       mapHits = [];
       const labelBoxes = []; const labelDraws = [];
       live.forEach((l) => {

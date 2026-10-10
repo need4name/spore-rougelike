@@ -1698,7 +1698,8 @@ window.G = window.G || {};
       const raider = s.band && s.opinion < 0;
       if (s.role !== 'predator' && !hostile && !raider) return;
       if (s.tamed) return;
-      const bandAtk = s.band ? 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
+      // A thinking band keeps up with you: its strength is never far below your own, and grows with the years.
+      const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 1 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
       const atk = G.speciesStat(s, 'str') + bandAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
@@ -1895,6 +1896,7 @@ window.G = window.G || {};
     const s = target && run.species.find((x) => x.name === target && !x.extinct);
     if (id === 'tame') { if (!s) return null; if (s.role === 'predator' || s.band) return 'Only gentler species can be tamed'; if (s.tamed) return 'Already tamed'; }
     if (id === 'revere' && s && run.totem === s.name) return 'Already your totem';
+    if (id === 'revere' && s && s.band) return 'Not a rival band';
     if (id === 'craft' && (run.special || 0) < 4) return `Needs 4 ${G.kind(run).resource}`;
     if (id === 'craft' && (run.gear || 0) >= 5) return 'Your gear is as good as it gets';
     if (id === 'ceremony' && run.turn < (run.ceremonyReadyAt || 0)) return `Ready in ${run.ceremonyReadyAt - run.turn} turns`;

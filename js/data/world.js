@@ -422,7 +422,7 @@ G.BOON = {}; G.BOONS.forEach((b) => { G.BOON[b.id] = b; });
 
 // Fossils: a snapshot at each milestone. Reviving one from amber costs Genetic Memory,
 // and a revived run earns less, so fresh runs still matter.
-G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45 };
+G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45, tribe: 50 };
 G.REVIVE_MULT = 0.6;
 G.FOSSIL_KEEP = 8; // recent fossils kept besides the ones in amber
 
