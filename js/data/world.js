@@ -819,12 +819,12 @@ G.KINDS = {
   song: {
     land: { name: 'Choir', band: 'choir', resource: 'Song', icon: '🎵', keeper: 'songkeeper', camp: 'roost', first: 'First Song' },
     sea: { name: 'Pod', band: 'pod', resource: 'Song', icon: '🎵', keeper: 'songkeeper', camp: 'gathering', first: 'First Song' },
-    desc: 'Singers remember in songs. Your Song is your people\'s memory: it makes you charming and clever, but when many of you die at once, verses are lost, and with them, discoveries (Activities: Teach the songs).',
+    desc: 'Singers remember in songs. Your Song is your people\'s memory: it makes you charming and clever, and at 6 or more rival bands sour on you half as fast, but when many of you die at once, verses are lost, and with them, discoveries (Activities: Teach the songs).',
   },
   many: {
     land: { name: 'Den', band: 'den', resource: 'Light', icon: '✨', keeper: 'lightkeeper', camp: 'lair', first: 'First Light' },
     sea: { name: 'Deep Den', band: 'den', resource: 'Light', icon: '✨', keeper: 'lightkeeper', camp: 'lair', first: 'First Light' },
-    desc: 'Many Minds are few, but each one is brilliant. Your Light is color and glow: at 3 or more it hides you (attacks are much rarer). You learn by watching others (Activities: Watch and learn), and moving your lair costs nothing.',
+    desc: 'Many Minds are few, but each one is brilliant. Your Light is color and glow: at 3 or more it hides you (attacks are rarer). You learn by watching others (Activities: Watch and learn), and moving your lair costs nothing.',
   },
   swarm: {
     land: { name: 'Hive', band: 'hive', resource: 'Brood', icon: '🥚', keeper: 'nurse', camp: 'mound', first: 'First Queen', leader: 'Queen' },
@@ -834,7 +834,7 @@ G.KINDS = {
   garden: {
     land: { name: 'Grove', band: 'grove', resource: 'Growth', icon: '🌱', keeper: 'gardener', camp: 'grove', first: 'First Harvest' },
     sea: { name: 'Kelp Garden', band: 'garden', resource: 'Growth', icon: '🌱', keeper: 'gardener', camp: 'garden', first: 'First Harvest' },
-    desc: 'Gardeners farm. Every 4 Growth feeds you 1 Food a turn, and tamed species feed you twice as well. But the more you grow, the likelier Blight becomes (Activities: Tend the gardens keeps it away).',
+    desc: 'Gardeners farm. Every 4 Growth feeds you 1 Food a turn, and tamed species feed you twice as well and guard your gardens. But the more you grow, the likelier Blight becomes (Activities: Tend the gardens keeps it away).',
   },
 };
 
@@ -1017,6 +1017,6 @@ G.ACTIVITIES.push(
   { id: 'craft', name: 'Craft', stage: 'tribe', path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
   { id: 'teach', name: 'Teach the songs', stage: 'tribe', path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
   { id: 'watch', name: 'Watch and learn', target: 'species', stage: 'tribe', path: 'many', turns: 3, desc: 'Spend three turns secretly watching a species. Watch a rival band and you copy one of its discoveries; watch any other species and you learn +4 Ideas and +2 Light.' },
-  { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +2 max members and +1 Toughness per level.' },
+  { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +2 max members per level, and +1 Toughness every second level.' },
   { id: 'tend', name: 'Tend the gardens', stage: 'tribe', path: 'garden', turns: 3, desc: 'Three turns of weeding and planting (−1 Food a turn): +2 Growth each turn, and Blight cannot strike for 12 turns after.' },
 );

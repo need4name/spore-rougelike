@@ -518,7 +518,7 @@ window.G = window.G || {};
       const safe = Math.max(0, (run.blightSafeUntil || 0) - run.turn);
       return `<h3>The gardens</h3><p class="note">+${Math.min(4, Math.floor((run.special || 0) / 4))} Food a turn from Growth, and tamed species feed you twice as well. ${safe ? `Safe from Blight for ${safe} more turns.` : (run.special || 0) >= 8 ? 'At 8 Growth or more, Blight can strike. Tend the gardens to keep it away.' : 'Below 8 Growth, Blight cannot strike.'}</p>`;
     }
-    if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (two thirds the members), but every one of you gets +2 Cunning and +1 Idea a turn. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 40% rarer.' : 'At 3 Light or more, you hide: attacks are 40% rarer.'} Migrating costs nothing.</p>`;
+    if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (two thirds the members), but every one of you gets +2 Cunning and +1 Idea a turn. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 25% rarer.' : 'At 3 Light or more, you hide: attacks are 25% rarer.'} Migrating costs nothing.</p>`;
     return '';
   }
   function discoveriesTab(run) {

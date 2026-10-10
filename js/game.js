@@ -426,10 +426,10 @@ window.G = window.G || {};
   G.TRIBE_HARSH = 5;
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
   G.RAID_BELOW = 20;
-  G.TRIBE_THREAT = null; // see predation
+  G.TRIBE_THREAT = 2; // see predation
   G.TRIBE_CHILD_COST = 2;
-  G.TRIBE_HIT_CAP = 0.45; // the most often a hunter or band can strike in a year
-  G.TRIBE_BLOW = 0; // extra members lost to every strike // bands raid you while their opinion is below this
+  G.TRIBE_HIT_CAP = 0.6; // the most often a hunter or band can strike in a year
+  G.TRIBE_BLOW = 1; // extra members lost to every strike // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1808,7 +1808,9 @@ window.G = window.G || {};
   // Many Minds hide in their Light once they have 3.
   G.lightHidden = (run) => run.stage === 'tribe' && run.path === 'many' && (run.special || 0) >= 3;
   // How much less often hunters and raiders reach your camp.
-  G.campShield = (run) => (G.firelit(run) ? 0.75 : 1) * (G.lightHidden(run) ? 0.6 : 1) * (run.stage === 'tribe' ? 1 - 0.15 * G.boonLevel('w_watch') : 1);
+  G.campShield = (run) => (G.firelit(run) ? 0.75 : 1) * (G.lightHidden(run) ? 0.75 : 1) * (run.stage === 'tribe' ? 1 - 0.15 * G.boonLevel('w_watch') : 1)
+    // Gardeners' tamed animals guard the gardens.
+    * (run.stage === 'tribe' && run.path === 'garden' ? 1 - 0.1 * Math.min(3, run.species.filter((x) => x.tamed && !x.extinct).length) : 1);
   G.wisdomOpen = () => G.stageStarts().length > 0 || (G.meta.codex.tribeEndings || []).length > 0;
   G.ruler = (run) => (G.kind(run) && G.kind(run).leader) || 'Leader';
   // What your body lets your people do.
@@ -1847,7 +1849,7 @@ window.G = window.G || {};
     if (tamed) list.push({ foodPerTurn: Math.min(3, tamed) });
     if (run.path === 'song') list.push({ cha: Math.min(3, Math.floor((run.special || 0) / 6)), ideasPerTurn: Math.min(2, Math.floor((run.special || 0) / 10)) });
     if (run.path === 'many') list.push({ cun: 2, ideasPerTurn: 1 });
-    if (run.path === 'swarm') { list.push(G.CASTES[run.caste || 'workers'].mods); if (run.mound) list.push({ maxPop: 2 * run.mound, tou: run.mound }); }
+    if (run.path === 'swarm') { list.push(G.CASTES[run.caste || 'workers'].mods); if (run.mound) list.push({ maxPop: 2 * run.mound, tou: Math.floor(run.mound / 2) }); }
     // Gardeners: Growth feeds you, and tamed species feed you twice as well.
     if (run.path === 'garden') list.push({ foodPerTurn: Math.min(4, Math.floor((run.special || 0) / 4)) + Math.min(3, tamed) });
     const hardy = G.boonLevel('w_hardy'); if (hardy) list.push({ tou: hardy });
@@ -1873,7 +1875,7 @@ window.G = window.G || {};
     }
     // Bands compete for the same land: unless you are allies, they slowly sour on you.
     // Even allies need tending: friendship with another people never lasts on its own.
-    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - G.BAND_SOUR); });
+    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.BAND_SOUR)); });
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
