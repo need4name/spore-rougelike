@@ -1623,8 +1623,10 @@ window.G = window.G || {};
     if (act.id === 'court') {
       // Mask peoples win others over with Cunning.
       const wooing = run.stage === 'tribe' && G.temperament(run).id === 'mask' ? Math.max(G.stat(run, 'cha'), G.stat(run, 'cun')) : G.stat(run, 'cha');
-      const chance = clamp(42 + (wooing - 2) * 8 + (run.stage === 'tribe' ? 15 * G.boonLevel('w_kin') : 0), 15, 90);
-      if (rand() * 100 < chance) { t.opinion = clamp(t.opinion + 12, -100, 100); lines.push({ t: `Courting the ${t.name}: opinion +12`, good: true }); }
+      // Another thinking people is harder to win over than an animal.
+      const chance = clamp(42 + (wooing - 2) * 8 + (run.stage === 'tribe' ? 15 * G.boonLevel('w_kin') : 0) - (t.band ? 15 : 0), 15, 90);
+      const gain = t.band ? 7 : 12;
+      if (rand() * 100 < chance) { t.opinion = clamp(t.opinion + gain, -100, 100); lines.push({ t: `Courting the ${t.name}: opinion +${gain}`, good: true }); }
       else { t.opinion = clamp(t.opinion - 2, -100, 100); lines.push({ t: `The ${t.name} were not impressed: opinion −2` }); }
       if (t.opinion >= 60) { if (t.opinion >= 90) t.sworn = true; gainDna(run, 3); lines.push(finishActivity(run, `The ${t.name} are now your allies. +3 DNA.`, true)); }
       else if (act.turns >= 12) lines.push(finishActivity(run, `The ${t.name} will not be won over, for now.`, false));
@@ -1869,7 +1871,7 @@ window.G = window.G || {};
     }
     // Bands compete for the same land: unless you are allies, they slowly sour on you.
     // Even allies need tending: friendship with another people never lasts on its own.
-    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (x.opinion < 60 ? G.BAND_SOUR : 1)); });
+    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - G.BAND_SOUR); });
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
