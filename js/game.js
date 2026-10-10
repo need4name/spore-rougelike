@@ -372,7 +372,7 @@ window.G = window.G || {};
     const base = run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 : 0) + (run.era - 1) * 3 + G.mod(run, 'maxPop');
     let max = Math.max(3, Math.round((base + (run.stage === 'tribe' ? 2 * G.boonLevel('w_blood') : 0)) * G.SIZES[G.sizeOf(run)].popMult));
     // Many Minds are few, but each one is brilliant.
-    if (run.stage === 'tribe' && run.path === 'many') max = Math.max(3, Math.round(max * 0.65));
+    if (run.stage === 'tribe' && run.path === 'many') max = Math.max(3, Math.round(max * 0.5));
     const g = G.gimmick(run);
     if (g === 'grazer') max = Math.round(max * 1.6);
     // A parasite can never outgrow its host.
@@ -429,7 +429,8 @@ window.G = window.G || {};
   G.TRIBE_THREAT = 2; // see predation
   G.TRIBE_CHILD_COST = 2;
   G.TRIBE_HIT_CAP = 0.6; // the most often a hunter or band can strike in a year
-  G.TRIBE_BLOW = 1; // extra members lost to every strike // bands raid you while their opinion is below this
+  G.TRIBE_BLOW = 1; // extra members lost to every strike
+  G.TRIBE_GRACE = 5; // years before the wild keeps pace and strikes harder // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1732,14 +1733,14 @@ window.G = window.G || {};
       const yearsAtk = run.stage === 'tribe' ? Math.floor(run.stageTurn / 8) : 0;
       // ...and its hunters keep pace with a strong people: never more than G.TRIBE_THREAT below your defence.
       const def0 = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
-      const paceAtk = run.stage === 'tribe' && !s.band && G.TRIBE_THREAT != null ? Math.max(0, def0 - G.TRIBE_THREAT - Math.floor(G.harsh(run) / 2) - G.speciesStat(s, 'str')) : 0;
+      const paceAtk = run.stage === 'tribe' && run.stageTurn > G.TRIBE_GRACE && !s.band && G.TRIBE_THREAT != null ? Math.max(0, def0 - G.TRIBE_THREAT - Math.floor(G.harsh(run) / 2) - G.speciesStat(s, 'str')) : 0;
       const atk = G.speciesStat(s, 'str') + bandAtk + yearsAtk + paceAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
       const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, run.stage === 'tribe' ? G.TRIBE_HIT_CAP : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (run.stage === 'tribe' ? G.TRIBE_BLOW : 0);
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (run.stage === 'tribe' && run.stageTurn > G.TRIBE_GRACE ? G.TRIBE_BLOW : 0);
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.kind(run).camp}: −${damage(run, n)} members` : `The ${s.name} hunted you: −${damage(run, n)} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
@@ -1848,7 +1849,7 @@ window.G = window.G || {};
     const tamed = run.species.filter((x) => x.tamed && !x.extinct).length;
     if (tamed) list.push({ foodPerTurn: Math.min(3, tamed) });
     if (run.path === 'song') list.push({ cha: Math.min(3, Math.floor((run.special || 0) / 6)), ideasPerTurn: Math.min(2, Math.floor((run.special || 0) / 10)) });
-    if (run.path === 'many') list.push({ cun: 2, ideasPerTurn: 1 });
+    if (run.path === 'many') list.push({ cun: 2 });
     if (run.path === 'swarm') { list.push(G.CASTES[run.caste || 'workers'].mods); if (run.mound) list.push({ maxPop: 2 * run.mound, tou: Math.floor(run.mound / 2) }); }
     // Gardeners: Growth feeds you, and tamed species feed you twice as well.
     if (run.path === 'garden') list.push({ foodPerTurn: Math.min(4, Math.floor((run.special || 0) / 4)) + Math.min(3, tamed) });
@@ -1865,7 +1866,7 @@ window.G = window.G || {};
       if (run.special > before) lines.push({ t: `+${run.special - before} ${G.kind(run).resource}`, good: true });
     }
     // The Swarm: brood hatches into new members.
-    if (run.path === 'swarm' && (run.special || 0) >= 6 && run.pop < G.maxPop(run)) { run.special -= 4; run.pop += 1; lines.push({ t: 'Brood hatched: +1 member', good: true }); }
+    if (run.path === 'swarm' && (run.special || 0) >= 8 && run.pop < G.maxPop(run)) { run.special -= 6; run.pop += 1; lines.push({ t: 'Brood hatched: +1 member', good: true }); }
     // Gardeners: the bigger the garden, the likelier Blight.
     if (run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) && rand() < 0.03 + 0.01 * (run.special - 8)) {
       const lost = Math.ceil(run.special / 2); run.special -= lost; run.food = Math.max(0, run.food - 3);
@@ -1994,7 +1995,7 @@ window.G = window.G || {};
         if (t.band) {
           const opts = discoveryOptions(run);
           if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push(finishActivity(run, `By watching the ${t.name}, your people learned ${G.DISCOVERY[d].name}.`, true)); } else lines.push(finishActivity(run, `The ${t.name} know nothing you do not.`, false));
-        } else { gainDna(run, 4); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2); lines.push(finishActivity(run, `Watching the ${t.name} taught your people a great deal: +4 Ideas, +2 Light.`, true)); }
+        } else { gainDna(run, 2); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 3); lines.push(finishActivity(run, `Watching the ${t.name} taught your people something: +2 Ideas, +3 Light.`, true)); }
       }
     }
     if (act.id === 'raise' && act.turns >= a.turns) { run.special -= 5; run.mound = (run.mound || 0) + 1; lines.push(finishActivity(run, `Your ${G.kind(run).camp} grows (level ${run.mound}): more room for everyone.`, true)); }

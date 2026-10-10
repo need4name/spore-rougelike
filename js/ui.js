@@ -495,7 +495,7 @@ window.G = window.G || {};
       <h3>${esc(G.ruler(run))}</h3>
       ${l ? `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} years; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span></div>` : '<p class="empty">No leader. One will be chosen soon.</p>'}
       <h3>${esc(k.resource)}</h3>
-      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}`}</p>
+      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : run.path === 'song' ? ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn, and at 6 or more bands sour on you half as fast.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}` : ''}</p>
       ${kindPanel(run)}
       <h3>Your temperament: ${esc(tm.name)}</h3>
       <p class="note">${tt ? `${esc(tt.rule)} (${esc(G.describeMods(tt.mods))})` : ''}</p>
@@ -512,13 +512,13 @@ window.G = window.G || {};
       const ready = run.turn >= (run.casteReadyAt || 0);
       return `<h3>Castes</h3><p class="note">Your ${esc(G.ruler(run).toLowerCase())} decides what the next broods become.${ready ? '' : ` You can change again in ${run.casteReadyAt - run.turn} turns.`}</p>
         <div class="chips">${Object.entries(G.CASTES).map(([id, c]) => `<button class="chip ${run.caste === id ? 'on' : ''}" ${ready && run.caste !== id ? `data-act="caste" data-arg="${id}"` : 'disabled'} aria-pressed="${run.caste === id}" title="${esc(G.describeMods(c.mods))}">${esc(c.name)}</button>`).join('')}</div>
-        <p class="note">${esc(G.CASTES[run.caste || 'workers'].name)}: ${esc(G.describeMods(G.CASTES[run.caste || 'workers'].mods))}. Your ${esc(G.kind(run).camp)} is level ${run.mound || 0} of 6. At 6 Brood or more, a new member hatches each turn.</p>`;
+        <p class="note">${esc(G.CASTES[run.caste || 'workers'].name)}: ${esc(G.describeMods(G.CASTES[run.caste || 'workers'].mods))}. Your ${esc(G.kind(run).camp)} is level ${run.mound || 0} of 6. At 8 Brood or more, a new member hatches (for 6 Brood).</p>`;
     }
     if (run.path === 'garden') {
       const safe = Math.max(0, (run.blightSafeUntil || 0) - run.turn);
       return `<h3>The gardens</h3><p class="note">+${Math.min(4, Math.floor((run.special || 0) / 4))} Food a turn from Growth, and tamed species feed you twice as well. ${safe ? `Safe from Blight for ${safe} more turns.` : (run.special || 0) >= 8 ? 'At 8 Growth or more, Blight can strike. Tend the gardens to keep it away.' : 'Below 8 Growth, Blight cannot strike.'}</p>`;
     }
-    if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (two thirds the members), but every one of you gets +2 Cunning and +1 Idea a turn. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 25% rarer.' : 'At 3 Light or more, you hide: attacks are 25% rarer.'} Migrating costs nothing.</p>`;
+    if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (half the members), but every one of you gets +2 Cunning. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 25% rarer.' : 'At 3 Light or more, you hide: attacks are 25% rarer.'} Migrating costs nothing.</p>`;
     return '';
   }
   function discoveriesTab(run) {
