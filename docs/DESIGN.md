@@ -47,6 +47,7 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Strangers.** At the Strangers milestone your nemesis (or worst rival) learns to think and becomes a rival band. Bands slowly sour on you unless you are allies, raid your camp once they dislike you, grow stronger with the years, and remember the old feud.
 - **The Founding** (`founding_<path>_<land|sea>`): three choices, each its own ending (`G.TRIBE_ENDINGS`): Settle (Toughness), Roam (Speed) or Conquer (Strength). 12 Tribe endings in all, in the Codex.
 - **Stage Select.** The start of each Tribe you reach is saved (`meta.stageStarts`, one per kind). A new run can begin there for free from the new lineage screen.
+- **Balance (test bots):** fully upgraded bots win nearly every Tribe they reach (their Creature win rate is 85–100%); weak, unupgraded bodies often die in the Tribe stage. Rival bands keep pace with your own Strength, so ignoring a hostile band costs members every year; courting or beating it stops the raids.
 - **Tribe words** for events: {band}, {Band}, {resource}, {keeper}, {camp}, {leader}, and {cand0}–{cand2}.
 
 ## Instinct (CK3-style focus)
