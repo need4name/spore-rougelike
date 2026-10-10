@@ -427,7 +427,9 @@ window.G = window.G || {};
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
   G.RAID_BELOW = 20;
   G.TRIBE_THREAT = null; // see predation
-  G.TRIBE_CHILD_COST = 2; // bands raid you while their opinion is below this
+  G.TRIBE_CHILD_COST = 2;
+  G.TRIBE_HIT_CAP = 0.45; // the most often a hunter or band can strike in a year
+  G.TRIBE_BLOW = 0; // extra members lost to every strike // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1735,9 +1737,9 @@ window.G = window.G || {};
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
-      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
+      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, run.stage === 'tribe' ? G.TRIBE_HIT_CAP : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3);
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (run.stage === 'tribe' ? G.TRIBE_BLOW : 0);
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.kind(run).camp}: −${damage(run, n)} members` : `The ${s.name} hunted you: −${damage(run, n)} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
