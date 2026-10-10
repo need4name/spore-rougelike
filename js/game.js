@@ -424,6 +424,8 @@ window.G = window.G || {};
   G.harsh = (run) => G.HARSH + Math.round(4 * (run.power || 0));
   // A new stage is hard: your first Tribe should usually fail. Ancestral Wisdom pays it back.
   G.TRIBE_HARSH = 5;
+  G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
+  G.RAID_BELOW = 20; // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
@@ -1713,18 +1715,20 @@ window.G = window.G || {};
       if (s === G.mimicOf(run) && rand() < 0.4) return;
       const hostile = G.speciesStatus(s) === 'hostile';
       // A rival band that dislikes you raids you, even before it turns openly hostile.
-      const raider = s.band && s.opinion < 0;
+      const raider = s.band && s.opinion < G.RAID_BELOW;
       if (s.role !== 'predator' && !hostile && !raider) return;
       if (s.tamed) return;
       // A thinking band keeps up with you: its strength is never far below your own, and grows with the years.
       const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 1 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
-      const atk = G.speciesStat(s, 'str') + bandAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
+      // In the Tribe stage the wild grows more dangerous with the years.
+      const yearsAtk = run.stage === 'tribe' ? Math.floor(run.stageTurn / 8) : 0;
+      const atk = G.speciesStat(s, 'str') + bandAtk + yearsAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
       const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, 3);
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3);
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.kind(run).camp}: −${damage(run, n)} members` : `The ${s.name} hunted you: −${damage(run, n)} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
@@ -1857,7 +1861,8 @@ window.G = window.G || {};
       log(run, 'Blight struck the gardens.');
     }
     // Bands compete for the same land: unless you are allies, they slowly sour on you.
-    run.species.forEach((x) => { if (x.band && !x.extinct && x.opinion < 60) x.opinion = Math.max(-100, x.opinion - 1); });
+    // Even allies need tending: friendship with another people never lasts on its own.
+    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (x.opinion < 60 ? G.BAND_SOUR : 1)); });
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
