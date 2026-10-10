@@ -197,6 +197,22 @@ window.G = window.G || {};
   }
 
   // ---------- New run setup ----------
+  // Stage Select: begin again at the start of a Tribe you have reached before. Free.
+  function stageSelect() {
+    const list = G.stageStarts();
+    if (!list.length) return '';
+    return `
+      <section class="setup-group">
+        <h2>Stage Select</h2>
+        <p class="note">Start in the Tribe stage, from a people you have founded before. It is free, and your Creature ending is not paid out again.</p>
+        <div class="choices">${list.map((x) => { const p = G.PATH[x.key.split('|')[0]]; return `
+          <button class="choice" data-act="stage-start" data-arg="${esc(x.key)}">
+            <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong></span>
+            <span class="choice-desc">${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
+          </button>`; }).join('')}</div>
+      </section>`;
+  }
+
   function setupScreen() {
     const m = G.meta;
     const st = G.ui.setup;
@@ -216,6 +232,7 @@ window.G = window.G || {};
     return `
       <main class="setup">
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>New lineage</h1></header>
+        ${stageSelect()}
         <section class="setup-group"><h2>Archetype</h2><div class="choices">${G.ARCHETYPES.map((a) => card('archetype', a, st.archetype === a.id, m.unlocked.archetypes.includes(a.id))).join('')}</div></section>
         <section class="setup-group"><h2>Home world</h2><div class="choices">${G.ORIGINS.map((o) => card('origin', o, st.origin === o.id, m.unlocked.origins.includes(o.id))).join('')}</div></section>
         ${hostility}
@@ -232,7 +249,7 @@ window.G = window.G || {};
     const net = inc.total - up;
     const goal = nextGoal(run);
     const pct = goal ? Math.min(100, (run.dna / goal.at) * 100) : 100;
-    const era = (run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
+    const era = (run.stage === 'tribe' ? ` · ${G.kind(run).name}` : run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
     const fasc = run.fascination && G.INNOVATION[run.fascination];
     return `
       <header class="topbar">
@@ -240,21 +257,32 @@ window.G = window.G || {};
         <div class="tb-main">
           <div class="tb-title"><strong>${esc(st.name)}</strong><span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
-            <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="Population. At 0 your lineage is extinct.">${ICON.pop}<b>${run.pop}</b>/${max}</span>
+            <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="${run.stage === 'tribe' ? 'Members of your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'}">${ICON.pop}<b>${run.pop}</b>/${max}</span>
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
-            ${run.mind ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
+            ${tribeChips(run)}
+            ${run.mind && run.stage === 'creature' ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
             ${gimmickChip(run)}
-            ${run.activity ? `<span class="res gimmick" title="Your current Activity">${esc({ war: 'War', court: 'Courting', avoid: 'Avoiding', hunt: 'Hunting', migrate: 'Migrating', scout: 'Scouting' }[run.activity.id])}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
+            ${run.activity ? `<span class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
             ${G.season(run) ? `<span class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
-          <div class="evo" title="DNA">
-            <span class="evo-label">${ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
+          <div class="evo" title="${run.stage === 'tribe' ? 'Ideas' : 'DNA'}">
+            <span class="evo-label">${run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
         <button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>
         <div class="tb-row2">${speedControls(run)}</div>
       </header>`;
+  }
+
+  // The Tribe stage at a glance: your special resource and your leader.
+  function tribeChips(run) {
+    if (run.stage !== 'tribe') return '';
+    const k = G.kind(run);
+    const sp = run.specialOn ? `<span class="res gimmick ${run.path === 'tool' && (run.special || 0) < 3 ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b>${run.gear ? ` · Gear ${run.gear}` : ''}</span>` : '';
+    const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
+    const ld = `<span class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
+    return sp + ld;
   }
 
   // The archetype's gimmick, at a glance.
@@ -282,9 +310,10 @@ window.G = window.G || {};
   function nextGoal(run) {
     const st = G.goals(run);
     const goals = [];
-    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: 'mutation' }));
-    st.milestones.filter((m) => !run.milestonesDone.includes(m.event)).forEach((m) => goals.push({ at: m.at, label: G.EVENT[m.event].title }));
-    if (st.evolveAt) goals.push({ at: st.evolveAt, label: 'the shore' });
+    const tribe = run.stage === 'tribe';
+    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: tribe ? 'discovery' : 'mutation' }));
+    st.milestones.map((m) => ({ at: m.at, id: m.event.replace('{path}', run.path) })).filter((m) => !run.milestonesDone.includes(m.id) && G.EVENT[m.id]).forEach((m) => goals.push({ at: m.at, label: G.EVENT[m.id].title }));
+    if (st.evolveAt) goals.push({ at: st.evolveAt, label: tribe ? 'the Founding' : 'the shore' });
     goals.sort((a, b) => a.at - b.at);
     return goals.find((g) => g.at > run.dna) || null;
   }
@@ -365,8 +394,9 @@ window.G = window.G || {};
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
       <article class="card outcome">
-        <p class="eyebrow">${run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
+        <p class="eyebrow">${run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
         <h2>${esc(run.scene.label)}</h2>
+        ${run.scene.discovery ? `<div class="callout"><strong>${esc(G.DISCOVERY[run.scene.discovery].name)}</strong><span>${esc(G.describeMods(G.DISCOVERY[run.scene.discovery].mods))}. ${esc(G.DISCOVERY[run.scene.discovery].desc)}</span></div>` : ''}
         ${run.scene.evolved ? `<div class="callout"><strong>${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
         <button class="btn primary wide" data-act="continue-mutation">Continue</button>
       </article>`;
@@ -418,7 +448,74 @@ window.G = window.G || {};
     return `<div class="part-compare">${rows.join('')}</div>`;
   }
 
+  // ---------- Tribe stage ----------
+  // A discovery's tags: which talent or Path it comes from.
+  function discoveryTags(d) {
+    return `${d.talent ? `<span class="kw">${esc(G.TALENT_NAMES[d.talent])}</span>` : ''}${d.path ? `<span class="kw">${esc(G.PATH[d.path].name)}</span>` : ''}${d.from ? '<span class="kw unlocked">Combined</span>' : ''}`;
+  }
+  function discoveryCard(run) {
+    const d = run.draft;
+    const known = run.discoveries || [];
+    const seen = G.meta.codex.discoveries || [];
+    return `
+      <article class="card draft">
+        <p class="eyebrow">Discovery</p>
+        <h2>What will your people learn?</h2>
+        <p class="note">Learn something new, or combine it with something you already know. The right pairs become a greater discovery (you keep only the result).</p>
+        <div class="draft-list">
+          ${d.options.map((id) => {
+            const x = G.DISCOVERY[id];
+            const combos = known.map((k) => ({ k, c: G.discoveryCombo(k, id) })).filter((o) => o.c);
+            return `
+            <div class="part-card">
+              <span class="opt-label">${esc(x.name)}${discoveryTags(x)}</span>
+              <span class="opt-meta"><span>${esc(G.describeMods(x.mods))}</span></span>
+              <span class="opt-desc">${esc(x.desc)}</span>
+              <div class="row tight">
+                <button class="btn small primary" data-act="draft" data-arg="${id}" data-mode="learn">Learn it</button>
+                ${combos.map((o) => `<button class="btn small primary evo" data-act="draft" data-arg="${id}" data-mode="combine" data-socket="${o.k}">Combine with ${esc(G.DISCOVERY[o.k].name)} → ${seen.includes(o.c) ? esc(G.DISCOVERY[o.c].name) : '✨ something new?'}</button>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="row">
+          ${d.rerolls > 0 ? `<button class="btn" data-act="reroll">Reroll (${d.rerolls})</button>` : ''}
+          <button class="btn ghost" data-act="skip-draft">Skip for +3 Food</button>
+        </div>
+      </article>`;
+  }
+  function peopleTab(run) {
+    const k = G.kind(run); const tm = G.temperament(run); const tt = G.TRIBE_TEMPER[tm.id];
+    const l = run.leader;
+    const talents = [...G.talents(run)];
+    const tamed = run.species.filter((s) => s.tamed && !s.extinct);
+    const band = run.species.find((s) => s.band && !s.extinct);
+    return `
+      <div class="callout"><strong>${k.icon} The ${esc(k.name)}</strong><span>${esc(G.sub(G.KINDS[run.path].desc, run))}</span></div>
+      <h3>Leader</h3>
+      ${l ? `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} years; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span></div>` : '<p class="empty">No leader. One will be chosen soon.</p>'}
+      <h3>${esc(k.resource)}</h3>
+      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}`}</p>
+      <h3>Your temperament: ${esc(tm.name)}</h3>
+      <p class="note">${tt ? `${esc(tt.rule)} (${esc(G.describeMods(tt.mods))})` : ''}</p>
+      <h3>Talents</h3>
+      <p class="note">What your body lets your people do. Talents bring their own discoveries.</p>
+      <div class="chips">${talents.length ? talents.map((t) => `<span class="chip on">${esc(G.TALENT_NAMES[t])}</span>`).join('') : '<span class="note">None yet: your body is plain. Shared discoveries still come.</span>'}</div>
+      <h3>Wildlife</h3>
+      <p class="note">${run.totem ? `Totem: the ${esc(run.totem)}. ` : 'No totem yet (Activities: Revere). '}${tamed.length ? `Tamed: ${esc(listJoin(tamed.map((s) => `the ${s.name}`)))}.` : 'Nothing tamed yet (Activities: Tame).'}</p>
+      ${band ? `<h3>Strangers</h3><p class="note">The ${esc(band.name)}: opinion ${band.opinion}${band.nemesis ? ', and they remember the old feud' : ''}.</p>` : ''}`;
+  }
+  function discoveriesTab(run) {
+    const known = run.discoveries || [];
+    const seen = G.meta.codex.discoveries || [];
+    return `<p class="note">${known.length} discover${known.length === 1 ? 'y' : 'ies'}. New ones come as your people gather Ideas.</p>
+      ${known.length ? known.map((id) => { const x = G.DISCOVERY[id]; return `<div class="callout"><strong>${esc(x.name)} ${discoveryTags(x)}</strong><span>${esc(G.describeMods(x.mods))}. ${esc(x.desc)}</span></div>`; }).join('') : '<p class="empty">Nothing yet.</p>'}
+      <h3>Combinations found (all lineages)</h3>
+      <p class="note">${esc(listJoin(G.DISCOVERIES.filter((x) => x.from && seen.includes(x.id)).map((x) => `${x.name} (${G.DISCOVERY[x.from[0]].name} + ${G.DISCOVERY[x.from[1]].name})`)) || 'None yet.')}</p>`;
+  }
+
   function draftCard(run) {
+    if (run.stage === 'tribe') return discoveryCard(run);
     const d = run.draft;
     const counts = G.keywordCounts(run);
     const merging = G.canMerge(run);
@@ -562,6 +659,20 @@ window.G = window.G || {};
 
   function evolvedCard(run) {
     const e = run.evolved;
+    if (e && e.tribe) {
+      const k = G.kind(run); const tt = G.TRIBE_TEMPER[G.temperament(run).id];
+      return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card finale">
+        <p class="eyebrow">Tribe Stage · ${esc(G.PATH[run.path].name)}</p>
+        <h2>${esc(e.ending)}: the ${esc(k.name)} is born</h2>
+        <p class="event-text">Your kind is no longer a ${run.habitat === 'sea' ? 'school' : 'herd'}. It is a people, with a name for itself and a leader: <b>${esc(G.leaderTitle(run.leader))}</b>.${run.checkpointGenes ? ` Your Creature ending earned <b>+${run.checkpointGenes} Genetic Memory</b>, kept whatever happens next.` : ''}</p>
+        <div class="callout"><strong>${k.icon} ${esc(k.resource)}</strong><span>${esc(G.sub(G.KINDS[run.path].desc, run))}</span></div>
+        ${tt ? `<div class="callout"><strong>${esc(G.temperament(run).name)}</strong><span>${esc(tt.rule)}</span></div>` : ''}
+        <p class="note">Ideas replace DNA. Each goal brings a Discovery instead of a mutation, from your Path, your home and what your body can do. Reach ${G.goals(run).evolveAt} Ideas for the Founding, where your people choose to Settle, Roam or Conquer. Your body no longer changes.</p>
+        <button class="btn primary wide" data-act="continue-evolved">Lead your people</button>
+      </article>`;
+    }
     const tr = G.TRAITS[e.heritage];
     const sea = run.habitat === 'sea';
     return `
@@ -579,6 +690,7 @@ window.G = window.G || {};
 
   function endCard(run) {
     const r = run.result;
+    if (run.stage === 'tribe') return tribeEndCard(run, r);
     const leg = run.legacy && G.LEGACIES[run.legacy];
     const b = r.breakdown;
     return `
@@ -586,13 +698,35 @@ window.G = window.G || {};
       <article class="card end ${r.victory ? 'finale' : ''}">
         <p class="eyebrow">${r.victory ? 'Prototype complete' : 'Extinction'}</p>
         <h2>${r.victory ? esc(G.endingName(run)) : 'Your lineage is gone'}</h2>
-        <p class="event-text">${r.victory ? `${leg.path ? `${esc(G.PATH[leg.path].name)} · ${esc(G.temperament(run).name)}. ` : ''}Your people will become ${esc(leg.desc.replace(/\.$/, '').replace(/^A /, 'a '))}. ${leg.path ? esc(G.temperament(run).rule) : ''} The Tribe stage arrives in Update 14.` : `${esc(r.cause)} It lasted ${run.turn} turns and reached the ${esc(G.STAGES[run.stage].name)}${run.stage === 'creature' ? ` (${esc(G.ERAS[run.era])})` : ''}.`}</p>
+        <p class="event-text">${r.victory ? `${leg.path ? `${esc(G.PATH[leg.path].name)} · ${esc(G.temperament(run).name)}. ` : ''}Your people will become ${esc(leg.desc.replace(/\.$/, '').replace(/^A /, 'a '))}. ${leg.path ? esc(G.temperament(run).rule) : ''} ${G.TRIBE_PATHS.includes(leg.path) ? '' : ` The Tribe stage for ${esc(G.PATH[leg.path] ? G.PATH[leg.path].name : 'your kind')} arrives in Update 15.`}` : `${esc(r.cause)} It lasted ${run.turn} turns and reached the ${esc(G.STAGES[run.stage].name)}${run.stage === 'creature' ? ` (${esc(G.ERAS[run.era])})` : ''}.`}</p>
         ${(() => { const fresh = G.meta.codex.evolutions.filter((id) => !(run.knownEvos || []).includes(id)); return fresh.length ? `<div class="callout"><strong>Unlocked for future runs</strong><span>${esc(listJoin(fresh.map((id) => G.PART[id].name)))} can now appear in mutation drafts.</span></div>` : ''; })()}
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
           <span>${b.base} from DNA collected${b.survival ? ` · +${b.survival} for surviving ${run.turn} turns` : ''}${b.progress ? ` · +${b.progress} for milestones reached` : ''}${b.winBonus ? ` · +${b.winBonus} for becoming a people` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new ending in the Codex` : ''}${b.revived ? ` · ×${G.REVIVE_MULT} revived` : ''}${b.mult > 1 && !b.revived ? ` · ×${b.mult} hostility` : ''}</span>
         </div>
         ${G.meta.fossils.some((f) => f.run && f.run.turn <= run.turn && !f.amber) ? '<p class="note">This lineage left fossils at its milestones. Keep a favourite in amber from the Fossil Record to revive it later.</p>' : ''}
+        <div class="row">
+          <button class="btn primary" data-act="setup">New lineage</button>
+          <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree</button>
+          <button class="btn" data-act="go" data-arg="fossils">Fossil Record</button>
+        </div>
+      </article>`;
+  }
+
+  function tribeEndCard(run, r) {
+    const b = r.breakdown; const k = G.kind(run);
+    const e = run.tribeEnding && G.TRIBE_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.tribeEnding];
+    return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card end ${r.victory ? 'finale' : ''}">
+        <p class="eyebrow">${r.victory ? 'Tribe stage complete' : 'Your people are gone'}</p>
+        <h2>${r.victory && e ? esc(e.name) : `The ${esc(k.name)} is no more`}</h2>
+        <p class="event-text">${r.victory && e ? `${esc(e.desc)} ${run.leader ? `Founded under ${esc(G.leaderTitle(run.leader))}, after` : 'Founded after'} ${run.stageTurn} years and ${(run.discoveries || []).length} discoveries. The Society stage arrives in Update 16.` : `${esc(r.cause)} Your people lasted ${run.stageTurn} years as a ${esc(k.band)}.`}${run.checkpointGenes ? ` (Your Creature ending already earned +${run.checkpointGenes} Genetic Memory.)` : ''}</p>
+        <div class="callout gene">
+          <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
+          <span>${b.base} from Ideas${b.progress ? ` · +${b.progress} for your people's growth` : ''}${b.winBonus ? ` · +${b.winBonus} for the Founding` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new Tribe ending` : ''}${b.mult > 1 ? ` · ×${b.mult}` : ''}</span>
+        </div>
+        <p class="note">You can start a new run from the beginning of this ${esc(k.name)} with Stage Select, on the new lineage screen.</p>
         <div class="row">
           <button class="btn primary" data-act="setup">New lineage</button>
           <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree</button>
@@ -861,7 +995,7 @@ window.G = window.G || {};
       current = `<div class="act-current"><strong>${esc(a.name)}${t ? `: the ${esc(t.name)}` : ''}</strong>${progress}<button class="btn small ghost" data-act="act-stop">Stop</button></div>`;
     }
     const alive = run.species.filter((s) => !s.extinct);
-    const list = G.ACTIVITIES.map((a) => {
+    const list = G.ACTIVITIES.filter((a) => !G.activityState(run, a.id).hidden).map((a) => {
       const picking = G.ui.actPick === a.id;
       const plain = !a.target && G.activityState(run, a.id).ok;
       return `<div class="act-card ${picking ? 'open' : ''}">
@@ -949,8 +1083,12 @@ window.G = window.G || {};
   function sheet(run) {
     const tab = G.ui.sheet;
     if (!tab) return '';
-    const tabs = [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panel = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab }[tab](run);
+    const tribe = run.stage === 'tribe';
+    const tabs = tribe
+      ? [['people', 'People'], ['found', 'Discoveries'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
+    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab };
+    const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
     return `
@@ -958,7 +1096,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${esc(arch.name)} lineage</h2><p class="note">${G.DIET_NAMES[G.diet(run)]} · ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${G.DIET_NAMES[G.diet(run)]} · ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
@@ -1210,6 +1348,14 @@ window.G = window.G || {};
             return `<li><strong>${pth.icon} ${esc(pth.name)} · ${l.habitat === 'sea' ? 'Sea' : 'Land'}</strong><span class="note">${esc(l.desc)}</span><ul>${G.ARCHETYPES.map((a) => { const tm = G.TEMPERAMENTS[a.id]; const got = (c.endings || []).includes(`${id}|${tm.id}`);
               return `<li class="${got ? 'got' : ''}"><span>${esc(a.name)}</span><b>${got ? esc(l.flavor[tm.id]) : '???'}</b></li>`; }).join('')}</ul></li>`; }).join('')}</ul>
         </section>
+        <section><h2>Tribe endings <span class="count">${(c.tribeEndings || []).length} / 12</span></h2>
+          <p class="note">How each kind of people can found itself: Settle, Roam or Conquer. A new one is worth +10 Genetic Memory.</p>
+          <ul class="codex-grid">${Object.entries(G.TRIBE_ENDINGS).flatMap(([path, byHab]) => Object.entries(byHab).flatMap(([hab, ends]) => Object.entries(ends).map(([road, e]) => { const got = (c.tribeEndings || []).includes(`${path}|${hab}|${road}`); const k = G.KINDS[path][hab];
+            return got ? `<li><strong>${esc(e.name)}</strong><span>${k.icon} ${esc(k.name)} · ${esc(road[0].toUpperCase() + road.slice(1))}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${k.icon} ${esc(k.name)} · ${esc(road[0].toUpperCase() + road.slice(1))}</span></li>`; }))).join('')}</ul>
+        </section>
+        <section><h2>Discoveries <span class="count">${G.DISCOVERIES.filter((d) => (c.discoveries || []).includes(d.id)).length} / ${G.DISCOVERIES.length}</span></h2>
+          <ul class="codex-grid">${G.DISCOVERIES.map((d) => ((c.discoveries || []).includes(d.id) ? `<li><strong>${esc(d.name)}</strong>${discoveryTags(d)}<span>${esc(G.describeMods(d.mods))}</span>${d.from ? `<span>${esc(G.DISCOVERY[d.from[0]].name)} + ${esc(G.DISCOVERY[d.from[1]].name)}</span>` : ''}</li>` : `<li class="unknown"><strong>???</strong>${d.from ? '<span>Combined</span>' : ''}</li>`)).join('')}</ul>
+        </section>
         <section><h2>Evolutions <span class="count">${c.evolutions.length} / ${evos.length}</span></h2>
           <p class="note">Merge the right two parts to evolve them. Discoveries unlock new archetypes and worlds.</p>
           <ul class="codex-grid">${evos.map(evoCard).join('')}</ul>
@@ -1246,6 +1392,7 @@ window.G = window.G || {};
       case 'pick-archetype': G.ui.setup.archetype = arg; break;
       case 'pick-origin': G.ui.setup.origin = arg; break;
       case 'pick-hostility': G.ui.setup.hostility = Number(arg); break;
+      case 'stage-start': if (G.startFromStage(arg)) { if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); } return;
       case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility); if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
       case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
       case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;

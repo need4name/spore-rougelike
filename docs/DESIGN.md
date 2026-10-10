@@ -10,7 +10,8 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 |---|---|---|---|
 | Cell | Epoch | Single cell → **Many Become One** (multicellularity) → **The Edge of the Sea** (land or sea) | Playable |
 | Creature | Generation | First Steps → **Age of Giants** (size choice) → **Spark of Mind** (choose a Path of Mind) → your Path's finale | Playable |
-| Tribe, Society, Empire | — | — | Planned (Empire is the final stage; see LATER_STAGES.md) |
+| Tribe | Year | **Your first Fire or Song** → **Strangers** (a rival band) → **The Council of Elders** → **the Founding** (Settle, Roam or Conquer) | Playable for Toolmakers and Singers (Update 14) |
+| Society, Empire | — | — | Planned (Empire is the final stage; see LATER_STAGES.md) |
 
 **Time:** every tick (2.4 s at normal speed) is one Epoch or Generation: Food is gathered and eaten, Population grows, DNA and Insight arrive, and every other species grows, starves or is hunted. Drafts, milestones and finales pause time when DNA reaches them. Random events also pop up and pause time; after choosing, a scene acts out what happened.
 
@@ -30,6 +31,23 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
   - **Awakening** (row 5): your Path's capstone. Researching it brings your Path's finale (`finale_<path>_<land|sea>`).
 - **Endings.** Ten main endings, one for each Path on land and at sea (`G.ENDING_FOR`), each named differently by your temperament: 70 in all (for example, the Hunter's Many Minds sea ending is the Lantern Court). They decide which kind of people you become in the Tribe stage. The **Codex of Endings** tracks every pair of start and ending you have reached; each new one is worth +10 Genetic Memory.
 - **Signature events:** two for each Path, shown only on that Path.
+
+## The Tribe stage (Update 14)
+
+- **Who gets one.** Toolmakers and Singers who win their Creature finale become a people instead of ending the run (`G.TRIBE_PATHS`, `becomeTribe`). Toolmakers become a **Tribe** (land) or **Shell Clan** (sea); Singers a **Choir** (land) or **Pod** (sea) (`G.KINDS`). Other Paths still end at their Creature ending until Update 15.
+- **Checkpoint.** The Creature ending pays out at once (`checkpoint`: the usual win Genetic Memory, the Codex of Endings square and a win), so dying in the Tribe stage never costs it. The Tribe stage then pays its own Genetic Memory at the end: Ideas ÷ 3, +5 and +2 per discovery (up to +10), +40 for the Founding, +10 for a new Tribe ending.
+- **Your body stays.** Parts, body plan and look carry over and no longer change. They give your stats and your **talents** (`G.talents`: hands, voice, glow, venom, armor, wings, eyes, speed), which open talent discoveries.
+- **Ideas replace DNA** (`G.ideasPerTurn`: 1 + Ideas bonuses + Cunning ÷ 10, +1 exploring). Rich Genes and your home world don't boost them. Goals: discoveries at 5, 13, 22, 32, 43, 55, 68, 82, 97 and 112; Strangers at 34; the Council of Elders at 70; the Founding at 120. A Tribe stage takes about 20–45 years.
+- **Discoveries** (`G.DISCOVERIES`, 51) are drafted 1 of 3 like parts: shared ones, talent ones, Path ones and land or sea ones. The right pairs **combine** (`from`) into a greater discovery; you keep only the result. New combinations go into the Codex (+3 Genetic Memory).
+- **Leaders** have a name and two traits (`G.LEADER_TRAITS`) that change your stats. A leader lives 14–25 years; when one dies (old age, a challenge, an event), you choose the next from three candidates (the `succession` event).
+- **Fire** (Toolmakers): from the first milestone your Fire (or Vent-heat) grows by 1 a turn, up to 20. At 3 or more it cancels cold seasons and cuts attacks by 25%. **Craft** spends 4 for a level of gear (+1 Strength per level, +1 Toughness every second level, up to 5).
+- **Song** (Singers): every 6 Song gives +1 Charm (up to 3) and every 10 gives +1 Idea a turn. When 3 or more members die at once, Song is lost, and if too little is left, a discovery is forgotten. **Teach the songs** protects you from the next such loss.
+- **Temperaments** carry on (`G.TRIBE_TEMPER`): Hunters hunt 1.5× and bands fear them; the Herd and the Many are bigger; the Bond tames more easily; the Taker steals a discovery when it beats a band in war; the Mask courts with Cunning; the Wanderer migrates a turn faster and learns 3 Ideas on the way.
+- **Wildlife.** The species of your Creature world stay. **Tame** one (Charm, up to 10 turns) for +1 Food a turn (up to 3) and it never attacks you; **Revere** one as your totem for +1 to its best stat. **Ceremony** (every 8 turns) gives Fire or Song and Ideas.
+- **Strangers.** At the Strangers milestone your nemesis (or worst rival) learns to think and becomes a rival band. Bands slowly sour on you unless you are allies, raid your camp once they dislike you, grow stronger with the years, and remember the old feud.
+- **The Founding** (`founding_<path>_<land|sea>`): three choices, each its own ending (`G.TRIBE_ENDINGS`): Settle (Toughness), Roam (Speed) or Conquer (Strength). 12 Tribe endings in all, in the Codex.
+- **Stage Select.** The start of each Tribe you reach is saved (`meta.stageStarts`, one per kind). A new run can begin there for free from the new lineage screen.
+- **Tribe words** for events: {band}, {Band}, {resource}, {keeper}, {camp}, {leader}, and {cand0}–{cand2}.
 
 ## Instinct (CK3-style focus)
 

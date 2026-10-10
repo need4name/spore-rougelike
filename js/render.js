@@ -1630,6 +1630,8 @@ window.G = window.G || {};
         if (act.id === 'war' || act.id === 'court') { tx = you.x + (Math.random() - 0.5) * 0.15; ty = you.y + (Math.random() - 0.5) * 0.15; }
       }
     } else {
+      // A Tribe stays close to its camp.
+      if (run.stage === 'tribe') { tx = h.hx + (Math.random() - 0.3) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
       // Your own herd follows your Activity.
       const act = run.activity;
       const th = act && act.target && herds.get(act.target);
@@ -1758,6 +1760,49 @@ window.G = window.G || {};
     });
   }
 
+  function drawCamp(run, x, y, k, t) {
+    const sea = run.habitat === 'sea';
+    const lit = (run.special || 0) > 0 && run.specialOn;
+    ctx.save();
+    if (run.path === 'tool') {
+      // Shelters around the heat.
+      for (let i = -1; i <= 1; i += 2) {
+        ctx.beginPath(); ctx.moveTo(x + i * k * 1.5 - k * 0.6, y); ctx.lineTo(x + i * k * 1.5, y - k * 1.1); ctx.lineTo(x + i * k * 1.5 + k * 0.6, y); ctx.closePath();
+        ctx.fillStyle = sea ? 'rgba(200, 190, 170, 0.85)' : 'rgba(120, 84, 50, 0.95)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      if (sea) {
+        ctx.beginPath(); ctx.ellipse(x, y, k * 0.55, k * 0.22, 0, 0, Math.PI * 2); ctx.fillStyle = '#3a3a44'; ctx.fill();
+        if (lit) for (let i = 0; i < 6; i++) { const ph = (t * 0.5 + i / 6) % 1; ctx.beginPath(); ctx.arc(x + Math.sin(i * 2.3 + t) * k * 0.25, y - ph * k * 2.2, k * (0.06 + 0.05 * (1 - ph)), 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 170, 110, ${0.7 * (1 - ph)})`; ctx.fill(); }
+      } else {
+        ctx.strokeStyle = '#4a3020'; ctx.lineWidth = Math.max(2, k * 0.12);
+        ctx.beginPath(); ctx.moveTo(x - k * 0.45, y); ctx.lineTo(x + k * 0.45, y - k * 0.12); ctx.moveTo(x + k * 0.45, y); ctx.lineTo(x - k * 0.45, y - k * 0.12); ctx.stroke();
+        if (lit) {
+          const g = ctx.createRadialGradient(x, y - k * 0.3, 1, x, y - k * 0.3, k * 2.2); g.addColorStop(0, 'rgba(255, 190, 90, 0.45)'); g.addColorStop(1, 'rgba(255, 190, 90, 0)');
+          ctx.fillStyle = g; ctx.fillRect(x - k * 2.2, y - k * 2.5, k * 4.4, k * 4.4);
+          for (let i = 0; i < 3; i++) {
+            const f = 1 + 0.18 * Math.sin(t * 9 + i * 2); const hgt = k * (0.9 - i * 0.22) * f;
+            ctx.beginPath(); ctx.moveTo(x - k * (0.32 - i * 0.08), y - k * 0.06); ctx.quadraticCurveTo(x + Math.sin(t * 6 + i) * k * 0.15, y - hgt * 1.3, x + k * (0.32 - i * 0.08), y - k * 0.06); ctx.closePath();
+            ctx.fillStyle = ['#ff7a2a', '#ffb13b', '#fff1a8'][i]; ctx.fill();
+          }
+        }
+      }
+    } else {
+      // A ring of stones (or coral) where the songs are sung, with notes drifting up.
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2; const sx = x + Math.cos(a) * k * 1.1; const sy = y + Math.sin(a) * k * 0.38;
+        ctx.beginPath(); ctx.ellipse(sx, sy - k * 0.25, k * 0.16, k * 0.32, 0, 0, Math.PI * 2); ctx.fillStyle = sea ? '#c98fa0' : '#8d8a80'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+      if (lit) for (let i = 0; i < 4; i++) {
+        const ph = (t * 0.3 + i / 4) % 1; const nx = x + Math.sin(i * 1.7 + t) * k * 0.6; const ny = y - k * 0.4 - ph * k * 2.4;
+        ctx.globalAlpha = 1 - ph; ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.ellipse(nx, ny, k * 0.12, k * 0.09, -0.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(nx + k * 0.09, ny - k * 0.45, Math.max(1, k * 0.04), k * 0.45); ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
+  }
+
   function drawMapBackground(run, w, h, t) {
     const hue = G.ORIGIN[run.origin].hue;
     if (run.stage !== 'cell' && run.habitat === 'land') {
@@ -1868,6 +1913,9 @@ window.G = window.G || {};
       // Draw scenery and herds together, far to near.
       const depthOf = (y) => (land ? 0.55 + 0.45 * y : seaMap ? 0.85 : 0.7 + 0.3 * y);
       const drawables = makeScenery(run).map((it) => ({ y: it.y, draw: () => { const k = base * depthOf(it.y) * it.r; drawScenery(it, it.x * w, top + it.y * (bottom - top), k, t); } }));
+      // A Tribe's camp: its fire, its warm vent or its singing stones, where your people always come back to.
+      const youHd = herds.get('you');
+      if (run.stage === 'tribe' && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx - 0.13) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
       mapHits = [];
       const labelBoxes = []; const labelDraws = [];
       live.forEach((l) => {

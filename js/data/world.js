@@ -711,16 +711,21 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '13.1';
+G.VERSION = '14';
 G.WHATS_NEW = {
-  title: 'Patch 13.1: A firmer footing',
+  title: 'Update 14: First Fires',
   items: [
-    'The Creature Editor now fits your kind of body. Jellyfish get a bell and tentacles, starfish a disc and arms, blobs width and pseudopods, serpents length, thickness and slither, and fish their fins. Tails, back parts and wings get size sliders when you have them.',
-    'Every starting archetype now shows how hard it is: Gentle, Tricky or Hard. Harder starts are there for when you are ready, not to be avoided.',
-    'Tips now darken everything behind them, so it is always clear what to read.',
-    'Drafts no longer show a "replace" line for merged parts (they can only have one half swapped out).',
-    'Cell sizes are spelled out (micrometres), and the map labels in the Cell stage just show how many there are.',
-    'Update 13 (Other Minds): five Paths of Mind, a Mind tree built from your own story, and 70 named endings in the Codex of Endings.',
+    'The Tribe stage. Toolmakers and Singers no longer end at their Creature ending: they become a people. Toolmakers become a Tribe on land or a Shell Clan at sea; Singers become a Choir on land or a Pod at sea.',
+    'Your Creature ending is now a checkpoint. It pays out its Genetic Memory straight away, so you keep it even if your people die out.',
+    'Ideas replace DNA. Each goal brings a Discovery, 1 of 3, from your Path, your home and what your body can do (hands, voice, glow, venom, armor, wings, eyes, speed). The right pairs combine into greater discoveries.',
+    'Leaders. Your people have a leader with two traits. Leaders grow old and die, and then you choose the next one from three.',
+    'Fire and Song. Toolmakers keep Fire (or Vent-heat at sea): it warms you through the cold, keeps hunters away, and crafts gear. Singers keep Song: it makes you charming and clever, but if many die at once, verses are lost, and discoveries with them.',
+    'New Activities: Tame a species, Revere one as your totem, hold a Ceremony, Craft gear (Toolmakers) or Teach the songs (Singers).',
+    'Strangers: your old nemesis, or a rival, learns to think too, and its band remembers how you treated it.',
+    'Your starting archetype still matters: each temperament has its own Tribe rule (hunters hunt better, bonders tame faster, takers steal knowledge, wanderers learn on the road).',
+    'The Founding: choose to Settle, Roam or Conquer. 12 Tribe endings to find.',
+    'Stage Select: start a new run at the beginning of any Tribe you have founded, for free.',
+    'Other Paths (Many Minds, Swarm, Garden) still end at their Creature ending until Update 15.',
   ],
 };
 
@@ -742,6 +747,12 @@ G.TUTORIALS = [
     text: 'You are multicellular. Two new slots are open (Senses and Organ), your symmetry is fixed for good, and the world around you now matters: some places are richer or harsher than others.' },
   { id: 'creature', title: 'The Creature stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature',
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
+  { id: 'tribe', title: 'The Tribe stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe',
+    text: 'Your kind is a people now. Population is now your members, and Ideas replace DNA: each goal brings a Discovery. Your body no longer changes, but what it can do decides which discoveries come. The People tab shows your leader, your Fire or Song, and your talents. Reach the Founding to choose your people\'s future.' },
+  { id: 'discoveries', title: 'Discoveries', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'tribe',
+    text: 'Learn a discovery, or combine it with one you know. Combining keeps only the result, but the result is stronger. New combinations go in your Codex and earn Genetic Memory.' },
+  { id: 'succession', title: 'Leaders', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && run.event.id === 'succession',
+    text: 'Each candidate has two traits that change your stats while they lead. Leaders grow old, so the choice comes round again.' },
   { id: 'paths', title: 'Paths of Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['spark_of_mind', 'path_choice'].includes(run.event.id),
     text: 'How your kind thinks depends on what it is. Your body and history open some Paths and lock others (locked ones say what they need). Your Path is fixed for this lineage and decides which ending, and which kind of people, you can become.' },
   { id: 'foundations', title: 'Foundations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['the_frame', 'the_young', 'the_blood'].includes(run.event.id),
@@ -789,9 +800,9 @@ G.DIFFICULTY_NAMES = { 1: 'Gentle', 2: 'Tricky', 3: 'Hard' };
 // (a Choir on land, a Pod at sea). The other Paths follow in Update 15.
 G.STAGES.tribe = {
   name: 'Tribe Stage', turnName: 'Year',
-  drafts: [3, 7, 12, 17, 23, 30, 37, 45, 53],
-  milestones: [{ at: 0, event: 'first_{path}' }, { at: 14, event: 'strangers' }, { at: 26, event: 'elders' }],
-  evolveAt: 40,
+  drafts: [5, 13, 22, 32, 43, 55, 68, 82, 97, 112],
+  milestones: [{ at: 0, event: 'first_{path}' }, { at: 34, event: 'strangers' }, { at: 70, event: 'elders' }],
+  evolveAt: 120,
 };
 G.TRIBE_PATHS = ['tool', 'song'];
 

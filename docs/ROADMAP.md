@@ -71,7 +71,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 12.1 | Patch ✅ | Comparing mutations, tips, a death scene, an editor fix | Small |
 | 12.2 | Patch ✅ | Arms, self-balancing bodies, tension in checks, seasons on the map, Gene Affinities | Medium |
 | 13 | **Other Minds** ✅ | The Mind tree rebuilt: roots from your start, Paths of Mind, 10 endings | Large |
-| 14 | First Fires | **Tribe stage**, part 1: Tribe (land) and Pod (sea) | Large |
+| 14 | **First Fires** ✅ | **Tribe stage**, part 1: Toolmakers (Tribe, Shell Clan) and Singers (Choir, Pod) | Large |
 | 15 | Many Kinds | Tribe stage, part 2: Hive, Reef-colony, Den, Grove and Kelp Garden | Large |
 | 16 | Peoples | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
@@ -353,11 +353,15 @@ From the playtest after Update 13, to make a solid platform for the Tribe stage:
 
 *Your creatures become a band.*
 
-- **The Tribe stage engine:** a band of 5–30 members in your home biome, a named leader who can die and be replaced, keepers, and Discoveries that you draft and combine the way you did with parts.
-- **Two kinds:** the **Tribe** (Toolmakers, land: Fire) and the **Pod** (Singers, sea: Song).
-- **Your body becomes your talents:** hands craft, voices sing, glow lures, venom poisons, shells armor.
-- **Species from your Creature world become wildlife** to hunt, tame or revere as totems.
-- **Three endings** for each kind (Settle, Roam, Conquer), and **Stage Select** to start a run in the Tribe stage with a fossil.
+- **The Tribe stage engine:** your members in your home biome, a named leader with two traits who grows old and is replaced (you choose from three), and Discoveries that you draft and combine the way you did with parts. Ideas replace DNA.
+- **Four kinds:** Toolmakers become the **Tribe** (land) or **Shell Clan** (sea) and keep **Fire** (or Vent-heat): warmth, protection and gear. Singers become the **Choir** (land) or **Pod** (sea) and keep **Song**: charm and ideas, but verses (and discoveries) are lost when many die.
+- **Your Creature ending is a checkpoint:** its Genetic Memory is paid at once.
+- **Your body becomes your talents:** hands, voice, glow, venom, armor, wings, eyes and speed open their own discoveries. 51 discoveries, with combinations.
+- **Species from your Creature world become wildlife** to hunt, tame or revere as totems. New Activities: Tame, Revere, Ceremony, Craft and Teach the songs.
+- **Strangers:** your nemesis or a rival learns to think and becomes a rival band that remembers you.
+- **Temperaments** each get a Tribe rule.
+- **~55 Tribe events**, three milestones and four Founding finales.
+- **Three endings** for each kind (Settle, Roam, Conquer), 12 in all, and **Stage Select** to start a run at the beginning of a Tribe you have founded, for free.
 
 **You'll test:** whether the Tribe and the Pod feel equally deep and clearly different.
 
