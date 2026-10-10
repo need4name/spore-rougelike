@@ -17,6 +17,8 @@ G.MOD_LABELS = {
   popPerTurn: 'Population regrowth per turn',
   dnaPerTurn: 'DNA per turn',
   insightPerTurn: 'Insight per turn',
+  ideasPerTurn: 'Ideas per turn',
+  specialPerTurn: 'Fire or Song per turn',
   forageBonus: 'Food while Foraging',
   huntBonus: 'Food while Hunting',
   exploreBonus: 'DNA while Exploring',
@@ -779,3 +781,143 @@ G.AFFINITY = {}; G.AFFINITIES.forEach((a) => { G.AFFINITY[a.id] = a; });
 
 // How hard each start is (shown on the setup screen). Harder starts are meant for later, not avoided.
 G.DIFFICULTY_NAMES = { 1: 'Gentle', 2: 'Tricky', 3: 'Hard' };
+
+// ======================= THE TRIBE STAGE =======================
+// Your kind has become a people: a band of a few dozen members with a named leader.
+// Ideas replace DNA; Discoveries replace parts; Members replace Population.
+// Update 14 brings the Toolmakers (a Tribe on land, a Shell Clan at sea) and the Singers
+// (a Choir on land, a Pod at sea). The other Paths follow in Update 15.
+G.STAGES.tribe = {
+  name: 'Tribe Stage', turnName: 'Year',
+  drafts: [3, 7, 12, 17, 23, 30, 37, 45, 53],
+  milestones: [{ at: 0, event: 'first_{path}' }, { at: 14, event: 'strangers' }, { at: 26, event: 'elders' }],
+  evolveAt: 40,
+};
+G.TRIBE_PATHS = ['tool', 'song'];
+
+// Each kind of people: its name, its special resource and the keepers who tend it.
+G.KINDS = {
+  tool: {
+    land: { name: 'Tribe', band: 'tribe', resource: 'Fire', icon: '🔥', keeper: 'firekeeper', camp: 'camp', first: 'First Fire' },
+    sea: { name: 'Shell Clan', band: 'clan', resource: 'Vent-heat', icon: '♨️', keeper: 'heat-keeper', camp: 'den', first: 'The Warm Vent' },
+    desc: 'Toolmakers craft. Your {resource} warms you through the cold and keeps hunters away, and you can spend it to craft gear for your people (Activities: Craft).',
+  },
+  song: {
+    land: { name: 'Choir', band: 'choir', resource: 'Song', icon: '🎵', keeper: 'songkeeper', camp: 'roost', first: 'First Song' },
+    sea: { name: 'Pod', band: 'pod', resource: 'Song', icon: '🎵', keeper: 'songkeeper', camp: 'gathering', first: 'First Song' },
+    desc: 'Singers remember in songs. Your Song is your people\'s memory: it makes you charming and clever, but when many of you die at once, verses are lost, and with them, discoveries (Activities: Teach the songs).',
+  },
+};
+
+// Leaders: a name and two traits. When a leader dies, you choose the next one.
+G.LEADER_SYLLABLES = { a: ['A', 'Ka', 'Mo', 'Ri', 'Tu', 'Ne', 'Sha', 'Lo', 'Ve', 'Zu', 'Ori', 'Ema', 'Ush', 'Ilo', 'Bra'], b: ['sha', 'ro', 'na', 'ki', 'lu', 'ven', 'tor', 'ra', 'mi', 'dun', 'eth', 'ka', 'sel'] };
+G.LEADER_TRAITS = {
+  brave: { name: 'Brave', mods: { str: 1 } },
+  wise: { name: 'Wise', mods: { ideasPerTurn: 1 } },
+  kind: { name: 'Kind', mods: { cha: 1 } },
+  sturdy: { name: 'Sturdy', mods: { tou: 1 } },
+  quick: { name: 'Quick', mods: { spd: 1 } },
+  clever: { name: 'Clever', mods: { cun: 1 } },
+  cruel: { name: 'Cruel', mods: { str: 2, cha: -1 } },
+  lazy: { name: 'Lazy', mods: { ideasPerTurn: -1, tou: 1 } },
+  curious: { name: 'Curious', mods: { cun: 1, exploreBonus: 1 } },
+  fearful: { name: 'Fearful', mods: { spd: 1, str: -1 } },
+  generous: { name: 'Generous', mods: { cha: 1, foodPerTurn: -1, maxPop: 1 } },
+  keen: { name: 'Keeper-born', mods: { specialPerTurn: 1 } },
+};
+
+// What each temperament (your starting archetype) adds in the Tribe stage.
+G.TRIBE_TEMPER = {
+  hunter: { mods: { str: 1, huntBonus: 2 }, rule: 'Hunts bring back half as much food again, and rival bands fear you.' },
+  herd: { mods: { maxPop: 3, tou: 1 }, rule: 'Bigger and harder to wipe out.' },
+  bond: { mods: { cha: 2 }, rule: 'Taming other species is much easier.' },
+  taker: { mods: { cun: 1, foodPerTurn: 1 }, rule: 'Beat a rival band and you steal one of their discoveries.' },
+  many: { mods: { maxPop: 4, growthCost: -1 }, rule: 'Great numbers, quickly grown.' },
+  mask: { mods: { cun: 2 }, rule: 'You win others over with Cunning instead of Charm.' },
+  wanderer: { mods: { spd: 1, exploreBonus: 2 }, rule: 'Moving camp is quicker and always teaches you something.' },
+};
+
+// Discoveries: drafted 1 of 3 like parts. Pairs combine into something better (`from`).
+//   path      only for that Path of Mind (leave out for any)
+//   habitat   only on land or at sea
+//   talent    needs something in your body: hands, voice, glow, venom, armor, wings, eyes, speed
+G.DISCOVERIES = [
+  // ----- Anyone -----
+  { id: 'shared_meals', name: 'Shared Meals', mods: { cha: 1, foodPerTurn: 1 }, desc: 'Everyone eats together.' },
+  { id: 'night_watch', name: 'Night Watch', mods: { tou: 1, cun: 1 }, desc: 'Someone is always awake.' },
+  { id: 'herb_lore', name: 'Herb Lore', mods: { popPerTurn: 1 }, desc: 'This leaf eases a fever; that one stops bleeding.' },
+  { id: 'trail_signs', name: 'Trail Signs', mods: { spd: 1, exploreBonus: 1 }, desc: 'Marks that say "food this way".' },
+  { id: 'storytelling', name: 'Storytelling', mods: { ideasPerTurn: 1 }, desc: 'Tales of the old days, told at night.' },
+  { id: 'grief_rites', name: 'Grief Rites', mods: { cha: 1, tou: 1 }, desc: 'The dead are remembered together.' },
+  // ----- From your body -----
+  { id: 'stone_tools', name: 'Stone Tools', talent: 'hands', habitat: 'land', mods: { str: 1, forageBonus: 1 }, desc: 'A sharp edge, held in the hand.' },
+  { id: 'shell_tools', name: 'Shell Tools', talent: 'hands', habitat: 'sea', mods: { str: 1, forageBonus: 1 }, desc: 'A shell to pry, a stone to crack.' },
+  { id: 'baskets', name: 'Baskets', talent: 'hands', habitat: 'land', mods: { foodCap: 5 }, desc: 'Carry more than your arms can hold.' },
+  { id: 'nets', name: 'Weed Nets', talent: 'hands', habitat: 'sea', mods: { foodCap: 5 }, desc: 'Woven weed holds the catch.' },
+  { id: 'shelters', name: 'Shelters', talent: 'hands', mods: { maxPop: 2, tou: 1 }, desc: 'A roof against the weather.' },
+  { id: 'spears', name: 'Spears', talent: 'hands', mods: { str: 2 }, desc: 'Reach farther than your teeth.' },
+  { id: 'calls', name: 'Calls', talent: 'voice', mods: { cha: 1, cun: 1 }, desc: 'A sound for every danger and every friend.' },
+  { id: 'drumming', name: 'Drumming', talent: 'voice', mods: { ideasPerTurn: 1 }, desc: 'Rhythms that carry ideas.' },
+  { id: 'lure_lights', name: 'Lure-Lights', talent: 'glow', mods: { huntBonus: 2 }, desc: 'A light in the dark brings the curious close.' },
+  { id: 'venom_darts', name: 'Venom Darts', talent: 'venom', mods: { str: 2 }, desc: 'A scratch is enough.' },
+  { id: 'shell_shields', name: 'Shell Shields', talent: 'armor', mods: { tou: 2 }, desc: 'Old shells, carried in front.' },
+  { id: 'sky_scouts', name: 'Sky Scouts', talent: 'wings', mods: { exploreBonus: 2, spd: 1 }, desc: 'Fliers who see the land from above.' },
+  { id: 'lookouts', name: 'Lookouts', talent: 'eyes', mods: { tou: 1, cun: 1 }, desc: 'So many eyes, watching every way.' },
+  { id: 'runners', name: 'Runners', talent: 'speed', mods: { spd: 2 }, desc: 'Messengers faster than any hunter.' },
+  // ----- Toolmakers -----
+  { id: 'fire_pit', name: 'Fire Pit', path: 'tool', habitat: 'land', mods: { specialPerTurn: 1, tou: 1 }, desc: 'A ring of stones keeps the fire alive.' },
+  { id: 'vent_hearth', name: 'Vent Hearth', path: 'tool', habitat: 'sea', mods: { specialPerTurn: 1, tou: 1 }, desc: 'A sheltered nook beside the warm vent.' },
+  { id: 'cooking', name: 'Cooking', path: 'tool', mods: { foodPerTurn: 1, popPerTurn: 1 }, desc: 'Cooked food goes further and makes you stronger.' },
+  { id: 'knapping', name: 'Knapping', path: 'tool', mods: { str: 1, cun: 1 }, desc: 'The art of the perfect edge.' },
+  { id: 'cloaks', name: 'Hide Cloaks', path: 'tool', habitat: 'land', mods: { tou: 2 }, desc: 'Warm against the winter.' },
+  { id: 'kelp_wraps', name: 'Kelp Wraps', path: 'tool', habitat: 'sea', mods: { tou: 2 }, desc: 'Bound weed against cold and stings.' },
+  { id: 'rafts', name: 'Rafts', path: 'tool', habitat: 'land', mods: { exploreBonus: 2 }, desc: 'Cross the river with everything you own.' },
+  { id: 'shell_floats', name: 'Shell Floats', path: 'tool', habitat: 'sea', mods: { exploreBonus: 2 }, desc: 'Carry loads on the current.' },
+  // ----- Singers -----
+  { id: 'lullabies', name: 'Lullabies', path: 'song', mods: { growthCost: -1, cha: 1 }, desc: 'Songs for the young.' },
+  { id: 'echo_maps', name: 'Echo Maps', path: 'song', mods: { exploreBonus: 2 }, desc: 'Sing, listen, and know the shape of the land or sea.' },
+  { id: 'song_lines', name: 'Song-Lines', path: 'song', mods: { specialPerTurn: 1 }, desc: 'Every road has its verse.' },
+  { id: 'chorus_hunts', name: 'Chorus Hunts', path: 'song', mods: { huntBonus: 2 }, desc: 'Drive the prey with song.' },
+  { id: 'teaching_songs', name: 'Teaching Songs', path: 'song', mods: { ideasPerTurn: 1 }, desc: 'Everything worth knowing, set to a tune.' },
+  { id: 'mourning_song', name: 'Mourning Song', path: 'song', mods: { cha: 1, tou: 1 }, desc: 'Sung for those who are gone.' },
+  // ----- Combinations -----
+  { id: 'hafted_axes', name: 'Hafted Axes', from: ['stone_tools', 'spears'], mods: { str: 3, forageBonus: 1 }, desc: 'Stone, bound to wood.' },
+  { id: 'shell_lances', name: 'Shell Lances', from: ['shell_tools', 'spears'], mods: { str: 3, forageBonus: 1 }, desc: 'A shell blade on a long stalk.' },
+  { id: 'hardened_spears', name: 'Fire-Hardened Spears', from: ['spears', 'fire_pit'], mods: { str: 4 }, desc: 'Points made hard in the flames.' },
+  { id: 'vent_blades', name: 'Vent-Tempered Blades', from: ['spears', 'vent_hearth'], mods: { str: 4 }, desc: 'Shell tempered in the heat of the deep.' },
+  { id: 'longhouse', name: 'Longhouse', from: ['shelters', 'fire_pit'], mods: { maxPop: 5, tou: 1 }, desc: 'One great home around one great fire.' },
+  { id: 'warm_den', name: 'Warm Den', from: ['shelters', 'vent_hearth'], mods: { maxPop: 5, tou: 1 }, desc: 'A home built around the vent.' },
+  { id: 'food_stores', name: 'Food Stores', from: ['baskets', 'cooking'], mods: { foodCap: 8, foodPerTurn: 2 }, desc: 'Smoked, dried and saved for winter.' },
+  { id: 'kelp_larders', name: 'Kelp Larders', from: ['nets', 'cooking'], mods: { foodCap: 8, foodPerTurn: 2 }, desc: 'Catch kept fresh in woven weed.' },
+  { id: 'feasts', name: 'Feasts', from: ['shared_meals', 'cooking'], mods: { cha: 2, foodPerTurn: 2 }, desc: 'Food, fire and stories, all night long.' },
+  { id: 'poison_spears', name: 'Poison Spears', from: ['venom_darts', 'spears'], mods: { str: 5 }, desc: 'Nothing survives a second strike.' },
+  { id: 'sentinels', name: 'Sentinels', from: ['lookouts', 'night_watch'], mods: { tou: 2, damageReduce: 1 }, desc: 'Watchers who never sleep.' },
+  { id: 'ancestor_tales', name: 'Ancestor Tales', from: ['storytelling', 'grief_rites'], mods: { ideasPerTurn: 2, cha: 1 }, desc: 'The dead still teach the living.' },
+  { id: 'signal_drums', name: 'Signal Drums', from: ['calls', 'drumming'], mods: { cha: 2, exploreBonus: 1 }, desc: 'Messages across whole valleys.' },
+  { id: 'great_routes', name: 'Great Routes', from: ['echo_maps', 'song_lines'], mods: { exploreBonus: 3, specialPerTurn: 1 }, desc: 'A song for every road in the world.' },
+  { id: 'song_school', name: 'Song School', from: ['lullabies', 'teaching_songs'], mods: { ideasPerTurn: 2, growthCost: -1 }, desc: 'The young learn everything in song.' },
+  { id: 'singing_lure', name: 'Singing Lure', from: ['chorus_hunts', 'lure_lights'], mods: { huntBonus: 4 }, desc: 'Prey come to the song, and the light.' },
+  { id: 'herbal_healers', name: 'Healers', from: ['herb_lore', 'grief_rites'], mods: { popPerTurn: 2, cha: 1 }, desc: 'Some of your people know how to mend others.' },
+];
+G.DISCOVERY = {}; G.DISCOVERIES.forEach((d) => { G.DISCOVERY[d.id] = d; });
+
+// How a Tribe stage ends: settle down, take to the road, or conquer. Named by kind.
+G.TRIBE_ENDINGS = {
+  tool: {
+    land: { settle: { name: 'The First Village', desc: 'Huts around a fire that never goes out.' }, roam: { name: 'The Long Road', desc: 'A tribe that carries its fire across the world.' }, conquer: { name: 'The Spear-Lords', desc: 'Every band in the valley answers to you.' } },
+    sea: { settle: { name: 'The Vent Village', desc: 'Dens of shell around the warm vents.' }, roam: { name: 'The Drifting Forge', desc: 'A clan that carries its heat on the currents.' }, conquer: { name: 'The Blade Reef', desc: 'Every clan in the deep answers to you.' } },
+  },
+  song: {
+    land: { settle: { name: 'The Singing Hills', desc: 'A home where every stone has a song.' }, roam: { name: 'The Wandering Choir', desc: 'A people whose home is the song itself.' }, conquer: { name: 'The Howling Host', desc: 'Your song drowns out every other.' } },
+    sea: { settle: { name: 'The Calving Grounds', desc: 'Warm waters where the songs are born.' }, roam: { name: 'The Great Migration', desc: 'A pod that sings its way around the world.' }, conquer: { name: 'The Thunder Pod', desc: 'The ocean falls silent when you sing.' } },
+  },
+};
+
+// Activities only for the Tribe stage.
+G.ACTIVITIES.push(
+  { id: 'tame', name: 'Tame', target: 'species', stage: 'tribe', desc: 'Win a species\' trust, slowly, with Charm, until it lives alongside your people. Each tamed species gives 1 Food a turn and never attacks you.' },
+  { id: 'revere', name: 'Revere', target: 'species', stage: 'tribe', turns: 2, desc: 'Make a species your totem: your people take on a little of its strength, and it grows friendlier. You can only have one totem.' },
+  { id: 'ceremony', name: 'Ceremony', stage: 'tribe', turns: 2, desc: 'Gather everyone for two turns of dance and story (−1 Food a turn): +2 of your special resource and +1 Idea each turn. Needs 8 turns between ceremonies.' },
+  { id: 'craft', name: 'Craft', stage: 'tribe', path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
+  { id: 'teach', name: 'Teach the songs', stage: 'tribe', path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
+);

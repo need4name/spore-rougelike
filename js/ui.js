@@ -264,7 +264,7 @@ window.G = window.G || {};
     if (g === 'predator') { const h = run.hunger || 0; t = `Hunger ${h}/${G.HUNGER_LIMIT}`; warn = h >= G.HUNGER_LIMIT - 1; tip = 'Turns since your last kill. At the limit you starve.'; }
     if (g === 'parasite') { const h = G.hostOf(run); t = h ? `Host: ${h.name} ${Math.round(h.pop)}` : 'No host'; warn = !h || h.pop < 6 || h.opinion <= -50; tip = 'Your Population can never outgrow your host.'; }
     if (g === 'symbiote') { const p = G.partnerOf(run); t = p ? `Partner: ${p.name} ${Math.round(p.pop)}` : 'No partner'; warn = !p || p.pop < p.cap * 0.3; }
-    if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); const land = run.stage === 'creature' && run.habitat === 'land'; t = `${land ? 'Wanderlust' : 'Current'}: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = land ? 'Turns until wanderlust carries you somewhere new.' : 'Turns until the current carries you somewhere new.'; }
+    if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); const land = run.stage !== 'cell' && run.habitat === 'land'; t = `${land ? 'Wanderlust' : 'Current'}: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = land ? 'Turns until wanderlust carries you somewhere new.' : 'Turns until the current carries you somewhere new.'; }
     if (g === 'grazer') { t = `Herd DNA +${G.dnaPerTurn(run)}`; tip = 'Bigger herds earn more DNA.'; }
     if (g === 'colony') t = `Offshoots ${G.budsOf(run).length}/3`;
     if (g === 'mimic') { const m = G.mimicOf(run); t = m ? `Disguised: ${m.name}` : 'Undisguised'; }
@@ -336,7 +336,7 @@ window.G = window.G || {};
             return `
             <button class="option ${st.ok ? '' : 'locked'}" ${st.ok ? `data-act="option" data-arg="${i}"` : 'disabled'}>
               <span class="opt-label">${reqTag(o)}${esc(G.sub(o.label, run, sp))}</span>
-              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance) : '<span class="chance sure">Certain</span>'}${o.hint ? `<span>${esc(o.hint)}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
+              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance) : '<span class="chance sure">Certain</span>'}${o.hint ? `<span>${esc(G.sub(o.hint, run, sp))}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
             </button>`;
           }).join('')}
         </div>

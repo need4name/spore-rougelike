@@ -1170,7 +1170,7 @@ window.G = window.G || {};
     const cx = w * 0.45; const cy = h * 0.5;
     drawAmbient(run, w, h, t, S, sc.species);
     drawHerd(run, cx, cy, S, t, w, h);
-    const land = run.stage === 'creature' && run.habitat === 'land';
+    const land = run.stage !== 'cell' && run.habitat === 'land';
     const pivotY = land ? cy + S * 0.36 : cy;
     const settle = dur - 0.35; const p = Math.min(1, el / settle);
     const tremble = Math.sin(el * 55) * 2.5 * (0.4 + p);
@@ -1391,7 +1391,7 @@ window.G = window.G || {};
       drawBackground(run, w, h, t);
       const S = Math.min(w * 0.72, h * 1.05);
       const cx = w * (story ? 0.36 : 0.45); const cy = h * 0.5;
-      const land = run.stage === 'creature' && run.habitat === 'land';
+      const land = run.stage !== 'cell' && run.habitat === 'land';
       const ground = land ? cy + S * 0.36 : null;
       const P = { w, h, cx, cy, S, k, t, success: sc.success, anim, ground };
       P_SKIP_WORDS = !!story || !!sc.evolved || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
@@ -1467,7 +1467,7 @@ window.G = window.G || {};
     drawBackground(run, w, h, s < 1 ? t : 0);
     const S = Math.min(w * 0.72, h * 1.05);
     const cx = w * 0.45; const cy = h * 0.48;
-    const land = run.stage === 'creature' && run.habitat === 'land';
+    const land = run.stage !== 'cell' && run.habitat === 'land';
     const ground = land ? cy + S * 0.36 : h * 0.86;
     const clamp01 = (x) => Math.max(0, Math.min(1, x));
     const fall = clamp01((s - 0.7) / 0.9); const ease = 1 - (1 - fall) ** 3;
@@ -1642,7 +1642,7 @@ window.G = window.G || {};
 
   // Home territories: spread evenly so herds never all bunch together.
   // Sea creatures keep to their home depth (see G.SEA_ZONES).
-  const isSeaMap = (run) => run.stage === 'creature' && run.habitat === 'sea';
+  const isSeaMap = (run) => run.stage !== 'cell' && run.habitat === 'sea';
   function zoneBox(run, s) {
     if (!isSeaMap(run)) return null;
     return G.SEA_ZONE[s ? (s.zone || 'open') : G.zone(run)];
@@ -1760,7 +1760,7 @@ window.G = window.G || {};
 
   function drawMapBackground(run, w, h, t) {
     const hue = G.ORIGIN[run.origin].hue;
-    if (run.stage === 'creature' && run.habitat === 'land') {
+    if (run.stage !== 'cell' && run.habitat === 'land') {
       const g = ctx.createLinearGradient(0, 0, 0, h * 0.24);
       g.addColorStop(0, hsl(hue + 20, 45, 34)); g.addColorStop(1, hsl(hue + 30, 40, 24));
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h * 0.24);
@@ -1804,7 +1804,7 @@ window.G = window.G || {};
         fall(id === 'winter' ? 40 : 18, 40, 20, (x, y, i) => dot(x, y, 1.5 + (i % 3) * 0.7, 'rgba(255,255,255,0.85)'));
       }
       if (biome === 'desert' && id !== 'winter') for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, top + 20 + i * 30 + Math.sin(x * 0.04 + t * 3 + i * 2) * 3); ctx.strokeStyle = 'rgba(255, 220, 160, 0.08)'; ctx.lineWidth = 4; ctx.stroke(); }
-    } else if (run.stage === 'creature') {
+    } else if (run.stage !== 'cell') {
       if (id === 'bloom') { tint('rgba(110, 200, 90, 0.10)'); fall(40, 6, 12, (x, y, i) => dot(x, y, 1.2 + (i % 3) * 0.6, 'rgba(160, 230, 120, 0.55)')); }
       if (id === 'storms') {
         tint('rgba(10, 20, 35, 0.22)');

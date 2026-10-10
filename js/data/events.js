@@ -1912,5 +1912,474 @@ G.ENDINGS.forEach((id) => { const l = G.LEGACIES[id]; (G.ENDING_FOR[l.path] = G.
   }));
 }());
 
+// ---------- Tribe stage (Update 14) ----------
+// Words in braces change with your people: {band} (tribe, clan, choir, pod), {resource} (Fire, Vent-heat, Song),
+// {keeper}, {camp}, {leader}, and {cand0}..{cand2} for leader candidates.
+G.EVENTS.push(
+  // ----- Milestones -----
+  {
+    id: 'first_tool', stage: 'tribe', milestone: true, path: 'tool', prop: 'fire', title: 'The Keeping of the Flame',
+    text: 'Your people have carried their {resource} this far, but it will not keep itself. Someone must tend it, day and night, or it goes out. Who will be the first {keeper}?',
+    options: [
+      { label: 'The oldest, who remembers how', hint: 'Steady', result: { text: 'Old hands feed it slowly. It has never burned so evenly.', specialOn: true, special: 1, dna: 1, anim: 'rest' } },
+      { label: 'The youngest, who will keep it longest', hint: 'More {resource} to start', result: { text: 'The child sits by it all night, eyes wide. By morning it is a blaze.', specialOn: true, special: 3, anim: 'grow' } },
+      { label: '{leader}, so everyone sees who leads', hint: 'Your leader becomes Keeper-born', result: { text: 'The flame and the leader become one idea. Nobody argues with either.', specialOn: true, leaderTrait: 'keen', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'first_song', stage: 'tribe', milestone: true, path: 'song', prop: 'notes', title: 'The First Song',
+    text: 'Your {band} has always sung, but now the songs hold things: where water is, who died, which plants heal. If nobody keeps them, they will drift apart. Who will be the first {keeper}?',
+    options: [
+      { label: 'The one with the strongest voice', hint: 'More Song to start', result: { text: 'Every verse rings out clear across the {camp}.', specialOn: true, special: 3, anim: 'social' } },
+      { label: 'The one who forgets nothing', hint: '+2 Ideas', result: { text: 'Not one word is lost. New verses come easier now.', specialOn: true, dna: 2, anim: 'mutate' } },
+      { label: '{leader}, so the song and the leader are one', hint: 'Your leader becomes Keeper-born', result: { text: 'Now when the leader sings, everyone joins in.', specialOn: true, leaderTrait: 'keen', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'strangers', stage: 'tribe', milestone: true, prop: 'shadow', title: 'Strangers',
+    text: 'Shapes watch your {camp} from a distance. They are not animals. They move together, they signal to each other, and one of them is holding something. Another kind has learned to think.',
+    options: [
+      { label: 'Go out to meet them', check: { stat: 'cha', diff: 4 }, success: { text: 'Signs, gestures, a shared meal. An uneasy peace.', band: true, bandOpinion: 30, anim: 'social' }, fail: { text: 'Something you did offended them deeply.', band: true, bandOpinion: -20 } },
+      { label: 'Show them your strength', check: { stat: 'str', diff: 4 }, success: { text: 'They see how many you are, and keep their distance.', band: true, bandOpinion: -10, dna: 2, anim: 'attack' }, fail: { text: 'They are not impressed. They are angry.', band: true, bandOpinion: -30, pop: -1 } },
+      { label: 'Watch them in secret', check: { stat: 'cun', diff: 4 }, success: { text: 'You learn how they hunt, where they sleep and what they fear.', band: true, dna: 3, anim: 'mutate' }, fail: { text: 'They spot you watching. That is never a good start.', band: true, bandOpinion: -15 } },
+    ],
+  },
+  {
+    id: 'elders', stage: 'tribe', milestone: true, prop: 'stars', title: 'The Council of Elders',
+    text: 'The oldest of your {band} now gather each night to decide things together. It is the first time your people have been governed by more than one voice. What should the elders care about most?',
+    options: [
+      { label: 'Remembering', hint: 'A new discovery', result: { text: 'They piece together what each of them knows, and something new comes of it.', discovery: true, anim: 'mutate' } },
+      { label: 'Teaching the young', hint: '+4 Ideas', result: { text: 'The children learn faster than their parents did.', dna: 4, anim: 'grow' } },
+      { label: 'Advising {leader}', hint: 'Your leader becomes Wise', result: { text: 'The leader listens. Mostly.', leaderTrait: 'wise', anim: 'social' } },
+    ],
+  },
+  {
+    id: 'succession', stage: 'tribe', chained: true, prop: 'stars', title: 'A New Leader',
+    text: 'Your leader is gone, and your {band} gathers to choose another. Three step forward.',
+    options: [
+      { label: '{cand0}', result: { text: 'The {band} follows a new voice.', leaderPick: 0, anim: 'social' } },
+      { label: '{cand1}', result: { text: 'The {band} follows a new voice.', leaderPick: 1, anim: 'social' } },
+      { label: '{cand2}', result: { text: 'The {band} follows a new voice.', leaderPick: 2, anim: 'social' } },
+    ],
+  },
+
+  // ----- Any people -----
+  {
+    id: 't_long_winter', stage: 'tribe', prop: 'snow', title: 'The Long Cold', tags: ['danger', 'food'],
+    text: 'The cold has lasted longer than anyone remembers. Stores are running low, and the youngest are weak.',
+    options: [
+      { label: 'Ration everything', check: { stat: 'tou', diff: 4 }, success: { text: 'Hungry, but alive. Every one of you.', food: -2, anim: 'rest' }, fail: { text: 'Not everyone makes it to the thaw.', food: -2, pop: -2 } },
+      { label: 'Send hunters out into it', check: { stat: 'str', diff: 4 }, success: { text: 'They come back dragging meat through the snow.', food: 4, anim: 'attack' }, fail: { text: 'Not all the hunters come back.', pop: -2 } },
+      { label: 'Huddle around the {resource}', hint: 'Needs 3 {resource}', req: { special: 3 }, result: { text: 'You burn through your stores of {resource}, but nobody freezes.', special: -3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_sickness', stage: 'tribe', prop: 'sickness', title: 'The Coughing Sickness', tags: ['danger'],
+    text: 'A sickness spreads through the {camp}. One by one, your people start to cough.',
+    options: [
+      { label: 'Keep the sick apart', check: { stat: 'cun', diff: 4 }, success: { text: 'It burns out before it reaches everyone.', pop: -1, dna: 2, anim: 'rest' }, fail: { text: 'You were too late. It is everywhere.', pop: -3 } },
+      { label: 'Care for them together', check: { stat: 'cha', diff: 4 }, success: { text: 'Nobody is left alone. Nearly everyone recovers.', pop: -1, anim: 'social' }, fail: { text: 'The carers catch it too.', pop: -3 } },
+      { label: 'Move the whole {camp}', result: { text: 'You leave the sickness behind, and a good deal of food with it.', food: -3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_quarrel', stage: 'tribe', prop: 'hearts', title: 'A Quarrel', tags: ['social'],
+    text: 'Two families have fallen out over a hunting spot, and now nobody will sit with anyone else.',
+    options: [
+      { label: '{leader} settles it', check: { stat: 'cha', diff: 4 }, success: { text: 'A fair judgement. Both sides grumble, which means it was fair.', dna: 2, anim: 'social' }, fail: { text: 'One family leaves the {band} for good.', pop: -2 } },
+      { label: 'Let them fight it out', check: { stat: 'str', diff: 3 }, success: { text: 'Bruises, then laughter. It is over.', anim: 'attack' }, fail: { text: 'It goes too far.', pop: -1, food: -1 } },
+      { label: 'Find a new spot for one of them', check: { stat: 'spd', diff: 3 }, success: { text: 'The new spot turns out to be better.', food: 2, anim: 'grow' }, fail: { text: 'There is no better spot.', food: -1 } },
+    ],
+  },
+  {
+    id: 't_twins', stage: 'tribe', prop: 'nest', title: 'A Season of Births', tags: ['food'],
+    text: 'More young are born this season than ever before. The {camp} is loud with them.',
+    options: [
+      { label: 'Raise them all', hint: '+2 members, −3 Food', result: { text: 'Every one of them is fed, somehow.', pop: 2, food: -3, anim: 'grow' } },
+      { label: 'Raise them to be thinkers', hint: '+3 Ideas, −2 Food', result: { text: 'They grow up asking why.', dna: 3, food: -2, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 't_stargazer', stage: 'tribe', prop: 'stars', title: 'The Stargazer', tags: ['explore'],
+    text: 'One of your people stays up every night, watching the lights in the sky. They say the lights move in patterns.',
+    options: [
+      { label: 'Listen to them', check: { stat: 'cun', diff: 4 }, success: { text: 'They can tell when the cold will come. That is worth a great deal.', discovery: true, anim: 'mutate' }, fail: { text: 'The patterns turn out to be wishful thinking.', dna: 1 } },
+      { label: 'Tell them to sleep', result: { text: 'They sleep. The lights keep moving.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_great_hunt', stage: 'tribe', prop: 'carcass', title: 'The Great Hunt', tags: ['hunt', 'food'], species: 'predator',
+    text: 'The {them} have been taking your people. The hunters want to go after them, all together.',
+    options: [
+      { label: 'Hunt them down', check: { stat: 'str', diff: 5 }, success: { text: 'You bring back a trophy that will be talked about for generations.', food: 4, opinion: -30, dna: 2, anim: 'attack' }, fail: { text: 'The hunters become the hunted.', pop: -3, opinion: -10 } },
+      { label: 'Set a trap', check: { stat: 'cun', diff: 4 }, success: { text: 'Patient and clever. It works.', food: 3, opinion: -20, anim: 'mutate' }, fail: { text: 'The trap catches nothing but your own foot.', pop: -1 } },
+      { label: 'Leave them be', result: { text: 'Some battles are not worth fighting.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_orphan_beast', stage: 'tribe', prop: 'nest', title: 'The Orphan', tags: ['social'], species: 'wild',
+    text: 'A young {them} has been left behind by its kind. It follows your people around the {camp}.',
+    options: [
+      { label: 'Raise it as one of your own', check: { stat: 'cha', diff: 4 }, success: { text: 'It grows up thinking it is one of you. When it returns to its kind, they follow it back.', tame: true, anim: 'social' }, fail: { text: 'It runs off the moment it is grown.', opinion: 10 } },
+      { label: 'Eat it', result: { text: 'Food is food.', food: 2, opinion: -15, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 't_sacred_beast', stage: 'tribe', prop: 'sun', title: 'The White One', tags: ['explore'], species: 'any',
+    when: (run) => !run.totem,
+    text: 'A pale {them}, white from nose to tail, has been seen near the {camp}. Your people say it is a sign.',
+    options: [
+      { label: 'Make it your totem', hint: 'The {them} become your totem', result: { text: 'Its kind will be honoured by your people for as long as they last.', totem: true, opinion: 30, anim: 'social' } },
+      { label: 'Hunt it for its pelt', check: { stat: 'spd', diff: 4 }, success: { text: 'A white pelt, worn by your leader.', leaderTrait: 'brave', opinion: -20, anim: 'attack' }, fail: { text: 'It vanishes. Some say it was never there.', opinion: -5 } },
+    ],
+  },
+  {
+    id: 't_fool', stage: 'tribe', prop: 'hearts', title: 'The Fool', tags: ['social'],
+    text: 'One of your people does everything wrong, loudly, and everyone laughs. They have started doing it on purpose.',
+    options: [
+      { label: 'Laugh along', hint: '+1 Charm for a while', result: { text: 'A people that can laugh at itself can survive anything.', trait: 'cooperative', anim: 'social' } },
+      { label: 'Ask them what they think', check: { stat: 'cun', diff: 3 }, success: { text: 'Under the jokes, a sharp mind. They have ideas nobody else dared to say.', dna: 3, anim: 'mutate' }, fail: { text: 'More jokes. Good ones, though.', dna: 1 } },
+    ],
+  },
+  {
+    id: 't_old_bones', stage: 'tribe', prop: 'bones', title: 'The Old Bones', tags: ['explore'],
+    text: 'Digging near the {camp}, your people find huge old bones, shaped a little like their own.',
+    options: [
+      { label: 'Bury them properly', result: { text: 'Whoever they were, they are remembered now.', trait: 'cooperative', dna: 1, anim: 'rest' } },
+      { label: 'Study them', check: { stat: 'cun', diff: 4 }, success: { text: 'Your people begin to understand where they came from.', dna: 4, anim: 'mutate' }, fail: { text: 'Bones are bones.', dna: 1 } },
+      { label: 'Make them into tools', check: { stat: 'str', diff: 3 }, success: { text: 'Strong, sharp and a little unsettling.', food: 2, anim: 'attack' }, fail: { text: 'They crumble.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_raiders', stage: 'tribe', prop: 'shadow', title: 'Raiders in the Night', tags: ['danger', 'social'], species: 'band', repeat: true,
+    text: 'The {them} have raided your food stores in the night.',
+    options: [
+      { label: 'Raid them back', check: { stat: 'str', diff: 5 }, success: { text: 'You take back what was yours, and some of theirs.', food: 4, opinion: -20, anim: 'attack' }, fail: { text: 'They were ready for you.', pop: -2, opinion: -10 } },
+      { label: 'Set a guard', check: { stat: 'tou', diff: 4 }, success: { text: 'The next time they come, they find you waiting.', opinion: -5, anim: 'rest' }, fail: { text: 'They come again. And again.', food: -3 } },
+      { label: 'Offer to share', check: { stat: 'cha', diff: 5 }, success: { text: 'They are hungry too. A shared store is a safer store.', food: -2, opinion: 30, anim: 'social' }, fail: { text: 'They take the offer, and everything else.', food: -4 } },
+    ],
+  },
+  {
+    id: 't_band_marriage', stage: 'tribe', prop: 'hearts', title: 'Across the Line', tags: ['social'], species: 'band',
+    when: (run) => run.species.some((s) => s.band && s.opinion >= 0),
+    text: 'One of your young and one of the {them} have been meeting in secret. They want to live together.',
+    options: [
+      { label: 'Bless the match', check: { stat: 'cha', diff: 4 }, success: { text: 'A feast for both peoples. Something new begins.', opinion: 35, dna: 2, anim: 'social' }, fail: { text: 'The {them} refuse. There is shouting.', opinion: -15 } },
+      { label: 'Forbid it', result: { text: 'They obey. Mostly.', opinion: -10, anim: 'rest' } },
+      { label: 'Take them in, both', result: { text: 'One more voice in your {band}, and the {them} feel robbed.', pop: 1, opinion: -20, anim: 'grow' } },
+    ],
+  },
+  {
+    id: 't_band_trade', stage: 'tribe', prop: 'fruit', title: 'The First Trade', tags: ['social', 'food'], species: 'band',
+    when: (run) => run.species.some((s) => s.band && s.opinion >= 10),
+    text: 'The {them} come to your {camp} with things to offer, and they want something back.',
+    options: [
+      { label: 'Trade food for knowledge', hint: '−3 Food, a discovery', result: { text: 'They show you something your people never thought of.', food: -3, discovery: true, opinion: 15, anim: 'social' } },
+      { label: 'Trade knowledge for food', hint: '+4 Food', result: { text: 'They leave delighted. Your stores are full.', food: 4, opinion: 10, anim: 'grow' } },
+      { label: 'Drive a hard bargain', check: { stat: 'cun', diff: 5 }, success: { text: 'You get both, for very little.', food: 3, dna: 2, opinion: -5, anim: 'mutate' }, fail: { text: 'They feel cheated, and say so.', opinion: -20 } },
+    ],
+  },
+  {
+    id: 't_band_war', stage: 'tribe', prop: 'shadow', title: 'War Paint', tags: ['danger'], species: 'band',
+    when: (run) => run.species.some((s) => s.band && s.opinion < -20),
+    text: 'The {them} have painted themselves for war. They are coming.',
+    options: [
+      { label: 'Meet them in battle', check: { stat: 'str', diff: 6 }, success: { text: 'They break and run. They will not try that again soon.', opinion: -20, dna: 3, food: 2, anim: 'attack' }, fail: { text: 'A terrible day.', pop: -4 } },
+      { label: 'Hold the {camp}', check: { stat: 'tou', diff: 5 }, success: { text: 'They cannot get in. In the end, they go home.', opinion: -5, anim: 'rest' }, fail: { text: 'They get in.', pop: -3, food: -2 } },
+      { label: 'Sue for peace', check: { stat: 'cha', diff: 6 }, success: { text: 'Somehow, words win. The paint washes off.', opinion: 40, anim: 'social' }, fail: { text: 'They laugh, and attack.', pop: -3, opinion: -10 } },
+    ],
+  },
+  {
+    id: 't_tamed_trouble', stage: 'tribe', prop: 'nest', title: 'Restless Beasts', tags: ['food'], species: 'tamed',
+    text: 'The {them} that live with your people are restless. Some have wandered off.',
+    options: [
+      { label: 'Round them up', check: { stat: 'spd', diff: 4 }, success: { text: 'Every one of them, back home by dusk.', anim: 'grow' }, fail: { text: 'Most of them come back. Some never do.', food: -2 } },
+      { label: 'Let them go a while', result: { text: 'They come back on their own, fatter than before.', food: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_totem_omen', stage: 'tribe', prop: 'sun', title: 'The Totem Speaks', tags: ['explore'], species: 'totem',
+    text: 'A {them}, your totem, has walked right into the middle of your {camp} and lain down. Everyone is staring.',
+    options: [
+      { label: 'Read it as a good sign', check: { stat: 'cha', diff: 3 }, success: { text: 'Your people are full of courage for days.', dna: 2, food: 1, anim: 'social' }, fail: { text: 'Nobody can agree what it means.', dna: 1 } },
+      { label: 'Read it as a warning', result: { text: 'You move your stores somewhere safer. A storm comes that night.', food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_new_idea', stage: 'tribe', prop: 'sparks', title: 'A Strange Idea', tags: ['explore'],
+    text: 'Somebody has an idea so strange that half the {band} thinks they are mad.',
+    options: [
+      { label: 'Let them try it', check: { stat: 'cun', diff: 5 }, success: { text: 'It works. Of course it works. Everyone always believed in them.', discovery: true, anim: 'mutate' }, fail: { text: 'It does not work, very loudly.', food: -1, pop: -1 } },
+      { label: 'Talk them out of it', result: { text: 'Safer. Duller.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_leader_age', stage: 'tribe', prop: 'stars', title: 'The Leader Grows Old', tags: ['social'],
+    when: (run) => run.leader && run.turn - run.leader.since >= 10,
+    text: '{leader} is slowing down. Some of the young say it is time for someone new.',
+    options: [
+      { label: 'Stand by {leader}', check: { stat: 'cha', diff: 4 }, success: { text: 'The old leader has one last good year in them, and teaches everything they know.', dna: 3, anim: 'social' }, fail: { text: 'The young split off and leave.', pop: -2 } },
+      { label: 'Let {leader} step down', hint: 'Choose a new leader', result: { text: '{leader} steps aside with dignity.', leaderDies: true, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_leader_dream', stage: 'tribe', prop: 'night', title: 'The Leader\'s Dream', tags: ['explore'],
+    when: (run) => !!run.leader,
+    text: '{leader} wakes from a dream, shaking. They say the {band} must move toward the rising sun.',
+    options: [
+      { label: 'Follow the dream', check: { stat: 'spd', diff: 4 }, success: { text: 'There is good land there. Maybe the dream was real.', food: 4, anim: 'grow' }, fail: { text: 'There is nothing there but a long walk back.', food: -2 } },
+      { label: 'Stay put', result: { text: '{leader} sulks for days.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_challenge', stage: 'tribe', prop: 'bones', title: 'The Challenger', tags: ['social', 'danger'],
+    when: (run) => !!run.leader,
+    text: 'A strong young one has challenged {leader} for the right to lead.',
+    options: [
+      { label: '{leader} accepts', check: { stat: 'str', diff: 5 }, success: { text: 'The old leader wins, and is more respected than ever.', leaderTrait: 'brave', anim: 'attack' }, fail: { text: 'The old leader loses, and does not get up.', leaderDies: true } },
+      { label: 'Let the {band} decide', check: { stat: 'cha', diff: 4 }, success: { text: 'The {band} chooses {leader}. The challenger accepts it.', dna: 2, anim: 'social' }, fail: { text: 'The {band} chooses the challenger.', leaderDies: true } },
+    ],
+  },
+  {
+    id: 't_feast', stage: 'tribe', prop: 'fruit', title: 'The Feast', tags: ['food', 'social'],
+    when: (run) => run.food >= 6,
+    text: 'The stores are full. Somebody says it is time for a feast.',
+    options: [
+      { label: 'Feast!', hint: '−4 Food', result: { text: 'Singing, dancing and far too much food. Nobody forgets this night.', food: -4, special: 2, dna: 2, anim: 'social' } },
+      { label: 'Save it for hard times', result: { text: 'Hard times always come.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_lost_child', stage: 'tribe', prop: 'night', title: 'Lost', tags: ['explore', 'danger'],
+    text: 'A child has wandered off and night is falling.',
+    options: [
+      { label: 'Everyone searches', check: { stat: 'spd', diff: 4 }, success: { text: 'Found, cold and scared, but fine. And they found a new place to forage, too.', food: 2, anim: 'grow' }, fail: { text: 'Found by morning, but someone else was hurt looking.', pop: -1 } },
+      { label: 'Follow the tracks', check: { stat: 'cun', diff: 4 }, success: { text: 'Every broken stem leads you closer. Found.', dna: 2, anim: 'mutate' }, fail: { text: 'The tracks vanish at the water.', pop: -1 } },
+    ],
+  },
+  {
+    id: 't_painted_cave', stage: 'tribe', habitat: 'land', prop: 'cave', title: 'The Painted Wall', tags: ['explore'],
+    text: 'Someone has pressed their hand, dipped in ash and red clay, against the wall of a cave. Now everyone wants to.',
+    options: [
+      { label: 'Paint the hunt', hint: '+3 Ideas', result: { text: 'The first story told without words.', dna: 3, anim: 'mutate' } },
+      { label: 'Paint the {leader}', hint: 'Your leader becomes Kind', result: { text: 'Everyone loves it. Especially the leader.', leaderTrait: 'kind', anim: 'social' } },
+    ],
+  },
+  {
+    id: 't_flood', stage: 'tribe', habitat: 'land', prop: 'pond', title: 'The Flood', tags: ['danger'],
+    text: 'The river has burst its banks and the water is rising toward the {camp}.',
+    options: [
+      { label: 'Run for high ground', check: { stat: 'spd', diff: 4 }, success: { text: 'Everyone makes it. Not everything does.', food: -2, anim: 'rest' }, fail: { text: 'The water was faster.', pop: -3 } },
+      { label: 'Build a wall of earth', check: { stat: 'str', diff: 5 }, success: { text: 'It holds. Your people have never felt so strong.', dna: 3, anim: 'attack' }, fail: { text: 'It breaks.', pop: -2, food: -2 } },
+    ],
+  },
+  {
+    id: 't_honey', stage: 'tribe', habitat: 'land', prop: 'swarm', title: 'The Honey Tree', tags: ['food'],
+    text: 'A hollow tree hums with stinging insects, and it drips with something sweet.',
+    options: [
+      { label: 'Smoke them out', hint: 'Needs 2 {resource}', req: { special: 2 }, result: { text: 'Sweet, sticky and only a few stings.', special: -2, food: 5, anim: 'grow' } },
+      { label: 'Just grab it', check: { stat: 'tou', diff: 4 }, success: { text: 'Worth every sting.', food: 4, anim: 'attack' }, fail: { text: 'Not worth the stings.', pop: -1 } },
+      { label: 'Leave it', result: { text: 'Sensible. Sad.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_grass_fire', stage: 'tribe', habitat: 'land', prop: 'fire', title: 'Wildfire', tags: ['danger'],
+    text: 'Fire is racing across the grassland toward you, faster than anything can run.',
+    options: [
+      { label: 'Burn a firebreak', req: { ownPath: 'tool' }, check: { stat: 'cun', diff: 4 }, success: { text: 'You fight fire with fire, and win.', dna: 3, special: 2, anim: 'mutate' }, fail: { text: 'Your fire joins the other.', pop: -2, food: -2 } },
+      { label: 'Run for the river', check: { stat: 'spd', diff: 5 }, success: { text: 'You wait it out in the water. The land is black, but you are alive.', food: -2, anim: 'rest' }, fail: { text: 'Not everyone reaches the water.', pop: -3 } },
+    ],
+  },
+  {
+    id: 't_storm_sea', stage: 'tribe', habitat: 'sea', prop: 'whirlpool', title: 'The Great Storm', tags: ['danger'],
+    text: 'The surface boils. Even down here, the water is wild and full of sand.',
+    options: [
+      { label: 'Dive deep and wait', check: { stat: 'tou', diff: 4 }, success: { text: 'Cold and dark, but calm. Everyone comes back up.', food: -1, anim: 'rest' }, fail: { text: 'Some are swept away.', pop: -3 } },
+      { label: 'Shelter in the {camp}', check: { stat: 'cun', diff: 4 }, success: { text: 'You chose the spot well. It holds.', dna: 2, anim: 'rest' }, fail: { text: 'It collapses.', pop: -2, food: -2 } },
+    ],
+  },
+  {
+    id: 't_whale_fall', stage: 'tribe', habitat: 'sea', prop: 'carcass', title: 'The Whale Fall', tags: ['food', 'explore'],
+    text: 'Something enormous has died and sunk to the sea floor. It will feed everything for miles, for years.',
+    options: [
+      { label: 'Claim it for your {band}', check: { stat: 'str', diff: 4 }, success: { text: 'It is yours. Others will have to ask.', food: 6, anim: 'attack' }, fail: { text: 'Bigger things got there first.', pop: -1 } },
+      { label: 'Share it with everyone', result: { text: 'Every kind in the deep remembers who shared.', food: 3, dna: 2, anim: 'social' } },
+    ],
+  },
+  {
+    id: 't_shipwreck', stage: 'tribe', habitat: 'sea', prop: 'bones', title: 'The Sunken Forest', tags: ['explore'],
+    text: 'A whole drowned forest lies on the sea floor, its trunks gone hard and strange.',
+    options: [
+      { label: 'Explore it', check: { stat: 'spd', diff: 4 }, success: { text: 'Hidden corners full of food and odd shapes to learn from.', food: 2, dna: 2, anim: 'grow' }, fail: { text: 'It is a maze. Some of you get lost.', pop: -1 } },
+      { label: 'Make it your {camp}', check: { stat: 'tou', diff: 4 }, success: { text: 'Safe walls, ready-made.', trait: 'cooperative', anim: 'rest' }, fail: { text: 'It is already someone else\'s home.', pop: -1 } },
+    ],
+  },
+  {
+    id: 't_red_tide', stage: 'tribe', habitat: 'sea', prop: 'bloom', title: 'Red Water', tags: ['danger', 'food'],
+    text: 'The water has turned red and bitter. Fish float belly-up all around the {camp}.',
+    options: [
+      { label: 'Move away from it', check: { stat: 'spd', diff: 4 }, success: { text: 'You outswim the red water.', food: -1, anim: 'rest' }, fail: { text: 'It catches up with the slowest.', pop: -2 } },
+      { label: 'Eat what you stored', result: { text: 'You live off your stores until the water clears.', food: -4, anim: 'rest' } },
+    ],
+  },
+
+  // ----- Toolmakers -----
+  {
+    id: 't_tool_spear', stage: 'tribe', path: 'tool', prop: 'stick', title: 'The Long Point', tags: ['hunt'],
+    text: 'A sharp stone tied to a long stick. Now your hunters can strike from out of reach.',
+    options: [
+      { label: 'Make spears for everyone', hint: '−2 {resource}, +1 gear', req: { special: 2 }, result: { text: 'Every hunter carries one now.', special: -2, gear: 1, anim: 'attack' } },
+      { label: 'Keep it for the best hunters', result: { text: 'They bring back more meat than ever.', food: 3, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 't_tool_fire_out', stage: 'tribe', path: 'tool', prop: 'night', title: 'The Fire Goes Out', tags: ['danger'],
+    when: (run) => (run.special || 0) >= 2,
+    text: 'Rain all night, and the {keeper} fell asleep. In the morning, the {resource} is cold.',
+    options: [
+      { label: 'Make it again from nothing', check: { stat: 'cun', diff: 5 }, success: { text: 'Two sticks, hours of work, and then smoke. You can make it whenever you want now.', special: 1, dna: 3, anim: 'mutate' }, fail: { text: 'Nothing. You must wait for lightning.', special: -4 } },
+      { label: 'Beg embers from the strangers', req: { band: true }, check: { stat: 'cha', diff: 4 }, success: { text: 'They give you a coal, wrapped in leaves.', special: -1, anim: 'social' }, fail: { text: 'They laugh at you.', special: -4 } },
+      { label: 'Punish the {keeper}', result: { text: 'It does not bring the fire back.', special: -4, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 't_tool_cooking', stage: 'tribe', path: 'tool', prop: 'fire', title: 'Cooked', tags: ['food'],
+    text: 'A piece of meat fell into the {resource}. Someone ate it anyway. Now everyone wants theirs that way.',
+    options: [
+      { label: 'Cook everything', hint: '−1 {resource}, +1 member', result: { text: 'Food goes further, and fewer people get sick.', special: -1, food: 2, pop: 1, anim: 'grow' } },
+      { label: 'Only for feasts', result: { text: 'Something to look forward to.', dna: 1, food: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_tool_knapper', stage: 'tribe', path: 'tool', prop: 'bones', title: 'The Master Knapper', tags: ['explore'],
+    text: 'One of your people makes blades so fine they can split a hair. Others want to learn.',
+    options: [
+      { label: 'Let them teach', check: { stat: 'cun', diff: 4 }, success: { text: 'Soon every hand in the {band} can do it.', gear: 1, dna: 2, anim: 'mutate' }, fail: { text: 'The secret is hard to pass on.', dna: 1 } },
+      { label: 'Make them leader', hint: 'New leader: Clever', result: { text: 'A maker, not a fighter, leads you now.', leaderTrait: 'clever', anim: 'social' } },
+    ],
+  },
+  {
+    id: 't_tool_trap', stage: 'tribe', path: 'tool', prop: 'stick', title: 'The Snare', tags: ['hunt', 'food'], species: 'wild',
+    text: 'A loop of twisted fibre catches a {them} by the leg. It works while you sleep.',
+    options: [
+      { label: 'Set snares everywhere', hint: '+4 Food', result: { text: 'Meat every morning. The {them} learn to fear your people.', food: 4, opinion: -15, anim: 'attack' } },
+      { label: 'Use them to catch the {them} alive', check: { stat: 'cha', diff: 4 }, success: { text: 'Caught gently, fed and kept. They stop trying to leave.', tame: true, anim: 'social' }, fail: { text: 'They chew through and flee.', opinion: -10 } },
+    ],
+  },
+  {
+    id: 't_tool_beast_fire', stage: 'tribe', path: 'tool', prop: 'fire', title: 'Eyes in the Dark', tags: ['danger'], species: 'predator',
+    text: 'At night, the eyes of the {them} glow at the edge of your {resource}-light.',
+    options: [
+      { label: 'Throw burning branches', hint: 'Needs 3 {resource}', req: { special: 3 }, result: { text: 'They have never seen anything like it. They do not come back.', special: -2, opinion: -15, dna: 2, anim: 'attack' } },
+      { label: 'Build the {resource} higher', check: { stat: 'tou', diff: 4 }, success: { text: 'They wait all night and slink away at dawn.', special: -1, anim: 'rest' }, fail: { text: 'One gets in.', pop: -2 } },
+    ],
+  },
+  {
+    id: 't_tool_raft', stage: 'tribe', path: 'tool', habitat: 'land', prop: 'shore', title: 'Something That Floats', tags: ['explore'],
+    text: 'Logs lashed together carry a child across the river, laughing.',
+    options: [
+      { label: 'Build more', check: { stat: 'cun', diff: 4 }, success: { text: 'Now the river is a road, not a wall.', discovery: true, anim: 'mutate' }, fail: { text: 'It sinks. The child is fine.', dna: 1 } },
+      { label: 'Too dangerous', result: { text: 'The river stays where it is.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_tool_vent_glass', stage: 'tribe', path: 'tool', habitat: 'sea', prop: 'vent', title: 'Vent Glass', tags: ['explore'],
+    text: 'Near the hottest vent, sand has melted into a black glass sharper than any shell.',
+    options: [
+      { label: 'Gather it carefully', check: { stat: 'tou', diff: 4 }, success: { text: 'Burned fins, but the finest blades in the deep.', gear: 1, anim: 'attack' }, fail: { text: 'Too hot.', pop: -1 } },
+      { label: 'Study how it forms', check: { stat: 'cun', diff: 4 }, success: { text: 'Your {keeper} can make it now.', special: 3, dna: 2, anim: 'mutate' }, fail: { text: 'It keeps its secrets.', dna: 1 } },
+    ],
+  },
+
+  // ----- Singers -----
+  {
+    id: 't_song_echo', stage: 'tribe', path: 'song', prop: 'cave', title: 'The Echo', tags: ['explore'],
+    text: 'In a hollow place, your song comes back to you, changed. It sounds like a second choir answering.',
+    options: [
+      { label: 'Sing with the echo', hint: '+3 Song', result: { text: 'Harmony, for the first time.', special: 3, anim: 'social' } },
+      { label: 'Listen to how it changes', check: { stat: 'cun', diff: 4 }, success: { text: 'The echo tells you how big the space is, and what is in it.', discovery: true, anim: 'mutate' }, fail: { text: 'It is just an echo.', dna: 1 } },
+    ],
+  },
+  {
+    id: 't_song_rival_voice', stage: 'tribe', path: 'song', prop: 'notes', title: 'A Rival Voice', tags: ['social'],
+    text: 'A young singer has made a new song, and the young ones love it. The {keeper} says it is noise.',
+    options: [
+      { label: 'Side with the old song', result: { text: 'The old ways hold. The young sulk.', special: 2, anim: 'rest' } },
+      { label: 'Side with the new song', check: { stat: 'cha', diff: 4 }, success: { text: 'The new song spreads. Even the {keeper} hums it, eventually.', dna: 3, anim: 'social' }, fail: { text: 'The {band} splits into two camps.', pop: -1, special: -2 } },
+      { label: 'Weave them together', check: { stat: 'cun', diff: 5 }, success: { text: 'A song with old roots and new branches.', special: 3, dna: 2, anim: 'mutate' }, fail: { text: 'It pleases nobody.', special: -1 } },
+    ],
+  },
+  {
+    id: 't_song_lullaby', stage: 'tribe', path: 'song', prop: 'night', title: 'The Lullaby', tags: ['social'],
+    text: 'A mother sings a song so gentle that the whole {camp} falls asleep, even the guards.',
+    options: [
+      { label: 'Teach it to everyone', hint: '+1 member', result: { text: 'Children sleep, parents rest, and more of them grow up strong.', pop: 1, special: 1, anim: 'rest' } },
+      { label: 'Sing it to the beasts', check: { stat: 'cha', diff: 5 }, success: { text: 'Even the wild ones lie down to listen.', dna: 2, anim: 'social' }, fail: { text: 'The beasts are not impressed.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_song_map', stage: 'tribe', path: 'song', prop: 'stars', title: 'The Song of the Way', tags: ['explore'],
+    text: 'An old song lists every landmark on the way to the far feeding grounds. Nobody has made the trip in generations.',
+    options: [
+      { label: 'Follow the song', check: { stat: 'spd', diff: 4 }, success: { text: 'Every landmark is where the song says it is. The feeding grounds are rich.', food: 5, anim: 'grow' }, fail: { text: 'One verse was wrong.', pop: -1, food: -1 } },
+      { label: 'Add a verse of your own', hint: '+2 Song, +1 Idea', result: { text: 'The song grows.', special: 2, dna: 1, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 't_song_silence', stage: 'tribe', path: 'song', prop: 'shadow', title: 'The Silence', tags: ['danger'], species: 'predator',
+    text: 'The {them} hunt by sound. Every time you sing, more of them come.',
+    options: [
+      { label: 'Stop singing for a season', result: { text: 'The {them} lose interest. So do your people.', special: -4, anim: 'rest' } },
+      { label: 'Sing louder, all together', check: { stat: 'cha', diff: 5 }, success: { text: 'A wall of sound. The {them} flee from it.', special: 2, opinion: -15, anim: 'social' }, fail: { text: 'They come anyway.', pop: -3 } },
+      { label: 'Sing somewhere else to lure them', check: { stat: 'spd', diff: 4 }, success: { text: 'They chase a song with nobody in it.', dna: 2, anim: 'mutate' }, fail: { text: 'The lure is caught.', pop: -1 } },
+    ],
+  },
+  {
+    id: 't_song_beast_song', stage: 'tribe', path: 'song', prop: 'notes', title: 'They Sing Back', tags: ['social'], species: 'wild',
+    text: 'When your people sing, the {them} answer: a call, the same every time.',
+    options: [
+      { label: 'Learn their call', check: { stat: 'cha', diff: 4 }, success: { text: 'You call, and they come. They trust you now.', tame: true, anim: 'social' }, fail: { text: 'You call wrong. They flee.', opinion: -10 } },
+      { label: 'Put their call in your song', hint: '+2 Song', result: { text: 'A new verse with an animal voice in it.', special: 2, opinion: 10, anim: 'social' } },
+    ],
+  },
+  {
+    id: 't_song_hum', stage: 'tribe', path: 'song', habitat: 'land', prop: 'tree', title: 'The Humming Hill', tags: ['explore'],
+    text: 'When the wind blows over a certain hill, the rocks hum a note your people have never heard.',
+    options: [
+      { label: 'Sing there every night', hint: '+3 Song', result: { text: 'Your songs sound older there, and truer.', special: 3, anim: 'social' } },
+      { label: 'Find out why', check: { stat: 'cun', diff: 4 }, success: { text: 'Hollow stones. You can make them hum yourselves now.', discovery: true, anim: 'mutate' }, fail: { text: 'The hill keeps its secret.', dna: 1 } },
+    ],
+  },
+  {
+    id: 't_song_deep_voice', stage: 'tribe', path: 'song', habitat: 'sea', prop: 'whirlpool', title: 'The Deep Voice', tags: ['explore'],
+    text: 'Far below, something sings in a voice so low it can be felt more than heard. It sings your song back to you, slowly.',
+    options: [
+      { label: 'Answer it', check: { stat: 'cha', diff: 5 }, success: { text: 'Whatever it is, it knows you now. Your songs carry farther.', special: 4, dna: 2, anim: 'social' }, fail: { text: 'It falls silent and never sings again.', special: -2 } },
+      { label: 'Swim away quietly', result: { text: 'Some things are better left alone.', anim: 'rest' } },
+    ],
+  },
+);
+
+// Founding: the Tribe stage's finale. Each option leads to one of three endings: Settle, Roam or Conquer.
+(function () {
+  const F = {
+    tool: {
+      land: { title: 'The Founding Fire', prop: 'fire', text: 'Your {band} is strong now, and the {resource} has never gone out. The elders say it is time to decide what your people will become.' },
+      sea: { title: 'The Founding Vent', prop: 'vent', text: 'Your {band} has grown around the warm vents. The elders say it is time to decide what your people will become.' },
+    },
+    song: {
+      land: { title: 'The Founding Song', prop: 'notes', text: 'Your {band} knows a song for everything now. The elders say there is one song left to write: what your people will become.' },
+      sea: { title: 'The Founding Song', prop: 'notes', text: 'Your {band} sings across whole oceans now. The elders say there is one song left to write: what your people will become.' },
+    },
+  };
+  const ROADS = [['settle', 'tou', 'Stay and build'], ['roam', 'spd', 'Keep moving'], ['conquer', 'str', 'Rule the others']];
+  Object.entries(F).forEach(([path, byHab]) => Object.entries(byHab).forEach(([hab, f]) => {
+    G.EVENTS.push({ id: `founding_${path}_${hab}`, stage: 'tribe', finale: true, habitat: hab, path, prop: f.prop, title: f.title, text: f.text,
+      options: ROADS.map(([road, stat, verb]) => { const e = G.TRIBE_ENDINGS[path][hab][road]; return { label: `${verb}: ${e.name}`, hint: e.desc, check: { stat, diff: 5 },
+        success: { text: `${e.desc} Your ${hab === 'sea' && path === 'tool' ? 'clan' : '{band}'} becomes a people.`, tribeEnding: road, anim: stat === 'str' ? 'attack' : stat === 'spd' ? 'grow' : 'social' },
+        fail: { text: 'Not yet. Your people are not ready to agree.', pop: -3, setback: 0 } }; }) });
+  }));
+}());
+
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
