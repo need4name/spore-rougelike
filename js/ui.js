@@ -803,7 +803,7 @@ window.G = window.G || {};
     const slots = G.allSlots(run);
     return `
       <div class="stats">${G.STATS.map((s) => `<div class="stat" title="${s.name}"><span>${s.short}</span><b>${G.stat(run, s.id)}</b></div>`).join('')}</div>
-      <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> (${G.sizeLabel(G.bodySize(run), run.stage)}) · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${G.SIZES[G.sizeOf(run)].eatDiv} members${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
+      <p class="size-line"><b>${G.SIZES[G.sizeOf(run)].name}</b> (${G.sizeLabel(G.bodySize(run), run.stage)}) · ${run.stage === 'cell' ? 'colony' : run.habitat === 'sea' ? 'schools' : 'herds'} of up to ${G.maxPop(run)} · 1 Food feeds ${Math.round(G.SIZES[G.sizeOf(run)].eatDiv * G.POP_SCALE)} members (meat feeds half as many again)${G.sizeOf(run) === 'small' ? ' · each blow kills more of you' : ''}</p>
       <ul class="parts">${slots.map((slot) => {
         const locked = slot.multi && !run.multicellular;
         const s = run.parts[slot.id];
