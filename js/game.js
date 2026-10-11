@@ -131,7 +131,7 @@ window.G = window.G || {};
     return !!run.parts[kind] && !off.includes(kind);
   };
   // Eyes come only from eye mutations: no eye part, no eyes. The best one you own sets how many.
-  G.EYES = { eyespot: 1, plated_eye: 1, compound_sense: 1, lantern_eye: 1, big_eyes: 2, glow_eyes: 2, night_eyes: 2, mantis_eyes: 2, rainbow_eyes: 2, hunter_eyes: 2, sentinel_ears: 2, compound_eyes: 4, mosaic_eyes: 4, all_seeing_eyes: 6 };
+  G.EYES = { eyespot: 1, plated_eye: 1, compound_sense: 1, lantern_eye: 1, big_eyes: 2, glow_eyes: 2, night_eyes: 2, mantis_eyes: 2, rainbow_eyes: 2, hunter_eyes: 2, sentinel_ears: 2, compound_eyes: 4, mosaic_eyes: 4, all_seeing_eyes: 6, ring_of_eyes: 6, seeking_front: 1 };
   G.eyesFrom = (ids) => { let n = 0; const seen = new Set(); const walk = (id) => { if (!id || seen.has(id)) return; seen.add(id); n = Math.max(n, G.EYES[id] || 0); ((G.PART[id] || {}).from || []).forEach(walk); }; ids.forEach(walk); return n; };
   G.eyeCount = (run) => G.eyesFrom(G.partIds(run));
   G.armPairs = (run) => {
@@ -225,8 +225,28 @@ window.G = window.G || {};
   G.partIds = (run) => {
     const out = [];
     const off = G.offSlots(run);
-    Object.entries(run.parts).forEach(([slot, s]) => { if (s && !off.includes(slot)) { out.push(s.id); if (s.merged) out.push(s.merged); } });
+    // Parts that need another body plan lie dormant: they stay, but do nothing until it fits again.
+    Object.entries(run.parts).forEach(([slot, s]) => { if (s && !off.includes(slot)) { [s.id, s.merged].forEach((id) => { if (id && G.partFits(run, G.PART[id])) out.push(id); }); } });
     return out;
+  };
+  // Does this part suit your body plan (symmetry, leg pairs, arm pairs)?
+  G.partFits = (run, p) => {
+    if (!p || (!p.sym && !p.legs && !p.arms)) return true;
+    if (run.stage === 'cell' && !run.multicellular) return false;
+    const sym = G.symmetry(run);
+    if (p.sym && sym !== p.sym) return false;
+    const arms = G.armPairs(run); const legs = G.segments(run) - arms;
+    if (p.legs && (sym !== 'bilateral' || legs < p.legs[0] || legs > p.legs[1])) return false;
+    if (p.arms && arms < p.arms) return false;
+    return true;
+  };
+  // In words: what body plan a part needs.
+  G.partNeeds = (p, habitat) => {
+    if (!p || (!p.sym && !p.legs && !p.arms)) return '';
+    const unit = habitat === 'sea' ? 'fins' : 'legs';
+    if (p.arms) return p.arms > 1 ? `${p.arms} pairs of arms` : 'A pair of arms';
+    if (p.legs) { const [a, b] = p.legs; return a === 0 && b === 0 ? `No ${unit}` : a === b ? `${a} pair${a > 1 ? 's' : ''} of ${unit}` : `${a}+ pairs of ${unit}`; }
+    return { radial: 'Radial', bilateral: 'Bilateral', colonial: 'No symmetry' }[p.sym];
   };
 
   G.canMerge = () => true;
@@ -499,7 +519,8 @@ window.G = window.G || {};
       // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.
       // With Twin Mouths, the second socket can hold either.
       && !(p.slot === 'mouth' && p.diet && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'))
-      && (!p.biome || p.biome === G.biome(run).id));
+      && (!p.biome || p.biome === G.biome(run).id)
+      && G.partFits(run, p));
   };
 
   function sub(text, run, speciesIdx) {
@@ -840,6 +861,7 @@ window.G = window.G || {};
     return ids.filter((id) => {
       const p = G.PART[id];
       return p && p.stage === run.stage && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat) && slots.includes(p.slot) && !have.includes(id)
+        && G.partFits(run, p)
         && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
         && !(G.gimmick(run) === 'predator' && p.diet === 'herb')
         // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.

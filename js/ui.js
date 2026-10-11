@@ -589,7 +589,7 @@ window.G = window.G || {};
             return `
             <div class="part-card">
               <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}${socks.length > 1 ? ` · 2nd: ${run.parts[socks[1]] ? esc(G.slotLabel(run.parts[socks[1]])) : 'empty'}` : ''}</span>
-              <span class="opt-label">${picon(pid)}${esc(p.name)}${kwTags(p)}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
+              <span class="opt-label">${picon(pid)}${esc(p.name)}${kwTags(p)}${G.partNeeds(p, run.habitat) ? `<span class="kw plan">${esc(G.partNeeds(p, run.habitat))}</span>` : ''}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
               ${syn}
@@ -813,7 +813,7 @@ window.G = window.G || {};
         const ids = [s.id].concat(s.merged ? [s.merged] : []);
         const mods = {};
         ids.forEach((id) => Object.entries(G.PART[id].mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; }));
-        return `<li><span class="slot">${slot.name}</span><span class="pname">${ids.map((id) => picon(id)).join('')}${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}</span>${s.merged ? `<span class="pmods halves">${ids.map((id) => `${esc(G.PART[id].name)}: ${esc(G.describeMods(G.PART[id].mods) || 'no stats')}`).join(' · ')}</span>` : ''}</li>`;
+        return `<li><span class="slot">${slot.name}</span><span class="pname">${ids.map((id) => picon(id)).join('')}${esc(G.slotLabel(s))}${ids.filter((id) => !G.partFits(run, G.PART[id])).map((id) => `<span class="kw dormant">${esc(G.PART[id].name)} dormant: needs ${esc(G.partNeeds(G.PART[id], run.habitat).toLowerCase())}</span>`).join('')}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}</span>${s.merged ? `<span class="pmods halves">${ids.map((id) => `${esc(G.PART[id].name)}: ${esc(G.describeMods(G.PART[id].mods) || 'no stats')}`).join(' · ')}</span>` : ''}</li>`;
       }).join('')}</ul>
       ${partnerSection(run)}
       <h3>Synergies</h3>
@@ -829,8 +829,12 @@ window.G = window.G || {};
     const sym = G.SYMMETRY[symId];
     const chosen = run.multicellular;
     const symCard = `<div class="plan-sym"><h3>Symmetry: ${chosen ? esc(sym.name) : 'not yet chosen'}</h3><p>${chosen ? esc(sym.desc) : 'You choose your symmetry when your cells become one body. It shapes the creature you grow into and cannot be changed afterwards.'}</p>${chosen && Object.keys(sym.mods).length ? `<p class="pmods">${esc(G.describeMods(sym.mods))}</p>` : ''}</div>`;
+    // The mutations this body plan opens (and that other plans would).
+    const gated = G.PARTS.filter((p) => (p.sym || p.legs || p.arms) && p.stage === run.stage && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat) && (!p.evolved || (run.knownEvos || []).includes(p.id)));
+    const fits = gated.filter((p) => G.partFits(run, p));
+    const opensCard = chosen ? `<div class="plan-opens"><h3>Your body plan opens</h3><p class="note">${fits.length ? fits.map((p) => `${picon(p.id)}${esc(p.name)}`).join(' · ') : 'Nothing special in this stage.'}</p>${gated.length > fits.length ? `<p class="note muted">Other body plans would open ${gated.length - fits.length} more.</p>` : ''}</div>` : '';
     if (run.stage !== 'creature') {
-      return `${symCard}<p class="note">${Object.values(G.SYMMETRY).map((x) => `${x.name}: ${x.desc}`).map(esc).join('<br>')}</p>`;
+      return `${symCard}${opensCard}<p class="note">${Object.values(G.SYMMETRY).map((x) => `${x.name}: ${x.desc}`).map(esc).join('<br>')}</p>`;
     }
     // Skeleton, young and blood: chosen once each in the creature stage.
     const found = ['skeleton', 'young', 'blood'].map((f) => {
@@ -852,7 +856,7 @@ window.G = window.G || {};
       const pl = planFor(k);
       ladder.push(`<li class="${k === n ? 'on' : ''}"><b>${k}</b><span><strong>${esc(pl.name)}</strong> ${esc(G.describeMods(pl.mods) || 'No bonus, no cost')}</span></li>`);
     }
-    return `${symCard}${foundCard}
+    return `${symCard}${opensCard}${foundCard}
       <div class="plan-now">
         <button class="btn small" ${canDown ? 'data-act="reshape" data-arg="-1"' : 'disabled'} aria-label="Fewer ${esc(unit)}">−</button>
         <div><b>${n} ${esc(unit)}</b>${cur.name !== `${n} ${unit}` ? `<span>${esc(cur.name)}</span>` : ''}</div>
