@@ -351,7 +351,7 @@ G.EVENTS = [
   },
   {
     id: 'crowded', stage: 'creature', title: 'Too Many Mouths', tags: ['food'],
-    when: (run) => run.pop >= G.maxPop(run) - 1,
+    when: (run) => run.pop >= G.maxPop(run) - G.POP_SCALE,
     text: 'Your kind has grown so numerous that {home} around you can barely feed you all.',
     options: [
       { label: 'A group sets off to find a new home', result: { text: 'They will become a new branch of the family.', pop: -2, dna: 4, anim: 'flee' } },
@@ -1470,7 +1470,7 @@ G.EVENTS = [
   },
   {
     id: 'herd_panic', stage: 'any', title: 'Panic in the Herd', tags: ['danger', 'social'], repeat: true,
-    when: (run) => G.gimmick(run) === 'grazer' && run.pop >= 10,
+    when: (run) => G.gimmick(run) === 'grazer' && G.heads(run) >= 10,
     text: 'Something spooks one of your kind, and in a heartbeat the whole {herd} is panicking.',
     options: [
       { label: 'Calm them', check: { stat: 'cha', diff: 3 }, success: { text: 'The panic fades as fast as it came.', dna: 2, trait: 'social' }, fail: { text: 'Some are trampled in the rush.', pop: -2 } },
@@ -2595,6 +2595,71 @@ G.EVENTS.push(
         fail: { text: 'Not yet. Your people are not ready to agree.', pop: -3, setback: 0 } }; }) });
   }));
 }());
+
+// ---------- Shares of your Population (Patch 15.1): a fixed number, a share of what you have, or a share of your maximum ----------
+G.EVENTS.push(
+  {
+    id: 'pct_bloom', stage: 'cell', prop: 'bloom', title: 'The Great Division', tags: ['food'],
+    text: 'Warm water, rich food: every one of your cells wants to divide at once.',
+    options: [
+      { label: 'Divide as fast as possible', hint: '+30% of your number now', result: { text: 'Everyone splits. Big colonies grow biggest.', popPct: 0.3, food: -2, anim: 'grow' } },
+      { label: 'Fill the empty water first', hint: '+20% of your maximum', result: { text: 'The gaps fill up. Small colonies catch up fastest.', popMaxPct: 0.2, food: -2, anim: 'grow' } },
+      { label: 'A steady trickle', hint: '+25 cells, no Food', result: { text: 'Slow and sure.', popFlat: 25, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'pct_plenty', stage: 'creature', prop: 'fruit', title: 'A Season of Plenty', tags: ['food'],
+    text: 'More food than anyone can remember. Every family could raise another brood this year.',
+    options: [
+      { label: 'Every family raises one more', hint: '+25% of your number now', result: { text: 'The bigger the {herd}, the bigger the boom.', popPct: 0.25, food: -3, anim: 'grow' } },
+      { label: 'Fill every empty nest', hint: '+20% of your maximum', result: { text: 'The {nests} fill up fast. Best when you are few.', popMaxPct: 0.2, food: -3, anim: 'grow' } },
+      { label: 'Store the food instead', hint: '+40 young later, +3 Food', result: { text: 'A little now, and full bellies for the hard times.', popFlat: 40, food: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'pct_sickness', stage: ['creature', 'tribe'], prop: 'sickness', title: 'The Spreading Fever', tags: ['danger'],
+    text: 'A fever is spreading. The closer together your {herd} lives, the faster it moves.',
+    options: [
+      { label: 'Scatter, and wait it out', hint: '−3 Food, −40 of your number', result: { text: 'Spread out, fewer catch it. But some still do.', popFlat: -40, food: -3, anim: 'rest' } },
+      { label: 'Stay together and nurse the sick', hint: '−15% of your number', result: { text: 'The sick are cared for. A big {herd} loses more.', popPct: -0.15, anim: 'social' } },
+      { label: 'Drive the sick away', check: { stat: 'tou', diff: 4 }, success: { text: 'Harsh, but it stops the fever cold.', popFlat: -15, anim: 'rest' }, fail: { text: 'Too late. It was already everywhere.', popPct: -0.25 } },
+    ],
+  },
+  {
+    id: 'pct_strays', stage: ['creature', 'tribe'], prop: 'shore', title: 'Strays', tags: ['social'],
+    text: 'A band of lost young from a {herd} like yours has wandered in. They are hungry.',
+    options: [
+      { label: 'Take them all in', hint: '+35 of your number, −4 Food', result: { text: 'More mouths, and more of you.', popFlat: 35, food: -4, anim: 'social' } },
+      { label: 'Take in as many as you can feed', hint: '+10% of your maximum', result: { text: 'As many as there is room for.', popMaxPct: 0.1, food: -1, anim: 'social' } },
+      { label: 'Send them on', result: { text: 'They move on. You never see them again.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'pct_stampede', stage: 'creature', habitat: 'land', prop: 'dust', title: 'Stampede', tags: ['danger'],
+    text: 'Something has spooked the whole valley. Every {herd} is running, and yours is in the way.',
+    options: [
+      { label: 'Run with them', check: { stat: 'spd', diff: 4 }, success: { text: 'You run until it is over. Everyone made it.', anim: 'flee' }, fail: { text: 'The slowest are trampled. Bigger herds lose more.', popPct: -0.2 } },
+      { label: 'Stand in a tight ring', check: { stat: 'tou', diff: 4 }, success: { text: 'The stampede parts around you.', anim: 'rest' }, fail: { text: 'The ring breaks.', popFlat: -30 } },
+    ],
+  },
+  {
+    id: 'pct_spawning', stage: 'creature', habitat: 'sea', prop: 'bubbles', title: 'The Spawning Moon', tags: ['food'],
+    text: 'Under a full moon, the whole sea spawns at once. Your kind could join in.',
+    options: [
+      { label: 'Spawn with everything you have', hint: '+30% of your number now, −4 Food', result: { text: 'Clouds of young. The bigger the school, the bigger the cloud.', popPct: 0.3, food: -4, anim: 'grow' } },
+      { label: 'Guard a few eggs well', hint: '+30 young, −1 Food', result: { text: 'Fewer, but they all survive.', popFlat: 30, food: -1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_pct_newcomers', stage: 'tribe', prop: 'hearts', title: 'Newcomers', tags: ['social'],
+    text: 'Families from a broken band ask to join your {band}.',
+    options: [
+      { label: 'Welcome every one of them', hint: '+40 members, −3 Food', result: { text: 'New faces at every fire.', popFlat: 40, food: -3, anim: 'social' } },
+      { label: 'Only as many as we have room for', hint: '+15% of your maximum', result: { text: 'The {camp} fills up, and no fuller.', popMaxPct: 0.15, anim: 'social' } },
+      { label: 'Ask what they know first', check: { stat: 'cun', diff: 4 }, success: { text: 'They teach you something before they settle in.', popFlat: 20, discovery: true, anim: 'mutate' }, fail: { text: 'They take offence and leave.', anim: 'rest' } },
+    ],
+  },
+);
 
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });

@@ -1053,7 +1053,7 @@ window.G = window.G || {};
   // Your herd, school or colony: more members on screen as Population grows.
   function drawHerd(run, cx, cy, S, t, w, h) {
     const small = G.sizeOf(run) === 'small';
-    const n = Math.max(0, Math.min(small ? 10 : 6, Math.floor(run.pop / (small ? 2 : 3))));
+    const n = Math.max(0, Math.min(small ? 10 : 6, Math.floor(G.heads(run) / (small ? 2 : 3))));
     const b = G.bodyOf(run);
     const wet = run.stage === 'cell' || run.habitat === 'sea';
     for (let i = 0; i < n; i++) {
@@ -1937,7 +1937,7 @@ window.G = window.G || {};
       const base = Math.min(w, h) * 0.12;
       const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings', 'insect_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
       // Keep the herd list in sync with the world.
-      const live = [{ key: 'you', s: null, pop: run.pop, body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
+      const live = [{ key: 'you', s: null, pop: G.heads(run), body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
       [...herds.keys()].forEach((k) => { if (!live.find((l) => l.key === k)) herds.delete(k); });
       live.forEach((l, i) => {
         let hd = herds.get(l.key);
@@ -1987,7 +1987,7 @@ window.G = window.G || {};
             ctx.restore();
           }
           const bond = !l.s ? '' : l.s.name === run.partner && G.gimmick(run) === 'symbiote' ? '♥ ' : l.s.name === run.host && G.gimmick(run) === 'parasite' ? 'Host · ' : l.s.bud ? '✦ ' : l.s.name === run.mimic && G.gimmick(run) === 'mimic' ? '🎭 ' : '';
-          const label = `${bond}${l.key === 'you' ? 'You' : l.key} · ${pop}${run.stage === 'cell' ? '' : ` · ${G.sizeLabel(realSize(run, l.s), run.stage)}`}`;
+          const label = `${bond}${l.key === 'you' ? 'You' : l.key} · ${l.key === 'you' ? run.pop : Math.round(l.pop * G.POP_SCALE)}${run.stage === 'cell' ? '' : ` · ${G.sizeLabel(realSize(run, l.s), run.stage)}`}`;
           ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
           const lx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, hx));

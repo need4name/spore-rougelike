@@ -265,8 +265,8 @@ window.G = window.G || {};
         <div class="tb-main">
           <div class="tb-title"><strong>${esc(st.name)}</strong><span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
-            <span class="res pop ${run.pop <= 2 ? 'warn' : ''}" title="${run.stage === 'tribe' ? 'Members of your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'}">${ICON.pop}<b>${run.pop}</b>/${max}</span>
-            <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="Food. Gathered ${inc.total}, eaten ${up} per turn.">${ICON.food}<b>${run.food}</b><i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
+            <span class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : ''}" title="${run.stage === 'tribe' ? 'Members of your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'}">${ICON.pop}<b>${run.pop}</b>/${max}</span>
+            <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${tribeChips(run)}
             ${run.mind && run.stage === 'creature' ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
             ${gimmickChip(run)}
@@ -298,8 +298,8 @@ window.G = window.G || {};
     const g = G.gimmick(run);
     let t = ''; let warn = false; let tip = G.ARCHETYPE[run.archetype].rule || '';
     if (g === 'predator') { const h = run.hunger || 0; t = `Hunger ${h}/${G.HUNGER_LIMIT}`; warn = h >= G.HUNGER_LIMIT - 1; tip = 'Turns since your last kill. At the limit you starve.'; }
-    if (g === 'parasite') { const h = G.hostOf(run); t = h ? `Host: ${h.name} ${Math.round(h.pop)}` : 'No host'; warn = !h || h.pop < 6 || h.opinion <= -50; tip = 'Your Population can never outgrow your host.'; }
-    if (g === 'symbiote') { const p = G.partnerOf(run); t = p ? `Partner: ${p.name} ${Math.round(p.pop)}` : 'No partner'; warn = !p || p.pop < p.cap * 0.3; }
+    if (g === 'parasite') { const h = G.hostOf(run); t = h ? `Host: ${h.name} ${Math.round(h.pop * G.POP_SCALE)}` : 'No host'; warn = !h || h.pop < 6 || h.opinion <= -50; tip = 'Your Population can never outgrow your host.'; }
+    if (g === 'symbiote') { const p = G.partnerOf(run); t = p ? `Partner: ${p.name} ${Math.round(p.pop * G.POP_SCALE)}` : 'No partner'; warn = !p || p.pop < p.cap * 0.3; }
     if (g === 'drifter') { const n = Math.max(0, (run.nextDrift || 0) - run.turn); const land = run.stage !== 'cell' && run.habitat === 'land'; t = `${land ? 'Wanderlust' : 'Current'}: ${n === 0 ? 'now' : `${n} turn${n === 1 ? '' : 's'}`}`; tip = land ? 'Turns until wanderlust carries you somewhere new.' : 'Turns until the current carries you somewhere new.'; }
     if (g === 'grazer') { t = `Herd DNA +${G.dnaPerTurn(run)}`; tip = 'Bigger herds earn more DNA.'; }
     if (g === 'colony') t = `Offshoots ${G.budsOf(run).length}/3`;
@@ -961,7 +961,7 @@ window.G = window.G || {};
       return `<li><button class="rival ${st}" data-act="species" data-arg="${i}">
         <canvas class="portrait mini" data-species="${i}"></canvas>
         <span class="rival-info">
-          <span class="rival-name">${esc(s.name)}<small>${esc(niche)} · ${G.DIET_NAMES[s.diet]} · ${G.sizeLabel(s.size, run.stage)} · ${Math.round(s.pop)}</small></span>
+          <span class="rival-name">${esc(s.name)}<small>${esc(niche)} · ${G.DIET_NAMES[s.diet]} · ${G.sizeLabel(s.size, run.stage)} · ${Math.round(s.pop * G.POP_SCALE)}</small></span>
           ${speciesTags(run, s) ? `<span class="tags">${speciesTags(run, s)}</span>` : ''}
           <span class="opinion"><span class="opinion-bar"><span style="left:${pct}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></span>
         </span>
@@ -1092,7 +1092,7 @@ window.G = window.G || {};
       <button class="btn ghost small" data-act="species-back">← All species</button>
       <div class="species-head">
         <button class="portrait-zoom" data-act="view" data-arg="${i}" aria-label="See the ${esc(s.name)} full screen"><canvas class="portrait big" data-species="${i}"></canvas><i>${ICON.expand}</i></button>
-        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${s.size >= 2 ? 'Giant, ' : s.size < 0.6 ? 'Tiny, ' : ''}${G.sizeLabel(s.size, run.stage)}${speciesPlan(s)} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop)}`}</p></div>
+        <div><h2>The ${esc(s.name)}</h2><p class="note">${G.ROLES[s.role]} · ${G.DIET_NAMES[s.diet]} · ${s.size >= 2 ? 'Giant, ' : s.size < 0.6 ? 'Tiny, ' : ''}${G.sizeLabel(s.size, run.stage)}${speciesPlan(s)} · ${s.extinct ? 'Extinct' : `Population ${Math.round(s.pop * G.POP_SCALE)}`}</p></div>
       </div>
       ${speciesBond(run, s)}
       <p>${esc(roleText)} ${esc(attitude)}</p>

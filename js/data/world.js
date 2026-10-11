@@ -608,6 +608,7 @@ G.BASE_POP = 8;      // max Population
 G.START_POP = 4;
 G.BASE_FOOD = 5;
 G.FOOD_CAP = 10;
+G.POP_SCALE = 10;   // Population is counted in individuals: about ten for every 'head' events are written for
 G.GROWTH_COST = 3;   // spare Food needed for +1 Population
 G.MAX_HOSTILITY = 5;
 

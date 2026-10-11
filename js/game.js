@@ -59,6 +59,9 @@ window.G = window.G || {};
   G.WISDOM.forEach((w) => { G.BOON[w.id] = w; });
   G.meta = mergeMeta(load(SAVE_META));
   G.run = load(SAVE_RUN);
+  // Patch 15.1 counts Population in individuals (×10). Older runs and fossils are converted when loaded.
+  G.migratePop = (run) => { if (run && !run.popV) { run.pop = Math.round(run.pop * G.POP_SCALE); run.popV = 2; } return run; };
+  G.migratePop(G.run);
   // Ideas from before Update 13 no longer exist.
   if (G.run && G.run.innovations) { const ids = new Set(G.INNOVATIONS.map((i) => i.id)); G.run.innovations = G.run.innovations.filter((id) => ids.has(id)); if (G.run.fascination && !ids.has(G.run.fascination)) G.run.fascination = null; }
   G.saveMeta = () => store(SAVE_META, G.meta);
@@ -369,6 +372,42 @@ window.G = window.G || {};
     return a || b || 'omni';
   };
   G.DIET_NAMES = { herb: 'Herbivore', carn: 'Carnivore', omni: 'Omnivore' };
+  // ---------- Two foods (Patch 15.1) ----------
+  // Meat and plants are kept apart. Herbivores eat only plants, carnivores only meat, omnivores either.
+  // Meat is richer (each one feeds 1.5) but a fifth of stored meat rots every turn; plants keep.
+  G.MEAT_NOURISH = 1.5; G.MEAT_ROT = 0.2;
+  G.edible = (run) => { const d = G.diet(run); return d === 'carn' ? ['meat'] : d === 'herb' ? ['plants'] : ['meat', 'plants']; };
+  G.prefFood = (run) => (G.diet(run) === 'carn' ? 'meat' : 'plants');
+  // The food you can eat, as one number (kept in run.food for everything that only needs a total).
+  G.syncFood = (run) => {
+    if (run.meat == null || run.plants == null) { const f = Math.max(0, run.food || 0); run.meat = G.diet(run) === 'carn' ? f : 0; run.plants = G.diet(run) === 'carn' ? 0 : f; }
+    run.food = G.edible(run).reduce((t, k) => t + run[k], 0);
+    return run.food;
+  };
+  // Gains go to the food named, if you can eat it; otherwise to the food you eat.
+  G.addFood = (run, n, kind) => {
+    G.syncFood(run);
+    if (n < 0) return -G.spendFood(run, -n);
+    const k = kind && G.edible(run).includes(kind) ? kind : G.prefFood(run);
+    run[k] += n; G.syncFood(run); return n;
+  };
+  // Costs come out of meat first (it would only rot), then plants.
+  G.spendFood = (run, n) => {
+    G.syncFood(run);
+    let left = n;
+    G.edible(run).forEach((k) => { const take = Math.min(run[k], left); run[k] -= take; left -= take; });
+    G.syncFood(run); return n - left;
+  };
+  // Eating: meat feeds 1.5. Returns what could not be eaten (the hunger left over).
+  function eatFood(run, need) {
+    G.syncFood(run);
+    let left = need;
+    if (G.edible(run).includes('meat') && left > 0) { const m = Math.min(run.meat, Math.ceil(left / G.MEAT_NOURISH)); run.meat -= m; left -= m * G.MEAT_NOURISH; }
+    if (G.edible(run).includes('plants') && left > 0) { const pl = Math.min(run.plants, Math.ceil(left)); run.plants -= pl; left -= pl; }
+    G.syncFood(run);
+    return Math.max(0, Math.ceil(left - 1e-9));
+  }
+  let curFoodKind = null; // what kind of food the event being resolved gives
   // A small icon for every mutation, from what it is (its name and id), then its slot.
   G.ICON_RULES = [
     [/eye|sight|sense_|vision/, '👁️'], [/\bwings?\b|feather/, '🪽'], [/shell|carapace|plate|armor|scale/, '🐚'], [/spine|quill|spike/, '🦔'], [/tentacle|octo/, '🐙'],
@@ -427,6 +466,8 @@ window.G = window.G || {};
   G.stat = (run, key) => Math.max(0, (run.stage === 'cell' ? 2 : 1) + G.mod(run, key));
   // Event gains and losses are written for a herd of about 10.
   G.popScale = (run) => Math.max(1, G.maxPop(run) / 10);
+  // Your numbers in 'heads': the units events, upkeep and births are written in.
+  G.heads = (run) => run.pop / G.POP_SCALE;
   G.sizeOf = (run) => (run.traits.includes('giant') ? 'giant' : run.traits.includes('small_many') ? 'small' : 'mid');
   // Max Population grows with every milestone, then scales with body size:
   // small creatures live in big herds, giants in small ones.
@@ -439,35 +480,38 @@ window.G = window.G || {};
     if (g === 'grazer') max = Math.round(max * 1.6);
     // A parasite can never outgrow its host.
     if (g === 'parasite') { const h = G.hostOf(run); max = Math.min(max, h ? Math.max(3, Math.floor(h.pop * 0.6)) : 3); }
-    return max;
+    return max * G.POP_SCALE;
   };
   G.foodCap = (run) => { const cap = Math.max(4, run.baseFoodCap + G.mod(run, 'foodCap')); return G.gimmick(run) === 'predator' ? Math.max(4, Math.floor(cap / 2)) : cap; };
   // Every member eats a share: mid-sized creatures 1 Food per 2 members, small per 3, giants per 1.5.
-  G.upkeep = (run) => Math.max(1, Math.ceil(run.pop / G.SIZES[G.sizeOf(run)].eatDiv) + G.mod(run, 'upkeep'));
+  G.upkeep = (run) => Math.max(1, Math.ceil(G.heads(run) / G.SIZES[G.sizeOf(run)].eatDiv) + G.mod(run, 'upkeep'));
   G.growthCost = (run) => Math.max(1, G.GROWTH_COST + (run.instinct === 'breed' ? -1 : 0) + G.mod(run, 'growthCost'));
 
   // Food gathered each turn, with a breakdown for the UI.
   G.income = function (run) {
     const diet = G.diet(run);
     const g = G.gimmick(run);
-    const parts = [{ label: 'Scraps', v: 1 }];
+    const pref = G.prefFood(run);
+    const parts = [{ label: 'Scraps', v: 1, kind: pref }];
     // More members means more mouths, but also more gatherers.
-    const crew = Math.floor(run.pop / 4);
-    if (run.instinct === 'forage') parts.push({ label: 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0) });
-    if (run.instinct === 'hunt') parts.push({ label: g === 'predator' ? 'Hunting (on a kill)' : 'Hunting', v: 2 + crew + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) + (g === 'predator' ? 1 : 0), hunt: true });
-    if (run.bonusFood && run.turn < run.bonusFood.until) parts.push({ label: 'Hidden feeding ground', v: run.bonusFood.v });
-    if (G.hostOf(run)) parts.push({ label: 'Feeding on your host', v: run.stage !== 'cell' ? 3 : 2 });
+    const crew = Math.floor(G.heads(run) / 4);
+    // Foraging brings plants and hunting brings meat; a carnivore forages carrion and a herbivore's raids bring plants.
+    if (run.instinct === 'forage') parts.push({ label: diet === 'carn' ? 'Scavenging' : 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0), kind: diet === 'carn' ? 'meat' : 'plants' });
+    if (run.instinct === 'hunt') parts.push({ label: g === 'predator' ? 'Hunting (on a kill)' : 'Hunting', v: 2 + crew + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) + (g === 'predator' ? 1 : 0), hunt: true, kind: diet === 'herb' ? 'plants' : 'meat' });
+    if (run.bonusFood && run.turn < run.bonusFood.until) parts.push({ label: 'Hidden feeding ground', v: run.bonusFood.v, kind: pref });
+    if (G.hostOf(run)) parts.push({ label: 'Feeding on your host', v: run.stage !== 'cell' ? 3 : 2, kind: pref });
     const partner = G.partnerOf(run);
-    if (g === 'symbiote' && run.partner && (!partner || partner.pop < partner.cap * 0.3)) parts.push({ label: 'Your partner is struggling', v: -2 });
-    if (run.instinct === 'explore' || run.instinct === 'hide') parts.push({ label: G.INSTINCT[run.instinct].name, v: -1 });
+    if (g === 'symbiote' && run.partner && (!partner || partner.pop < partner.cap * 0.3)) parts.push({ label: 'Your partner is struggling', v: -2, kind: pref });
+    if (run.instinct === 'explore' || run.instinct === 'hide') parts.push({ label: G.INSTINCT[run.instinct].name, v: -1, kind: pref });
     const fpt = G.mod(run, 'foodPerTurn');
-    if (fpt) parts.push({ label: 'Helpers and allies', v: fpt });
+    if (fpt) parts.push({ label: 'Helpers and allies', v: fpt, kind: pref });
     const total = Math.max(0, parts.reduce((s, p) => s + p.v, 0));
-    return { total, parts };
+    const meat = Math.max(0, parts.filter((p) => p.kind === 'meat').reduce((s, p) => s + p.v, 0));
+    return { total, parts, meat: Math.min(meat, total), plants: Math.max(0, total - Math.min(meat, total)) };
   };
 
   // Grazers earn DNA from the size of the herd instead of from time.
-  G.dnaPerTurn = (run) => (run.stage === 'tribe' ? G.ideasPerTurn(run) : Math.max(1, (G.gimmick(run) === 'grazer' ? Math.floor(run.pop / 6) : 1) + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0)));
+  G.dnaPerTurn = (run) => (run.stage === 'tribe' ? G.ideasPerTurn(run) : Math.max(1, (G.gimmick(run) === 'grazer' ? Math.floor(G.heads(run) / 6) : 1) + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0)));
   G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 5) + G.mod(run, 'insightPerTurn') : 0);
 
   // Checks get harder as a creature, in later eras, and the longer you linger in one (up to +2).
@@ -709,7 +753,7 @@ window.G = window.G || {};
       instinct: 'forage',
       traits: [], species: makeWorld('cell'), ages: [], chains: [], openNiches: [], activity: null, biome: 'vent', seenBiomes: ['vent'],
       seen: [], log: [], notices: [],
-      draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0,
+      draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0, popV: 2,
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
       quietTicks: 2, look: {}, knownEvos: G.meta.codex.evolutions.slice(),
     };
@@ -739,7 +783,7 @@ window.G = window.G || {};
       if (h) run.host = h.name;
     }
     if (g === 'drifter') { const d = G.diet(run); run.instinct = d === 'carn' ? 'hunt' : 'forage'; run.nextDrift = run.turn + G.DRIFT_EVERY; }
-    if (g === 'predator') { run.instinct = 'hunt'; run.hunger = 0; if (run.stage === 'cell') run.food += 3; }
+    if (g === 'predator') { run.instinct = 'hunt'; run.hunger = 0; if (run.stage === 'cell') G.addFood(run, 3, 'meat'); }
     if (g === 'mimic') run.mimic = null;
   }
 
@@ -785,7 +829,7 @@ window.G = window.G || {};
     if (g === 'parasite') {
       const h = G.hostOf(run);
       if (h) {
-        h.pop = Math.max(0, h.pop - Math.max(0.3, run.pop * 0.04));
+        h.pop = Math.max(0, h.pop - Math.max(0.3, G.heads(run) * 0.04));
         h.opinion = clamp(h.opinion - 2, -100, 100);
       } else {
         // The host is gone: most of you die with it, and the survivors find a new one.
@@ -805,14 +849,15 @@ window.G = window.G || {};
       run.partner = next ? next.name : null;
       if (next) { next.opinion = Math.max(next.opinion, 60); run.notices.push(`Your partner died out, and half of you with it. The ${next.name} have become your new partners.`); }
     }
-    if (g === 'colony' && run.pop >= G.maxPop(run) && run.food >= G.growthCost(run) * 2 && G.budsOf(run).length < 3 && run.pop >= 6) bud(run, lines);
+    if (g === 'colony' && run.pop >= G.maxPop(run) && run.food >= G.growthCost(run) * 2 && G.budsOf(run).length < 3 && G.heads(run) >= 6) bud(run, lines);
   }
 
   // Part of a Colony splits off as a new, allied species with your body.
   function bud(run, lines) {
     const n = Math.ceil(run.pop / 3);
     run.pop -= n;
-    run.food -= G.growthCost(run) * 2;
+    G.spendFood(run, G.growthCost(run) * 2);
+    const heads = Math.max(1, Math.round(n / G.POP_SCALE));
     const world = run.stage === 'cell' ? 'cell' : run.habitat;
     const names = G.SPECIES_NAMES[world];
     let name; let guard = 0;
@@ -820,7 +865,7 @@ window.G = window.G || {};
     const body = G.bodyOf(run);
     const parts = {};
     Object.entries(run.parts).forEach(([k, v]) => { if (v && !k.endsWith('2')) parts[k] = { id: v.id, merged: v.merged }; });
-    run.species.push({ name, role: 'neighbor', diet: G.diet(run), opinion: 100, hue: (body.hue + 25) % 360, size: G.bodySize(run), seed: Math.floor(rand() * 1000), world, cap: 14, pop: n,
+    run.species.push({ name, role: 'neighbor', diet: G.diet(run), opinion: 100, hue: (body.hue + 25) % 360, size: G.bodySize(run), seed: Math.floor(rand() * 1000), world, cap: 14, pop: heads,
       plan: run.plan, stage: run.stage, multicellular: run.multicellular, parts, symmetry: G.symmetry(run), segments: G.segments(run), zone: run.habitat === 'sea' ? G.zone(run) : undefined, bud: true, look: run.stage === 'creature' ? G.effectiveLook(run) : null });
     lines.push({ t: `${n} of you split off and founded the ${name}, your allies`, good: true });
     run.notices.push(`Part of your colony split off and founded the ${name}. They are your allies.`);
@@ -843,7 +888,7 @@ window.G = window.G || {};
       run.species[run.species.indexOf(gone)] = fresh;
       met = fresh;
     }
-    run.food += 1;
+    G.addFood(run, 1);
     const land = run.stage !== 'cell' && run.habitat === 'land';
     run.notices.push(land ? `Wanderlust carries your herds to new ground${met ? `, where you meet the ${met.name}` : ''}.`
       : `The current carries you to new waters${met ? `, where you meet the ${met.name}` : ''}.${free ? '' : ` It now pushes you to ${G.INSTINCT[run.instinct].name.toLowerCase()}.`}`);
@@ -937,14 +982,14 @@ window.G = window.G || {};
   // The Second Chance upgrade: once per run, a few survivors cling on.
   function secondChance(run) {
     if (run.stage === 'tribe' && G.boonLevel('w_stand') && !run.lastStandUsed) {
-      run.lastStandUsed = true; run.pop = 3;
+      run.lastStandUsed = true; run.pop = 3 * G.POP_SCALE;
       run.notices.push('Last Stand: your people should have died out, but a few hold on.');
       log(run, 'A few of your people held on against all odds.');
       return true;
     }
     if (!G.boonLevel('second_chance') || run.secondChanceUsed) return false;
     run.secondChanceUsed = true;
-    run.pop = 3;
+    run.pop = 3 * G.POP_SCALE;
     run.notices.push('Second Chance: your kind should have died out, but a few survivors cling on.');
     log(run, 'A few survivors cling on against all odds.');
     return true;
@@ -970,9 +1015,9 @@ window.G = window.G || {};
     const molting = run.moltUntil && run.turn <= run.moltUntil ? 2 : 0;
     const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce') + molting);
     const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / 10);
-    const dmg = Math.max(1, Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1)));
+    const dmg = Math.max(1, Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1) * (0.85 + rand() * 0.3)));
     run.pop -= dmg;
-    if (run.stage === 'tribe') songLoss(run, dmg);
+    if (run.stage === 'tribe') songLoss(run, dmg / G.POP_SCALE);
     return dmg;
   }
 
@@ -1043,9 +1088,13 @@ window.G = window.G || {};
       if (eff.pop < 0) lines.push({ t: `−${damage(run, -eff.pop)} Population`, bad: true });
       else { const g = grow(run, eff.pop); lines.push({ t: g ? `+${g} Population` : 'Population already at its limit' }); }
     }
+    // Shares of your Population: of what you have now, or of your maximum.
+    if (eff.popPct) { const n = Math.round(run.pop * Math.abs(eff.popPct)); if (eff.popPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(-eff.popPct * 100)}% of your number)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(eff.popPct * 100)}% of your number)`, good: true }); } }
+    if (eff.popFlat) { const word = run.stage === 'tribe' ? 'members' : 'Population'; if (eff.popFlat < 0) { const n = Math.min(run.pop, -eff.popFlat); run.pop -= n; lines.push({ t: `−${n} ${word}`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, eff.popFlat); run.pop += g; if (g) lines.push({ t: `+${g} ${word}`, good: true }); } }
+    if (eff.popMaxPct) { const n = Math.round(G.maxPop(run) * Math.abs(eff.popMaxPct)); if (eff.popMaxPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(-eff.popMaxPct * 100)}% of your maximum)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(eff.popMaxPct * 100)}% of your maximum)`, good: true }); } }
     if (eff.food) {
-      const before = run.food;
-      run.food = Math.max(0, run.food + eff.food);
+      const before = G.syncFood(run);
+      if (eff.food > 0) G.addFood(run, eff.food, eff.foodKind || curFoodKind); else G.spendFood(run, -eff.food);
       const d = run.food - before;
       if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} Food`, bad: d < 0 });
     }
@@ -1149,7 +1198,7 @@ window.G = window.G || {};
   // Pick an animation for the scene from what happened.
   function sceneAnim(res, opt, success) {
     if (res && res.anim) return res.anim;
-    if (res && res.pop < 0) return 'hurt';
+    if (res && popLoss(res)) return 'hurt';
     if (res && res.randomPart) return 'mutate';
     if (opt.check && success) {
       if (opt.check.stat === 'str') return 'attack';
@@ -1163,9 +1212,10 @@ window.G = window.G || {};
   }
 
   // What the scene acts out, so the animation matches what happened.
+  const popLoss = (res) => (res.pop || 0) < 0 || (res.popPct || 0) < 0 || (res.popFlat || 0) < 0 || (res.popMaxPct || 0) < 0;
   function sceneStory(run, ev, opt, res, success, sp) {
     const stat = opt.check && opt.check.stat;
-    const pop = (res && res.pop) || 0;
+    const pop = res && popLoss(res) ? -1 : (res && res.pop) || 0;
     const food = (res && res.food) || 0;
     const op = (res && res.opinion) || 0;
     if (sp == null || sp < 0) return null;
@@ -1189,7 +1239,7 @@ window.G = window.G || {};
   // How your creature feels about what just happened, for its face.
   function sceneMood(res, opt, success) {
     if (res && res.mood) return res.mood;
-    if (res && res.pop < 0) return success === false ? 'dizzy' : 'sad';
+    if (res && popLoss(res)) return success === false ? 'dizzy' : 'sad';
     if (success === false) return 'worried';
     const anim = sceneAnim(res, opt, success);
     return { attack: 'angry', flee: 'scared', eat: 'happy', social: 'love', rest: 'sleepy', mutate: 'surprised', grow: 'proud' }[anim] || 'happy';
@@ -1312,7 +1362,9 @@ window.G = window.G || {};
       res = success ? opt.success : opt.fail;
     }
     const sp = run.event.species;
-    const popBefore = run.pop; const foodBefore = run.food; const dnaBefore = run.dna;
+    // Food from a hunt or a carcass is meat; from fruit, blooms and kelp it is plants; otherwise what you eat.
+    curFoodKind = (ev.tags || []).includes('hunt') || ['carcass', 'bones'].includes(ev.prop) ? 'meat' : ['fruit', 'bloom', 'kelp', 'tree', 'pond'].includes(ev.prop) ? 'plants' : null;
+    const popBefore = run.pop; const foodBefore = G.syncFood(run); const dnaBefore = run.dna;
     run.lastEvolution = null;
     const lines = applyEffects(run, res, sp);
     const story = sceneStory(run, ev, opt, res, success, sp);
@@ -1507,7 +1559,7 @@ window.G = window.G || {};
   // The age is named after whoever dominates the world: most numerous and biggest.
   function updateAge(run) {
     if (run.turn % 4 !== 0) return;
-    const yours = run.pop * G.bodySize(run);
+    const yours = G.heads(run) * G.bodySize(run);
     let best = { name: 'your kind', you: true, v: yours };
     run.species.filter((s) => !s.extinct && !s.migrant).forEach((s) => { const v = s.pop * s.size * (s.role === 'predator' ? 1.4 : 1); if (v > best.v) best = { name: s.name, you: false, v }; });
     run.ages = run.ages || [];
@@ -1661,35 +1713,35 @@ window.G = window.G || {};
     if (a.target && !t) { lines.push(finishActivity(run, `The ${act.target} are gone. ${a.name} is over.`, true)); return; }
     if (a.stage === 'tribe') { tribeActivityTurn(run, act, t, lines); return; }
     if (act.id === 'migrate') {
-      run.food = Math.max(0, run.food - 1);
+      G.spendFood(run, 1);
       // Wanderer peoples move camp a turn faster, and learn on the way.
       const wander = run.stage === 'tribe' && G.temperament(run).id === 'wanderer';
       // Many Minds have no fixed home: moving costs them nothing.
-      if (run.stage === 'tribe' && run.path === 'many') run.food += 1;
+      if (run.stage === 'tribe' && run.path === 'many') G.addFood(run, 1);
       if (act.turns >= a.turns - (wander ? 1 : 0)) {
         if (wander) { gainDna(run, 3); lines.push({ t: 'The road taught your people something: +3 Ideas', good: true }); }
         // Without the wits to choose, you end up wherever the road leads.
         const dest = act.dest || pick(G.biome(run).next);
         moveBiome(run, dest);
-        run.food += 3; gainDna(run, 3);
+        G.addFood(run, 3, 'plants'); gainDna(run, 3);
         run.migrateReadyAt = run.turn + 10;
         lines.push(finishActivity(run, `You reached the ${G.biome(run).name}: +3 Food and +3 ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}.`, true));
       } else lines.push({ t: `Migrating (${act.turns}/${a.turns}): −1 Food` });
     }
     if (act.id === 'war') {
       const power = (x) => x;
-      const mine = power(G.stat(run, 'str') + Math.floor(G.stat(run, 'tou') / 2) + Math.floor(run.pop / 5));
+      const mine = power(G.stat(run, 'str') + Math.floor(G.stat(run, 'tou') / 2) + Math.floor(G.heads(run) / 5));
       const theirs = power(G.speciesStat(t, 'str') + Math.floor(G.speciesStat(t, 'tou') / 2) + Math.floor(t.pop / 8));
       const delta = Math.round(16 + (mine - theirs) * 5 + (rand() - 0.5) * 34);
       act.score = clamp(act.score + delta, -100, 100);
       t.pop = Math.max(0, t.pop - t.cap * 0.05);
       t.opinion = clamp(t.opinion - 6, -100, 100);
-      run.food = Math.max(0, run.food - 1);
+      G.spendFood(run, 1);
       lines.push({ t: `War with the ${t.name}: ${delta >= 0 ? '+' : '−'}${Math.abs(delta)} (score ${act.score})`, good: delta > 0, bad: delta < 0 });
       if (rand() < (delta < 0 ? 0.4 : 0.15)) lines.push({ t: `War dead: −${damage(run, 1)} Population`, bad: true });
       if (act.score >= 100) {
         t.pop = Math.max(0.5, t.pop * 0.35); t.opinion = -100; t.nemesis = true;
-        run.food += 6; gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
+        G.addFood(run, 6, 'meat'); gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
         // Takers carry off what the beaten band knew.
         if (t.band && run.stage === 'tribe' && G.temperament(run).id === 'taker') { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push({ t: `You took their knowledge: ${G.DISCOVERY[d].name}`, good: true }); } }
         lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}. They will not forget.`, true));
@@ -1712,7 +1764,7 @@ window.G = window.G || {};
       else if (act.turns >= 12) lines.push(finishActivity(run, `The ${t.name} will not be won over, for now.`, false));
     }
     if (act.id === 'cross') {
-      run.food = Math.max(0, run.food - 1);
+      G.spendFood(run, 1);
       if (act.turns >= a.turns) {
         const lost = Math.ceil(run.pop / 4);
         run.pop = Math.max(1, run.pop - lost);
@@ -1723,19 +1775,19 @@ window.G = window.G || {};
       }
       lines.push({ t: `${run.habitat === 'land' ? 'Returning to the sea' : 'Crawling onto land'} (${act.turns}/${a.turns}): −1 Food` });
     }
-    if (act.id === 'avoid') { run.food = Math.max(0, run.food - 2); lines.push({ t: `Keeping away from the ${t.name}: −2 Food` }); }
+    if (act.id === 'avoid') { G.spendFood(run, 2); lines.push({ t: `Keeping away from the ${t.name}: −2 Food` }); }
     if (act.id === 'hunt') {
       const chance = clamp(45 + (Math.max(G.stat(run, 'str'), G.stat(run, 'spd')) - G.speciesStat(t, 'spd')) * 8 + G.mod(run, 'huntBonus') * 4, 10, 90);
       if (rand() * 100 < chance) {
-        const food = Math.round((2 + Math.floor(run.pop / 8)) * (run.stage === 'tribe' && G.temperament(run).id === 'hunter' ? 1.5 : 1));
-        run.food += food; t.pop = Math.max(0, t.pop - t.cap * 0.08); t.opinion = clamp(t.opinion - 6, -100, 100);
+        const food = Math.round((2 + Math.floor(G.heads(run) / 8)) * (run.stage === 'tribe' && G.temperament(run).id === 'hunter' ? 1.5 : 1));
+        G.addFood(run, food, 'meat'); t.pop = Math.max(0, t.pop - t.cap * 0.08); t.opinion = clamp(t.opinion - 6, -100, 100);
         if (G.gimmick(run) === 'predator') { run.hunger = 0; if (rand() < 0.15) run.pendingSpecial = { name: t.name, source: 'devour' }; }
         lines.push({ t: `You hunted the ${t.name}: +${food} Food`, good: true });
       } else if (G.speciesStat(t, 'str') > G.stat(run, 'tou') && rand() < 0.5) lines.push({ t: `The ${t.name} fought back: −${damage(run, 1)} Population`, bad: true });
       else lines.push({ t: `The ${t.name} got away` });
     }
     if (act.id === 'scout') {
-      run.food = Math.max(0, run.food - 1);
+      G.spendFood(run, 1);
       lines.push({ t: `Scouting (${act.turns}/${a.turns}): −1 Food` });
       if (act.turns >= a.turns) {
         run.scoutReadyAt = run.turn + 12;
@@ -1768,28 +1820,33 @@ window.G = window.G || {};
         if (run.hunger >= G.HUNGER_LIMIT) lines.push({ t: `Starving for meat: −${damage(run, 1)} Population`, bad: true });
       }
     }
-    run.food += gathered - up;
-    lines.push({ t: `Food +${gathered} gathered, −${up} eaten` });
+    // Gathered food goes into its own store; then everyone eats, meat first.
+    const meatIn = Math.min(gathered, inc.meat); const plantsIn = gathered - meatIn;
+    G.addFood(run, meatIn, 'meat'); G.addFood(run, plantsIn, 'plants');
+    const hungry = eatFood(run, up);
+    lines.push({ t: `Food +${gathered} gathered (${meatIn ? `${meatIn} meat` : ''}${meatIn && plantsIn ? ', ' : ''}${plantsIn ? `${plantsIn} plants` : ''}${!gathered ? 'nothing' : ''}), ${up} eaten` });
     gimmickTurn(run, lines);
     activityTurn(run, lines);
     // A shell has to be shed to grow: every 12 turns you are soft for 2 turns.
     if (run.traits.includes('skeleton_shell') && run.stageTurn % 12 === 0) { run.moltUntil = run.turn + 2; lines.push({ t: 'Molting: your new shell is soft for 2 turns', bad: true }); }
     const season = G.season(run);
     if (season && run.seasonId !== season.id) { if (run.seasonId) run.notices.push(`${season.name}: ${season.desc}`); run.seasonId = season.id; }
-    if (run.food < 0) {
-      const starve = -run.food;
-      run.food = 0;
-      run.pop -= starve;
-      lines.push({ t: `Starving: −${starve} Population`, bad: true });
+    if (hungry > 0) {
+      const starve = hungry;
+      const starved = Math.min(run.pop, starve * G.POP_SCALE);
+      run.pop -= starved;
+      lines.push({ t: `Starving: −${starved} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
     } else {
       // Spare Food becomes young: bigger herds can raise more at once.
       // A people raises its young slowly: one a year, and each costs more.
       const tribe = run.stage === 'tribe';
       const cost = G.growthCost(run) + (tribe ? G.TRIBE_CHILD_COST : 0);
       let born = 0;
-      const birthCap = tribe || run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run)) * (run.traits.includes('young_eggs') ? 2 : 1);
-      while (run.food >= cost && run.pop < G.maxPop(run) && born < birthCap) { run.food -= cost; run.pop += 1; born += 1; }
-      if (born) lines.push({ t: `+${born} Population (used ${born * cost} spare Food)`, good: true });
+      // Each brood costs spare Food and adds about ten young (a few more or fewer).
+      const birthCap = tribe || run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run) / G.POP_SCALE) * (run.traits.includes('young_eggs') ? 2 : 1);
+      let broods = 0;
+      while (G.syncFood(run) >= cost && run.pop < G.maxPop(run) && broods < birthCap) { G.spendFood(run, cost); const n = Math.min(G.maxPop(run) - run.pop, Math.round(G.POP_SCALE * (0.8 + rand() * 0.4))); run.pop += n; born += n; broods += 1; }
+      if (born) lines.push({ t: `+${born} ${tribe ? 'members' : 'Population'} (used ${broods * cost} spare Food)`, good: true });
     }
     // Predators and hostile species pick off your weakest. Toughness and Speed keep them at bay,
     // and the longer you linger in a stage, the hungrier the world gets.
@@ -1823,7 +1880,13 @@ window.G = window.G || {};
     const regrow = G.mod(run, 'popPerTurn');
     if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} Population from symbionts`, good: true }); }
     const cap = G.foodCap(run);
-    if (run.food > cap) { lines.push({ t: `${run.food - cap} Food spoiled (storage ${cap})`, bad: true }); run.food = cap; }
+    // Meat rots; and there is only so much room to store food.
+    G.syncFood(run);
+    const rot = Math.floor(run.meat * G.MEAT_ROT);
+    if (rot) { run.meat -= rot; lines.push({ t: `${rot} meat rotted`, bad: true }); }
+    const stored = run.meat + run.plants;
+    if (stored > cap) { let over = stored - cap; const m = Math.min(run.meat, over); run.meat -= m; over -= m; run.plants -= over; lines.push({ t: `${stored - cap} Food spoiled (storage ${cap})`, bad: true }); }
+    G.syncFood(run);
     lines.push({ t: `+${gainDna(run, G.dnaPerTurn(run))} ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}`, good: true });
     if (run.stage === 'tribe') tribeTurn(run, lines);
     if (run.mind && run.stage === 'creature') {
@@ -1943,10 +2006,10 @@ window.G = window.G || {};
       if (run.special > before) lines.push({ t: `+${run.special - before} ${G.kind(run).resource}`, good: true });
     }
     // The Swarm: brood hatches into new members.
-    if (run.path === 'swarm' && (run.special || 0) >= 8 && run.pop < G.maxPop(run)) { run.special -= 6; run.pop += 1; lines.push({ t: 'Brood hatched: +1 member', good: true }); }
+    if (run.path === 'swarm' && (run.special || 0) >= 8 && run.pop < G.maxPop(run)) { run.special -= 6; const n = Math.min(G.maxPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
     // Gardeners: the bigger the garden, the likelier Blight.
     if (run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) && rand() < 0.03 + 0.01 * (run.special - 8)) {
-      const lost = Math.ceil(run.special / 2); run.special -= lost; run.food = Math.max(0, run.food - 3);
+      const lost = Math.ceil(run.special / 2); run.special -= lost; G.spendFood(run, 3);
       lines.push({ t: `Blight! −${lost} Growth, −3 Food`, bad: true });
       run.notices.push('Blight has struck your gardens. Tending them keeps it away for a while.');
       log(run, 'Blight struck the gardens.');
@@ -1962,9 +2025,9 @@ window.G = window.G || {};
   }
   // Singers: when many die at once, verses are lost, and with them, discoveries.
   function songLoss(run, dmg) {
-    if (run.path !== 'song' || dmg < 3) return;
+    if (run.path !== 'song' || dmg < 3) return; // dmg is in heads
     if (run.songSafe) { run.songSafe = false; run.notices.push('Your teaching held: no verses were lost.'); return; }
-    run.special = Math.max(0, (run.special || 0) - dmg);
+    run.special = Math.max(0, (run.special || 0) - Math.round(dmg));
     const known = run.discoveries || [];
     if (known.length && run.special < known.length * 2) {
       const d = pick(known);
@@ -2056,13 +2119,13 @@ window.G = window.G || {};
     }
     if (act.id === 'revere' && act.turns >= a.turns) { run.totem = t.name; t.opinion = clamp(t.opinion + 40, -100, 100); lines.push(finishActivity(run, `The ${t.name} are now your totem.`, true)); }
     if (act.id === 'ceremony') {
-      run.food = Math.max(0, run.food - 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2); gainDna(run, 1);
+      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2); gainDna(run, 1);
       lines.push({ t: `Ceremony: +2 ${G.kind(run).resource}, +1 Idea, −1 Food`, good: true });
       if (act.turns >= a.turns) { run.ceremonyReadyAt = run.turn + 8; lines.push(finishActivity(run, 'The ceremony ends. Everyone feels closer.', true)); }
     }
     if (act.id === 'craft' && act.turns >= a.turns) { run.special -= 4; run.gear = (run.gear || 0) + 1; lines.push(finishActivity(run, `New gear for your people (level ${run.gear}).`, true)); }
     if (act.id === 'teach') {
-      run.food = Math.max(0, run.food - 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
+      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
       lines.push({ t: `Teaching: +2 Song, −1 Food`, good: true });
       if (act.turns >= a.turns) { run.songSafe = true; lines.push(finishActivity(run, 'The songs are learned by heart. The next great loss will not cost a verse.', true)); }
     }
@@ -2077,7 +2140,7 @@ window.G = window.G || {};
     }
     if (act.id === 'raise' && act.turns >= a.turns) { run.special -= 5; run.mound = (run.mound || 0) + 1; lines.push(finishActivity(run, `Your ${G.kind(run).camp} grows (level ${run.mound}): more room for everyone.`, true)); }
     if (act.id === 'tend') {
-      run.food = Math.max(0, run.food - 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
+      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
       lines.push({ t: 'Tending the gardens: +2 Growth, −1 Food', good: true });
       if (act.turns >= a.turns) { run.blightSafeUntil = run.turn + 12; lines.push(finishActivity(run, 'The gardens are weeded and healthy. Blight cannot strike for 12 turns.', true)); }
     }
@@ -2126,7 +2189,7 @@ window.G = window.G || {};
   G.startFromStage = function (key) {
     const m = G.meta; const st = G.stageStarts().find((x) => x.key === key);
     if (!st) return false;
-    const run = JSON.parse(JSON.stringify(st.run));
+    const run = G.migratePop(JSON.parse(JSON.stringify(st.run)));
     run.fromStage = true; run.checkpointGenes = 0;
     run.knownEvos = m.codex.evolutions.slice();
     run.baseMaxPop = G.BASE_POP + G.boonLevel('hardy');
@@ -2297,7 +2360,7 @@ window.G = window.G || {};
   G.skipDraft = function () {
     const run = G.run;
     if (!run || run.phase !== 'draft') return;
-    run.food += 3;
+    G.addFood(run, 3);
     run.notices.push(`You skipped a ${run.stage === 'tribe' ? 'discovery' : 'mutation'} and gained 3 Food.`);
     if (!run.draft.source) run.draftsTaken += 1;
     run.draft = null;
@@ -2419,7 +2482,7 @@ window.G = window.G || {};
     const f = m.fossils.find((x) => x.id === id);
     if (!f || !f.amber || m.genes < G.reviveCost(f)) return false;
     m.genes -= G.reviveCost(f);
-    const run = JSON.parse(JSON.stringify(f.run));
+    const run = G.migratePop(JSON.parse(JSON.stringify(f.run)));
     run.revived = true;
     run.knownEvos = m.codex.evolutions.slice();
     run.baseMaxPop = G.BASE_POP + G.boonLevel('hardy');
