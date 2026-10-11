@@ -595,3 +595,13 @@ button.rival:hover { border-color: var(--accent); }
 .kw.plan { background: rgba(120, 170, 255, 0.18); color: #b9d3ff; }
 .kw.dormant { background: rgba(255, 120, 100, 0.16); color: #ffb9a8; }
 .res.food .fk { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; }
+
+/* Society stage (Update 16) */
+.settlements { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.settlement { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); font-size: 0.85rem; }
+.settlement span { letter-spacing: 2px; color: var(--good); font-size: 0.75rem; }
+.callout.warn { border-color: var(--bad); }
+.loyalty { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.loyalty > span { display: block; height: 100%; background: var(--good); }
+.loyalty.warn > span { background: #e8c35a; }
+.loyalty.bad > span { background: var(--bad); }

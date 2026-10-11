@@ -2661,5 +2661,365 @@ G.EVENTS.push(
   },
 );
 
+// ---------- Society stage (Update 16) ----------
+// Words in braces: {people} (the Hearthlands, the Pod League...), {settlement} and {settlements} (village, hold, circle,
+// calving ground), {capital}, {leader}, {ruler}, {myth}, {plotter}, and {cand0}..{cand3} for the council's choice.
+G.EVENTS.push(
+  // ----- Milestones -----
+  {
+    id: 'society_founded', stage: 'society', milestone: true, prop: 'fire', title: 'The First Generation',
+    text: 'Your people are many now, spread across more than one {settlement}. The old stories are becoming something bigger: {myth}, told the same way in every home. What should it teach?',
+    options: [
+      { label: 'That we were chosen', hint: '+4 Influence', result: { text: 'Every child grows up knowing they are part of something great.', dna: 4, anim: 'social' } },
+      { label: 'That {capital} is our heart', hint: 'Your smallest {settlement} grows', result: { text: 'People come from every {settlement} to see where it all began. Some stay.', settlementGrow: true, anim: 'grow' } },
+      { label: 'How we should live', hint: 'A new tradition', result: { text: 'The myth ends with rules. Everyone knows them by heart.', tradition: true, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 'the_council', stage: 'society', milestone: true, prop: 'stars', title: 'The Council Meets',
+    text: 'Your Steward, Marshal and Keeper have each grown powerful in their own right. Today they meet with {leader} in {capital} to decide how much power each of them should have.',
+    options: [
+      { label: 'Share power with them', hint: 'The council warms to your ruler, −3 Influence', result: { text: 'They leave the meeting smiling. Your ruler leaves it a little smaller.', loyalty: 25, dna: -3, anim: 'social' } },
+      { label: 'Remind them who rules', check: { stat: 'str', diff: 6 }, success: { text: 'Nobody argues. Your ruler is feared, and that is a kind of loyalty.', loyalty: 5, dna: 4, anim: 'attack' }, fail: { text: 'They bow, and go home angry.', loyalty: -20 } },
+      { label: 'Let them argue it out', check: { stat: 'cha', diff: 6 }, success: { text: 'By dawn they agree on a new law, and they all think it was their idea.', tradition: true, loyalty: 10, anim: 'social' }, fail: { text: 'By dawn nobody is speaking to anyone.', loyalty: -10 } },
+    ],
+  },
+  {
+    id: 'neighbours_gather', stage: 'society', milestone: true, prop: 'hearts', title: 'The Gathering of Peoples',
+    text: 'For the first time, every people in the region sends someone to one great meeting. Old rivals sit across from each other. Everyone is watching the {people}.',
+    options: [
+      { label: 'Host the feast', hint: '−5 Food, every neighbour likes you more', req: { food: 5 }, result: { text: 'Nobody has ever eaten so well. They will remember who fed them.', food: -5, neighbourOpinion: 15, anim: 'social' } },
+      { label: 'Challenge them all', check: { stat: 'str', diff: 7 }, success: { text: 'Your champion beats every one of theirs. They will not forget it, or forgive it.', dna: 8, neighbourOpinion: -10, anim: 'attack' }, fail: { text: 'Your champion is beaten, in front of everyone.', pop: -3, neighbourOpinion: -5 } },
+      { label: 'Listen and learn', check: { stat: 'cun', diff: 6 }, success: { text: 'Each people does something better than you. Now you know what.', tradition: true, dna: 2, anim: 'mutate' }, fail: { text: 'You learn mostly that they do not trust you.', dna: 1 } },
+    ],
+  },
+  {
+    id: 'soc_succession', stage: 'society', chained: true, prop: 'stars', title: 'Who Rules Next',
+    text: 'Your {ruler} is gone. The council meets in {capital} to choose who rules the {people} next. Any of the three could rule, and so could the heir.',
+    options: [
+      { label: '{cand0}', hint: 'A new Steward takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 0, loyalty: 5, anim: 'social' } },
+      { label: '{cand1}', hint: 'A new Marshal takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 1, loyalty: 5, anim: 'social' } },
+      { label: '{cand2}', hint: 'A new Keeper takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 2, loyalty: 5, anim: 'social' } },
+      { label: '{cand3}', hint: 'The council is passed over', req: { cand: 3 }, result: { text: 'The heir rules. The council grumbles.', leaderPick: 3, loyalty: -10, dna: 3, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'council_plot', stage: 'society', chained: true, prop: 'shadow', title: 'A Plot in the Council',
+    text: 'Whispers in {capital}: {plotter} has been meeting in secret with the ruler\'s enemies. If nothing is done, there will be a new ruler before long.',
+    options: [
+      { label: 'Dismiss them before the council', check: { stat: 'cha', diff: 5 }, success: { text: 'The others agree. {plotter} leaves {capital} in disgrace.', plotEnds: 'dismiss', anim: 'social' }, fail: { text: 'The council sides with the plotter. Your ruler is driven out.', plotEnds: 'coup', loyalty: -5 } },
+      { label: 'Buy them off', hint: '−5 Food', req: { food: 5 }, result: { text: 'Gifts, honours, a bigger house. The plotting stops, for now.', food: -5, plotEnds: 'appease', anim: 'rest' } },
+      { label: 'Strike first', check: { stat: 'str', diff: 6 }, success: { text: 'It is over in one night. Nobody else on the council will try this.', plotEnds: 'dismiss', loyalty: -5, dna: 3, anim: 'attack' }, fail: { text: 'They were ready for you. The fighting spills into the streets.', plotEnds: 'coup', pop: -3 } },
+      { label: 'Turn their allies against them', check: { stat: 'cun', diff: 6 }, success: { text: 'One by one, their friends come to your ruler with the truth.', plotEnds: 'dismiss', loyalty: 10, anim: 'mutate' }, fail: { text: 'Your spies were their spies.', plotEnds: 'coup' } },
+    ],
+  },
+
+  // ----- Any people -----
+  {
+    id: 's_harvest_feast', stage: 'society', prop: 'fruit', title: 'The Great Feast', tags: ['food', 'social'],
+    text: 'The best season in living memory. Every {settlement} has more than it can eat.',
+    options: [
+      { label: 'Store it all', hint: '+6 Food', result: { text: 'Every store is full to the roof.', food: 6, anim: 'rest' } },
+      { label: 'Feast in {capital}', hint: '+4 Influence, the council warms', result: { text: 'Everyone comes. Everyone remembers who paid for it.', dna: 4, loyalty: 10, anim: 'social' } },
+      { label: 'Raise more children', hint: '+15% of your maximum', result: { text: 'A generation of well-fed children.', popMaxPct: 0.15, anim: 'grow' } },
+    ],
+  },
+  {
+    id: 's_plague', stage: 'society', prop: 'sickness', title: 'The Crowding Sickness', tags: ['danger'],
+    text: 'So many people living so close together: a sickness moves from {settlement} to {settlement} faster than anyone can run.',
+    options: [
+      { label: 'Close the roads', check: { stat: 'cun', diff: 6 }, success: { text: 'It burns out in one {settlement}.', popPct: -0.08, anim: 'rest' }, fail: { text: 'Too late. It is everywhere.', popPct: -0.2, settlementLoss: true } },
+      { label: 'Care for the sick', check: { stat: 'cha', diff: 6 }, success: { text: 'The healers work day and night. Most recover.', popPct: -0.1, loyalty: 5, anim: 'social' }, fail: { text: 'The healers fall sick too.', popPct: -0.2 } },
+      { label: 'Abandon the worst {settlement}', result: { text: 'You burn it and walk away. The sickness stays behind.', settlementLoss: true, popPct: -0.05, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_flood', stage: 'society', habitat: 'land', prop: 'pond', title: 'The Flood', tags: ['danger'],
+    text: 'The river rises in the night and keeps rising. Your lowest {settlement} is already under water.',
+    options: [
+      { label: 'Build a wall of earth', check: { stat: 'tou', diff: 6 }, success: { text: 'It holds. Barely.', food: -2, anim: 'rest' }, fail: { text: 'The wall breaks.', settlementLoss: true, food: -3 } },
+      { label: 'Get everyone out', check: { stat: 'spd', diff: 5 }, success: { text: 'Everyone gets out. The houses do not.', settlementLoss: true, anim: 'grow' }, fail: { text: 'Not everyone gets out.', settlementLoss: true, pop: -3 } },
+    ],
+  },
+  {
+    id: 's_great_storm', stage: 'society', habitat: 'sea', prop: 'whirlpool', title: 'The Great Storm', tags: ['danger'],
+    text: 'A storm so strong it reaches the depths. The currents tear at your outermost {settlement}.',
+    options: [
+      { label: 'Hold fast', check: { stat: 'tou', diff: 6 }, success: { text: 'It passes over. Everything still stands.', anim: 'rest' }, fail: { text: 'The current takes it.', settlementLoss: true, pop: -2 } },
+      { label: 'Ride it out in deeper water', check: { stat: 'spd', diff: 5 }, success: { text: 'Everyone comes back once it is over.', food: -2, anim: 'grow' }, fail: { text: 'The deep water was not empty.', pop: -3 } },
+    ],
+  },
+  {
+    id: 's_border', stage: 'society', prop: 'shadow', title: 'A Border Dispute', tags: ['social', 'danger'], species: 'band',
+    text: 'Your people and the {species} both claim the same hunting grounds. Tempers are rising on both sides.',
+    options: [
+      { label: 'Share it', check: { stat: 'cha', diff: 5 }, success: { text: 'A stone is set in the middle. Both sides respect it.', bandOpinion: 15, anim: 'social' }, fail: { text: 'They see sharing as weakness.', bandOpinion: -10, food: -2 } },
+      { label: 'Take it', check: { stat: 'str', diff: 6 }, success: { text: 'It is yours now. They will not forget.', food: 4, dna: 2, bandOpinion: -25, anim: 'attack' }, fail: { text: 'They drive you off.', pop: -3, bandOpinion: -15 } },
+      { label: 'Give it up', result: { text: 'They are surprised, and grateful.', food: -3, bandOpinion: 20, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_envoys', stage: 'society', prop: 'hearts', title: 'Envoys', tags: ['social'], species: 'band',
+    text: 'Envoys from the {species} arrive in {capital}, carrying gifts and a long list of complaints.',
+    options: [
+      { label: 'Welcome them like kin', hint: '−2 Food', result: { text: 'They leave with full bellies and fewer complaints.', food: -2, bandOpinion: 15, anim: 'social' } },
+      { label: 'Hear their complaints', check: { stat: 'cun', diff: 5 }, success: { text: 'Most of it is easily fixed. They are impressed.', bandOpinion: 20, dna: 2, anim: 'mutate' }, fail: { text: 'You misunderstand something important.', bandOpinion: -10 } },
+      { label: 'Keep the gifts, send them home', result: { text: 'Useful gifts. An insulted neighbour.', food: 4, bandOpinion: -20, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_marriage', stage: 'society', prop: 'hearts', title: 'A Marriage of Peoples', tags: ['social'], species: 'band',
+    text: 'The ruler of the {species} offers a match: one of their own, joined to a family close to {leader}.',
+    options: [
+      { label: 'Accept', hint: 'They like you much more', result: { text: 'A great wedding. The two peoples have never been closer.', bandOpinion: 30, food: -2, anim: 'social' } },
+      { label: 'Ask for land as well', check: { stat: 'cha', diff: 6 }, success: { text: 'They agree. A new {settlement} is founded on the land.', newSettlement: true, bandOpinion: 10, anim: 'social' }, fail: { text: 'They take back the offer, offended.', bandOpinion: -20 } },
+      { label: 'Refuse', result: { text: 'Politely. They do not take it politely.', bandOpinion: -15, loyalty: 5, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_market', stage: 'society', prop: 'sun', title: 'Market Day', tags: ['food', 'social'],
+    text: 'Traders from every people meet in {capital} to swap food, tools and stories.',
+    options: [
+      { label: 'Trade food for knowledge', hint: '−3 Food, +5 Influence', req: { food: 3 }, result: { text: 'Strange new ideas, cheap.', food: -3, dna: 5, anim: 'mutate' } },
+      { label: 'Drive a hard bargain', check: { stat: 'cun', diff: 5 }, success: { text: 'You come out well ahead.', food: 5, anim: 'social' }, fail: { text: 'You come out well behind.', food: -2, neighbourOpinion: -5 } },
+      { label: 'Give generously', result: { text: 'Every trader goes home speaking well of you.', food: -2, neighbourOpinion: 8, anim: 'social' } },
+    ],
+  },
+  {
+    id: 's_builder', stage: 'society', prop: 'stick', title: 'The Great Builder', tags: ['explore'],
+    text: 'One of your people has plans for something bigger than anything ever built. They need food and workers.',
+    options: [
+      { label: 'Give them everything', hint: '−4 Food', req: { food: 4 }, result: { text: 'It takes a whole generation. It is magnificent.', food: -4, settlementGrow: true, dna: 3, anim: 'grow' } },
+      { label: 'Give them a little', check: { stat: 'cun', diff: 5 }, success: { text: 'Smaller, but clever. It works.', settlementGrow: true, anim: 'mutate' }, fail: { text: 'It falls down.', food: -2 } },
+      { label: 'Tell them no', result: { text: 'They leave for another people, taking their plans with them.', dna: -2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_crowded', stage: 'society', prop: 'nest', title: 'Too Many', tags: ['food'],
+    when: (run) => run.pop >= G.maxPop(run) * 0.8,
+    text: 'Every home in every {settlement} is full. Young families are sleeping in the open.',
+    options: [
+      { label: 'Found a new {settlement}', hint: '−4 Food', req: { food: 4 }, result: { text: 'The young set off together, and build.', food: -4, newSettlement: true, anim: 'grow' } },
+      { label: 'Build upward', check: { stat: 'cun', diff: 6 }, success: { text: 'Homes on top of homes.', settlementGrow: true, anim: 'mutate' }, fail: { text: 'It collapses.', pop: -3 } },
+      { label: 'Let some leave', result: { text: 'They join a neighbour people, and speak well of you there.', popPct: -0.1, neighbourOpinion: 10, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_restless', stage: 'society', prop: 'dust', title: 'The Restless Young', tags: ['explore'],
+    text: 'The young of {capital} want land of their own. They are talking about leaving, with or without permission.',
+    options: [
+      { label: 'Bless their journey', hint: 'A new {settlement}, −10% of your people', result: { text: 'They found a {settlement} a day\'s walk away, and send back gifts.', newSettlement: true, popPct: -0.1, anim: 'grow' } },
+      { label: 'Make them warriors', result: { text: 'Restless young make good fighters.', mods: { str: 1 }, anim: 'attack' } },
+      { label: 'Forbid it', check: { stat: 'cha', diff: 5 }, success: { text: 'They stay, and grumble, and grow up.', dna: 2, anim: 'social' }, fail: { text: 'They go anyway, and do not come back.', popPct: -0.12, loyalty: -5 } },
+    ],
+  },
+  {
+    id: 's_ambition', stage: 'society', prop: 'stars', title: 'An Ambitious Council', tags: ['social'],
+    text: 'Your councillors each want more: more food for their {settlement}, more say, more honours.',
+    options: [
+      { label: 'Give them honours', hint: '+loyalty, −3 Influence', result: { text: 'Titles are cheap. They are pleased.', loyalty: 15, dna: -3, anim: 'social' } },
+      { label: 'Give them food', hint: '+loyalty, −4 Food', req: { food: 4 }, result: { text: 'Their {settlements} eat well, and so do they.', loyalty: 20, food: -4, anim: 'social' } },
+      { label: 'Give them nothing', result: { text: 'They remember.', loyalty: -15, dna: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_famine', stage: 'society', prop: 'drought', title: 'The Lean Years', tags: ['food', 'danger'],
+    text: 'Three bad seasons in a row. The stores are almost empty and people are starting to leave.',
+    options: [
+      { label: 'Share everything equally', check: { stat: 'cha', diff: 6 }, success: { text: 'Everyone is hungry. Nobody starves.', food: -2, loyalty: 5, anim: 'social' }, fail: { text: 'Someone is hoarding. Everyone knows.', popPct: -0.12, loyalty: -10 } },
+      { label: 'Raid a neighbour', check: { stat: 'str', diff: 6 }, success: { text: 'Their stores fill yours.', food: 6, neighbourOpinion: -10, anim: 'attack' }, fail: { text: 'They were starving too, and fought like it.', pop: -4, neighbourOpinion: -10 } },
+      { label: 'Ask the neighbours for help', req: { neighbour: 20 }, result: { text: 'They send what they can spare.', food: 4, dna: -2, anim: 'social' } },
+    ],
+  },
+  {
+    id: 's_night_raid', stage: 'society', prop: 'night', title: 'Raiders in the Night', tags: ['danger'],
+    text: 'Fires on the edge of your smallest {settlement}. Someone is attacking, and nobody can see who.',
+    options: [
+      { label: 'Fight them off', check: { stat: 'str', diff: 6 }, success: { text: 'They run, leaving their weapons behind.', dna: 3, anim: 'attack' }, fail: { text: 'They take what they came for.', food: -4, pop: -3 } },
+      { label: 'Bar the gates', check: { stat: 'tou', diff: 6 }, success: { text: 'They find nothing to take.', anim: 'rest' }, fail: { text: 'The gates burn.', settlementLoss: true } },
+      { label: 'Track them home', check: { stat: 'cun', diff: 6 }, success: { text: 'It was nobody you knew: outcasts from every people. You know where they sleep now.', food: 3, neighbourOpinion: 5, anim: 'mutate' }, fail: { text: 'The trail goes cold.', food: -3 } },
+    ],
+  },
+  {
+    id: 's_prophet', stage: 'society', prop: 'stars', title: 'The Prophet', tags: ['social'],
+    text: 'A stranger walks into {capital} preaching a new way. Crowds follow them. The council is nervous.',
+    options: [
+      { label: 'Listen to them', check: { stat: 'cun', diff: 6 }, success: { text: 'Strange, but wise. Some of it becomes law.', tradition: true, anim: 'mutate' }, fail: { text: 'They say the ruler must go. People listen.', loyalty: -15 } },
+      { label: 'Drive them out', result: { text: 'They go. Some of the crowd goes with them.', popPct: -0.05, loyalty: 10, anim: 'rest' } },
+      { label: 'Make them a councillor', hint: '+4 Influence, the council cools', result: { text: 'Now they preach for your ruler.', dna: 4, loyalty: -10, anim: 'social' } },
+    ],
+  },
+  {
+    id: 's_census', stage: 'society', prop: 'bones', title: 'Counting the People', tags: ['explore'],
+    text: 'The Keeper wants to count every one of your people, in every {settlement}. Nobody has ever done it before.',
+    options: [
+      { label: 'Count everyone', check: { stat: 'cun', diff: 5 }, success: { text: 'Now you know exactly what you have. That is power.', dna: 5, anim: 'mutate' }, fail: { text: 'Everyone gives a different answer.', dna: 1 } },
+      { label: 'Count the food instead', result: { text: 'Some of the stores were not where you thought.', food: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_cut_off', stage: 'society', prop: 'snow', title: 'Cut Off', tags: ['danger'],
+    when: (run) => (run.settlements || []).length >= 3,
+    text: 'Nobody has heard from your farthest {settlement} in a long time. The road there is blocked.',
+    options: [
+      { label: 'Send a rescue', check: { stat: 'spd', diff: 6 }, success: { text: 'They were hungry, and very glad to see you.', loyalty: 5, food: -2, anim: 'grow' }, fail: { text: 'By the time you get there, it is empty.', settlementLoss: true } },
+      { label: 'Trust them to manage', check: { stat: 'tou', diff: 6 }, success: { text: 'They manage. They always did.', dna: 2, anim: 'rest' }, fail: { text: 'They manage without you, and decide they prefer it.', settlementLoss: true, neighbourOpinion: -5 } },
+    ],
+  },
+  {
+    id: 's_storyteller', stage: 'society', prop: 'fire', title: 'A New Telling', tags: ['social'],
+    text: 'A storyteller has changed {myth}. In their telling, {leader} is the hero.',
+    options: [
+      { label: 'Spread it everywhere', hint: '+5 Influence, the council cools', result: { text: 'Every child knows it. The council is less pleased.', dna: 5, loyalty: -5, anim: 'social' } },
+      { label: 'Keep the old telling', result: { text: 'The old stories are the ones everyone trusts.', loyalty: 10, dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_beast', stage: 'society', prop: 'shadow', title: 'The Beast', tags: ['danger'], species: 'predator',
+    text: 'A {species} has been taking people from the edge of a {settlement}. It is not afraid of your fires any more.',
+    options: [
+      { label: 'Hunt it together', check: { stat: 'str', diff: 6 }, success: { text: 'Its head hangs in {capital}.', dna: 3, food: 3, anim: 'attack' }, fail: { text: 'It kills two of the hunters.', pop: -3 } },
+      { label: 'Wall it out', check: { stat: 'tou', diff: 5 }, success: { text: 'It circles, and leaves.', anim: 'rest' }, fail: { text: 'It finds the gap.', pop: -2 } },
+      { label: 'Leave it offerings', check: { stat: 'cha', diff: 5 }, success: { text: 'It takes the meat and leaves the people.', food: -2, anim: 'social' }, fail: { text: 'It takes both.', food: -2, pop: -2 } },
+    ],
+  },
+  {
+    id: 's_refugees', stage: 'society', prop: 'dust', title: 'Refugees', tags: ['social'],
+    text: 'A whole people arrive at your borders: their home is gone, burned or flooded or taken. They ask to join you.',
+    options: [
+      { label: 'Take them all in', hint: '+20% of your maximum, −3 Food', result: { text: 'Strangers today. Your people, in a generation.', popMaxPct: 0.2, food: -3, anim: 'grow' } },
+      { label: 'Take the useful ones', check: { stat: 'cun', diff: 5 }, success: { text: 'Smiths, healers and singers.', popMaxPct: 0.08, dna: 3, anim: 'mutate' }, fail: { text: 'You chose badly.', popMaxPct: 0.08, food: -2 } },
+      { label: 'Send them on', result: { text: 'They go to your neighbours instead.', neighbourOpinion: -5, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 's_old_grudge', stage: 'society', prop: 'bones', title: 'An Old Grudge', tags: ['danger'], species: 'band',
+    text: 'The {species} still tell stories about what your ancestors did to theirs. Today their young came looking for revenge.',
+    options: [
+      { label: 'Apologise for the past', check: { stat: 'cha', diff: 6 }, success: { text: 'It is the first time anyone has. It means more than you thought.', bandOpinion: 30, anim: 'social' }, fail: { text: 'Words are not enough.', bandOpinion: -10, pop: -2 } },
+      { label: 'Teach them a new lesson', check: { stat: 'str', diff: 6 }, success: { text: 'They go home with a new story to tell.', dna: 3, bandOpinion: -15, anim: 'attack' }, fail: { text: 'They had been planning this for a long time.', pop: -4, bandOpinion: -10 } },
+    ],
+  },
+
+  // ----- Kinds of society -----
+  {
+    id: 's_walls', stage: 'society', prop: 'stick', title: 'Walls', tags: ['danger'],
+    text: 'Your capital, {capital}, has grown rich, and rich places are raided. Should it have walls?',
+    options: [
+      { label: 'Stone walls', hint: 'Settled peoples only', req: { socType: 'settle' }, result: { text: 'Nobody gets in without asking now.', mods: { tou: 2 }, food: -3, anim: 'rest' } },
+      { label: 'Move before they find us', hint: 'Roaming peoples only', req: { socType: 'roam' }, result: { text: 'By the time the raiders come, you are gone.', mods: { spd: 1 }, dna: 3, anim: 'grow' } },
+      { label: 'The best wall is a spear', hint: 'Warlike peoples only', req: { socType: 'conquer' }, result: { text: 'You raid them first.', food: 4, neighbourOpinion: -10, dna: 3, anim: 'attack' } },
+      { label: 'No walls', result: { text: 'Trust is cheaper than stone.', neighbourOpinion: 5, anim: 'social' } },
+    ],
+  },
+  {
+    id: 's_herds_move', stage: 'society', prop: 'dust', title: 'The Herds Move On', tags: ['food'],
+    text: 'The animals your people depend on are moving away, season by season, to new grazing.',
+    options: [
+      { label: 'Follow them', hint: 'Roaming peoples do best', check: { stat: 'spd', diff: 5 }, success: { text: 'Where the herds go, you go.', food: 5, anim: 'grow' }, fail: { text: 'You lose them in the hills.', food: -3 } },
+      { label: 'Learn to farm instead', check: { stat: 'cun', diff: 6 }, success: { text: 'A field does not wander off.', mods: { foodPerTurn: 1 }, anim: 'mutate' }, fail: { text: 'Nothing grows.', food: -3 } },
+    ],
+  },
+
+  // ----- Toolmakers -----
+  {
+    id: 'tool_s_metal', stage: 'society', path: 'tool', prop: 'sparks', title: 'The Bright Stone', tags: ['explore'],
+    text: 'In the hottest {resource}, a stone melted and ran like water. When it cooled, it was harder than any stone.',
+    options: [
+      { label: 'Make weapons', result: { text: 'Bright blades. Nobody has seen anything like them.', mods: { str: 2 }, anim: 'attack' } },
+      { label: 'Make tools', check: { stat: 'cun', diff: 6 }, success: { text: 'Bright ploughs, bright axes. Everything is easier.', tradition: true, anim: 'mutate' }, fail: { text: 'It cracks. You need to learn more.', dna: 2 } },
+      { label: 'Trade it', result: { text: 'Every neighbour wants some.', neighbourOpinion: 10, food: 3, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'tool_s_fire_spreads', stage: 'society', path: 'tool', prop: 'fire', title: 'The Great Fire', tags: ['danger'],
+    text: 'A {resource} gets loose in {capital}. The wind is up and the roofs are dry.',
+    options: [
+      { label: 'Fight it', check: { stat: 'tou', diff: 6 }, success: { text: 'Burned hands, but {capital} still stands.', anim: 'rest' }, fail: { text: 'Half of it burns.', settlementLoss: true, food: -3 } },
+      { label: 'Burn a firebreak', check: { stat: 'cun', diff: 6 }, success: { text: 'You burn a street to save a city. It works.', food: -2, anim: 'mutate' }, fail: { text: 'The firebreak is too narrow.', settlementLoss: true } },
+    ],
+  },
+  {
+    id: 'tool_s_road', stage: 'society', path: 'tool', habitat: 'land', prop: 'stick', title: 'The First Road', tags: ['explore'],
+    text: 'The Steward wants a road of flat stones between every village, so that food can move faster than hunger.',
+    options: [
+      { label: 'Build it', hint: '−4 Food, +Speed', req: { food: 4 }, result: { text: 'It takes years. Then nobody can imagine life without it.', food: -4, mods: { spd: 1, foodPerTurn: 1 }, anim: 'grow' } },
+      { label: 'Not yet', result: { text: 'The old paths will do.', dna: 1, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'tool_s_vent_dies', stage: 'society', path: 'tool', habitat: 'sea', prop: 'vent', title: 'A Vent Goes Cold', tags: ['danger'],
+    text: 'The vent that warms one of your holds is cooling. Within a generation it will be dead.',
+    options: [
+      { label: 'Move the hold to a new vent', check: { stat: 'spd', diff: 6 }, success: { text: 'Everyone moves before the cold sets in.', anim: 'grow' }, fail: { text: 'The new vent is already taken.', settlementLoss: true } },
+      { label: 'Carry heat from the Deep Forge', hint: 'Needs 4 {resource}', req: { special: 4 }, result: { text: 'Hot stones carried in shifts, day and night.', special: -4, loyalty: 5, anim: 'rest' } },
+    ],
+  },
+  // ----- Singers -----
+  {
+    id: 'song_s_chorus', stage: 'society', path: 'song', prop: 'notes', title: 'The Great Chorus', tags: ['social'],
+    text: 'For the first time, every {settlement} sings the same song at the same moment. The sound carries for days.',
+    options: [
+      { label: 'Sing to the neighbours', hint: 'Every neighbour likes you more', result: { text: 'They stop what they are doing to listen.', neighbourOpinion: 10, anim: 'social' } },
+      { label: 'Sing the law', result: { text: 'Now everyone knows it.', tradition: true, anim: 'mutate' } },
+      { label: 'Sing to frighten', check: { stat: 'str', diff: 5 }, success: { text: 'It sounds like an army ten times your size.', dna: 4, neighbourOpinion: -5, anim: 'attack' }, fail: { text: 'It sounds like a lot of singing.', dna: 1 } },
+    ],
+  },
+  {
+    id: 'song_s_lost_verse', stage: 'society', path: 'song', prop: 'notes', title: 'The Lost Verse', tags: ['explore'],
+    text: 'An old singer dies, and with them a verse that nobody else knew. Some say it was the most important one.',
+    options: [
+      { label: 'Piece it together', check: { stat: 'cun', diff: 6 }, success: { text: 'Fragments from a dozen singers make the whole.', dna: 5, anim: 'mutate' }, fail: { text: 'It is gone.', special: -3 } },
+      { label: 'Write a new one', check: { stat: 'cha', diff: 5 }, success: { text: 'The new verse is better. Nobody will admit it.', special: 3, anim: 'social' }, fail: { text: 'Nobody likes it.', dna: -1 } },
+    ],
+  },
+  {
+    id: 'song_s_rival_song', stage: 'society', path: 'song', prop: 'notes', title: 'A Rival Song', tags: ['social'], species: 'band',
+    text: 'The {species} have started to sing too. Their songs are simpler than yours, but catchy. Your young are learning them.',
+    options: [
+      { label: 'Teach them yours', check: { stat: 'cha', diff: 6 }, success: { text: 'Soon both peoples sing the same songs.', bandOpinion: 25, dna: 2, anim: 'social' }, fail: { text: 'They prefer their own.', bandOpinion: -5 } },
+      { label: 'Forbid the foreign songs', result: { text: 'Your songs stay pure. Your young sulk.', loyalty: 5, bandOpinion: -10, anim: 'rest' } },
+      { label: 'Learn from theirs', result: { text: 'Simple is not stupid.', dna: 3, bandOpinion: 5, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 'song_s_silence', stage: 'society', path: 'song', habitat: 'sea', prop: 'bubbles', title: 'The Silence', tags: ['danger'],
+    text: 'Something is drowning out your songs across the ocean: a deep, endless rumbling. The pods cannot hear each other.',
+    options: [
+      { label: 'Sing louder', check: { stat: 'tou', diff: 6 }, success: { text: 'Your voices carry through it.', anim: 'social' }, fail: { text: 'One calving ground loses touch for good.', settlementLoss: true } },
+      { label: 'Find where it comes from', check: { stat: 'cun', diff: 6 }, success: { text: 'The sea floor is shifting. You move the routes.', dna: 4, anim: 'mutate' }, fail: { text: 'You never find out.', special: -3 } },
+    ],
+  },
+  {
+    id: 'song_s_echo', stage: 'society', path: 'song', habitat: 'land', prop: 'notes', title: 'The Echo Valley', tags: ['explore'],
+    text: 'Scouts find a valley where every song echoes back three times. The Keeper wants to build a circle there.',
+    options: [
+      { label: 'Build it', hint: 'A new {settlement}, −4 Food', req: { food: 4 }, result: { text: 'The loudest circle there has ever been.', newSettlement: true, food: -4, anim: 'grow' } },
+      { label: 'Make it a holy place', result: { text: 'Pilgrims come from every circle.', dna: 4, loyalty: 5, anim: 'social' } },
+    ],
+  },
+);
+
+// The Union: the Society stage's finale. Each option leads to one of three endings: Conquest, Trade or Faith.
+(function () {
+  const F = {
+    tool: {
+      land: { title: 'The Union of Hearths', prop: 'fire', text: 'Every village in the region looks to the Great Hearth now. The council says the time has come to bring them all together, one way or another.' },
+      sea: { title: 'The Union of Holds', prop: 'vent', text: 'The Deep Forge is the hottest, richest place in the ocean. The council says the time has come to bring every hold together, one way or another.' },
+    },
+    song: {
+      land: { title: 'The Union of Circles', prop: 'notes', text: 'Every circle in the region knows the First Circle\'s songs. The council says the time has come to sing them all into one people.' },
+      sea: { title: 'The Union of Pods', prop: 'notes', text: 'The songs of the Singing Deep carry across the whole ocean. The council says the time has come to sing every pod into one people.' },
+    },
+  };
+  const ROADS = [['conquest', 'str', 'By force'], ['trade', 'cha', 'By trade'], ['faith', 'cun', 'By faith']];
+  Object.entries(F).forEach(([path, byHab]) => Object.entries(byHab).forEach(([hab, f]) => {
+    G.EVENTS.push({ id: `union_${path}_${hab}`, stage: 'society', finale: true, habitat: hab, path, prop: f.prop, title: f.title, text: f.text,
+      options: ROADS.map(([road, stat, verb]) => { const e = G.SOCIETY_ENDINGS[path][hab][road]; return { label: `${verb}: ${e.name}`, hint: e.desc, check: { stat, diff: 7 },
+        success: { text: `${e.desc} The region is one people now.`, societyEnding: road, anim: stat === 'str' ? 'attack' : stat === 'cha' ? 'social' : 'mutate' },
+        fail: { text: 'The region is not ready to be one. Not yet.', pop: -3, loyalty: -5, setback: 0 } }; }) });
+  }));
+}());
+
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });

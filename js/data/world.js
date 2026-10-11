@@ -423,7 +423,7 @@ G.BOON = {}; G.BOONS.forEach((b) => { G.BOON[b.id] = b; });
 
 // Fossils: a snapshot at each milestone. Reviving one from amber costs Genetic Memory,
 // and a revived run earns less, so fresh runs still matter.
-G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45, tribe: 50 };
+G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45, tribe: 50, society: 60 };
 G.REVIVE_MULT = 0.6;
 G.FOSSIL_KEEP = 8; // recent fossils kept besides the ones in amber
 
@@ -712,21 +712,19 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '15.1';
+G.VERSION = '16';
 G.WHATS_NEW = {
-  title: 'Patch 15.1: Bigger, fairer, clearer',
+  title: 'Update 16: Peoples',
   items: [
-    'Population is counted in individuals now: herds of hundreds, not dozens. Some events give or take a share of your Population, or of your maximum, instead of a fixed number, so the best choice depends on how big you are.',
-    'Meat and plants are separate foods. Herbivores eat plants and carnivores meat; omnivores eat either. Meat is richer, but a fifth of it rots every turn; plants keep.',
-    'Odds are fairer: checks follow a gentle curve, so risky options are real choices from the start, instead of 5% early on and near-certain late.',
-    'No more odds meter. When a fight starts, the two sides face off, someone pounces, and they vanish into a cloud of dust. Only when it clears do you see what happened, and only then do your numbers change.',
-    'Body plans matter more: radial, bilateral and shapeless bodies each have their own mutations, and so do legless, two-legged, four-legged and many-legged bodies, and bodies with arms. They have their own combinations too, and parts that no longer fit your body plan lie dormant.',
-    'Mutations your diet or archetype cannot use are no longer offered (no fangs for herbivores).',
-    'Eyes come from eye mutations only. No eye part means no eyes; compound and all-seeing eyes give more. The eye-count slider is gone.',
-    'Every mutation has its own little icon, in drafts, on your body and in the Codex.',
-    'The Creature Editor has dice: randomise one tab or your whole look.',
-    'Extra fins and pseudopods now show on your creature.',
-    'Update 15 (Many Kinds): every Path reaches the Tribe stage, and Ancestral Wisdom.',
+    'The Society stage. Toolmakers and Singers, on land and at sea, go on from the Founding to become a people of many settlements: the Hearthlands, the Vent Holds, the Song-circles and the Pod League.',
+    'How you Founded your tribe decides what kind of society you become. Settled peoples farm and build faster, Roaming peoples move and learn on the road, and Warlike peoples gain from every victory.',
+    'Influence replaces Ideas. It comes from your settlements, your Keeper and your traditions.',
+    'Settlements: found new ones and build them up from Activities. Each one feeds you and lets your people grow bigger. Your capital shows on the map, and the others spread across the region.',
+    'The council: a Steward, a Marshal and a Keeper govern with your ruler. Keep them loyal, or they withhold their help and start plotting. When the ruler dies, the council chooses who rules next.',
+    'Traditions and Laws: your culture tree, drafted like discoveries. Some come in opposed pairs (War Bands or Peace Vows, Open Gates or Closed Gates), and higher tiers open as you learn more.',
+    'Neighbour peoples: your old rivals and new peoples share the region. Send gifts, trade with friends, or raid them. Allies share their food; hated neighbours raid you.',
+    'Over 35 new events, and the Union: unite the region by force, by trade or by faith, for 12 new Society endings.',
+    'Stage Select can start a run at the Society stage too.',
   ],
 };
 
@@ -750,6 +748,12 @@ G.TUTORIALS = [
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
   { id: 'tribe', title: 'The Tribe stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe',
     text: 'Your kind is a people now. Population is now your members, and Ideas replace DNA: each goal brings a Discovery. Your body no longer changes, but what it can do decides which discoveries come. The People tab shows your leader, your Fire or Song, and your talents. Reach the Founding to choose your people\'s future.' },
+  { id: 'society', title: 'The Society stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society',
+    text: 'Your people live in many settlements now. Influence replaces Ideas, and each goal brings a Tradition. Found and build settlements from Activities to grow bigger and earn more. The Society tab shows your settlements and neighbours; the Council tab shows who might turn against your ruler.' },
+  { id: 'council', title: 'Your council', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society' && (run.council || []).some((c) => c.loyalty < 0),
+    text: 'One of your councillors is losing faith in your ruler. Below −25 loyalty they may start plotting, and below −30 they stop helping. Feasts, honours and kind rulers keep them loyal; some traditions do too.' },
+  { id: 'traditions', title: 'Traditions', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'society',
+    text: 'Traditions are your people\'s laws and customs. Some come in opposed pairs: adopting one rules out the other for this run. Higher tiers open once you hold 2 and 4.' },
   { id: 'kind_many', title: 'Many Minds', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'many',
     text: 'Your den is small, but every member is clever. Keep 3 Light or more and you are hidden: hunters and raiders find you far less often. Watch and learn copies discoveries from rival bands.' },
   { id: 'kind_swarm', title: 'The Swarm', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'swarm',
@@ -1028,9 +1032,9 @@ G.ACTIVITIES.push(
 // ---------- The Society stage (Update 16) ----------
 G.STAGES.society = {
   name: 'Society Stage', turnName: 'Generation',
-  drafts: [6, 15, 26, 38, 52, 68, 85, 104],
-  milestones: [{ at: 0, event: 'society_founded' }, { at: 30, event: 'the_council' }, { at: 62, event: 'neighbours_gather' }],
-  evolveAt: 125,
+  drafts: [8, 20, 34, 50, 68, 88, 110, 135, 160],
+  milestones: [{ at: 0, event: 'society_founded' }, { at: 45, event: 'the_council' }, { at: 95, event: 'neighbours_gather' }],
+  evolveAt: 190,
 };
 G.SOCIETY_PATHS = ['tool', 'song'];
 // Your Founding decides what kind of society you become.
