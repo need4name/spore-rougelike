@@ -587,3 +587,8 @@ button.rival:hover { border-color: var(--accent); }
 .choice-diff.d3 { color: var(--bad); }
 /* A tip darkens everything behind it, so it is clear which window to read. */
 #tip:not(:empty) { top: 0; align-items: flex-end; background: rgba(4, 10, 12, 0.66); pointer-events: auto; }
+
+.editor-head { gap: 8px; }
+.editor-head h2 { flex: 1; }
+.editor-body .dice { margin: 0 0 8px; }
+.picon { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; margin-right: 6px; border-radius: 50%; background: var(--panel-2, rgba(255,255,255,0.06)); box-shadow: inset 0 0 0 2px var(--kw, transparent); font-size: 0.9em; vertical-align: middle; flex: none; }

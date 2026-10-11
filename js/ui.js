@@ -329,6 +329,12 @@ window.G = window.G || {};
     return `<span class="chance ${cls}">${statName(stat)} · ${chance}%</span>`;
   }
 
+  // A mutation's icon, ringed in its keyword's color.
+  function picon(id) {
+    const p = G.PART[id]; if (!p) return '';
+    const kw = (p.keywords || [])[0];
+    return `<span class="picon" ${kw ? `style="--kw:${G.KEYWORDS[kw].color}"` : ''} aria-hidden="true">${G.partIcon(id)}</span>`;
+  }
   function reqTag(opt) {
     const r = opt.req;
     if (!r) return '';
@@ -397,7 +403,7 @@ window.G = window.G || {};
         <p class="eyebrow">${run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
         <h2>${esc(run.scene.label)}</h2>
         ${run.scene.discovery ? `<div class="callout"><strong>${esc(G.DISCOVERY[run.scene.discovery].name)}</strong><span>${esc(G.describeMods(G.DISCOVERY[run.scene.discovery].mods))}. ${esc(G.DISCOVERY[run.scene.discovery].desc)}</span></div>` : ''}
-        ${run.scene.evolved ? `<div class="callout"><strong>${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
+        ${run.scene.evolved ? `<div class="callout"><strong>${picon(run.scene.evolved)}${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
         <button class="btn primary wide" data-act="continue-mutation">Continue</button>
       </article>`;
   }
@@ -575,7 +581,7 @@ window.G = window.G || {};
             return `
             <div class="part-card">
               <span class="opt-slot">${esc(slotName)}${slot ? ` · now ${esc(G.slotLabel(slot))}` : ' · empty'}${socks.length > 1 ? ` · 2nd: ${run.parts[socks[1]] ? esc(G.slotLabel(run.parts[socks[1]])) : 'empty'}` : ''}</span>
-              <span class="opt-label">${esc(p.name)}${kwTags(p)}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
+              <span class="opt-label">${picon(pid)}${esc(p.name)}${kwTags(p)}${p.evolved ? `<span class="kw unlocked">${p.evolved === 2 ? 'Legendary' : 'Unlocked'}</span>` : ''}</span>
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
               ${syn}
@@ -799,7 +805,7 @@ window.G = window.G || {};
         const ids = [s.id].concat(s.merged ? [s.merged] : []);
         const mods = {};
         ids.forEach((id) => Object.entries(G.PART[id].mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; }));
-        return `<li><span class="slot">${slot.name}</span><span class="pname">${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}</span>${s.merged ? `<span class="pmods halves">${ids.map((id) => `${esc(G.PART[id].name)}: ${esc(G.describeMods(G.PART[id].mods) || 'no stats')}`).join(' · ')}</span>` : ''}</li>`;
+        return `<li><span class="slot">${slot.name}</span><span class="pname">${ids.map((id) => picon(id)).join('')}${esc(G.slotLabel(s))}${ids.map((id) => kwTags(G.PART[id])).join('')}</span><span class="pmods">${esc(G.describeMods(mods))}${slot.id === 'mouth' ? ` · ${G.DIET_NAMES[G.diet(run)]}` : ''}</span>${s.merged ? `<span class="pmods halves">${ids.map((id) => `${esc(G.PART[id].name)}: ${esc(G.describeMods(G.PART[id].mods) || 'no stats')}`).join(' · ')}</span>` : ''}</li>`;
       }).join('')}</ul>
       ${partnerSection(run)}
       <h3>Synergies</h3>
@@ -1189,10 +1195,10 @@ window.G = window.G || {};
     const tabs = TABS[kind];
     const tab = tabs.some(([id]) => id === G.ui.editorTab) ? G.ui.editorTab : 'body';
     return `<div class="editor" role="dialog" aria-modal="true" aria-label="Creature Editor">
-      <header class="editor-head"><h2>Creature Editor</h2><button class="btn small primary" data-act="editor-done">Done</button></header>
+      <header class="editor-head"><h2>Creature Editor</h2><button class="btn small" data-act="editor-random" data-arg="all" aria-label="Randomise everything">🎲 All</button><button class="btn small primary" data-act="editor-done">Done</button></header>
       <div class="editor-preview"><canvas class="editor-canvas"></canvas></div>
       <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="editor-tab" data-arg="${id}">${label}</button>`).join('')}</div>
-      <div class="editor-body">${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
+      <div class="editor-body"><button class="btn small ghost dice" data-act="editor-random" data-arg="${tab}">🎲 Randomise ${esc(tabs.find(([id]) => id === tab)[1].toLowerCase())}</button>${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
       <div class="editor-foot"><button class="btn primary wide" data-act="editor-done">Done</button></div>
     </div>`;
   }
@@ -1360,10 +1366,10 @@ window.G = window.G || {};
     const seenParts = G.PARTS.filter((p) => c.parts.includes(p.id)).length;
     const evos = G.EVOLUTIONS;
     const evoCard = (e) => (c.evolutions.includes(e.id)
-      ? `<li class="evo-known"><strong>${esc(e.name)}${e.evolved === 2 ? ' ★' : ''}</strong><span>${esc(G.PART[e.from[0]].name)} + ${esc(G.PART[e.from[1]].name)}</span><span>${esc(G.describeMods(e.mods))}</span></li>`
+      ? `<li class="evo-known"><strong>${picon(e.id)}${esc(e.name)}${e.evolved === 2 ? ' ★' : ''}</strong><span>${esc(G.PART[e.from[0]].name)} + ${esc(G.PART[e.from[1]].name)}</span><span>${esc(G.describeMods(e.mods))}</span></li>`
       : `<li class="unknown"><strong>???</strong><span>${e.evolved === 2 ? 'Legendary · ' : ''}${e.stage === 'cell' ? 'Cell' : 'Creature'} ${esc(G.SLOTS[e.stage === 'cell' ? 'cell' : (e.habitat || 'land')].find((sl) => sl.id === e.slot).name.toLowerCase())}</span></li>`);
     const group = (filter) => `<ul class="codex-grid">${G.PARTS.filter((p) => !p.evolved && filter(p)).map((p) => (c.parts.includes(p.id)
-      ? `<li><strong>${esc(p.name)}</strong>${kwTags(p)}<span>${esc(G.describeMods(p.mods))}</span></li>`
+      ? `<li><strong>${picon(p.id)}${esc(p.name)}</strong>${kwTags(p)}<span>${esc(G.describeMods(p.mods))}</span></li>`
       : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>`;
     return `
       <main class="codex">
@@ -1444,6 +1450,7 @@ window.G = window.G || {};
       case 'act-stop': G.stopActivity(); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'reshape': G.reshape(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'arms': G.setArms(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'editor-random': G.randomiseLook(arg === 'all' ? null : arg); G.ui.keepEditorScroll = true; parts = ['top', 'editor']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;

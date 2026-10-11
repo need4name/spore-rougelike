@@ -130,7 +130,10 @@ window.G = window.G || {};
     if (kind === 'wings') return ['feathered_wings', 'true_wings', 'insect_wings'].some((id) => G.partIds(run).includes(id) || G.partIds(run).some((pid) => (G.PART[pid].from || []).includes(id)));
     return !!run.parts[kind] && !off.includes(kind);
   };
-  G.eyeCount = (run) => (run.stage !== 'cell' && run.look && run.look.eyeCount) || 1;
+  // Eyes come only from eye mutations: no eye part, no eyes. The best one you own sets how many.
+  G.EYES = { eyespot: 1, plated_eye: 1, compound_sense: 1, lantern_eye: 1, big_eyes: 2, glow_eyes: 2, night_eyes: 2, mantis_eyes: 2, rainbow_eyes: 2, hunter_eyes: 2, sentinel_ears: 2, compound_eyes: 4, mosaic_eyes: 4, all_seeing_eyes: 6 };
+  G.eyesFrom = (ids) => { let n = 0; const seen = new Set(); const walk = (id) => { if (!id || seen.has(id)) return; seen.add(id); n = Math.max(n, G.EYES[id] || 0); ((G.PART[id] || {}).from || []).forEach(walk); }; ids.forEach(walk); return n; };
+  G.eyeCount = (run) => G.eyesFrom(G.partIds(run));
   G.armPairs = (run) => {
     if (run.stage === 'cell' || run.habitat !== 'land' || G.symmetry(run) !== 'bilateral') return 0;
     const n = G.segments(run);
@@ -281,6 +284,28 @@ window.G = window.G || {};
 
   // The highest a slider can go right now (some open later in the run).
   G.sculptMax = (run, sl) => (sl.cap ? Math.min(sl.max, sl.cap(run)) : sl.max);
+  // The editor's dice: a random look for one tab (or everything), using only options you have unlocked.
+  G.EDITOR_TAB_KEYS = { body: { groups: ['shape'], sculpt: ['body'] }, limbs: { groups: ['fins'], sculpt: ['limbs'] }, head: { groups: ['head', 'headPos', 'eyes'], sculpt: ['head'] }, color: { groups: ['pattern', 'finish'], sculpt: ['color'], colors: true } };
+  G.randomiseLook = function (tab) {
+    const run = G.run;
+    if (!run || run.stage === 'cell') return;
+    const kind = G.editorBody(run);
+    run.look = run.look || {};
+    const tabs = tab && G.EDITOR_TAB_KEYS[tab] ? [tab] : Object.keys(G.EDITOR_TAB_KEYS);
+    tabs.forEach((id) => {
+      const T = G.EDITOR_TAB_KEYS[id];
+      T.groups.forEach((key) => {
+        const opts = (G.APPEARANCE[key] || []).filter((o) => (!o.only || o.only === run.habitat) && G.lookOptionState(run, o).ok);
+        if (opts.length) run.look[key] = pick(opts).id;
+      });
+      G.SCULPT.filter((sl) => T.sculpt.includes(sl.group) && sl.bodies.includes(kind) && (!sl.part || G.hasVisiblePart(run, sl.part))).forEach((sl) => {
+        const max = G.sculptMax(run, sl); const steps = Math.round((max - sl.min) / sl.step);
+        run.look[sl.id] = Math.round((sl.min + Math.floor(rand() * (steps + 1)) * sl.step) * 100) / 100;
+      });
+      if (T.colors) { const h = Math.floor(rand() * 360); run.look.hue = h; run.look.belly = (h + 20 + Math.floor(rand() * 40)) % 360; run.look.accent = (h + 40 + Math.floor(rand() * 200)) % 360; run.look.accent2 = (run.look.accent + 30 + Math.floor(rand() * 90)) % 360; }
+    });
+    G.saveRun();
+  };
 
   // The Creature Editor opens for free when you become a creature and after the Age of Giants and the Spark of Mind;
   // in between it costs a little DNA.
@@ -324,6 +349,23 @@ window.G = window.G || {};
     return a || b || 'omni';
   };
   G.DIET_NAMES = { herb: 'Herbivore', carn: 'Carnivore', omni: 'Omnivore' };
+  // A small icon for every mutation, from what it is (its name and id), then its slot.
+  G.ICON_RULES = [
+    [/eye|sight|sense_|vision/, '👁️'], [/\bwings?\b|feather/, '🪽'], [/shell|carapace|plate|armor|scale/, '🐚'], [/spine|quill|spike/, '🦔'], [/tentacle|octo/, '🐙'],
+    [/claw|pincer|scythe|talon/, '🦀'], [/horn|brow/, '🦏'], [/glow|lantern|lure|biolum|light|photophore/, '✨'], [/barbel|antenna|whisker|feeler/, '〰️'], [/venom|sting|toxin|poison|\bbarbs?\b/, '☠️'], [/\bears?\b|echo|sonar|hearing/, '👂'],
+    [/fang|jaw|teeth|tooth|maw|beak|bite|cutter|grinder|mandible/, '🦷'], [/filter|baleen|sucker|suction|\blips?\b|tongue|trunk|proboscis|sieve/, '👄'], [/gill|bubble/, '🫧'],
+    [/lung|breath/, '🫁'], [/\bheart|blood/, '🫀'], [/hoof|hooves/, '🐴'], [/\bfins?\b|flipper|\brays?\b|fluke/, '🐟'], [/tail/, '🦎'], [/hand|finger|arm|grip|grasp/, '✋'], [/leg|haunch|tendon|bone|stride|sprint|knee/, '🦵'],
+    [/foot|feet|pad|toe/, '🐾'], [/flagell|cilia|whip|propel/, '🌀'], [/membrane|wall|skin|hide|fur|coat|camo/, '🧬'], [/garden|moss|kelp|algae|plant|chloro|photocyte|sun sieve/, '🌿'], [/fat|store|stomach|gut|organ/, '🫃'],
+    [/brain|mind|neuron|nerve/, '🧠'], [/electric|shock/, '⚡'], [/heat|thermal/, '🔥'], [/magnet/, '🧲'], [/egg|brood|pouch/, '🥚'], [/web|silk/, '🕸️'],
+  ];
+  G.SLOT_ICONS = { mouth: '👄', senses: '👃', skin: '🧬', back: '🦴', organ: '🫀', membrane: '🫧', tail: '🦎', frontLimbs: '🦵', hindLimbs: '🦵', hands: '✋', feet: '🐾', underside: '⬇️', motility: '🌀', arms: '✋' };
+  G.partIcon = (id) => {
+    const p = G.PART[id]; if (!p) return '❔';
+    if (p.icon) return p.icon;
+    const text = `${p.id} ${p.name}`.toLowerCase();
+    const r = G.ICON_RULES.find(([re]) => re.test(text));
+    return r ? r[1] : G.SLOT_ICONS[G.baseSlot ? G.baseSlot(p.slot) : p.slot] || '🧬';
+  };
 
   // ---------- Stats and modifiers ----------
   function modSources(run) {
@@ -448,6 +490,10 @@ window.G = window.G || {};
       && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat)
       && (!p.pack || packs.includes(p.pack))
       && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
+      && !(G.gimmick(run) === 'predator' && p.diet === 'herb')
+      // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.
+      // With Twin Mouths, the second socket can hold either.
+      && !(p.slot === 'mouth' && p.diet && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'))
       && (!p.biome || p.biome === G.biome(run).id));
   };
 
@@ -789,7 +835,11 @@ window.G = window.G || {};
     return ids.filter((id) => {
       const p = G.PART[id];
       return p && p.stage === run.stage && (run.stage === 'cell' || !p.habitat || p.habitat === run.habitat) && slots.includes(p.slot) && !have.includes(id)
-        && !(G.gimmick(run) === 'grazer' && p.diet === 'carn');
+        && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
+        && !(G.gimmick(run) === 'predator' && p.diet === 'herb')
+        // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.
+        // With Twin Mouths, the second socket can hold either.
+        && !(p.slot === 'mouth' && p.diet && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'));
     }).sort(() => rand() - 0.5).slice(0, 3);
   }
   function startSpecialDraft(run) {
@@ -1198,7 +1248,7 @@ window.G = window.G || {};
     else if (req.symmetry && G.symmetry(run) !== req.symmetry) reason = `Needs ${G.SYMMETRY[req.symmetry].name.toLowerCase()} symmetry`;
     else if (req.serpent && !(run.stage !== 'cell' && G.symmetry(run) === 'bilateral' && G.segments(run) === 0)) reason = 'Needs a legless, serpent body';
     else if (req.manyLegs && !(run.stage !== 'cell' && G.symmetry(run) === 'bilateral' && G.segments(run) - G.armPairs(run) >= 4)) reason = run.habitat === 'sea' ? 'Needs 4 or more pairs of fins' : 'Needs 4 or more pairs of legs';
-    else if (req.eyes && G.eyeCount(run) < req.eyes) reason = `Needs ${req.eyes} or more eyes (set them in the Creature Editor)`;
+    else if (req.eyes && G.eyeCount(run) < req.eyes) reason = `Needs ${req.eyes} or more eyes (from eye mutations)`;
     else if (req.arms && G.armPairs(run) < req.arms) reason = 'Needs arms (turn a pair of legs into arms in the Body plan)';
     else if (req.upright && !(run.stage !== 'cell' && G.symmetry(run) === 'bilateral' && G.segments(run) - G.armPairs(run) === 1)) reason = 'Needs to stand on two legs';
     else if (req.size && G.sizeOf(run) !== req.size) reason = `Only for ${req.size} creatures`;

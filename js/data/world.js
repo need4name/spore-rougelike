@@ -590,7 +590,6 @@ G.SCULPT = [
   { id: 'legShift', name: 'Limb position', group: 'limbs', bodies: ['land'], min: -0.5, max: 0.5, step: 0.05, def: 0, ends: ['Toward the tail', 'Toward the head'] },
   { id: 'headTilt', name: 'Head angle', group: 'head', bodies: ['land'], only: 'land', min: -0.6, max: 0.6, step: 0.05, def: 0, ends: ['Nose up', 'Nose down'] },
   { id: 'headSize', name: 'Head size', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 0.7, max: 1.6, step: 0.05, def: 1 },
-  { id: 'eyeCount', name: 'Number of eyes', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 1, max: 6, step: 1, def: 1 },
   { id: 'eyeSize', name: 'Eye size', group: 'head', bodies: ['land', 'sea', 'serpent'], min: 0.6, max: 1.8, step: 0.05, def: 1 },
   { id: 'jaw', name: 'Jaw size', group: 'head', bodies: ['land', 'serpent'], min: 0.6, max: 1.6, step: 0.05, def: 1 },
   { id: 'patScale', name: 'Pattern size', group: 'color', bodies: ALL_BODIES, min: 0.5, max: 2, step: 0.05, def: 1 },
