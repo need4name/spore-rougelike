@@ -76,8 +76,9 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 15.1 | Patch ✅ | Population in the hundreds, meat and plants, fairer odds, dust-cloud fights, body-plan mutations, eyes, icons, editor dice | Medium |
 | 16 | Peoples ✅ | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
 | 16.1 | Patch ✅ | Soft and hard population caps, nothing useless offered for your diet, a bold diet badge, disaster scenes, distinct and more meaningful biomes | Medium |
-| 16.2 | Patch | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
-| 16.3 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
+| 16.2 | Patch ✅ | **Cut Paper:** creatures as layers of cut card with a choppier frame rate; merged parts drawn as stacked cards | Medium |
+| 16.3 | Patch | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
+| 16.4 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
 | 19 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+ | Large |
@@ -395,14 +396,20 @@ From play-testing feedback:
 - **Distinct biomes:** each land and sea biome has its own sky, ground, weather and life, in events and on the map; its own danger level and common disasters; stronger effects; cold blood struggles in cold places.
 - **Strong builds feel strong:** the wild and rival bands keep pace less closely with a powerful people.
 
-## Patch 16.2: Tribe rework (planned)
+## Patch 16.2: Cut Paper ✅
+
+- **Cut-paper creatures** (creatures only; the world and menus are unchanged): each piece casts a crisp shadow on the one below, a pale cut edge and a drop shadow around the whole creature, flat colours with paper grain, bellies as separate pieces. Creatures animate at 8 frames a second (`G.CUT_FPS`) while effects and the world stay smooth.
+- **Merged parts as stacked cards:** the recessive half of a merged slot is drawn as a smaller card behind the base part, placed for its slot (a forked tail, a second back piece further down the spine, a seam between two skins, a merged foot behind the main one, a second set of sea arms or underside parts). No extra art per combination.
+- **Limb details follow the limb.**
+
+## Patch 16.3: Tribe rework (planned)
 
 - **The resource matters:** Fire, Song, Light, Brood and Growth become the cost of discoveries, more for advanced ones, changed by a percentage from events, the Mind tree, stats, population and your leader (always rounded to whole numbers), so a tribe builds up its technology step by step. Soft and hard caps, and real threats to it.
 - **Leaders:** candidates with backgrounds, ambitions and relationships; the choice changes what your people can do, and it carries into later stages.
 - **The Tribe world screen:** camps placed near friendly species and away from rivals, camps that grow as you progress, an animation when you move camp, and expeditions whose size depends on population, diet and how social you are.
 - **A wider world:** the map opens out in the Tribe stage, so the world feels bigger and closer at once.
 
-## Patch 16.3: Mind tree rebuild (planned)
+## Patch 16.4: Mind tree rebuild (planned)
 
 - Many more nodes, some of them awakenings and skills that change how you play rather than stat boosts.
 - Nodes open from their own prerequisites, not a whole row at once, and some nodes block others.

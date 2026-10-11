@@ -712,19 +712,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.1';
+G.VERSION = '16.2';
 G.WHATS_NEW = {
-  title: 'Patch 16.1: Listening',
+  title: 'Patch 16.2: Cut Paper',
   items: [
-    'Your maximum Population is now a comfortable size, not a wall. You can grow past it, up to half as many again, but crowded members eat twice as much, young cost more Food, and crowding sickness takes a tenth of the excess every turn.',
-    'Nothing your kind can\'t use right now is offered: no hunting ideas, discoveries, Instinct or event choices for a herbivore, no foraging ones for a Predator. Your diet can still change: omnivore mouths are always offered, so a herbivore can become an omnivore and then a carnivore (and back), and what was hidden comes back when it does. Omnivores see everything. Only your starting archetype locks things for good: Grazers never hunt, Predators never forage.',
-    'Fixed: an evolved leg (or fin) part no longer adds an extra pair to your creature. Your body always shows exactly the limbs your body plan has; evolved limbs grow longer and stronger instead.',
-    'Your diet is shown in bold colour at the top of the screen and on your lineage sheet: green for herbivores, red for carnivores, gold for omnivores.',
-    'Disasters get their own scenes. Floods rise, storms close in, blizzards white out the screen, fevers drift through, droughts blaze, sandstorms roll over you and the ground shakes. Only when it clears do you see what happened, and a bad outcome leaves its mark (drips, frost, a sickly haze, smoke) instead of a cartoon bonk.',
-    'Every biome looks different now, in events and on the map: a blazing desert sun, tundra snow and auroras, jungle vines and haze, swamp fog and fireflies, gulls on the shore; kelp forests, polar ice, glowing vent fields and sandy coasts at sea.',
-    'Biomes matter more. Each has its own danger (hunters are a third more common in the jungle, rarer in the desert and the kelp) and its own disasters (blizzards in the tundra, fevers in the swamp, droughts in the desert), and the effects are stronger. Cold blood struggles in cold places. The World Map tab shows each biome\'s rules.',
-    'Strong builds are allowed to be strong: the wild and rival bands no longer keep pace quite so closely with a powerful people.',
-    'Update 16 (Peoples): Toolmakers and Singers who win the Founding go on to the Society stage: settlements, a ruler and council, Traditions and Laws, neighbour peoples, and the Union with 12 new endings.',
+    'Creatures are made of cut paper now: every piece is a layer of card that casts a crisp little shadow on the piece below, each creature has a pale cut edge and sits just above the scene, colours are flat with a touch of paper grain, and bellies are their own paper piece.',
+    'Creatures move at a choppier frame rate than everything else, like cut-out animation. The world, the weather and the menus stay smooth.',
+    'Merged parts look like they belong together. The second part of a merged slot is a smaller card tucked behind the first: a second tail forks off the first, a second back part sits further down the spine, two skins meet at a stitched seam, a merged foot or hand peeks out behind the main one, and at sea a second set of arms or underside parts sits just behind the first.',
+    'Limb mutations sit on the limb: armour bands, muscles, joints, tendons and feathers follow the leg instead of floating beside it.',
+    'Patch 16.1 (Listening): soft and hard population caps, a bold diet badge, nothing useless offered for your diet (and diets can change through omnivore mouths), disaster scenes, distinct biomes, and evolved limbs no longer add an extra pair.',
   ],
 };
 

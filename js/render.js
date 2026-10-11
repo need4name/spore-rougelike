@@ -186,7 +186,7 @@ window.G = window.G || {};
     ctx.closePath();
     const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R * 1.3);
     grad.addColorStop(0, hsl(hue, 65, 72)); grad.addColorStop(1, hsl(hue, 55, 52));
-    ctx.fillStyle = grad; ctx.fill();
+    ctx.fillStyle = G.CUTOUT ? hsl(hue, 58, 60) : grad; ctx.fill();
     const hard = H.has('silica_shell') || H.has('plated_wall');
     ctx.lineWidth = R * (hard ? 0.11 : 0.045); ctx.strokeStyle = hard ? SHELL : (accent || dark); ctx.stroke();
     if (H.has('plated_wall')) for (let i = 0; i < 8; i++) { const [x1, y1] = at((i / 8) * Math.PI * 2, 0.88); const [x2, y2] = at((i / 8) * Math.PI * 2, 1.04); line(x1, y1, x2, y2, SHELL, R * 0.045); }
@@ -527,8 +527,9 @@ window.G = window.G || {};
     ctx.save(); ctx.translate(cx, cy); ctx.scale(2 - wob, wob);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     const grad = ctx.createLinearGradient(0, -ry, 0, ry); grad.addColorStop(0, light); grad.addColorStop(0.55, body); grad.addColorStop(1, bellyCol(L, hue) || body);
-    ctx.fillStyle = grad; ctx.fill();
+    ctx.fillStyle = G.CUTOUT ? body : grad; ctx.fill();
     ctx.clip();
+    if (G.CUTOUT && bellyCol(L, hue)) { ctx.beginPath(); ctx.ellipse(rx * 0.05, ry * 0.75, rx * 0.85, ry * 0.55, 0, 0, Math.PI * 2); ctx.fillStyle = bellyCol(L, hue); ctx.fill(); }
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     pattern(L, rx, ry, S, hue, t);
     if (nSeg >= 4) for (let i = 1; i < nSeg; i++) { const x = -rx + (i / nSeg) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.06, 0, x, ry); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); }
@@ -734,7 +735,8 @@ window.G = window.G || {};
     ctx.save();
     ctx.beginPath(); ctx.ellipse(cx, y0, rx, ry, 0, 0, Math.PI * 2);
     const grad = ctx.createLinearGradient(cx, y0 - ry, cx, y0 + ry); grad.addColorStop(0, body); grad.addColorStop(1, bellyCol(L, hue) || light);
-    ctx.fillStyle = grad; ctx.fill(); ctx.clip();
+    ctx.fillStyle = G.CUTOUT ? body : grad; ctx.fill(); ctx.clip();
+    if (G.CUTOUT) { ctx.beginPath(); ctx.ellipse(cx + rx * 0.05, y0 + ry * 0.8, rx * 0.9, ry * 0.5, 0, 0, Math.PI * 2); ctx.fillStyle = bellyCol(L, hue) || light; ctx.fill(); }
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
     const skinBlock = () => {
@@ -864,7 +866,7 @@ window.G = window.G || {};
       for (let i = 0; i < n * 2; i++) { const x = cx - R * 1.1 + (i / (n * 2 - 1)) * R * 2.2; wavy(x, by + R * 0.3, armLen * (1.1 + (i % 3) * 0.25), Math.PI / 2, S * 0.025, t, i % 2 ? dark : (accent || light), S * 0.012, i); }
       ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.closePath();
       const g = ctx.createRadialGradient(cx, by - R * 0.6, R * 0.2, cx, by, R * 1.5); g.addColorStop(0, light); g.addColorStop(1, hsl(hue, 55, 50, 0.85));
-      ctx.fillStyle = g; ctx.fill();
+      ctx.fillStyle = G.CUTOUT ? hsl(hue, 55, 58) : g; ctx.fill();
       ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.clip(); ctx.translate(cx, by - R * 0.5); pattern(L, R * 1.4, R, S, hue, t); ctx.restore();
       if (H.has('back_spines') || E.back) for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * (Math.PI / 7); tri(cx + Math.cos(a) * R * 1.35 - 4, by + Math.sin(a) * R * 1.05, cx + Math.cos(a) * R * 1.75, by + Math.sin(a) * R * 1.45, cx + Math.cos(a) * R * 1.35 + 4, by + Math.sin(a) * R * 1.05, accent || BONE); }
       if (H.has('biolume_skin') || H.has('glow_eyes') || accent) glow(accent || GLOW, 12, () => { for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.15, S * 0.008, accent || GLOW); });
@@ -896,7 +898,7 @@ window.G = window.G || {};
     });
     ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2);
     const g = ctx.createRadialGradient(cx - R * 0.3, ccy - R * 0.3, 1, cx, ccy, R * 1.2); g.addColorStop(0, light); g.addColorStop(1, body);
-    ctx.fillStyle = g; ctx.fill();
+    ctx.fillStyle = G.CUTOUT ? body : g; ctx.fill();
     ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, ccy); pattern(L, R, R * 0.75, S, hue, t); ctx.restore();
     if (E.skin || H.has('biolume_skin')) glow(accent || GLOW, 12, () => { ctx.beginPath(); ctx.ellipse(cx, ccy, R * 1.05, R * 0.8, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 2; ctx.stroke(); });
     const eyes = Math.min(8, G.eyesFrom([...H]) + (E.senses && G.eyesFrom([...H]) ? 3 : 0));
@@ -979,7 +981,78 @@ window.G = window.G || {};
 
   // ======================= BODIES =======================
   // Draw a body (yours or another species') centered at (cx, cy) inside a box of size S.
+  // ---------- Cut-paper creatures ----------
+  // Creatures (only creatures: never the world or the menus) look like layers of cut card, South Park style:
+  // every piece casts a crisp shadow on the piece below, the whole creature has a pale cut edge and a drop shadow,
+  // colours are flat with a little paper grain, and they move at a choppier frame rate than everything else.
+  G.CUTOUT = true;
+  G.CUT_FPS = 8;
+  const PAPER = '#f4ecd8';
+  const cutQ = (t) => (G.CUTOUT && !reduceMotion ? Math.floor(t * G.CUT_FPS) / G.CUT_FPS : t);
+  G.cutQ = cutQ;
+  let grainPattern = null; let cutDepth = 0;
+  const cutPool = [document.createElement('canvas'), document.createElement('canvas')];
+  function grain() {
+    if (grainPattern) return grainPattern;
+    const c = document.createElement('canvas'); c.width = 96; c.height = 96; const g = c.getContext('2d');
+    for (let i = 0; i < 900; i++) { const v = Math.random(); g.fillStyle = v < 0.5 ? `rgba(0,0,0,${0.05 + v * 0.1})` : `rgba(255,255,255,${0.04 + (v - 0.5) * 0.12})`; g.fillRect(Math.random() * 96, Math.random() * 96, 1 + Math.random() * 1.5, 1); }
+    for (let i = 0; i < 14; i++) { g.strokeStyle = 'rgba(120,100,70,0.07)'; g.lineWidth = 0.6; g.beginPath(); const x = Math.random() * 96; const y = Math.random() * 96; g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 10); g.stroke(); }
+    grainPattern = c; return c;
+  }
+  // Finished cut-outs are cached: a creature only changes pose G.CUT_FPS times a second, so most frames just place the card.
+  const cutCache = new Map();
   function drawBody(b, cx, cy, S, t) {
+    if (!G.CUTOUT || cutDepth > 0) { drawBodyRaw(b, cx, cy, S, t); return; }
+    const e = bodyExtent(b); const u = S / 100;
+    // Rendered at a resolution rounded to quarter-octaves, so squash-and-stretch doesn't force a fresh cut-out every frame.
+    const m = ctx.getTransform(); const sc = Math.pow(2, Math.round(Math.log2(Math.max(0.5, Math.min(4, Math.hypot(m.a, m.b)))) * 4) / 4);
+    const pad = S * 0.22 + 6;
+    const ox = e.minX * u - pad; const oy = e.minY * u - pad;
+    const bw = (e.maxX - e.minX) * u + pad * 2; const bh = (e.maxY - e.minY) * u + pad * 2;
+    // Paper doesn't need to be razor sharp: big cut-outs are made at a capped resolution.
+    const cap = Math.min(1, 640 / Math.max(bw * sc, bh * sc));
+    const W = Math.ceil(bw * sc * cap); const Hh = Math.ceil(bh * sc * cap);
+    if (W < 4 || Hh < 4) { drawBodyRaw(b, cx, cy, S, t); return; }
+    const landBody = b.stage === 'creature' && b.habitat !== 'sea' && b.symmetry !== 'radial' && b.symmetry !== 'colonial' && b.segments !== 0;
+    // A soft shadow on the ground stays part of the world, under the cut-out.
+    if (landBody && !NO_SHADOW) { ctx.beginPath(); ctx.ellipse(cx + (e.minX + e.maxX) / 2 * u, cy + S * 0.36 + 2, (e.maxX - e.minX) * u * 0.42, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
+    const tq = cutQ(t);
+    const key = `${bodyKey(b)}|${S.toFixed(1)}|${sc.toFixed(2)}|${tq.toFixed(3)}`;
+    let hit = cutCache.get(key);
+    if (!hit) {
+      const off = cutPool[0]; const sil = cutPool[1];
+      off.width = W; off.height = Hh; sil.width = W; sil.height = Hh;
+      const k = W / bw;
+      const prevNoShadow = NO_SHADOW; NO_SHADOW = true;
+      const prev = ctx; ctx = off.getContext('2d');
+      // Drawn around (0, 0), then placed at (cx, cy).
+      ctx.setTransform(k, 0, 0, k, -ox * k, -oy * k);
+      // Each piece casts a hard little shadow on whatever is under it: layers of card.
+      const lift = Math.max(0.8, S * 0.009);
+      ctx.shadowColor = 'rgba(20, 14, 8, 0.38)'; ctx.shadowOffsetX = lift * 0.7 * k; ctx.shadowOffsetY = lift * k; ctx.shadowBlur = 0;
+      cutDepth += 1;
+      try { drawBodyRaw(b, 0, 0, S, tq); } finally { cutDepth -= 1; NO_SHADOW = prevNoShadow; }
+      ctx.shadowColor = 'transparent';
+      // Paper grain, only where there is creature.
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = ctx.createPattern(grain(), 'repeat'); ctx.fillRect(0, 0, W, Hh); ctx.globalCompositeOperation = 'source-over';
+      ctx = prev;
+      // The silhouette gives the drop shadow and the pale cut edge.
+      const sctx = sil.getContext('2d'); sctx.clearRect(0, 0, W, Hh); sctx.drawImage(off, 0, 0);
+      const tint = (col) => { sctx.globalCompositeOperation = 'source-in'; sctx.fillStyle = col; sctx.fillRect(0, 0, W, Hh); sctx.globalCompositeOperation = 'source-over'; };
+      const edge = Math.max(0.9, S * 0.0085) * k;
+      const comp = document.createElement('canvas'); comp.width = W; comp.height = Hh; const cc = comp.getContext('2d');
+      tint('#0a0806'); cc.globalAlpha = 0.3; cc.drawImage(sil, edge * 1.6, edge * 2.2); cc.globalAlpha = 1;
+      tint(PAPER); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.3; cc.drawImage(sil, Math.cos(a) * edge, Math.sin(a) * edge); }
+      cc.drawImage(off, 0, 0);
+      hit = { comp, face: FACE ? { ...FACE } : null };
+      cutCache.set(key, hit);
+      if (cutCache.size > 14) cutCache.delete(cutCache.keys().next().value);
+    }
+    // Where the face is, for drawFace afterwards, moved from (0, 0) to (cx, cy).
+    FACE = hit.face ? { ...hit.face, x: hit.face.x + cx, y: hit.face.y + cy, mx: hit.face.mx + cx, my: hit.face.my + cy, top: hit.face.top + cy } : null;
+    ctx.drawImage(hit.comp, cx + ox, cy + oy, bw, bh);
+  }
+  function drawBodyRaw(b, cx, cy, S, t) {
     FACE = null;
     const sym = b.stage === 'creature' ? (b.symmetry || 'bilateral') : null;
     if (b.stage === 'cell') drawCell(b, cx, cy, S * 0.24, t);
@@ -1009,7 +1082,16 @@ window.G = window.G || {};
   }
 
   // Cartoon expressions drawn over the last body's eye and mouth.
+  // Eyes and mouths are cut pieces too: they cast the same little shadow, and blink at the creature's frame rate.
   function drawFace(mood, t) {
+    if (!G.CUTOUT || !FACE) { drawFaceRaw(mood, t); return; }
+    ctx.save();
+    const m = ctx.getTransform(); const k = Math.hypot(m.a, m.b); const lift = Math.max(0.6, (FACE.s || 40) * 0.012);
+    ctx.shadowColor = 'rgba(20, 14, 8, 0.35)'; ctx.shadowOffsetX = lift * 0.7 * k; ctx.shadowOffsetY = lift * k; ctx.shadowBlur = 0;
+    drawFaceRaw(mood, cutQ(t));
+    ctx.restore();
+  }
+  function drawFaceRaw(mood, t) {
     const f = FACE;
     if (!f || !mood) return;
     const r = Math.max(3.5, f.r);
@@ -1145,7 +1227,8 @@ window.G = window.G || {};
   }
 
   // Other species wandering past in the background.
-  function drawAmbient(run, w, h, t, S, skip) {
+  function drawAmbient(run, w, h, tSmooth, S, skip) {
+    const t = cutQ(tSmooth);
     const wet = run.stage === 'cell' || run.habitat === 'sea';
     run.species.forEach((s, i) => {
       if (i === skip) return;
@@ -1160,7 +1243,8 @@ window.G = window.G || {};
   }
 
   // Your herd, school or colony: more members on screen as Population grows.
-  function drawHerd(run, cx, cy, S, t, w, h) {
+  function drawHerd(run, cx, cy, S, tSmooth, w, h) {
+    const t = cutQ(tSmooth);
     const small = G.sizeOf(run) === 'small';
     const n = Math.max(0, Math.min(small ? 10 : 6, Math.floor(G.heads(run) / (small ? 2 : 3))));
     const b = G.bodyOf(run);
@@ -1355,7 +1439,8 @@ window.G = window.G || {};
   }
   // Who starts it: you, when you attacked; them, when they came for you.
   const instigator = (story) => (story === 'mauled' || story === 'escape' ? 'them' : story === 'standoff' ? 'both' : 'you');
-  function buildUpFrame(run, me, sp, sc, w, h, t, el, dur) {
+  function buildUpFrame(run, me, sp, sc, w, h, t, elSmooth, dur) {
+    const el = cutQ(elSmooth);
     ctx.clearRect(0, 0, w, h);
     drawBackground(run, w, h, t);
     const S = Math.min(w * 0.72, h * 1.05);
@@ -1390,7 +1475,8 @@ window.G = window.G || {};
       ctx.save(); ctx.translate(youX + Math.sin(el * 40) * 2 * q, pivot); ctx.scale(1 + 0.08 * q, 1 - 0.12 * q); ctx.translate(-youX, -pivot);
       const fm = fitBody(me, S, youX, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
       drawBody(me, fm.x, fm.y, fm.S, t); drawFace(q > 0.5 ? 'scared' : 'worried', t); ctx.restore();
-      hazardLayer(sc.hazard, Math.min(1, 0.15 + q * q * 1.05), w, h, S, youX, cy, land ? ground : null, t);
+      const qs = Math.min(1, elSmooth / dur);
+      hazardLayer(sc.hazard, Math.min(1, 0.15 + qs * qs * 1.05), w, h, S, youX, cy, land ? ground : null, t);
       ctx.restore();
       return;
     }
@@ -1624,6 +1710,11 @@ window.G = window.G || {};
       const windup = ANT && kRaw < ANT ? kRaw / ANT : 1;
       let k = Math.max(0, kRaw - ANT);
       if (IMPACT != null && k > IMPACT) k = k < IMPACT + STOP ? IMPACT : k - STOP;
+      // The creatures themselves move on a choppier clock than the effects around them, like cut-out animation.
+      const kcRaw = reduceMotion ? 2 : (cutQ(el) - SUSPENSE) / DUR;
+      const windupC = ANT && kcRaw < ANT ? kcRaw / ANT : 1;
+      let kc = Math.max(0, kcRaw - ANT);
+      if (IMPACT != null && kc > IMPACT) kc = kc < IMPACT + STOP ? IMPACT : kc - STOP;
       const sinceHit = IMPACT != null && sc.success !== false ? Math.max(-1, kRaw - ANT - IMPACT) : -1;
       const shakeAmt = sinceHit >= 0 && sinceHit < 0.4 ? (1 - sinceHit / 0.4) * (anim === 'hurt' ? 10 : 7) : 0;
       ctx.clearRect(0, 0, w, h);
@@ -1639,13 +1730,13 @@ window.G = window.G || {};
       if (sc.prop) drawProp(sc.prop, 'back', P);
       drawAmbient(run, w, h, t, S, sc.species);
       drawHerd(run, cx, cy, S, t, w, h);
-      const st = story ? storyFrame(story, k, w, S) : null;
+      const st = story ? storyFrame(story, kc, w, S) : null;
       // The other species, acting out its side of the story.
       if (sp) {
         const ks = S * (land ? 0.5 : 0.55) * Math.min(1.5, sp.size);
         const baseX = w * (story ? 0.8 : 0.86);
         const sy = land ? ground - ks * 0.36 : cy;
-        const T = st ? st.them : { dx: anim === 'attack' && sc.success ? Math.max(0, Math.sin(Math.min(1, k) * Math.PI)) * 40 : 0, dy: 0, rot: 0, sx: 1, sy: 1, alpha: 1 };
+        const T = st ? st.them : { dx: anim === 'attack' && sc.success ? Math.max(0, Math.sin(Math.min(1, kc) * Math.PI)) * 40 : 0, dy: 0, rot: 0, sx: 1, sy: 1, alpha: 1 };
         if (T.alpha > 0.02 && T.sx > 0.02) {
           ctx.save(); ctx.globalAlpha = T.alpha;
           const pivot = land ? ground : sy;
@@ -1657,10 +1748,10 @@ window.G = window.G || {};
         if (story === 'chase' && k > 0.95) drawProp('bones', 'back', { ...P, ground: land ? ground : cy + S * 0.25, w: (baseX + w * 0.2) / 0.78 });
       }
       // You: bigger moves, plus a crouch before you spring.
-      const T = st ? st.you : exaggerate(animTransform(anim, v, k, w), anim, windup);
+      const T = st ? st.you : exaggerate(animTransform(anim, v, kc, w), anim, windupC);
       if (!st && (anim === 'flee' || anim === 'attack') && windup >= 1 && k > 0.03 && k < 0.6) for (let i = 0; i < 5; i++) { const ly = cy - S * 0.2 + i * S * 0.1; const lx = cx + T.dx - S * 0.45 - (i % 2) * S * 0.12; line(lx - S * 0.3, ly, lx, ly, `rgba(255,255,255,${0.45 * Math.sin(k / 0.6 * Math.PI)})`, 2.5); }
-      const sink = sc.prop === 'tar' && (sc.success === false || anim === 'hurt') ? Math.min(1, k) * S * 0.12 : 0;
-      const spin = sc.prop === 'whirlpool' && anim === 'hurt' && k < 1 ? k * Math.PI * 4 : 0;
+      const sink = sc.prop === 'tar' && (sc.success === false || anim === 'hurt') ? Math.min(1, kc) * S * 0.12 : 0;
+      const spin = sc.prop === 'whirlpool' && anim === 'hurt' && kc < 1 ? kc * Math.PI * 4 : 0;
       const pivotY = land ? ground : cy;
       ctx.save();
       ctx.translate(cx + T.dx, pivotY + T.dy + sink); ctx.rotate(T.rot + spin); ctx.scale(T.sx, T.sy); ctx.translate(-cx, -pivotY);
@@ -1777,7 +1868,7 @@ window.G = window.G || {};
     const c = document.createElement('canvas'); c.width = 400; c.height = 400;
     const prev = ctx; const prevFace = FACE;
     ctx = c.getContext('2d'); ctx.translate(200, 230);
-    try { drawBody(b, 0, 0, 100, 0.6); } catch (err) { /* measure what we can */ }
+    try { cutDepth += 1; drawBodyRaw(b, 0, 0, 100, 0.6); } catch (err) { /* measure what we can */ } finally { cutDepth -= 1; }
     ctx = prev; FACE = prevFace;
     const data = c.getContext('2d').getImageData(0, 0, 400, 400).data;
     let x0 = 400; let y0 = 400; let x1 = 0; let y1 = 0;
@@ -2188,11 +2279,16 @@ window.G = window.G || {};
           const hy = groundY - air;
           const spr = spriteFor(l.body);
           const spread = size * (0.35 + Math.sqrt(icons) * 0.32);
+          // The creatures step along at the cut-out frame rate; the world and the labels stay smooth.
+          const step = Math.floor(t * G.CUT_FPS);
+          if (hd.qStep !== step) { hd.qStep = step; hd.qx = hd.x; hd.qy = hd.y; }
+          const tc = cutQ(t);
+          const chx = (G.CUTOUT ? hd.qx : hd.x) * w; const chy = top + (G.CUTOUT ? hd.qy : hd.y) * (bottom - top) - (flies(l.body) ? h * 0.16 + Math.sin(tc * 1.3 + hd.hx * 9) * 8 : 0);
           for (let i = 0; i < icons; i++) {
             const ang = i * 2.399; const rad = spread * Math.sqrt((i + 0.5) / icons);
-            const bob = Math.sin(t * (air ? 9 : 6) + i * 1.7) * size * (air ? 0.08 : 0.03);
-            const mx = hx + Math.cos(ang) * rad + Math.sin(t * 0.8 + i) * size * 0.08;
-            const my = hy + Math.sin(ang) * rad * 0.35 + bob;
+            const bob = Math.sin(tc * (air ? 9 : 6) + i * 1.7) * size * (air ? 0.08 : 0.03);
+            const mx = chx + Math.cos(ang) * rad + Math.sin(tc * 0.8 + i) * size * 0.08;
+            const my = chy + Math.sin(ang) * rad * 0.35 + bob;
             if (air) { ctx.beginPath(); ctx.ellipse(mx, groundY + Math.sin(ang) * rad * 0.35, size * 0.25, size * 0.06, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fill(); }
             ctx.save(); ctx.translate(mx, my); if (hd.dir < 0) ctx.scale(-1, 1);
             ctx.drawImage(spr, -size / 2, -size / 2, size, size);
