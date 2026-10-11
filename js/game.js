@@ -596,7 +596,7 @@ window.G = window.G || {};
       w.Herd = w.Band;
       if (run.stage === 'society') {
         const sk = G.socKind(run);
-        Object.assign(w, { people: sk.name, settlement: sk.settlement, settlements: `${sk.settlement}s`, capital: sk.capital, herd: 'people', Herd: 'People' });
+        Object.assign(w, { ruler: 'ruler', Ruler: 'Ruler', people: sk.name, settlement: sk.settlement, settlements: `${sk.settlement}s`, capital: sk.capital, herd: 'people', Herd: 'People' });
         (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = `${c.role ? `${G.COUNCIL_ROLES[c.role].name} ` : 'The heir, '}${G.leaderTitle(c)}`; });
         const pl = run.plot != null && run.council && run.council[run.plot];
         w.plotter = pl ? `${G.COUNCIL_ROLES[pl.role].name} ${pl.name}` : 'a councillor';

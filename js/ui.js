@@ -596,7 +596,7 @@ window.G = window.G || {};
       <h3>${esc(k.resource)}</h3>
       <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn. Building up a ${esc(sk.settlement)} uses 4 of it (or 6 Food).` : 'None.'}</p>
       <h3>Neighbours</h3>
-      ${nb.length ? nb.map((b) => `<div class="callout"><strong>The ${esc(b.name)}</strong><span>Opinion ${b.opinion} · ${b.opinion >= 60 ? 'allies: they share food with you' : b.opinion >= 10 ? 'friendly: you can trade' : b.opinion < G.RAID_BELOW ? 'hostile: they may raid you' : 'wary'}${b.nemesis ? ' · they remember the old feud' : ''}</span></div>`).join('') : '<p class="empty">No neighbours.</p>'}`;
+      ${nb.length ? nb.map((b) => `<div class="callout"><strong>The ${esc(b.name)}</strong><span>Opinion ${b.opinion} · ${b.opinion >= 60 ? 'allies: they share food with you' : b.opinion >= 10 ? 'friendly: you can trade' : b.opinion < G.SOC_RAID_BELOW ? 'hostile: they may raid you' : 'wary'}${b.nemesis ? ' · they remember the old feud' : ''}</span></div>`).join('') : '<p class="empty">No neighbours.</p>'}`;
   }
   function councilTab(run) {
     return `<p class="note">Your council governs with your ruler. Loyal councillors add their role and their trait; one whose loyalty falls below −30 gives nothing, and below −25 they may start plotting. Councillors grow more ambitious every generation.</p>
@@ -620,7 +620,7 @@ window.G = window.G || {};
       <article class="card end ${r.victory ? 'finale' : ''}">
         <p class="eyebrow">${r.victory ? 'Society stage complete' : 'Your people are gone'}</p>
         <h2>${r.victory && e ? esc(e.name) : `The ${esc(sk.name)} have fallen`}</h2>
-        <p class="event-text">${r.victory && e ? `${esc(e.desc)} United under ${esc(run.leader ? G.leaderTitle(run.leader) : 'the council')}, after ${run.stageTurn} generations, with ${run.settlements.length} ${esc(sk.settlement)}s and ${(run.traditions || []).length} traditions. The Empire stage arrives in a later update.` : `${esc(r.cause)} Your people lasted ${run.stageTurn} generations as the ${esc(sk.name)}.`}${run.checkpointGenes ? ` (Earlier endings already earned +${run.checkpointGenes} Genetic Memory.)` : ''}</p>
+        <p class="event-text">${r.victory && e ? `${esc(e.desc)} United under ${esc(run.leader ? G.leaderTitle(run.leader) : 'the council')}, after ${run.stageTurn} generation${run.stageTurn === 1 ? '' : 's'}, with ${run.settlements.length} ${esc(sk.settlement)}s and ${(run.traditions || []).length} traditions. The Empire stage arrives in a later update.` : `${esc(r.cause)} Your people lasted ${run.stageTurn} generations as the ${esc(sk.name)}.`}${run.checkpointGenes ? ` (Earlier endings already earned +${run.checkpointGenes} Genetic Memory.)` : ''}</p>
         <div class="callout gene">
           <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
           <span>${b.base} from Influence${b.progress ? ` · +${b.progress} for your ${esc(sk.settlement)}s and traditions` : ''}${b.winBonus ? ` · +${b.winBonus} for the Union` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new Society ending` : ''}${b.mult > 1 ? ` · ×${b.mult}` : ''}</span>

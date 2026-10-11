@@ -74,7 +74,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 14 | **First Fires** ✅ | **Tribe stage**, part 1: Toolmakers (Tribe, Shell Clan) and Singers (Choir, Pod) | Large |
 | 15 | **Many Kinds** ✅ | Tribe stage, part 2: Den, Hive, Reef-colony, Grove and Kelp Garden; Ancestral Wisdom | Large |
 | 15.1 | Patch ✅ | Population in the hundreds, meat and plants, fairer odds, dust-cloud fights, body-plan mutations, eyes, icons, editor dice | Medium |
-| 16 | Peoples | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
+| 16 | Peoples ✅ | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
 | 19 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+ | Large |
@@ -373,13 +373,14 @@ From the playtest after Update 13, to make a solid platform for the Tribe stage:
 - **Ancestral Wisdom:** a 12-node Tribe-stage tree on the Evolution screen. The Tribe stage is now harder, so a first attempt usually fails.
 - 79 discoveries, ~85 Tribe events, 30 Tribe endings.
 
-## Update 16: Peoples (Society stage, part 1)
+## Update 16: Peoples (Society stage, part 1) ✅
 
 *You are not the only people.*
 
 - **The Society stage engine:** 3–8 settlements in a region, a ruler and a council of three, and **Traditions and Laws** (a culture tree whose first node is your founding myth).
 - **Toolmakers and Singers** on land and at sea.
 - **Neighbour peoples** of any kind, with gifts, trade, alliances, raids and wars.
+- Shipped: 28 traditions, 41 Society events, the Union finale with 12 Society endings (force, trade, faith), council plots and coups, and Stage Select for Societies. See DESIGN.md.
 
 ## Update 17: Faith and Neighbours (Society stage, part 2)
 

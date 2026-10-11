@@ -1039,7 +1039,7 @@ G.STAGES.society = {
 G.SOCIETY_PATHS = ['tool', 'song'];
 // Your Founding decides what kind of society you become.
 G.SOCIETY_TYPES = {
-  settle: { name: 'Settled', mods: { foodPerTurn: 1, tou: 1 }, start: 4, rule: 'Settled peoples start with four settlements and grow them faster (Build up costs less).' },
+  settle: { name: 'Settled', mods: { foodPerTurn: 1, tou: 1 }, start: 4, rule: 'Settled peoples start with four settlements and grow them faster (Build up takes a turn less).' },
   roam: { name: 'Roaming', mods: { spd: 1, exploreBonus: 2 }, start: 2, rule: 'Roaming peoples start with two settlements, but migrating is quick and always pays Influence.' },
   conquer: { name: 'Warlike', mods: { str: 2 }, start: 3, rule: 'Warlike peoples hit harder, and every war won or raid made earns Influence.' },
 };
