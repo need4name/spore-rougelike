@@ -1015,8 +1015,10 @@ window.G = window.G || {};
     const molting = run.moltUntil && run.turn <= run.moltUntil ? 2 : 0;
     const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce') + molting);
     // Never less than one 'head' per point of damage, however small the herd: small herds are fragile.
-    const scale = Math.max(G.POP_SCALE, Math.min(G.maxPop(run), run.pop) / 10);
-    const dmg = Math.max(1, Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1) * (0.85 + rand() * 0.3)));
+    // Worked out in whole heads (rounded up), then counted out in individuals, give or take a few.
+    const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / G.POP_SCALE / 10);
+    const heads = Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1));
+    const dmg = Math.max(1, Math.round(heads * G.POP_SCALE * (0.85 + rand() * 0.3)));
     run.pop -= dmg;
     if (run.stage === 'tribe') songLoss(run, dmg / G.POP_SCALE);
     return dmg;
