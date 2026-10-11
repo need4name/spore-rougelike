@@ -717,7 +717,8 @@ G.WHATS_NEW = {
   title: 'Patch 16.1: Listening',
   items: [
     'Your maximum Population is now a comfortable size, not a wall. You can grow past it, up to half as many again, but crowded members eat twice as much, young cost more Food, and crowding sickness takes a tenth of the excess every turn.',
-    'Nothing your kind can never use is offered any more: no hunting ideas, discoveries, Instinct or event choices for herbivores, and no foraging ones for predators that only eat what they kill.',
+    'Nothing your kind can\'t use right now is offered: no hunting ideas, discoveries, Instinct or event choices for a herbivore, no foraging ones for a Predator. Your diet can still change: omnivore mouths are always offered, so a herbivore can become an omnivore and then a carnivore (and back), and what was hidden comes back when it does. Omnivores see everything. Only your starting archetype locks things for good: Grazers never hunt, Predators never forage.',
+    'Fixed: an evolved leg (or fin) part no longer adds an extra pair to your creature. Your body always shows exactly the limbs your body plan has; evolved limbs grow longer and stronger instead.',
     'Your diet is shown in bold colour at the top of the screen and on your lineage sheet: green for herbivores, red for carnivores, gold for omnivores.',
     'Disasters get their own scenes. Floods rise, storms close in, blizzards white out the screen, fevers drift through, droughts blaze, sandstorms roll over you and the ground shakes. Only when it clears do you see what happened, and a bad outcome leaves its mark (drips, frost, a sickly haze, smoke) instead of a cartoon bonk.',
     'Every biome looks different now, in events and on the map: a blazing desert sun, tundra snow and auroras, jungle vines and haze, swamp fog and fireflies, gulls on the shore; kelp forests, polar ice, glowing vent fields and sandy coasts at sea.',

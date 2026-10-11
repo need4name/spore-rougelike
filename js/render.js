@@ -255,8 +255,9 @@ window.G = window.G || {};
       frontX = p.frontLimbs ? [xs[xs.length - 1]] : [];
       hindX = p.frontLimbs ? xs.slice(0, -1) : xs;
     } else {
-      hindX = [cx - rx * 0.6].concat(E.hindLimbs >= 2 ? [cx - rx * 0.05] : []);
-      frontX = [cx + rx * 0.5].concat(E.frontLimbs >= 2 ? [cx + rx * 0.1] : []);
+      // Always exactly the pairs your body plan has: evolved limbs grow longer and stronger, never more numerous.
+      hindX = [cx - rx * 0.6];
+      frontX = [cx + rx * 0.5];
     }
     // The editor moves legs closer together or apart, and toward the head or tail,
     // but never so far that the body would float with nothing under it.
@@ -392,7 +393,8 @@ window.G = window.G || {};
     function leg(x, top, len, kind, foot, col, swing, front) {
       const gy = top + len;
       const ev = front ? E.frontLimbs : E.hindLimbs;
-      const muscle = (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1) * legThick;
+      const evoLimb = E[front ? 'frontLimbs' : 'hindLimbs'] || 0;
+      const muscle = (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1) * legThick * (1 + 0.12 * evoLimb);
       if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); }
       else if (kind === 'fore_tentacles' || H.has(front ? 'boneless_f' : '__none')) { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03 * muscle, front ? 2 : 0); if (kind === 'fore_tentacles') return; }
       else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); }
@@ -726,7 +728,6 @@ window.G = window.G || {};
     }
     if (p.frontLimbs && nSegSea >= 1) fin(cx + rx * 0.35, y0 + ry * 0.5, p.frontLimbs, S * 0.15 * (E.frontLimbs ? 1.4 : 1) * (L.legLen || 1));
     if (p.hindLimbs && nSegSea >= 2 && !H.has('sea_tentacles')) fin(cx - rx * 0.45, y0 + ry * 0.6, p.hindLimbs, S * 0.12 * (E.hindLimbs ? 1.4 : 1) * (L.legLen || 1));
-    if (E.frontLimbs >= 2) fin(cx + rx * 0.05, y0 + ry * 0.7, p.frontLimbs, S * 0.12);
     if (E.back && !['spiral_shell', 'sail_fin', 'anemone_crown', 'angler_rod', 'carapace'].some((id) => H.has(id))) tri(cx - rx * 0.5, y0 - ry * 0.85, cx - rx * 0.2, y0 - ry * (2.6 + 0.4 * E.back), cx + rx * 0.1, y0 - ry * 0.85, accent || dark);
     if (E.skin) glow(accent || GLOW, 14, () => { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.02, ry * 1.04, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 3; ctx.stroke(); });
 

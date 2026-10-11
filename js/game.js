@@ -98,13 +98,16 @@ window.G = window.G || {};
   // and once the Mind awakens they choose for themselves.
   G.drifterFree = (run) => !!run.mind || (run.stage !== 'cell' && run.habitat === 'land');
   // Which Instincts this archetype may choose.
-  // Things your kind can never use are not offered at all: no hunting ideas for herbivores,
-  // no foraging ones for a predator that only eats what it kills.
+  // Things your kind can't use right now are not offered: no hunting ideas for a herbivore, no foraging ones for a
+  // Predator. Your diet can change (an omnivore mouth bridges the two), and what is hidden comes back when it does;
+  // omnivores see everything. Only the starting archetype locks things for good (Grazers never hunt, Predators never forage).
   G.useless = (run, x) => {
     if (!run || !x) return false;
     const d = G.diet(run); const g = G.gimmick(run); const m = x.mods || {};
     const diets = x.diet || (x.req && x.req.diet);
-    if (diets && !diets.includes(d)) return true;
+    if (g === 'grazer' && diets && diets.every((y) => y === 'carn')) return true;
+    if (g === 'predator' && diets && diets.every((y) => y === 'herb')) return true;
+    if (diets && d !== 'omni' && !diets.includes(d) && !diets.includes('omni')) return true;
     if ((m.huntBonus || 0) > 0 && (d === 'herb' || g === 'grazer')) return true;
     if ((m.forageBonus || 0) > 0 && g === 'predator') return true;
     return false;
@@ -589,9 +592,9 @@ window.G = window.G || {};
       && (!p.pack || packs.includes(p.pack))
       && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
       && !(G.gimmick(run) === 'predator' && p.diet === 'herb')
-      // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.
-      // With Twin Mouths, the second socket can hold either.
-      && !(p.slot === 'mouth' && p.diet && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'))
+      // A mouth for the opposite diet is never offered directly, but omnivore mouths always are: they bridge the two,
+      // so any lineage (bar a Grazer or a Predator) can change its diet step by step. With Twin Mouths, the second socket can hold either.
+      && !(p.slot === 'mouth' && p.diet && p.diet !== 'omni' && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'))
       && (!p.biome || p.biome === G.biome(run).id)
       && G.partFits(run, p));
   };
@@ -952,9 +955,8 @@ window.G = window.G || {};
         && G.partFits(run, p)
         && !(G.gimmick(run) === 'grazer' && p.diet === 'carn')
         && !(G.gimmick(run) === 'predator' && p.diet === 'herb')
-        // A mouth for the other diet is never offered (it would only confuse); omnivore mouths bridge the two.
-        // With Twin Mouths, the second socket can hold either.
-        && !(p.slot === 'mouth' && p.diet && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'));
+        // Omnivore mouths are always on offer: they bridge the two diets.
+        && !(p.slot === 'mouth' && p.diet && p.diet !== 'omni' && G.diet(run) !== 'omni' && p.diet !== G.diet(run) && !G.boonLevel('twin_mouth'));
     }).sort(() => rand() - 0.5).slice(0, 3);
   }
   function startSpecialDraft(run) {
@@ -1429,7 +1431,7 @@ window.G = window.G || {};
     else if (G.gimmick(run) === 'grazer' && req.diet && !req.diet.some((d) => d !== 'carn')) reason = 'Grazers never hunt';
     const out = { ok: !reason, reason };
     // Options your kind can never take (wrong diet, wrong archetype) are not shown at all.
-    if (reason && ((req.diet && !req.diet.includes(G.diet(run))) || (req.gimmick && G.gimmick(run) !== req.gimmick) || (G.gimmick(run) === 'grazer' && req.diet && !req.diet.some((d) => d !== 'carn')))) out.hidden = true;
+    if (reason && ((req.diet && G.useless(run, { diet: req.diet })) || (req.gimmick && G.gimmick(run) !== req.gimmick))) out.hidden = true;
     if (opt.check) out.chance = G.chance(run, opt.check.stat, opt.check.diff);
     return out;
   };
