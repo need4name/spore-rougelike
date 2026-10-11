@@ -465,7 +465,7 @@ window.G = window.G || {};
   // Cells start a little sturdier so early checks are not hopeless.
   G.stat = (run, key) => Math.max(0, (run.stage === 'cell' ? 2 : 1) + G.mod(run, key));
   // Event gains and losses are written for a herd of about 10.
-  G.popScale = (run) => Math.max(1, G.maxPop(run) / 10);
+  G.popScale = (run) => Math.max(G.POP_SCALE, G.maxPop(run) / 10);
   // Your numbers in 'heads': the units events, upkeep and births are written in.
   G.heads = (run) => run.pop / G.POP_SCALE;
   G.sizeOf = (run) => (run.traits.includes('giant') ? 'giant' : run.traits.includes('small_many') ? 'small' : 'mid');
@@ -1014,7 +1014,8 @@ window.G = window.G || {};
     // Small creatures lose even more members to the same blow.
     const molting = run.moltUntil && run.turn <= run.moltUntil ? 2 : 0;
     const n2 = Math.max(1, n + (run.era >= 2 ? 1 : 0) - G.mod(run, 'damageReduce') + molting);
-    const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / 10);
+    // Never less than one 'head' per point of damage, however small the herd: small herds are fragile.
+    const scale = Math.max(G.POP_SCALE, Math.min(G.maxPop(run), run.pop) / 10);
     const dmg = Math.max(1, Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1) * (0.85 + rand() * 0.3)));
     run.pop -= dmg;
     if (run.stage === 'tribe') songLoss(run, dmg / G.POP_SCALE);
