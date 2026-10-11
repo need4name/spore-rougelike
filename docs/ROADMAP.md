@@ -73,6 +73,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 13 | **Other Minds** ✅ | The Mind tree rebuilt: roots from your start, Paths of Mind, 10 endings | Large |
 | 14 | **First Fires** ✅ | **Tribe stage**, part 1: Toolmakers (Tribe, Shell Clan) and Singers (Choir, Pod) | Large |
 | 15 | **Many Kinds** ✅ | Tribe stage, part 2: Den, Hive, Reef-colony, Grove and Kelp Garden; Ancestral Wisdom | Large |
+| 15.1 | Patch ✅ | Population in the hundreds, meat and plants, fairer odds, dust-cloud fights, body-plan mutations, eyes, icons, editor dice | Medium |
 | 16 | Peoples | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |

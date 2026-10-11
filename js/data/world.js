@@ -711,18 +711,21 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '15';
+G.VERSION = '15.1';
 G.WHATS_NEW = {
-  title: 'Update 15: Many Kinds',
+  title: 'Patch 15.1: Bigger, fairer, clearer',
   items: [
-    'Every Path of Mind now goes on to the Tribe stage. Many Minds become a Den (Light), the Swarm a Hive or Reef-colony (Brood), and Gardeners a Grove or Kelp Garden (Growth).',
-    'Dens are few but brilliant: +2 Cunning, hidden from hunters by their Light, and they copy discoveries by watching rival bands.',
-    'Hives and Reef-colonies have a Queen instead of a leader, castes you choose (workers, soldiers or nurses), Brood that hatches into new members, and a great home that keeps growing.',
-    'Groves and Kelp Gardens are fed by their Growth and their tamed species, but big gardens attract Blight.',
-    'Ancestral Wisdom: a new tree on the Evolution screen, just for the Tribe stage. A people\'s first Tribe is now much harder; Wisdom makes every later one easier.',
-    'Rival bands: a second band arrives later on, and every band has its own way of thinking. When two bands feud, you can take sides.',
-    '79 discoveries, about 85 Tribe events and 30 Tribe endings to find.',
-    'Update 14 (First Fires): the Tribe stage, leaders, Discoveries, taming and totems, and Stage Select.',
+    'Population is counted in individuals now: herds of hundreds, not dozens. Some events give or take a share of your Population, or of your maximum, instead of a fixed number, so the best choice depends on how big you are.',
+    'Meat and plants are separate foods. Herbivores eat plants and carnivores meat; omnivores eat either. Meat is richer, but a fifth of it rots every turn; plants keep.',
+    'Odds are fairer: checks follow a gentle curve, so risky options are real choices from the start, instead of 5% early on and near-certain late.',
+    'No more odds meter. When a fight starts, the two sides face off, someone pounces, and they vanish into a cloud of dust. Only when it clears do you see what happened, and only then do your numbers change.',
+    'Body plans matter more: radial, bilateral and shapeless bodies each have their own mutations, and so do legless, two-legged, four-legged and many-legged bodies, and bodies with arms. They have their own combinations too, and parts that no longer fit your body plan lie dormant.',
+    'Mutations your diet or archetype cannot use are no longer offered (no fangs for herbivores).',
+    'Eyes come from eye mutations only. No eye part means no eyes; compound and all-seeing eyes give more. The eye-count slider is gone.',
+    'Every mutation has its own little icon, in drafts, on your body and in the Codex.',
+    'The Creature Editor has dice: randomise one tab or your whole look.',
+    'Extra fins and pseudopods now show on your creature.',
+    'Update 15 (Many Kinds): every Path reaches the Tribe stage, and Ancestral Wisdom.',
   ],
 };
 

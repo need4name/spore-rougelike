@@ -15,11 +15,20 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 
 **Time:** every tick (2.4 s at normal speed) is one Epoch or Generation: Food is gathered and eaten, Population grows, DNA and Insight arrive, and every other species grows, starves or is hunted. Drafts, milestones and finales pause time when DNA reaches them. Random events also pop up and pause time; after choosing, a scene acts out what happened.
 
+**Odds** (Patch 15.1): `G.chance` = 50 + 45 × tanh((stat − difficulty) ÷ (3 + 0.3 × difficulty)), from 5% to 95%. Matching the difficulty is 50%; a few points short is still a gamble at any stage.
+
+**Build-up** (Patch 15.1): before the outcome of a fight with another species, the two face off, the instigator pounces, and they brawl in a cloud of dust (2.1 s); friendly approaches get a short walk-up and solo checks a short tremble. The result text appears, and your numbers change, only when it is over.
+
+**Body-plan parts** (Patch 15.1): parts can need a symmetry (`sym`), a number of leg pairs (`legs: [min, max]`) or arm pairs (`arms`). They are only offered when your body fits (`G.partFits`), and lie dormant (no stats, no keywords) if your body plan changes. Each symmetry has cell and creature parts and combinations; legless, one-pair, two-pair, many-pair and armed bodies have their own. The Body plan tab lists what your plan opens.
+
+**Eyes** come only from eye parts (`G.EYES`): none means no eyes; the best eye part sets how many.
+
 **A failed finale is a real failure:** you lose Population (and some DNA in the Cell stage), then can try again 3 turns later.
 
 ## Resources
 
-- **Population**: your health. At 0 you are extinct.
+- **Population**: your health. At 0 you are extinct. Since Patch 15.1 it is counted in individuals (`G.POP_SCALE` = 10 per "head"): maximums are in the hundreds, broods add about ten young for each lot of spare Food, and starving costs ten for each Food short. Event gains and losses are written in heads and scale with your herd; some give or take a share instead (`popPct` of what you have, `popMaxPct` of your maximum) or a fixed number (`popFlat`). Old saves are converted when loaded (`G.migratePop`).
+- **Meat and plants** (Patch 15.1): two stores (`run.meat`, `run.plants`; `run.food` is the total you can eat). Herbivores eat plants, carnivores meat, omnivores either (meat first). Foraging brings plants (carrion for carnivores) and hunting brings meat (for herbivores, plants); events give meat for hunts and carcasses, plants for fruit, blooms and kelp, otherwise what you eat. Meat feeds 1.5 (`G.MEAT_NOURISH`) but a fifth of it rots every turn (`G.MEAT_ROT`); plants keep. Storage caps the total.
 - **Food**: you gather Food every turn based on your Instinct and parts, and eat half your Population (rounded up). Spare Food grows Population by 1 (once per turn). Storage is capped, and extra Food spoils. So Food turns into Population, and a bigger Population eats more.
 - **DNA**: drives drafts, milestones and finales.
 - **Insight** (after the Spark of Mind, about halfway through the Creature stage; finishing the tree takes the other half): flows into the idea your kind is researching in its Mind tree.
