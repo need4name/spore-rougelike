@@ -1733,7 +1733,7 @@ window.G = window.G || {};
     run.activity = { id, target: target || null, turns: 0, score: 0, dest: id === 'migrate' && G.vision(run) >= 1 && G.biome(run).next.includes(dest) ? dest : null };
     const a = G.ACTIVITY[id];
     run.notices.push(`Activity begun: ${a.name}${target ? ` (the ${target})` : ''}.`);
-    log(run, `Your kind began to ${a.name.toLowerCase()}${target ? `: the ${target}` : ''}.`);
+    log(run, `${G.people(run) ? "Your people" : "Your kind"} began to ${a.name.toLowerCase()}${target ? `: the ${target}` : ''}.`);
     G.saveRun();
   };
   G.stopActivity = function () {
