@@ -746,7 +746,7 @@ window.G = window.G || {};
       stage: 'cell', plan: 'cell', habitat: null, era: 1, eraTurn: 1, turn: 1, stageTurn: 1,
       baseMaxPop: G.BASE_POP + (b.hardy || 0),
       baseFoodCap: G.FOOD_CAP + 2 * (b.pantry || 0),
-      pop: G.START_POP, food: G.BASE_FOOD + 3 * (b.pantry || 0),
+      pop: G.START_POP * G.POP_SCALE, food: G.BASE_FOOD + 3 * (b.pantry || 0),
       power: G.power(),
       dna: 3 * (b.memory || 0), totalDna: 0, insight: 0,
       parts: {}, multicellular: false, mind: false, innovations: [], fascination: null,
