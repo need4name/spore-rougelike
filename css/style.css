@@ -605,3 +605,11 @@ button.rival:hover { border-color: var(--accent); }
 .loyalty > span { display: block; height: 100%; background: var(--good); }
 .loyalty.warn > span { background: #e8c35a; }
 .loyalty.bad > span { background: var(--bad); }
+
+/* Patch 16.1: diet badge */
+.diet-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; border: 1px solid currentColor; }
+.diet-badge.herb { color: #8fd16a; background: rgba(143, 209, 106, 0.14); }
+.diet-badge.carn { color: #ef7d6b; background: rgba(239, 125, 107, 0.14); }
+.diet-badge.omni { color: #f2c35b; background: rgba(242, 195, 91, 0.14); }
+.tb-title .diet-badge { font-size: 0.66rem; }
+.res.pop.over b { color: #f2c35b; }

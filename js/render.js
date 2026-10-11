@@ -1012,26 +1012,62 @@ window.G = window.G || {};
   }
 
   // ======================= BACKGROUNDS =======================
+  // Each biome has its own sky, hills and ground, so you can tell where you are at a glance.
+  const BIOME_LOOK = {
+    plains: { sky: ['#6fa8d0', '#bcdcc0'], hills: '#4f7340', ground: '#5d8a3e', grass: '#86b958' },
+    jungle: { sky: ['#2f5c40', '#4f7a4a'], hills: '#1d4428', ground: '#244f29', grass: '#3f8a3c' },
+    desert: { sky: ['#e8a95a', '#f6dda0'], hills: '#d29a52', ground: '#e0b673', grass: null },
+    tundra: { sky: ['#93a9bd', '#dfe8ef'], hills: '#d7e2ea', ground: '#e9f0f4', grass: '#b9c8cf' },
+    swamp: { sky: ['#3f4c3c', '#66705a'], hills: '#2d3a28', ground: '#36432a', grass: '#56683a' },
+    shore: { sky: ['#7cc0e4', '#f2dfb2'], hills: '#9db58a', ground: '#e0c78e', grass: '#b8b46a' },
+    warm: { sea: ['#2f86bf', '#082742'] },
+    kelp: { sea: ['#2f7f6a', '#06221b'] },
+    polar: { sea: ['#a7cfe2', '#13314a'] },
+    vents: { sea: ['#4a3036', '#0b0606'] },
+    coast: { sea: ['#5cc7d6', '#14506a'] },
+  };
+  function biomeLook(run) { return G.biomeMatters(run) && run.stage !== 'cell' ? BIOME_LOOK[G.biome(run).id] : null; }
+  // Weather and life that belong to each biome, drawn over the scene.
+  function biomeAtmosphere(run, w, h, t, ground) {
+    const L = biomeLook(run); if (!L) return;
+    const id = G.biome(run).id;
+    ctx.save();
+    if (id === 'desert') { const g = ctx.createRadialGradient(w * 0.82, h * 0.1, 4, w * 0.82, h * 0.1, h * 0.35); g.addColorStop(0, 'rgba(255, 250, 220, 0.95)'); g.addColorStop(0.15, 'rgba(255, 230, 160, 0.6)'); g.addColorStop(1, 'rgba(255, 200, 120, 0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 5; i++) { const y = (ground || h * 0.8) - 10 - i * 8; ctx.beginPath(); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, y + Math.sin(x * 0.06 + t * 5 + i) * 2); ctx.strokeStyle = 'rgba(255, 240, 210, 0.12)'; ctx.lineWidth = 2; ctx.stroke(); } }
+    if (id === 'tundra' || id === 'polar') for (let i = 0; i < 50; i++) { const x = (i * 83.3 + t * 18 + Math.sin(t + i) * 8) % w; const y = (i * 47.9 + t * (30 + (i % 5) * 8)) % h; dot(x, y, 1.2 + (i % 3) * 0.7, 'rgba(255, 255, 255, 0.8)'); }
+    if (id === 'tundra') { ctx.globalAlpha = 0.18; for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let x = 0; x <= w; x += 12) ctx.lineTo(x, h * (0.08 + i * 0.03) + Math.sin(x * 0.015 + t * 0.6 + i) * 10); ctx.strokeStyle = ['#7dffb0', '#7fd8ff', '#c08bff'][i]; ctx.lineWidth = 8; ctx.stroke(); } ctx.globalAlpha = 1; }
+    if (id === 'jungle') { for (let i = 0; i < 9; i++) { const x = (i + 0.3) * w / 8; const len = h * (0.12 + (i % 3) * 0.06); line(x, 0, x + Math.sin(t * 0.8 + i) * 6, len, '#1f4a22', 3); for (let j = 0; j < 4; j++) dot(x + Math.sin(t * 0.8 + i) * 6 * (j / 4), len * (j + 1) / 4, 5, '#2f6a30'); } for (let i = 0; i < 14; i++) dot((i * 61) % w, 0, 26 + (i % 3) * 8, '#173b1c'); ctx.fillStyle = 'rgba(160, 220, 150, 0.06)'; ctx.fillRect(0, 0, w, h); }
+    if (id === 'swamp') { for (let i = 0; i < 3; i++) { const y = (ground || h * 0.8) - h * (0.04 + i * 0.07); const g = ctx.createLinearGradient(0, y - 20, 0, y + 20); g.addColorStop(0, 'rgba(200, 210, 190, 0)'); g.addColorStop(0.5, 'rgba(200, 210, 190, 0.18)'); g.addColorStop(1, 'rgba(200, 210, 190, 0)'); ctx.fillStyle = g; ctx.fillRect(0, y - 20, w, 40); } for (let i = 0; i < 10; i++) { const a = 0.5 + 0.5 * Math.sin(t * 3 + i * 1.7); dot((i * 97 + Math.sin(t * 0.7 + i) * 20) % w, h * (0.35 + (i % 5) * 0.08), 2.2, `rgba(230, 255, 140, ${0.7 * a})`); } }
+    if (id === 'shore') { const y0 = ground ? ground + 6 : h * 0.9; ctx.fillStyle = 'rgba(70, 150, 200, 0.85)'; ctx.beginPath(); ctx.moveTo(w * 0.62, h); for (let x = w * 0.62; x <= w; x += 8) ctx.lineTo(x, y0 + Math.sin(x * 0.05 + t * 2) * 4 - (x - w * 0.62) * 0.05); ctx.lineTo(w, h); ctx.fill(); for (let i = 0; i < 2; i++) { const x = ((t * 25 + i * 160) % (w + 60)) - 30; const y = h * (0.12 + i * 0.05); line(x - 8, y, x, y + 4, '#f4f4f4', 2); line(x, y + 4, x + 8, y, '#f4f4f4', 2); } }
+    if (id === 'kelp') { for (let i = 0; i < 10; i++) wavy((i + 0.5) * w / 10, h, h * (0.6 + (i % 3) * 0.12), -Math.PI / 2, 10, t * 0.6, 'rgba(70, 130, 60, 0.55)', 6, i); ctx.fillStyle = 'rgba(80, 160, 110, 0.08)'; ctx.fillRect(0, 0, w, h); }
+    if (id === 'polar') { ctx.fillStyle = 'rgba(235, 245, 252, 0.95)'; ctx.beginPath(); ctx.moveTo(0, 0); for (let x = 0; x <= w; x += 30) ctx.lineTo(x, h * 0.05 + ((x * 7) % 23)); ctx.lineTo(w, 0); ctx.fill(); for (let i = 0; i < 3; i++) { const x = (i * 0.33 + 0.1) * w; tri(x - 26, h * 0.06, x, h * 0.2 + i * 10, x + 22, h * 0.06, 'rgba(210, 232, 245, 0.85)'); } }
+    if (id === 'vents') { const g = ctx.createLinearGradient(0, h * 0.7, 0, h); g.addColorStop(0, 'rgba(255, 110, 40, 0)'); g.addColorStop(1, 'rgba(255, 110, 40, 0.28)'); ctx.fillStyle = g; ctx.fillRect(0, h * 0.7, w, h * 0.3); for (let i = 0; i < 4; i++) { const x = (i + 0.5) * w / 4; tri(x - 18, h, x, h * 0.86, x + 18, h, '#2a1c1c'); for (let j = 0; j < 6; j++) { const q = (t * 0.5 + j / 6 + i * 0.13) % 1; dot(x + Math.sin(q * 6 + i) * 10 * q, h * 0.86 - q * h * 0.4, 6 + q * 16, `rgba(40, 30, 30, ${0.5 * (1 - q)})`); } } }
+    if (id === 'coast') { ctx.fillStyle = 'rgba(225, 205, 150, 0.9)'; ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, h * 0.84); ctx.quadraticCurveTo(w * 0.4, h * 0.9, w, h * 0.95); ctx.lineTo(w, h); ctx.fill(); ctx.globalAlpha = 0.1; for (let i = 0; i < 6; i++) { const x = (i * 0.18 + 0.03) * w + Math.sin(t * 0.4 + i) * 15; tri(x, 0, x + w * 0.06, 0, x + w * 0.2, h, '#ffffff'); } ctx.globalAlpha = 1; }
+    ctx.restore();
+  }
+  G.biomeAtmosphere = biomeAtmosphere;
   function drawBackground(run, w, h, t) {
     const hue = G.ORIGIN[run.origin].hue;
+    const L = biomeLook(run);
     if (run.stage === 'cell' || run.habitat === 'sea') {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, hsl(hue, 45, run.stage === 'cell' ? 24 : 22)); g.addColorStop(1, hsl(hue + 10, 45, 8));
+      if (L && L.sea) { g.addColorStop(0, L.sea[0]); g.addColorStop(1, L.sea[1]); } else { g.addColorStop(0, hsl(hue, 45, run.stage === 'cell' ? 24 : 22)); g.addColorStop(1, hsl(hue + 10, 45, 8)); }
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       ctx.save(); ctx.globalAlpha = 0.07;
       for (let i = 0; i < 4; i++) { const x = (i * 0.3 + 0.1) * w + Math.sin(t * 0.3 + i) * 20; tri(x, 0, x + w * 0.08, 0, x + w * 0.25, h, '#ffffff'); }
       ctx.restore();
       for (let i = 0; i < 26; i++) { const x = (i * 97.3 + t * (6 + (i % 5))) % w; const y = (i * 53.7 + Math.sin(t + i) * 10 + h) % h; dot(x, y, 1 + (i % 3) * 0.6, 'rgba(255,255,255,0.16)'); }
-      if (run.habitat === 'sea') { ctx.fillStyle = hsl(hue, 25, 14); ctx.fillRect(0, h * 0.92, w, h * 0.08); for (let i = 0; i < 8; i++) wavy(i * w / 7, h * 0.92, h * 0.18, -Math.PI / 2, 5, t * 0.6, hsl(120, 35, 30, 0.7), 3, i); }
+      if (run.habitat === 'sea') { ctx.fillStyle = hsl(hue, 25, 14); ctx.fillRect(0, h * 0.92, w, h * 0.08); for (let i = 0; i < 8; i++) wavy(i * w / 7, h * 0.92, h * 0.18, -Math.PI / 2, 5, t * 0.6, hsl(120, 35, 30, 0.7), 3, i); biomeAtmosphere(run, w, h, t, null); }
     } else {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, hsl(hue + 20, 40, 32)); g.addColorStop(0.7, hsl(hue + 30, 35, 18)); g.addColorStop(1, hsl(hue + 30, 30, 12));
+      if (L && L.sky) { g.addColorStop(0, L.sky[0]); g.addColorStop(0.62, L.sky[1]); g.addColorStop(1, L.ground); } else { g.addColorStop(0, hsl(hue + 20, 40, 32)); g.addColorStop(0.7, hsl(hue + 30, 35, 18)); g.addColorStop(1, hsl(hue + 30, 30, 12)); }
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       for (let i = 0; i < 3; i++) { const cx = ((i * 0.37 + 0.1) * w + t * 6) % (w + 120) - 60; dot(cx, h * (0.12 + i * 0.06), 16, 'rgba(255,255,255,0.08)'); dot(cx + 18, h * (0.12 + i * 0.06) + 4, 13, 'rgba(255,255,255,0.08)'); }
-      ctx.fillStyle = hsl(hue + 40, 25, 16);
+      ctx.fillStyle = L ? L.hills : hsl(hue + 40, 25, 16);
       ctx.beginPath(); ctx.moveTo(0, h * 0.62); for (let x = 0; x <= w; x += 20) ctx.lineTo(x, h * 0.62 - Math.sin(x * 0.01 + 1) * h * 0.08 - Math.sin(x * 0.023) * h * 0.04); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
-      ctx.fillStyle = hsl(95, 25, 20); ctx.fillRect(0, h * 0.86, w, h * 0.14);
-      for (let i = 0; i < 18; i++) { const x = (i * 71) % w; line(x, h * 0.86, x + Math.sin(t + i) * 2, h * 0.83, hsl(95, 35, 32), 2); }
+      ctx.fillStyle = L ? L.ground : hsl(95, 25, 20); ctx.fillRect(0, h * 0.86, w, h * 0.14);
+      const grass = L ? L.grass : hsl(95, 35, 32);
+      if (grass) for (let i = 0; i < 18; i++) { const x = (i * 71) % w; line(x, h * 0.86, x + Math.sin(t + i) * 2, h * 0.83, grass, 2); }
+      biomeAtmosphere(run, w, h, t, h * 0.86);
     }
   }
 
@@ -1169,9 +1205,81 @@ window.G = window.G || {};
   G.buildUp = (sc) => {
     if (reduceMotion || !sc || sc.success == null) return 0;
     if (sc.story && G.FIGHT_STORIES.includes(sc.story)) return 2.1;
+    if (sc.hazard) return 1.8;
     if (sc.story) return 1.1;
     return sc.stat ? 0.9 : 0;
   };
+  // Natural disasters, drawn over the scene at a strength from 0 (nothing) to 1 (it fills the screen).
+  function hazardLayer(kind, s, w, h, S, cx, cy, ground, t) {
+    if (s <= 0.01) return;
+    ctx.save();
+    const rnd = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+    if (kind === 'flood') {
+      const level = h - s * h * 0.95;
+      ctx.beginPath(); ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 8) ctx.lineTo(x, level + Math.sin(x * 0.03 + t * 3) * 6 + Math.sin(x * 0.07 - t * 2) * 3);
+      ctx.lineTo(w, h); ctx.closePath();
+      const g = ctx.createLinearGradient(0, level, 0, h); g.addColorStop(0, 'rgba(110, 160, 190, 0.85)'); g.addColorStop(1, 'rgba(40, 80, 120, 0.95)');
+      ctx.fillStyle = g; ctx.fill();
+      for (let i = 0; i < 24; i++) { const x = rnd(i, 1) * w; const y = level + ((rnd(i, 2) * h + t * 40) % Math.max(1, h - level)); dot(x, y, 2 + rnd(i, 3) * 3, 'rgba(220, 240, 255, 0.5)'); }
+      for (let i = 0; i < 40 * s; i++) { const x = (rnd(i, 4) * w + t * 60) % w; const y = (rnd(i, 5) * h + t * 500) % h; line(x, y, x - 4, y + 14, 'rgba(200, 225, 255, 0.45)', 1.5); }
+    }
+    if (kind === 'storm') {
+      ctx.fillStyle = `rgba(18, 22, 38, ${0.65 * s})`; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 160 * s; i++) { const x = (rnd(i, 1) * w * 1.3 + t * 300) % (w * 1.3) - w * 0.15; const y = (rnd(i, 2) * h + t * 900) % h; line(x, y, x - 10, y + 22, 'rgba(190, 210, 240, 0.55)', 1.5); }
+      const flash = Math.max(0, Math.sin(t * 2.3) * Math.sin(t * 7.1)) > 0.8 && s > 0.3;
+      if (flash) { ctx.fillStyle = `rgba(255, 255, 255, ${0.35 * s})`; ctx.fillRect(0, 0, w, h); const x0 = w * (0.2 + rnd(Math.floor(t * 2), 9) * 0.6); ctx.beginPath(); ctx.moveTo(x0, 0); let x = x0; for (let y = 0; y < h * 0.6; y += 24) { x += (rnd(y, Math.floor(t * 2)) - 0.5) * 40; ctx.lineTo(x, y); } ctx.strokeStyle = 'rgba(255, 250, 210, 0.95)'; ctx.lineWidth = 3; ctx.stroke(); }
+    }
+    if (kind === 'cold') {
+      const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.2 * (1.2 - s), w / 2, h / 2, Math.max(w, h) * 0.75);
+      g.addColorStop(0, `rgba(210, 230, 255, ${0.35 * s})`); g.addColorStop(1, `rgba(240, 248, 255, ${0.95 * s})`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 180 * s; i++) { const x = (rnd(i, 1) * w + t * 50 + Math.sin(t + i) * 10) % w; const y = (rnd(i, 2) * h + t * (60 + rnd(i, 3) * 80)) % h; dot(x, y, 1.5 + rnd(i, 4) * 2.5, 'rgba(255, 255, 255, 0.9)'); }
+    }
+    if (kind === 'sickness') {
+      ctx.fillStyle = `rgba(90, 130, 40, ${0.3 * s})`; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 14; i++) {
+        const fromLeft = i % 2 === 0; const drift = Math.min(1, s * 1.2);
+        const x = fromLeft ? -w * 0.2 + drift * (w * 0.5 + rnd(i, 1) * w * 0.4) : w * 1.2 - drift * (w * 0.5 + rnd(i, 1) * w * 0.4);
+        const y = h * (0.15 + rnd(i, 2) * 0.75) + Math.sin(t * 1.5 + i) * 10;
+        dot(x, y, S * (0.12 + rnd(i, 3) * 0.12) * (0.6 + s), `rgba(150, 200, 70, ${0.28 * s})`);
+      }
+      for (let i = 0; i < 16 * s; i++) { const x = rnd(i, 5) * w; const y = h - ((t * 30 + rnd(i, 6) * h) % h); ctx.beginPath(); ctx.arc(x, y, 3 + rnd(i, 7) * 4, 0, Math.PI * 2); ctx.strokeStyle = `rgba(190, 230, 110, ${0.6 * s})`; ctx.lineWidth = 1.5; ctx.stroke(); }
+    }
+    if (kind === 'drought') {
+      ctx.fillStyle = `rgba(235, 150, 60, ${0.35 * s})`; ctx.fillRect(0, 0, w, h);
+      const g = ctx.createRadialGradient(w * 0.8, h * 0.08, 4, w * 0.8, h * 0.08, Math.max(w, h) * 0.6 * (0.4 + s));
+      g.addColorStop(0, `rgba(255, 245, 200, ${0.9 * s})`); g.addColorStop(1, 'rgba(255, 200, 120, 0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 8; i++) { const y = h * (0.3 + i * 0.08); ctx.beginPath(); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, y + Math.sin(x * 0.05 + t * 6 + i) * 3); ctx.strokeStyle = `rgba(255, 230, 180, ${0.25 * s})`; ctx.lineWidth = 2; ctx.stroke(); }
+      if (ground) for (let i = 0; i < 9; i++) { const x = rnd(i, 8) * w; line(x, ground + 4, x + (rnd(i, 9) - 0.5) * 50, ground + 4 + 18 * s, `rgba(80, 50, 20, ${0.7 * s})`, 2); }
+    }
+    if (kind === 'dust') {
+      const front = w * (1.1 - s * 1.3);
+      const g = ctx.createLinearGradient(front - w * 0.3, 0, front + w * 0.1, 0); g.addColorStop(0, 'rgba(180, 140, 90, 0)'); g.addColorStop(1, 'rgba(170, 130, 85, 0.92)');
+      ctx.fillStyle = g; ctx.fillRect(front - w * 0.3, 0, w * 1.5, h);
+      for (let i = 0; i < 120 * s; i++) { const x = (rnd(i, 1) * w * 1.5 - t * 400) % (w * 1.5); const xx = x < 0 ? x + w * 1.5 : x; const y = rnd(i, 2) * h; if (xx > front - w * 0.2) line(xx, y, xx + 14, y + 2, 'rgba(120, 90, 50, 0.55)', 1.5); }
+    }
+    if (kind === 'fire') {
+      ctx.fillStyle = `rgba(60, 50, 50, ${0.45 * s})`; ctx.fillRect(0, 0, w, h * 0.6);
+      const base = ground || h * 0.9;
+      for (let i = 0; i < 16; i++) { const x = (i + 0.5) * w / 16; const hgt = S * (0.15 + 0.35 * s) * (0.7 + 0.3 * Math.sin(t * 8 + i * 1.7)); ctx.beginPath(); ctx.moveTo(x - w / 28, base + 10); ctx.quadraticCurveTo(x + Math.sin(t * 5 + i) * 10, base - hgt * 1.4, x + w / 28, base + 10); ctx.closePath(); ctx.fillStyle = i % 3 ? `rgba(255, 120, 40, ${0.85 * s})` : `rgba(255, 200, 80, ${0.85 * s})`; ctx.fill(); }
+      for (let i = 0; i < 10 * s; i++) { const q = (t * 0.4 + rnd(i, 3)) % 1; dot(rnd(i, 4) * w, base - q * h, S * 0.06 * (0.5 + q), `rgba(90, 85, 85, ${0.4 * (1 - q)})`); }
+    }
+    if (kind === 'quake') {
+      for (let i = 0; i < 12 * s; i++) { const q = (t * 1.2 + rnd(i, 1)) % 1; const x = rnd(i, 2) * w; const y = q * h; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 10, y + 4); ctx.lineTo(x + 6, y + 14); ctx.lineTo(x - 6, y + 10); ctx.closePath(); ctx.fillStyle = 'rgba(110, 95, 80, 0.9)'; ctx.fill(); }
+      if (ground) { ctx.beginPath(); let x = w * 0.1; ctx.moveTo(x, ground + 2); for (let i = 0; i < 12; i++) { x += w * 0.07; ctx.lineTo(x, ground + 2 + (i % 2 ? 10 : -4) * s); } ctx.strokeStyle = `rgba(30, 20, 10, ${0.9 * s})`; ctx.lineWidth = 3; ctx.stroke(); }
+      ctx.fillStyle = `rgba(120, 100, 80, ${0.25 * s})`; ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
+  }
+  // What a disaster leaves on you when it goes badly: drips, frost, a green haze, smoke.
+  function hazardMarks(kind, cx, cy, S, k, t) {
+    const a = Math.min(1, k * 2);
+    if (kind === 'flood' || kind === 'storm') for (let i = 0; i < 6; i++) { const q = (t * 1.3 + i / 6) % 1; dot(cx - S * 0.2 + i * S * 0.08, cy - S * 0.05 + q * S * 0.35, 3, `rgba(170, 210, 240, ${a * (1 - q)})`); }
+    if (kind === 'cold') { for (let i = 0; i < 5; i++) { const x = cx - S * 0.2 + i * S * 0.1; ctx.beginPath(); ctx.moveTo(x - 4, cy - S * 0.12); ctx.lineTo(x + 4, cy - S * 0.12); ctx.lineTo(x, cy - S * 0.12 + 12 + (i % 2) * 6); ctx.closePath(); ctx.fillStyle = `rgba(230, 245, 255, ${0.9 * a})`; ctx.fill(); } }
+    if (kind === 'sickness') for (let i = 0; i < 5; i++) { const q = (t * 0.6 + i / 5) % 1; ctx.beginPath(); ctx.arc(cx - S * 0.1 + Math.sin(i * 2 + t) * S * 0.12, cy - S * 0.3 - q * S * 0.25, 4 + i, 0, Math.PI * 2); ctx.strokeStyle = `rgba(170, 220, 90, ${a * (1 - q)})`; ctx.lineWidth = 2; ctx.stroke(); }
+    if (kind === 'fire' || kind === 'drought' || kind === 'dust' || kind === 'quake') for (let i = 0; i < 4; i++) { const q = (t * 0.5 + i / 4) % 1; dot(cx - S * 0.1 + i * S * 0.08, cy - S * 0.3 - q * S * 0.3, 6 + q * 10, `rgba(110, 100, 95, ${0.45 * a * (1 - q)})`); }
+  }
   // Who starts it: you, when you attacked; them, when they came for you.
   const instigator = (story) => (story === 'mauled' || story === 'escape' ? 'them' : story === 'standoff' ? 'both' : 'you');
   function buildUpFrame(run, me, sp, sc, w, h, t, el, dur) {
@@ -1200,6 +1308,19 @@ window.G = window.G || {};
       hidden = el > POUNCE;
     } else if (sp) youDX = (midX - youX) * 0.45 * Math.min(1, el / (dur * 0.8));
     const crouch = el < FACE_OFF ? Math.min(1, el / FACE_OFF) : 0;
+    if (sc.hazard && !sp) {
+      // The disaster closes in on your herd, which braces; it fills the screen before anything is decided.
+      const q = Math.min(1, el / dur);
+      ctx.save();
+      if (sc.hazard === 'quake') ctx.translate(Math.sin(el * 60) * 8 * q, Math.cos(el * 47) * 5 * q);
+      const pivot = land ? ground : cy;
+      ctx.save(); ctx.translate(youX + Math.sin(el * 40) * 2 * q, pivot); ctx.scale(1 + 0.08 * q, 1 - 0.12 * q); ctx.translate(-youX, -pivot);
+      const fm = fitBody(me, S, youX, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
+      drawBody(me, fm.x, fm.y, fm.S, t); drawFace(q > 0.5 ? 'scared' : 'worried', t); ctx.restore();
+      hazardLayer(sc.hazard, Math.min(1, 0.15 + q * q * 1.05), w, h, S, youX, cy, land ? ground : null, t);
+      ctx.restore();
+      return;
+    }
     if (!hidden) {
       if (sp) {
         const sy = land ? ground - ks * 0.36 : cy;
@@ -1403,7 +1524,7 @@ window.G = window.G || {};
   G.playScene = function (canvas, run, sc) {
     if (sceneFrame) cancelAnimationFrame(sceneFrame);
     if (!canvas || !run) return;
-    const anim = sc.anim || 'rest';
+    const anim = sc.hazard && !(sc.species != null && sc.species >= 0) && sc.anim === 'hurt' ? 'rest' : sc.anim || 'rest';
     const v = hash(`${sc.title || ''}${sc.label || ''}${run.turn}`) % (VARIANTS[anim] || 1);
     const start = performance.now();
     const me = G.bodyOf(run);
@@ -1441,7 +1562,7 @@ window.G = window.G || {};
       const land = run.stage !== 'cell' && run.habitat === 'land';
       const ground = land ? cy + S * 0.36 : null;
       const P = { w, h, cx, cy, S, k, t, success: sc.success, anim, ground };
-      P_SKIP_WORDS = !!story || !!sc.evolved || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
+      P_SKIP_WORDS = !!story || !!sc.evolved || !!sc.hazard || (sc.prop === 'ice' && anim === 'attack' && sc.success) || (sc.prop === 'fruit' && anim === 'hurt');
       if (sc.prop) drawProp(sc.prop, 'back', P);
       drawAmbient(run, w, h, t, S, sc.species);
       drawHerd(run, cx, cy, S, t, w, h);
@@ -1475,12 +1596,17 @@ window.G = window.G || {};
       drawFace((st && st.youMood) || sc.mood, t);
       ctx.restore();
       if (sc.prop) drawProp(sc.prop, 'front', P);
+      if (sc.hazard && !sp) {
+        const rest = sc.success === false || (sc.popDelta || 0) < 0 ? 0.32 : 0.06;
+        hazardLayer(sc.hazard, Math.max(rest, 1 - k * 1.6), w, h, S, cx, cy, ground, t);
+        if (rest > 0.1 && k > 0.4) hazardMarks(sc.hazard, cx, cy, S, k - 0.4, t);
+      }
       if (st && st.word && k > st.wordAt && k < st.wordAt + 0.9) {
         const q = Math.min(1, (k - st.wordAt) * 6);
         const wx = story === 'escape' || story === 'rebuffed' ? w * 0.8 : cx + (story === 'mauled' || story === 'brawl_lose' ? 0 : S * 0.45);
         comic(st.word, wx, cy - S * 0.42, S * 0.1 * (0.6 + q * 0.5), Math.min(1, (st.wordAt + 0.9 - k) * 3), story === 'mauled' || story === 'brawl_lose' ? '#ef7d6b' : '#f2c14e', -0.12);
       }
-      if (!st) drawEffects(anim, v, k, cx, cy, S, w, h, !!sp, ground);
+      if (!st && !(sc.hazard && !sp)) drawEffects(anim, v, k, cx, cy, S, w, h, !!sp, ground);
       // Your herd grows or shrinks.
       for (let i = 0; i < babies; i++) { const q = Math.min(1, Math.max(0, k * 1.5 - 0.3 - i * 0.12)); if (q <= 0) continue; const bx = cx - S * 0.35 - i * S * 0.12; const by = (land ? ground - S * 0.08 : cy + S * 0.25); ctx.save(); ctx.translate(bx, by); const sc2 = Math.min(1, q * 1.3) * (1 + 0.15 * Math.sin(q * 12) * (1 - q)); ctx.scale(sc2, sc2); drawBody(me, 0, -S * 0.05, S * 0.28, t + i); ctx.restore(); if (q < 1) star(bx, by - S * 0.18, 5 * (1 - q) + 2, '#f2c14e'); }
       if (babies && k > 0.4 && k < 2) comic(`+${sc.popDelta}`, cx - S * 0.45, (land ? ground : cy) - S * 0.35, S * 0.08, Math.min(1, (2 - k)), '#8fd16a');
@@ -1853,10 +1979,11 @@ window.G = window.G || {};
     const hue = G.ORIGIN[run.origin].hue;
     if (run.stage !== 'cell' && run.habitat === 'land') {
       const g = ctx.createLinearGradient(0, 0, 0, h * 0.24);
-      g.addColorStop(0, hsl(hue + 20, 45, 34)); g.addColorStop(1, hsl(hue + 30, 40, 24));
+      const LM = biomeLook(run);
+      if (LM && LM.sky) { g.addColorStop(0, LM.sky[0]); g.addColorStop(1, LM.sky[1]); } else { g.addColorStop(0, hsl(hue + 20, 45, 34)); g.addColorStop(1, hsl(hue + 30, 40, 24)); }
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h * 0.24);
       for (let i = 0; i < 3; i++) { const cx = ((i * 0.37 + 0.1) * w + t * 6) % (w + 120) - 60; dot(cx, h * (0.05 + i * 0.03), 14, 'rgba(255,255,255,0.08)'); dot(cx + 16, h * (0.05 + i * 0.03) + 3, 11, 'rgba(255,255,255,0.08)'); }
-      ctx.fillStyle = hsl(hue + 40, 22, 20);
+      ctx.fillStyle = LM ? LM.hills : hsl(hue + 40, 22, 20);
       ctx.beginPath(); ctx.moveTo(0, h * 0.24); for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h * 0.24 - Math.abs(Math.sin(x * 0.012 + 1)) * h * 0.07 - Math.sin(x * 0.031) * h * 0.02); ctx.lineTo(w, h * 0.26); ctx.lineTo(0, h * 0.26); ctx.fill();
       // Ground colour by biome: [hue, saturation, lightness].
       const bio = G.biome(run).id;
@@ -1866,8 +1993,11 @@ window.G = window.G || {};
       ctx.fillStyle = gg; ctx.fillRect(0, h * 0.24, w, h * 0.76);
       if (bio === 'shore') { ctx.fillStyle = 'rgba(80, 150, 190, 0.75)'; ctx.beginPath(); ctx.moveTo(0, h); for (let x = 0; x <= w; x += 10) ctx.lineTo(x, h * 0.8 + Math.sin(x * 0.03 + t * 1.5) * 6); ctx.lineTo(w, h); ctx.fill(); }
       if (bio !== 'desert' && bio !== 'tundra') for (let i = 0; i < 60; i++) { const x = (i * 97.3) % w; const y = h * 0.27 + ((i * 53.1) % (h * 0.72)); line(x, y, x + Math.sin(t + i) * 1.5, y - 5 - (y / h) * 5, hsl(gh, gs + 8, gl + 13), 1.5); }
+      if (bio !== 'shore') biomeAtmosphere(run, w, h * 0.3, t, h * 0.24);
       if (bio === 'tundra') for (let i = 0; i < 40; i++) { const x = ((i * 53.7) + t * 20) % w; const y = ((i * 91.1) + t * 35) % h; dot(x, y, 1.5, 'rgba(255,255,255,0.7)'); }
-    } else if (isSeaMap(run)) { drawDepthBackground(run, w, h, t); return; }
+      if (bio === 'swamp') for (let i = 0; i < 4; i++) { const y = h * (0.35 + i * 0.16); const g2 = ctx.createLinearGradient(0, y - 30, 0, y + 30); g2.addColorStop(0, 'rgba(200, 210, 190, 0)'); g2.addColorStop(0.5, 'rgba(200, 210, 190, 0.12)'); g2.addColorStop(1, 'rgba(200, 210, 190, 0)'); ctx.fillStyle = g2; ctx.fillRect(0, y - 30, w, 60); }
+      if (bio === 'desert') { ctx.fillStyle = 'rgba(255, 200, 120, 0.08)'; ctx.fillRect(0, 0, w, h); }
+    } else if (isSeaMap(run)) { drawDepthBackground(run, w, h, t); const sb = G.biome(run).id; if (sb === 'polar' || sb === 'vents') biomeAtmosphere(run, w, h, t, null); if (sb === 'kelp') { ctx.fillStyle = 'rgba(60, 160, 90, 0.1)'; ctx.fillRect(0, 0, w, h); } return; }
     else drawBackground(run, w, h, t);
     const o = run.origin;
     const P = { w, h, cx: w / 2, cy: h / 2, S: Math.min(w, h), k: 2, t, ground: h * 0.95 };

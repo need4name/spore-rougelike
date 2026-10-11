@@ -263,9 +263,9 @@ window.G = window.G || {};
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
         <div class="tb-main">
-          <div class="tb-title"><strong>${esc(st.name)}</strong><span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
+          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}<span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
-            <span class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : ''}" title="${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'}">${ICON.pop}<b>${run.pop}</b>/${max}</span>
+            <span class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
             <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${tribeChips(run)}
             ${run.mind && run.stage === 'creature' ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
@@ -283,6 +283,13 @@ window.G = window.G || {};
       </header>`;
   }
 
+  // What your kind eats, impossible to miss.
+  function dietBadge(run) {
+    if (run.stage === 'cell' && !run.parts) return '';
+    const d = G.diet(run);
+    const icon = { herb: '🌿', carn: '🥩', omni: '🍽️' }[d] || '';
+    return `<b class="diet-badge ${d}" title="${esc(`${G.DIET_NAMES[d]}: eats ${G.edible(run).join(' and ')}`)}">${icon} ${esc(G.DIET_NAMES[d])}</b>`;
+  }
   // The Tribe stage at a glance: your special resource and your leader.
   function tribeChips(run) {
     if (!G.people(run)) return '';
@@ -379,7 +386,7 @@ window.G = window.G || {};
         <h2>${esc(G.sub(ev.title, run, sp))}</h2>
         <p class="event-text">${esc(G.sub(ev.text, run, sp))}</p>
         <div class="options">
-          ${ev.options.map((o, i) => {
+          ${(() => { const shown = ev.options.map((o, i) => [o, i]).filter(([o]) => !G.optionState(run, o).hidden); return (shown.length ? shown : ev.options.map((o, i) => [o, i])); })().map(([o, i]) => {
             const st = G.optionState(run, o);
             return `
             <button class="option ${st.ok ? '' : 'locked'}" ${st.ok ? `data-act="option" data-arg="${i}"` : 'disabled'}>
@@ -1011,11 +1018,11 @@ window.G = window.G || {};
     const up = G.upkeep(run);
     return `
       <div class="economy">
-        <p><b>Each turn</b>: gather ${inc.total} Food (${inc.parts.map((p) => `${esc(p.label)} ${p.v >= 0 ? '+' : '−'}${Math.abs(p.v)}`).join(', ')}), eat ${up} (half your Population, rounded up).</p>
-        <p>Spare Food grows your Population by 1 for every ${G.growthCost(run)} Food, once per turn. You can store up to ${G.foodCap(run)} Food; the rest spoils.</p>
-        <p>DNA per turn: ${G.dnaPerTurn(run)}.${run.mind ? ` Insight per turn: ${G.insightPerTurn(run)}.` : ''}</p>
+        <p><b>Each turn</b>: gather ${inc.total} Food (${inc.parts.map((p) => `${esc(p.label)} ${p.v >= 0 ? '+' : '−'}${Math.abs(p.v)}`).join(', ')}), eat ${up}.</p>
+        <p>Spare Food raises young: each brood of about ${G.POP_SCALE} costs ${G.growthCost(run) + (G.people(run) ? G.TRIBE_CHILD_COST : 0)} Food. Your comfortable size is ${G.maxPop(run)}. You can grow past it, up to ${G.hardPop(run)}, but crowded members eat twice, broods cost more, and crowding sickness takes a tenth of the excess every turn. You can store up to ${G.foodCap(run)} Food; the rest spoils.</p>
+        <p>${G.dnaWord(run)} per turn: ${G.dnaPerTurn(run)}.${run.mind ? ` Insight per turn: ${G.insightPerTurn(run)}.` : ''}</p>
       </div>
-      <div class="instincts">${G.INSTINCTS.map((ins) => { const al = G.instinctAllowed(run, ins.id); return `
+      <div class="instincts">${G.INSTINCTS.filter((ins) => !G.instinctAllowed(run, ins.id).hidden || run.instinct === ins.id).map((ins) => { const al = G.instinctAllowed(run, ins.id); return `
         <button class="choice ${run.instinct === ins.id ? 'selected' : ''}" ${al.ok ? `data-act="instinct" data-arg="${ins.id}"` : 'disabled'} aria-pressed="${run.instinct === ins.id}">
           <span class="choice-head"><strong>${esc(ins.name)}</strong></span>
           <span class="choice-desc">${esc(ins.desc)}</span>
@@ -1113,6 +1120,7 @@ window.G = window.G || {};
       <div class="inv-detail">
         <div class="inv-head"><strong>${esc(sel.name)}${sel.id === here.id ? ' · home' : ''}</strong></div>
         <span class="inv-desc">${esc(sel.desc)}</span>
+        ${sel.rule ? `<span class="inv-desc"><b>${esc(sel.rule)}</b>${sel.danger && sel.danger !== 1 ? ` (attacks ×${sel.danger})` : ''}${sel.hazards ? ` Common disasters: ${esc(sel.hazards.join(', '))}.` : ''}</span>` : ''}
         ${Object.keys(sel.mods).length ? `<span class="inv-mods">${esc(G.describeMods(sel.mods))}${G.biomeMatters(run) ? '' : ' (once you are multicellular)'}</span>` : ''}
         ${action}
         ${migrating ? `<span class="note">Migrating${run.activity.dest ? ` to the ${esc(list.find((b) => b.id === run.activity.dest).name)}` : ' somewhere new'}: ${run.activity.turns} of 4 turns.</span>` : ''}
@@ -1240,7 +1248,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${G.DIET_NAMES[G.diet(run)]} · ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
