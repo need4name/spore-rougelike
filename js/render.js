@@ -1164,46 +1164,74 @@ window.G = window.G || {};
     return X;
   }
 
-  // The odds of a check: green for success, red for failure, and a needle that swings, slows and lands.
-  function oddsBar(sc, w, h, pos, alpha) {
-    const x0 = w * 0.14; const x1 = w * 0.86; const y = h * 0.08; const bh = Math.max(10, h * 0.035);
-    const split = x0 + (x1 - x0) * (sc.chance / 100);
-    ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-    ctx.fillStyle = 'rgba(12, 26, 29, 0.75)'; ctx.fillRect(x0 - 6, y - 6, x1 - x0 + 12, bh + 12);
-    ctx.fillStyle = '#5fae4e'; ctx.fillRect(x0, y, split - x0, bh);
-    ctx.fillStyle = '#c4553f'; ctx.fillRect(split, y, x1 - split, bh);
-    const target = sc.success ? sc.chance * 0.5 / 100 : (sc.chance + (100 - sc.chance) * 0.5) / 100;
-    const nx = x0 + (x1 - x0) * Math.max(0, Math.min(1, pos === 1 ? target : pos));
-    tri(nx - 8, y - 12, nx + 8, y - 12, nx, y + 2, '#f2ecd8'); line(nx, y, nx, y + bh, '#f2ecd8', 3);
-    const stat = (G.STATS.find((x) => x.id === sc.stat) || {}).short || '';
-    ctx.font = `700 ${Math.round(Math.max(11, bh * 0.9))}px 'Atkinson Hyperlegible', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#e8efe4'; ctx.fillText(`${stat} check · ${sc.chance}%`, w / 2, y + bh + 8);
-    ctx.restore();
-  }
-
-  // Before a check resolves: the needle swings back and forth, slowing, while you tremble.
-  function suspenseFrame(run, me, sc, w, h, t, el, dur) {
+  // Build-up before an outcome. Nothing is decided on screen until the dust settles.
+  G.FIGHT_STORIES = ['brawl_win', 'brawl_lose', 'mauled', 'chase', 'escape', 'standoff'];
+  G.buildUp = (sc) => {
+    if (reduceMotion || !sc || sc.success == null) return 0;
+    if (sc.story && G.FIGHT_STORIES.includes(sc.story)) return 2.1;
+    if (sc.story) return 1.1;
+    return sc.stat ? 0.9 : 0;
+  };
+  // Who starts it: you, when you attacked; them, when they came for you.
+  const instigator = (story) => (story === 'mauled' || story === 'escape' ? 'them' : story === 'standoff' ? 'both' : 'you');
+  function buildUpFrame(run, me, sp, sc, w, h, t, el, dur) {
     ctx.clearRect(0, 0, w, h);
     drawBackground(run, w, h, t);
     const S = Math.min(w * 0.72, h * 1.05);
-    const cx = w * 0.45; const cy = h * 0.5;
-    drawAmbient(run, w, h, t, S, sc.species);
-    drawHerd(run, cx, cy, S, t, w, h);
     const land = run.stage !== 'cell' && run.habitat === 'land';
-    const pivotY = land ? cy + S * 0.36 : cy;
-    const settle = dur - 0.35; const p = Math.min(1, el / settle);
-    const tremble = Math.sin(el * 55) * 2.5 * (0.4 + p);
-    ctx.save(); ctx.translate(cx + tremble, pivotY); ctx.scale(1 + 0.03 * p, 1 - 0.05 * p); ctx.translate(-cx, -pivotY);
-    const f = fitBody(me, S, cx, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
-    drawBody(me, f.x, f.y, f.S, t);
-    drawFace(p > 0.6 ? 'scared' : 'worried', t);
-    ctx.restore();
-    const target = sc.success ? sc.chance * 0.5 / 100 : (sc.chance + (100 - sc.chance) * 0.5) / 100;
-    const amp = 0.55 * Math.pow(1 - p, 1.4);
-    const pos = el >= settle ? target : target + amp * Math.sin(el * (16 - 9 * p));
-    oddsBar(sc, w, h, Math.max(0, Math.min(1, pos)), 1);
-    if (el >= settle) { const q = Math.min(1, (el - settle) / 0.15); comic(sc.success ? 'YES!' : 'NO!', w * 0.5, h * 0.24, S * 0.1 * (0.6 + 0.6 * q), 1, sc.success ? '#8fd16a' : '#ef7d6b', -0.08); }
-    else if (Math.floor(el * 4) % 2 === 0) comic('...', cx + S * 0.3, cy - S * 0.42, S * 0.07, 0.8, '#e8efe4');
+    const cy = h * 0.5; const ground = land ? cy + S * 0.36 : cy;
+    drawAmbient(run, w, h, t, S, sc.species);
+    const youX = w * (sp ? 0.36 : 0.45); const themX = w * 0.8;
+    const fight = sp && G.FIGHT_STORIES.includes(sc.story);
+    const who = instigator(sc.story);
+    const midX = (youX + themX) / 2;
+    const ks = sp ? S * (land ? 0.5 : 0.55) * Math.min(1.5, sp.size) : 0;
+    // Phases: face off, pounce, brawl in a dust cloud, the cloud bursts.
+    const FACE_OFF = fight ? 0.55 : dur * 0.75; const POUNCE = fight ? 0.85 : dur;
+    const tremble = (amt) => Math.sin(el * 48) * amt;
+    let youDX = 0; let youDY = 0; let themDX = 0; let themDY = 0; let hidden = false;
+    if (fight) {
+      if (el > FACE_OFF && el <= POUNCE) {
+        const q = (el - FACE_OFF) / (POUNCE - FACE_OFF);
+        const arc = -Math.sin(q * Math.PI) * S * 0.18;
+        if (who !== 'them') { youDX = (midX - youX) * q; youDY = arc; }
+        if (who !== 'you') { themDX = (midX - themX) * q; themDY = arc; }
+      }
+      hidden = el > POUNCE;
+    } else if (sp) youDX = (midX - youX) * 0.45 * Math.min(1, el / (dur * 0.8));
+    const crouch = el < FACE_OFF ? Math.min(1, el / FACE_OFF) : 0;
+    if (!hidden) {
+      if (sp) {
+        const sy = land ? ground - ks * 0.36 : cy;
+        ctx.save(); ctx.translate(themX + themDX + (crouch ? tremble(1.5) : 0), (land ? ground : sy) + themDY); ctx.scale(-(1 + 0.06 * crouch), 1 - 0.1 * crouch); ctx.translate(0, sy - (land ? ground : sy));
+        drawBody(G.speciesBody(sp), 0, 0, ks, t);
+        drawFace(fight ? 'angry' : 'surprised', t); ctx.restore();
+      }
+      const pivot = land ? ground : cy;
+      ctx.save(); ctx.translate(youX + youDX + (crouch ? tremble(2) : 0), pivot + youDY); ctx.scale(1 + 0.06 * crouch, 1 - 0.1 * crouch); ctx.translate(-youX, -pivot);
+      const fm = fitBody(me, S, youX, cy, { x0: 4, y0: h * 0.03, x1: w - 4, y1: h - 4 });
+      drawBody(me, fm.x, fm.y, fm.S, t);
+      drawFace(fight ? (who === 'them' ? 'scared' : 'angry') : sp ? 'happy' : 'worried', t); ctx.restore();
+      if (Math.floor(el * 4) % 2 === 0) comic('...', sp ? midX : youX + S * 0.3, cy - S * 0.42, S * 0.07, 0.8, '#e8efe4');
+    }
+    if (hidden) {
+      // The brawl: a rolling ball of dust, with limbs, stars and comic words flying out.
+      const q = (el - POUNCE) / (dur - POUNCE);
+      const burst = q > 0.85 ? (q - 0.85) / 0.15 : 0;
+      const R = S * 0.26 * (1 + 0.5 * burst);
+      const by = (land ? ground - S * 0.12 : cy) + Math.sin(el * 20) * 4;
+      ctx.save(); ctx.globalAlpha = 1 - burst;
+      for (let i = 0; i < 16; i++) {
+        const a = i * 0.9 + el * (i % 2 ? 7 : -6); const r = R * (0.45 + 0.35 * Math.abs(Math.sin(i * 1.7 + el * 5)));
+        dot(midX + Math.cos(a) * r, by + Math.sin(a) * r * 0.7, R * (0.32 + 0.1 * Math.sin(i + el * 9)), i % 3 ? 'rgba(196, 172, 140, 0.92)' : 'rgba(150, 128, 100, 0.92)');
+      }
+      for (let i = 0; i < 4; i++) { const a = el * 9 + i * 1.6; const x1 = midX + Math.cos(a) * R * 0.8; const y1 = by + Math.sin(a) * R * 0.6; line(x1, y1, x1 + Math.cos(a) * R * 0.5, y1 + Math.sin(a) * R * 0.5, hsl(me.hue, 40, 30), Math.max(3, S * 0.02)); }
+      for (let i = 0; i < 3; i++) { const a = el * 5 + i * 2.1; star(midX + Math.cos(a) * R * 1.15, by + Math.sin(a) * R * 0.9, S * 0.025, '#f2c14e'); }
+      const words = ['POW!', 'WHAM!', 'BIFF!', 'THUD!', 'BONK!'];
+      const wi = Math.floor(el * 3.3) % words.length;
+      comic(words[wi], midX + (wi % 2 ? -1 : 1) * R * 0.9, by - R * 1.05, S * 0.085, 1 - burst, wi % 2 ? '#ef7d6b' : '#f2c14e', wi % 2 ? 0.12 : -0.12);
+      ctx.restore();
+    }
   }
 
   // Squash, stretch, hop and spin. Returns an offset and scale for this moment.
@@ -1385,8 +1413,8 @@ window.G = window.G || {};
     const ghosts = Math.min(5, Math.max(0, -(sc.popDelta || 0)));
     const food = sc.foodDelta || 0;
     const dying = sc.title === 'end';
-    // Tension: a check first swings a needle across the odds while your creature sweats it out.
-    const SUSPENSE = !reduceMotion && sc.chance != null && sc.success != null && sc.stat ? 1.7 : 0;
+    // Build-up: a face-off and a brawl in a dust cloud (or a tense pause) before anything is decided on screen.
+    const SUSPENSE = G.buildUp(sc);
     // Timing: a wind-up before the action, and a freeze-frame with screen shake on impact.
     const ANT = anim === 'hurt' || anim === 'rest' ? 0 : 0.22;
     const IMPACT = anim === 'attack' ? 0.42 : anim === 'hurt' ? 0.06 : null;
@@ -1397,7 +1425,7 @@ window.G = window.G || {};
       const { w, h } = fit(canvas);
       const t = reduceMotion ? 0 : now / 1000;
       const el = (now - start) / 1000;
-      if (SUSPENSE && el < SUSPENSE) { suspenseFrame(run, me, sc, w, h, t, el, SUSPENSE); sceneFrame = requestAnimationFrame(frame); return; }
+      if (SUSPENSE && el < SUSPENSE) { buildUpFrame(run, me, sp, sc, w, h, t, el, SUSPENSE); sceneFrame = requestAnimationFrame(frame); return; }
       const kRaw = reduceMotion ? 2 : (el - SUSPENSE) / DUR;
       const windup = ANT && kRaw < ANT ? kRaw / ANT : 1;
       let k = Math.max(0, kRaw - ANT);
@@ -1471,7 +1499,6 @@ window.G = window.G || {};
         for (let i = 0; i < 16; i++) { const a2 = i * Math.PI / 8 + k; line(cx + Math.cos(a2) * S * 0.2 * q, cy + Math.sin(a2) * S * 0.2 * q, cx + Math.cos(a2) * S * 0.55 * q, cy + Math.sin(a2) * S * 0.55 * q, hsl((i * 40 + k * 200) % 360, 90, 70, Math.max(0, 0.6 - k * 0.2)), 3); }
         comic('EVOLVED!', w * 0.5, h * 0.14, S * 0.11 * (0.7 + 0.3 * q), Math.min(1, (2.5 - k) * 1.5), '#f2c14e', -0.06);
       }
-      if (SUSPENSE && kRaw < 0.9) oddsBar(sc, w, h, 1, 1 - kRaw / 0.9);
       ctx.restore();
       sceneFrame = reduceMotion ? null : requestAnimationFrame(frame);
     }

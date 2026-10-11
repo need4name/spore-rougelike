@@ -477,7 +477,12 @@ window.G = window.G || {};
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
   G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (run.stage === 'tribe' ? G.TRIBE_HARSH - G.boonLevel('w_elders') - (finaleEase(run) ? 2 * G.boonLevel('w_founding') : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
-  G.chance = (run, stat, base) => clamp(50 + (G.stat(run, stat) - G.difficulty(run, base)) * 12, 5, 95);
+  // Odds follow a gentle S-curve scaled to the check, so risky options are real choices at every stage:
+  // equal to the difficulty is 50%, a few points short is still a gamble, and only big gaps get near 5% or 95%.
+  G.chance = (run, stat, base) => {
+    const d = G.difficulty(run, base);
+    return clamp(Math.round(50 + 45 * Math.tanh((G.stat(run, stat) - d) / (3 + 0.3 * Math.max(0, d)))), 5, 95);
+  };
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
 
@@ -1285,7 +1290,7 @@ window.G = window.G || {};
       res = success ? opt.success : opt.fail;
     }
     const sp = run.event.species;
-    const popBefore = run.pop; const foodBefore = run.food;
+    const popBefore = run.pop; const foodBefore = run.food; const dnaBefore = run.dna;
     run.lastEvolution = null;
     const lines = applyEffects(run, res, sp);
     const story = sceneStory(run, ev, opt, res, success, sp);
@@ -1309,7 +1314,7 @@ window.G = window.G || {};
       prop: ev.prop || null,
       mood: sceneMood(res, opt, success),
       species: sp,
-      story, popDelta: run.pop - popBefore, foodDelta: run.food - foodBefore, evolved: run.lastEvolution,
+      story, popDelta: run.pop - popBefore, foodDelta: run.food - foodBefore, evolved: run.lastEvolution, before: { pop: popBefore, food: foodBefore, dna: dnaBefore },
       finale: !!ev.finale, milestone: ev.milestone ? ev.id : null,
       habitat: res && res.habitat, won: ev.finale && success !== false,
       stat: opt.check ? opt.check.stat : null, chance: state.chance,

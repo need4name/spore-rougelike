@@ -122,7 +122,11 @@ window.G = window.G || {};
     const scene = root && root.querySelector('canvas.scene');
     if (!scene) return;
     let info;
-    if (run.phase === 'scene') info = run.scene;
+    if (run.phase === 'scene') {
+      info = run.scene;
+      const wait = G.buildUp(info) * 1000;
+      if (wait && G.ui.revealFor !== info) { G.ui.revealFor = info; G.ui.revealAt = Date.now() + wait; setTimeout(() => { if (G.run && G.run.scene === info) render(['top']); }, wait + 60); }
+    }
     else if (run.phase === 'mutated') info = { anim: 'mutate', mood: run.scene.mood || 'surprised', title: run.scene.label, evolved: run.scene.evolved };
     else if (run.phase === 'evolved') info = { anim: 'grow', mood: 'proud', title: 'evolved', prop: run.habitat === 'sea' ? 'bubbles' : null };
     else if (run.phase === 'end') info = run.result && run.result.victory ? { anim: 'social', mood: 'proud', title: 'win', prop: run.habitat === 'sea' ? 'notes' : 'sparks' } : { anim: 'rest', mood: 'sad', title: 'end' };
@@ -243,6 +247,10 @@ window.G = window.G || {};
   // ---------- Game: top bar ----------
   function topBar(run) {
     const st = G.STAGES[run.stage];
+    // While a scene builds up, the numbers hold still; they change once the outcome is shown.
+    const sc0 = run.phase === 'scene' && run.scene;
+    const held = sc0 && sc0.before && G.buildUp(sc0) && (G.ui.revealFor !== sc0 || Date.now() < (G.ui.revealAt || 0)) ? sc0.before : null;
+    if (held) run = Object.assign(Object.create(Object.getPrototypeOf(run)), run, held);
     const max = G.maxPop(run);
     const inc = G.income(run);
     const up = G.upkeep(run);
@@ -386,11 +394,11 @@ window.G = window.G || {};
     else if (sc.finale && sc.won) cta = run.stage === 'cell' ? (sc.habitat === 'sea' ? 'Into the open sea' : 'Onto the land') : 'Begin the age of peoples';
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
-      <article class="card outcome ${sc.stat && sc.success != null ? 'suspense' : ''}">
+      <article class="card outcome ${G.buildUp(sc) ? 'suspense' : ''}" style="--reveal:${G.buildUp(sc)}s">
         <p class="eyebrow">${esc(sc.title)}</p>
         <h2>${esc(sc.label)} ${tag}</h2>
         ${sc.text ? `<p class="event-text">${esc(sc.text)}</p>` : ''}
-        ${sc.stat ? `<p class="note">${statName(sc.stat)} check at ${sc.chance}%.</p>` : ''}
+        ${sc.stat ? `<p class="note reveal-late">${statName(sc.stat)} check at ${sc.chance}%.</p>` : ''}
         ${lines(sc.lines)}
         <button class="btn primary wide" data-act="continue-scene">${cta}</button>
       </article>`;
