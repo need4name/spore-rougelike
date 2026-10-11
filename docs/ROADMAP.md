@@ -77,6 +77,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16 | Peoples ✅ | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
 | 16.1 | Patch ✅ | Soft and hard population caps, nothing useless offered for your diet, a bold diet badge, disaster scenes, distinct and more meaningful biomes | Medium |
 | 16.2 | Patch ✅ | **Cut Paper:** creatures as layers of cut card with a choppier frame rate; merged parts drawn as stacked cards | Medium |
+| 16.2.1 | Patch ✅ | **Stop Motion:** scenes on one 10 fps clock, slower held poses, hand-nudged boil, no squash and stretch; the world smooth again | Small |
 | 16.3 | Patch | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
 | 16.4 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
