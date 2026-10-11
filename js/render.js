@@ -986,13 +986,10 @@ window.G = window.G || {};
   // every piece casts a crisp shadow on the piece below, the whole creature has a pale cut edge and a drop shadow,
   // colours are flat with a little paper grain, and they move at a choppier frame rate than everything else.
   G.CUTOUT = true;
-  // Scenes are stop motion: one clock for everything in the scene, stepping G.STOP_FPS times a second, with every
-  // movement slowed (G.STOP_SLOW) so it reads as a run of held poses. The world map, viewer and editor stay smooth.
-  G.STOP_FPS = 10;
-  G.STOP_SLOW = 1.45;
-  let STOP_STEP = null; // the current stop-motion frame while a scene draws, else null
+  // Everything moves smoothly; the cut-paper look is only in how creatures are drawn.
+  // (Poses are cut out and cached G.POSE_FPS times a second; movement and placement are smooth every frame.)
+  G.POSE_FPS = 30;
   const PAPER = '#f4ecd8';
-  const srnd = (i, k) => { const x = Math.sin(i * 91.7 + k * 47.3) * 43758.5453; return x - Math.floor(x); };
   let grainPattern = null; let cutDepth = 0;
   const cutPool = [document.createElement('canvas'), document.createElement('canvas')];
   function grain() {
@@ -1002,7 +999,7 @@ window.G = window.G || {};
     for (let i = 0; i < 14; i++) { g.strokeStyle = 'rgba(120,100,70,0.07)'; g.lineWidth = 0.6; g.beginPath(); const x = Math.random() * 96; const y = Math.random() * 96; g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 10); g.stroke(); }
     grainPattern = c; return c;
   }
-  // Finished cut-outs are cached per pose: in a scene a creature only changes pose G.STOP_FPS times a second.
+  // Finished cut-outs are cached per pose, so most frames only place the card.
   const cutCache = new Map();
   function drawBody(b, cx, cy, S, t) {
     if (!G.CUTOUT || cutDepth > 0) { drawBodyRaw(b, cx, cy, S, t); return; }
@@ -1013,16 +1010,14 @@ window.G = window.G || {};
     const ox = e.minX * u - pad; const oy = e.minY * u - pad;
     const bw = (e.maxX - e.minX) * u + pad * 2; const bh = (e.maxY - e.minY) * u + pad * 2;
     // Paper doesn't need to be razor sharp: big cut-outs are made at a capped resolution.
-    const cap = Math.min(1, 640 / Math.max(bw * sc, bh * sc));
+    const cap = Math.min(1, 460 / Math.max(bw * sc, bh * sc));
     const W = Math.ceil(bw * sc * cap); const Hh = Math.ceil(bh * sc * cap);
     if (W < 4 || Hh < 4) { drawBodyRaw(b, cx, cy, S, t); return; }
     const landBody = b.stage === 'creature' && b.habitat !== 'sea' && b.symmetry !== 'radial' && b.symmetry !== 'colonial' && b.segments !== 0;
     // A soft shadow on the ground stays part of the world, under the cut-out.
     if (landBody && !NO_SHADOW) { ctx.beginPath(); ctx.ellipse(cx + (e.minX + e.maxX) / 2 * u, cy + S * 0.36 + 2, (e.maxX - e.minX) * u * 0.42, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
-    // In a scene, time already steps with the stop-motion clock; elsewhere poses are cached 15 times a second.
-    const tq = STOP_STEP != null ? t : Math.round(t * 15) / 15;
-    const boil = STOP_STEP != null && S >= 60 ? STOP_STEP : 0;
-    const key = `${bodyKey(b)}|${S.toFixed(1)}|${sc.toFixed(2)}|${tq.toFixed(3)}|${boil % 7}`;
+    const tq = Math.round(t * G.POSE_FPS) / G.POSE_FPS;
+    const key = `${bodyKey(b)}|${S.toFixed(1)}|${sc.toFixed(2)}|${tq.toFixed(3)}`;
     let hit = cutCache.get(key);
     if (!hit) {
       const off = cutPool[0]; const sil = cutPool[1];
@@ -1045,22 +1040,21 @@ window.G = window.G || {};
       const sctx = sil.getContext('2d'); sctx.clearRect(0, 0, W, Hh); sctx.drawImage(off, 0, 0);
       const tint = (col) => { sctx.globalCompositeOperation = 'source-in'; sctx.fillStyle = col; sctx.fillRect(0, 0, W, Hh); sctx.globalCompositeOperation = 'source-over'; };
       const edge = Math.max(0.9, S * 0.0085) * k;
-      const comp = document.createElement('canvas'); comp.width = W; comp.height = Hh; const cc = comp.getContext('2d');
+      // Reuse the canvas of the cut-out this one pushes out of the cache.
+      let comp = null;
+      if (cutCache.size >= 40) { const oldKey = cutCache.keys().next().value; comp = cutCache.get(oldKey).comp; cutCache.delete(oldKey); }
+      if (!comp) comp = document.createElement('canvas');
+      comp.width = W; comp.height = Hh; const cc = comp.getContext('2d');
       tint('#0a0806'); cc.globalAlpha = 0.3; cc.drawImage(sil, edge * 1.6, edge * 2.2); cc.globalAlpha = 1;
-      // The cut edge shifts a little from frame to frame in a scene, like paper re-cut and re-laid by hand.
-      tint(PAPER); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.3 + (boil % 7) * 0.45; const r = edge * (1 + (STOP_STEP != null ? (srnd(boil % 7, i) - 0.5) * 0.5 : 0)); cc.drawImage(sil, Math.cos(a) * r, Math.sin(a) * r); }
+      tint(PAPER); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.3; cc.drawImage(sil, Math.cos(a) * edge, Math.sin(a) * edge); }
       cc.drawImage(off, 0, 0);
       hit = { comp, face: FACE ? { ...FACE } : null };
       cutCache.set(key, hit);
-      if (cutCache.size > 40) cutCache.delete(cutCache.keys().next().value);
+
     }
-    // A stop-motion puppet never sits in exactly the same place twice: a tiny nudge and tilt every frame.
-    const jx = boil ? (srnd(boil, 1) - 0.5) * S * 0.008 : 0; const jy = boil ? (srnd(boil, 2) - 0.5) * S * 0.006 : 0;
-    const jr = boil ? (srnd(boil, 3) - 0.5) * 0.014 : 0;
     // Where the face is, for drawFace afterwards, moved from (0, 0) to (cx, cy).
-    FACE = hit.face ? { ...hit.face, x: hit.face.x + cx + jx, y: hit.face.y + cy + jy, mx: hit.face.mx + cx + jx, my: hit.face.my + cy + jy, top: hit.face.top + cy + jy } : null;
-    if (jr) { ctx.save(); ctx.translate(cx + jx, cy + jy); ctx.rotate(jr); ctx.translate(-cx, -cy); ctx.drawImage(hit.comp, cx + ox, cy + oy, bw, bh); ctx.restore(); }
-    else ctx.drawImage(hit.comp, cx + ox, cy + oy, bw, bh);
+    FACE = hit.face ? { ...hit.face, x: hit.face.x + cx, y: hit.face.y + cy, mx: hit.face.mx + cx, my: hit.face.my + cy, top: hit.face.top + cy } : null;
+    ctx.drawImage(hit.comp, cx + ox, cy + oy, bw, bh);
   }
   function drawBodyRaw(b, cx, cy, S, t) {
     FACE = null;
@@ -1345,8 +1339,8 @@ window.G = window.G || {};
   }
 
   // ======================= ANIMATION =======================
-  const SLOW = G.CUTOUT ? G.STOP_SLOW : 1;
-  const DUR = 1.6 * SLOW;
+  const SLOW = 1;
+  const DUR = 1.6;
   let P_SKIP_WORDS = false; // a prop shouting its own word ("CRACK!", "BONK!") silences the generic one
   const VARIANTS = { attack: 3, flee: 3, hurt: 3, eat: 2, social: 2, rest: 2, grow: 1, mutate: 2 };
   const WORDS = {
@@ -1370,7 +1364,7 @@ window.G = window.G || {};
   G.FIGHT_STORIES = ['brawl_win', 'brawl_lose', 'mauled', 'chase', 'escape', 'standoff'];
   G.buildUp = (sc) => {
     if (reduceMotion || !sc || sc.success == null) return 0;
-    const k = G.CUTOUT ? 1.3 : 1;
+    const k = 1;
     if (sc.story && G.FIGHT_STORIES.includes(sc.story)) return 2.1 * k;
     if (sc.hazard) return 1.8 * k;
     if (sc.story) return 1.1 * k;
@@ -1722,19 +1716,8 @@ window.G = window.G || {};
     const ANT = anim === 'hurt' || anim === 'rest' ? 0 : 0.22;
     const IMPACT = anim === 'attack' ? 0.42 : anim === 'hurt' ? 0.06 : null;
     const STOP = 0.09;
-    let lastStep = -1;
-    function frame(nowSmooth) {
-      if (!canvas.isConnected) { sceneFrame = null; STOP_STEP = null; return; }
-      // Stop motion: the whole scene moves on one stepped clock, and a held frame isn't redrawn at all.
-      const stepping = G.CUTOUT && !reduceMotion;
-      const step = Math.floor((nowSmooth - start) / 1000 * G.STOP_FPS);
-      if (stepping && step === lastStep) { sceneFrame = requestAnimationFrame(frame); return; }
-      lastStep = step;
-      const now = stepping ? start + (step * 1000) / G.STOP_FPS : nowSmooth;
-      STOP_STEP = stepping ? step : null;
-      try { drawSceneFrame(now); } finally { STOP_STEP = null; }
-    }
-    function drawSceneFrame(now) {
+    function frame(now) {
+      if (!canvas.isConnected) { sceneFrame = null; return; }
       if (dying) { deathFrame(canvas, run, me, reduceMotion ? 6 : (now - start) / 1000, reduceMotion ? 0 : now / 1000); sceneFrame = reduceMotion ? null : requestAnimationFrame(frame); return; }
       const { w, h } = fit(canvas);
       const t = reduceMotion ? 0 : now / 1000;

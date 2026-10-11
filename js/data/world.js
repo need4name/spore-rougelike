@@ -712,20 +712,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.2.1';
+G.VERSION = '16.2.2';
 G.WHATS_NEW = {
-  title: 'Patch 16.2.1: Stop Motion',
+  title: 'Patch 16.2.2: Smooth Paper',
   items: [
-    'Scenes are stop motion now. Everything in a scene (the creatures, the dust, the comic words, the weather) moves together on one clock at 10 frames a second, so it looks shot frame by frame instead of stuttering.',
-    'Scene animations are slower, so every move reads as a run of held poses, and creatures shift a hair from frame to frame, like puppets nudged by hand between shots.',
-    'Paper doesn\'t squash or stretch: cut-outs lean, pivot and hop instead.',
-    'The world map, the creature viewer and the editor are smooth again. The paper look stays everywhere.',
+    'Everything is smooth again. The stop-motion stepping and the frame-to-frame jitter are gone, and scenes run at their old pace.',
+    'The cut-paper look stays: creatures are layers of card with crisp shadows, a pale cut edge, flat colours and paper grain, and merged parts are stacked cards (forked tails, back pieces further down the spine, skins meeting at a seam).',
+    'Cut-outs lean, pivot and hop instead of squashing and stretching.',
     'A scene\'s set (the moon, the fire, the storm) is in place from the first frame of the build-up.',
-    'Creatures are made of cut paper now: every piece is a layer of card that casts a crisp little shadow on the piece below, each creature has a pale cut edge and sits just above the scene, colours are flat with a touch of paper grain, and bellies are their own paper piece.',
-    'Creatures move at a choppier frame rate than everything else, like cut-out animation. The world, the weather and the menus stay smooth.',
-    'Merged parts look like they belong together. The second part of a merged slot is a smaller card tucked behind the first: a second tail forks off the first, a second back part sits further down the spine, two skins meet at a stitched seam, a merged foot or hand peeks out behind the main one, and at sea a second set of arms or underside parts sits just behind the first.',
-    'Limb mutations sit on the limb: armour bands, muscles, joints, tendons and feathers follow the leg instead of floating beside it.',
-    'Patch 16.1 (Listening): soft and hard population caps, a bold diet badge, nothing useless offered for your diet (and diets can change through omnivore mouths), disaster scenes, distinct biomes, and evolved limbs no longer add an extra pair.',
   ],
 };
 
