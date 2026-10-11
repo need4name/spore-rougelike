@@ -26,7 +26,7 @@ window.G = window.G || {};
       unlocked: { archetypes: ['drifter', 'grazer'], origins: ['tidal'], packs: [] },
       boons: {},
       maxHostility: 0,
-      codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [], discoveries: [], tribeEndings: [] },
+      codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [], discoveries: [], tribeEndings: [], societyEndings: [], traditions: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0 },
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {}, stageStarts: [],
     };
@@ -50,7 +50,7 @@ window.G = window.G || {};
       const list = (saved.unlocked && saved.unlocked[k]) || [];
       list.forEach((id) => { if (!m.unlocked[k].includes(id)) m.unlocked[k].push(id); });
     });
-    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
+    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings', 'societyEndings', 'traditions'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
     Object.assign(m.stats, saved.stats || {});
     return m;
   }
@@ -83,7 +83,9 @@ window.G = window.G || {};
   G.INNOVATION = {}; G.INNOVATIONS.forEach((i) => { G.INNOVATION[i.id] = i; });
 
   // ---------- Archetype gimmicks: each archetype breaks one rule for the whole run ----------
-  G.gimmick = (run) => (run && run.stage !== 'tribe' && G.ARCHETYPE[run.archetype] && G.ARCHETYPE[run.archetype].gimmick) || null;
+  // The Tribe and Society stages: you are a people now, not a lineage.
+  G.people = (run) => !!run && (run.stage === 'tribe' || run.stage === 'society');
+  G.gimmick = (run) => (run && !G.people(run) && G.ARCHETYPE[run.archetype] && G.ARCHETYPE[run.archetype].gimmick) || null;
   const speciesNamed = (run, name) => (name ? run.species.find((s) => s.name === name && !s.extinct) || null : null);
   G.partnerOf = (run) => (G.gimmick(run) === 'symbiote' ? speciesNamed(run, run.partner) : null);
   G.hostOf = (run) => (G.gimmick(run) === 'parasite' ? speciesNamed(run, run.host) : null);
@@ -263,7 +265,7 @@ window.G = window.G || {};
   };
 
   // What the renderer needs to draw a body. Other species have the same shape.
-  G.bodyOf = (run) => ({ stage: run.stage === 'tribe' ? 'creature' : run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, symmetry: G.symmetry(run), segments: G.segments(run), armPairs: G.armPairs(run), off: G.offSlots(run), hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
+  G.bodyOf = (run) => ({ stage: G.people(run) ? 'creature' : run.stage, habitat: run.habitat, multicellular: run.multicellular, parts: run.parts, symmetry: G.symmetry(run), segments: G.segments(run), armPairs: G.armPairs(run), off: G.offSlots(run), hue: (run.look && run.look.hue != null) ? run.look.hue : G.ARCHETYPE[run.archetype].color, traits: run.traits, look: G.effectiveLook(run) });
 
   // ---------- Appearance ----------
   G.lookOptionState = (run, opt) => {
@@ -440,7 +442,8 @@ window.G = window.G || {};
     if (run.instinct === 'hide') list.push({ damageReduce: 1 });
     if (run.stage !== 'cell') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
     if (run.stage !== 'cell' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
-    if (run.stage === 'tribe') tribeMods(run).forEach((m) => list.push(m));
+    if (G.people(run)) tribeMods(run).forEach((m) => list.push(m));
+    if (run.stage === 'society') societyMods(run).forEach((m) => list.push(m));
     const season = G.season(run);
     // Warm blood shrugs off the food cost of cold seasons.
     const warm = run.traits.includes('blood_warm') || G.firelit(run);
@@ -472,10 +475,12 @@ window.G = window.G || {};
   // Max Population grows with every milestone, then scales with body size:
   // small creatures live in big herds, giants in small ones.
   G.maxPop = (run) => {
-    const base = run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 : 0) + (run.era - 1) * 3 + G.mod(run, 'maxPop');
+    // A society's size is its settlements.
+    const base = run.stage === 'society' ? 4 + (run.settlements || []).reduce((t, x) => t + x.size * 5, 0) + G.mod(run, 'maxPop')
+      : run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 : 0) + (run.era - 1) * 3 + G.mod(run, 'maxPop');
     let max = Math.max(3, Math.round((base + (run.stage === 'tribe' ? 2 * G.boonLevel('w_blood') : 0)) * G.SIZES[G.sizeOf(run)].popMult));
     // Many Minds are few, but each one is brilliant.
-    if (run.stage === 'tribe' && run.path === 'many') max = Math.max(3, Math.round(max * 0.5));
+    if (G.people(run) && run.path === 'many') max = Math.max(3, Math.round(max * 0.5));
     const g = G.gimmick(run);
     if (g === 'grazer') max = Math.round(max * 1.6);
     // A parasite can never outgrow its host.
@@ -511,7 +516,7 @@ window.G = window.G || {};
   };
 
   // Grazers earn DNA from the size of the herd instead of from time.
-  G.dnaPerTurn = (run) => (run.stage === 'tribe' ? G.ideasPerTurn(run) : Math.max(1, (G.gimmick(run) === 'grazer' ? Math.floor(G.heads(run) / 6) : 1) + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0)));
+  G.dnaPerTurn = (run) => (run.stage === 'society' ? G.influencePerTurn(run) : run.stage === 'tribe' ? G.ideasPerTurn(run) : Math.max(1, (G.gimmick(run) === 'grazer' ? Math.floor(G.heads(run) / 6) : 1) + G.mod(run, 'dnaPerTurn') + (run.instinct === 'explore' ? 1 + G.mod(run, 'exploreBonus') : 0)));
   G.insightPerTurn = (run) => (run.mind ? 1 + Math.floor(G.stat(run, 'cun') / 5) + G.mod(run, 'insightPerTurn') : 0);
 
   // Checks get harder as a creature, in later eras, and the longer you linger in one (up to +2).
@@ -540,7 +545,7 @@ window.G = window.G || {};
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
-  G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (run.stage === 'tribe' ? G.TRIBE_HARSH - G.boonLevel('w_elders') - (finaleEase(run) ? 2 * G.boonLevel('w_founding') : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (G.people(run) ? G.TRIBE_HARSH - (run.stage === 'tribe' ? G.boonLevel('w_elders') : 0) - (finaleEase(run) ? 2 * G.boonLevel('w_founding') : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   // Odds follow a gentle S-curve scaled to the check, so risky options are real choices at every stage:
   // equal to the difficulty is 50%, a few points short is still a gamble, and only big gaps get near 5% or 95%.
   G.chance = (run, stat, base) => {
@@ -578,13 +583,18 @@ window.G = window.G || {};
     const sea = run.stage === 'cell' || run.habitat === 'sea';
     const herd = run.stage === 'cell' || (run.stage !== 'cell' && G.symmetry(run) === 'colonial') ? 'colony' : sea ? 'school' : 'herd';
     const w = { herd, nests: sea ? 'egg beds' : 'nests', cover: sea ? 'weed' : 'grass', home: sea ? 'the water' : 'the land', move: sea ? 'swim' : 'walk', crossing: sea ? 'current' : 'river', depth: run.habitat === 'sea' ? G.SEA_ZONE[G.zone(run)].name : 'the valley' };
-    if (run.stage === 'tribe' && G.kind(run)) {
+    if (G.people(run) && G.kind(run)) {
       // In the Tribe stage, your herd is a people.
       const k = G.kind(run); const cap = (x) => x[0].toUpperCase() + x.slice(1);
       Object.assign(w, { herd: k.band, band: k.band, Band: cap(k.band), resource: k.resource, keeper: k.keeper, camp: k.camp,
         leader: run.leader ? run.leader.name : 'the eldest', ruler: k.leader ? k.leader.toLowerCase() : 'leader', Ruler: k.leader || 'Leader' });
       (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = G.leaderTitle(c); });
       w.Herd = w.Band;
+      if (run.stage === 'society') {
+        const sk = G.socKind(run);
+        Object.assign(w, { people: sk.name, settlement: sk.settlement, settlements: `${sk.settlement}s`, capital: sk.capital, herd: 'people', Herd: 'People' });
+        (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = `${c.role ? `${G.COUNCIL_ROLES[c.role].name} ` : ''}${G.leaderTitle(c)}`; });
+      }
       return w;
     }
     w.Herd = herd[0].toUpperCase() + herd.slice(1);
@@ -787,18 +797,24 @@ window.G = window.G || {};
     if (g === 'mimic') run.mimic = null;
   }
 
-  function endRun(run, victory, cause) {
+  // What a stage pays out in Genetic Memory. Earlier stages' endings were paid at their checkpoints.
+  function stageReward(run, victory) {
     const base = Math.floor(run.totalDna / 3);
-    const tribe = run.stage === 'tribe';
-    // In the Tribe stage the Creature ending has already been paid out (see checkpoint), so only the new stage counts.
-    const progress = tribe ? 5 + Math.min(10, (run.discoveries || []).length * 2) : (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
-    // The Founding is worth less than a Creature ending, which the Tribe stage has already paid out.
-    const winBonus = victory ? (tribe ? 25 : 40) : 0;
-    // Each new square in the Codex of Endings (a start against an ending) is worth a bonus.
-    const endKey = victory && (tribe ? (run.tribeEnding ? `${run.path}|${run.habitat === 'sea' ? 'sea' : 'land'}|${run.tribeEnding}` : null)
+    const tribe = run.stage === 'tribe'; const soc = run.stage === 'society';
+    const hab = run.habitat === 'sea' ? 'sea' : 'land';
+    const progress = soc ? 5 + Math.min(15, (run.settlements || []).length * 2 + (run.traditions || []).length) : tribe ? 5 + Math.min(10, (run.discoveries || []).length * 2) : (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
+    // Later endings are worth less than a Creature ending, which has already been paid out.
+    const winBonus = victory ? (tribe || soc ? 25 : 40) : 0;
+    // Each new ending in the Codex is worth a bonus.
+    const endKey = victory && (soc ? (run.societyEnding ? `${run.path}|${hab}|${run.societyEnding}` : null) : tribe ? (run.tribeEnding ? `${run.path}|${hab}|${run.tribeEnding}` : null)
       : run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null);
-    const codexList = tribe ? 'tribeEndings' : 'endings';
+    const codexList = soc ? 'societyEndings' : tribe ? 'tribeEndings' : 'endings';
     const firstEnding = endKey && !(G.meta.codex[codexList] || []).includes(endKey) ? 10 : 0;
+    const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
+    return { base, progress, winBonus, firstEnding, mult, endKey, codexList, tribe, soc };
+  }
+  function endRun(run, victory, cause) {
+    const { base, progress, winBonus, firstEnding, endKey, codexList, tribe, soc } = stageReward(run, victory);
     // Lineages that die as cells still learn something: 1 per 4 turns survived, and never less
     // than 6 in all, so early runs can afford the first upgrades.
     const survival = run.stage === 'cell' ? Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0) : 0;
@@ -809,17 +825,17 @@ window.G = window.G || {};
     if (victory) {
       m.stats.wins += 1;
       m.maxHostility = Math.max(m.maxHostility, Math.min(G.MAX_HOSTILITY, run.hostility + 1));
-      if (run.legacy && !tribe) addUnique(m.codex.legacies, run.legacy);
+      if (run.legacy && !tribe && !soc) addUnique(m.codex.legacies, run.legacy);
       if (endKey) addUnique(m.codex[codexList] = m.codex[codexList] || [], endKey);
     } else {
       m.stats.extinctions += 1;
     }
     m.stats.bestDna = Math.max(m.stats.bestDna || 0, run.totalDna);
     run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, survival, firstEnding, mult, revived: !!run.revived } };
-    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? (tribe ? G.tribeEndingName(run) : G.endingName(run)) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
+    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? (soc ? G.societyEndingName(run) : tribe ? G.tribeEndingName(run) : G.endingName(run)) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
     m.history = m.history.slice(0, 30);
     run.phase = 'end';
-    log(run, victory ? (tribe ? `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes a people.` : `${G.endingName(run)}: your people are born.`) : `${tribe ? 'Your people are gone.' : 'Extinction.'} ${cause}`);
+    log(run, victory ? (soc ? `${G.societyEndingName(run)}: your people unite the region.` : tribe ? `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes a people.` : `${G.endingName(run)}: your people are born.`) : `${tribe || soc ? 'Your people are gone.' : 'Extinction.'} ${cause}`);
     save();
   }
 
@@ -1002,7 +1018,7 @@ window.G = window.G || {};
   // ---------- Effects ----------
   function gainDna(run, n) {
     // Rich Genes and your home world boost DNA, not a people's Ideas.
-    const amount = n > 0 && run.stage !== 'tribe' ? Math.round(n * G.ORIGIN[run.origin].dnaMult * (1 + 0.1 * G.boonLevel('rich_genes'))) : n;
+    const amount = n > 0 && !G.people(run) ? Math.round(n * G.ORIGIN[run.origin].dnaMult * (1 + 0.1 * G.boonLevel('rich_genes'))) : n;
     run.dna = Math.max(0, run.dna + amount);
     if (amount > 0) run.totalDna += amount;
     return amount;
@@ -1020,7 +1036,7 @@ window.G = window.G || {};
     const heads = Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1));
     const dmg = Math.max(1, Math.round(heads * G.POP_SCALE * (0.85 + rand() * 0.3)));
     run.pop -= dmg;
-    if (run.stage === 'tribe') songLoss(run, dmg / G.POP_SCALE);
+    if (G.people(run)) songLoss(run, dmg / G.POP_SCALE);
     return dmg;
   }
 
@@ -1092,16 +1108,16 @@ window.G = window.G || {};
       else { const g = grow(run, eff.pop); lines.push({ t: g ? `+${g} Population` : 'Population already at its limit' }); }
     }
     // Shares of your Population: of what you have now, or of your maximum.
-    if (eff.popPct) { const n = Math.round(run.pop * Math.abs(eff.popPct)); if (eff.popPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(-eff.popPct * 100)}% of your number)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(eff.popPct * 100)}% of your number)`, good: true }); } }
-    if (eff.popFlat) { const word = run.stage === 'tribe' ? 'members' : 'Population'; if (eff.popFlat < 0) { const n = Math.min(run.pop, -eff.popFlat); run.pop -= n; lines.push({ t: `−${n} ${word}`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, eff.popFlat); run.pop += g; if (g) lines.push({ t: `+${g} ${word}`, good: true }); } }
-    if (eff.popMaxPct) { const n = Math.round(G.maxPop(run) * Math.abs(eff.popMaxPct)); if (eff.popMaxPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(-eff.popMaxPct * 100)}% of your maximum)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${run.stage === 'tribe' ? 'members' : 'Population'} (${Math.round(eff.popMaxPct * 100)}% of your maximum)`, good: true }); } }
+    if (eff.popPct) { const n = Math.round(run.pop * Math.abs(eff.popPct)); if (eff.popPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${G.popWord(run)} (${Math.round(-eff.popPct * 100)}% of your number)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${G.popWord(run)} (${Math.round(eff.popPct * 100)}% of your number)`, good: true }); } }
+    if (eff.popFlat) { const word = G.popWord(run); if (eff.popFlat < 0) { const n = Math.min(run.pop, -eff.popFlat); run.pop -= n; lines.push({ t: `−${n} ${word}`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, eff.popFlat); run.pop += g; if (g) lines.push({ t: `+${g} ${word}`, good: true }); } }
+    if (eff.popMaxPct) { const n = Math.round(G.maxPop(run) * Math.abs(eff.popMaxPct)); if (eff.popMaxPct < 0) { run.pop -= n; lines.push({ t: `−${n} ${G.popWord(run)} (${Math.round(-eff.popMaxPct * 100)}% of your maximum)`, bad: true }); } else { const g = Math.min(G.maxPop(run) - run.pop, n); run.pop += g; if (g) lines.push({ t: `+${g} ${G.popWord(run)} (${Math.round(eff.popMaxPct * 100)}% of your maximum)`, good: true }); } }
     if (eff.food) {
       const before = G.syncFood(run);
       if (eff.food > 0) G.addFood(run, eff.food, eff.foodKind || curFoodKind); else G.spendFood(run, -eff.food);
       const d = run.food - before;
       if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} Food`, bad: d < 0 });
     }
-    if (eff.dna) lines.push({ t: `+${gainDna(run, eff.dna)} ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}`, good: true });
+    if (eff.dna) lines.push({ t: `+${gainDna(run, eff.dna)} ${G.dnaWord(run)}`, good: true });
     if (eff.tame && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx] && !run.species[speciesIdx].band) { const sp = run.species[speciesIdx]; sp.tamed = true; sp.opinion = 100; lines.push({ t: `The ${sp.name} are tamed`, good: true }); }
     if (eff.totem && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) { run.totem = run.species[speciesIdx].name; lines.push({ t: `The ${run.totem} are your totem`, good: true }); }
     if (eff.insight) {
@@ -1169,6 +1185,20 @@ window.G = window.G || {};
     if (eff.nemesis && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) run.species[speciesIdx].nemesis = true;
     if (eff.legacy) run.legacy = eff.legacy;
     if (eff.tribeEnding) run.tribeEnding = eff.tribeEnding;
+    if (eff.societyEnding) run.societyEnding = eff.societyEnding;
+    if (eff.loyalty && run.council) { run.council.forEach((c) => { c.loyalty = clamp(c.loyalty + eff.loyalty, -100, 100); }); lines.push({ t: `Your council ${eff.loyalty > 0 ? 'warms to' : 'cools on'} your ruler`, good: eff.loyalty > 0, bad: eff.loyalty < 0 }); }
+    if (eff.plotEnds && run.plot != null && run.council && run.council[run.plot]) {
+      const c = run.council[run.plot];
+      if (eff.plotEnds === 'dismiss') { run.council[run.plot] = newCouncillor(run, c.role); lines.push({ t: `${c.name} is gone; ${run.council[run.plot].name} is the new ${G.COUNCIL_ROLES[c.role].name}`, good: true }); }
+      if (eff.plotEnds === 'appease') { c.loyalty = 20; lines.push({ t: `${c.name} is satisfied, for now`, good: true }); }
+      if (eff.plotEnds === 'coup') { lines.push({ t: `${c.name} has seized power!`, bad: true }); log(run, `${c.name} overthrew ${G.leaderTitle(run.leader)}.`); run.leader = { name: c.name, traits: c.traits.concat(['cruel']).slice(0, 2), since: run.turn, life: 14 + Math.floor(rand() * 10) }; run.council[run.plot] = newCouncillor(run, c.role); }
+      run.plot = null;
+    }
+    if (eff.settlementLoss && run.settlements && run.settlements.length > 1) { const st = run.settlements.slice().sort((x, y) => x.size - y.size)[0]; if (st.size > 1) { st.size -= 1; lines.push({ t: `${st.name} shrinks`, bad: true }); } else { run.settlements = run.settlements.filter((x) => x !== st); lines.push({ t: `${st.name} is abandoned`, bad: true }); } run.pop = Math.min(run.pop, G.maxPop(run)); }
+    if (eff.settlementGrow && run.settlements) { const st = run.settlements.slice().sort((x, y) => x.size - y.size)[0]; if (st && st.size < 4) { st.size += 1; lines.push({ t: `${st.name} grows`, good: true }); } }
+    if (eff.newSettlement && run.settlements && run.settlements.length < 8) { const name = settlementName(run); run.settlements.push({ name, size: 1 }); lines.push({ t: `A new ${G.socKind(run).settlement}: ${name}`, good: true }); }
+    if (eff.neighbourOpinion) { run.species.filter((x) => x.band && !x.extinct).forEach((b) => { b.opinion = clamp(b.opinion + eff.neighbourOpinion, -100, 100); }); lines.push({ t: `Every neighbour people ${eff.neighbourOpinion > 0 ? 'likes' : 'dislikes'} you more`, good: eff.neighbourOpinion > 0, bad: eff.neighbourOpinion < 0 }); }
+    if (eff.tradition) { const opts = traditionOptions(run); if (opts.length) { const d = pick(opts); run.traditions.push(d); addUnique(G.meta.codex.traditions = G.meta.codex.traditions || [], d); lines.push({ t: `Tradition: ${G.TRADITION[d].name}`, good: true }); } }
     if (eff.mound) { const m0 = run.mound || 0; run.mound = clamp(m0 + eff.mound, 0, 6); if (run.mound !== m0) lines.push({ t: `Your ${G.kind(run).camp} grows to level ${run.mound}`, good: true }); }
     if (eff.gear) { const g0 = run.gear || 0; run.gear = clamp(g0 + eff.gear, 0, 5); if (run.gear !== g0) lines.push({ t: `Gear level ${run.gear}`, good: run.gear > g0, bad: run.gear < g0 }); }
     if (eff.special) { const before = run.special || 0; run.special = clamp(before + eff.special, 0, G.SPECIAL_CAP); const d = run.special - before; if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} ${G.kind(run).resource}`, good: d > 0, bad: d < 0 }); }
@@ -1176,7 +1206,7 @@ window.G = window.G || {};
     if (eff.band2) { const b = makeBand(run, true); if (b) lines.push({ t: `Another band: the ${b.name}`, bad: b.opinion < 0 }); }
     if (eff.band) { const b = makeBand(run); if (b) lines.push({ t: `A rival ${G.kind(run).band}: the ${b.name}`, bad: b.opinion < 0 }); }
     if (eff.bandOpinion) { const b = run.species.filter((x) => x.band && !x.extinct).pop(); if (b) { b.opinion = clamp(b.opinion + eff.bandOpinion, -100, 100); lines.push({ t: `The ${b.name} ${eff.bandOpinion > 0 ? 'like' : 'dislike'} you ${eff.bandOpinion > 0 ? 'more' : 'more'}`, good: eff.bandOpinion > 0, bad: eff.bandOpinion < 0 }); } }
-    if (eff.leaderPick != null && run.candidates && run.candidates[eff.leaderPick]) { run.leader = run.candidates[eff.leaderPick]; run.candidates = null; lines.push({ t: `New leader: ${G.leaderTitle(run.leader)}`, good: true }); log(run, `${G.leaderTitle(run.leader)} became leader.`); }
+    if (eff.leaderPick != null && run.candidates && run.candidates[eff.leaderPick]) { const cand = run.candidates[eff.leaderPick]; if (cand.role && run.council) { const i = run.council.findIndex((c) => c.name === cand.name); if (i >= 0) run.council[i] = newCouncillor(run, cand.role); } run.leader = { name: cand.name, traits: cand.traits.length > 1 ? cand.traits : cand.traits.concat([pick(Object.keys(G.LEADER_TRAITS).filter((x) => !cand.traits.includes(x)))]), since: run.turn, life: cand.life || 18 }; run.candidates = null; lines.push({ t: `New leader: ${G.leaderTitle(run.leader)}`, good: true }); log(run, `${G.leaderTitle(run.leader)} became leader.`); }
     if (eff.leaderTrait && run.leader && !run.leader.traits.includes(eff.leaderTrait)) { run.leader.traits.push(eff.leaderTrait); lines.push({ t: `${run.leader.name} is now ${G.LEADER_TRAITS[eff.leaderTrait].name}`, good: true }); }
     if (eff.leaderDies && run.leader) { lines.push({ t: `${run.leader.name} has died`, bad: true }); log(run, `${G.leaderTitle(run.leader)} died.`); run.leader = null; run.needLeader = true; }
     if (eff.discovery) { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries = G.meta.codex.discoveries || [], d); lines.push({ t: `Discovery: ${G.DISCOVERY[d].name}`, good: true }); } }
@@ -1340,6 +1370,9 @@ window.G = window.G || {};
     else if (req.special && (run.special || 0) < req.special) reason = `Needs ${req.special} ${G.kind(run) ? G.kind(run).resource : ''}`;
     else if (req.band && !run.species.some((x) => x.band && !x.extinct)) reason = 'Needs a rival band nearby';
     else if (req.cand != null && !(run.candidates && run.candidates[req.cand])) reason = 'A fourth candidate needs Wise Choosing (Ancestral Wisdom)';
+    else if (req.socType && run.socType !== req.socType) reason = `Only for ${G.SOCIETY_TYPES[req.socType].name} peoples`;
+    else if (req.settlements && (run.settlements || []).length < req.settlements) reason = `Needs ${req.settlements} ${G.socKind(run) ? G.socKind(run).settlement : 'settlement'}s`;
+    else if (req.neighbour && !run.species.some((x) => x.band && !x.extinct && x.opinion >= req.neighbour)) reason = `Needs a neighbour people with opinion ${req.neighbour} or more`;
     else if (req.ownPath && run.path !== req.ownPath) reason = `Only for ${G.PATH[req.ownPath].name}`;
     else if (opt.result && opt.result.trait === 'giant' && run.traits.includes('skeleton_shell') && run.habitat === 'land') reason = 'An outer shell cannot carry a giant on land';
     else if (req.gimmick && G.gimmick(run) !== req.gimmick) reason = `Only for the ${G.ARCHETYPES.find((a) => a.gimmick === req.gimmick).name}`;
@@ -1417,6 +1450,7 @@ window.G = window.G || {};
     } else if (sc.finale && sc.won) {
       if (run.stage === 'cell') evolve(run, sc.habitat);
       else if (run.stage === 'creature' && G.TRIBE_PATHS.includes(run.path)) becomeTribe(run);
+      else if (run.stage === 'tribe' && G.SOCIETY_PATHS.includes(run.path)) becomeSociety(run);
       else endRun(run, true);
     } else {
       nextStep(run, false);
@@ -1664,9 +1698,9 @@ window.G = window.G || {};
   G.activityState = (run, id, target) => {
     const a = G.ACTIVITY[id];
     if (!a || run.phase === 'end') return { ok: false, why: '' };
-    if (a.stage && a.stage !== run.stage) return { ok: false, hidden: true, why: '' };
+    if (a.stage && ![].concat(a.stage).includes(run.stage)) return { ok: false, hidden: true, why: '' };
     if (a.path && a.path !== run.path) return { ok: false, hidden: true, why: '' };
-    if (id === 'cross' && run.stage === 'tribe') return { ok: false, hidden: true, why: '' };
+    if (id === 'cross' && G.people(run)) return { ok: false, hidden: true, why: '' };
     if (a.target) {
       const s = target && run.species.find((x) => x.name === target && !x.extinct);
       if (!s) return { ok: false, why: 'Choose a species' };
@@ -1714,21 +1748,23 @@ window.G = window.G || {};
     act.turns += 1;
     const t = G.activityTarget(run);
     if (a.target && !t) { lines.push(finishActivity(run, `The ${act.target} are gone. ${a.name} is over.`, true)); return; }
-    if (a.stage === 'tribe') { tribeActivityTurn(run, act, t, lines); return; }
+    if (a.stage && [].concat(a.stage).some((x) => x === 'tribe' || x === 'society')) { tribeActivityTurn(run, act, t, lines); return; }
     if (act.id === 'migrate') {
       G.spendFood(run, 1);
       // Wanderer peoples move camp a turn faster, and learn on the way.
-      const wander = run.stage === 'tribe' && G.temperament(run).id === 'wanderer';
+      const wander = G.people(run) && G.temperament(run).id === 'wanderer';
+      const roam = run.stage === 'society' && run.socType === 'roam';
       // Many Minds have no fixed home: moving costs them nothing.
-      if (run.stage === 'tribe' && run.path === 'many') G.addFood(run, 1);
-      if (act.turns >= a.turns - (wander ? 1 : 0)) {
+      if (G.people(run) && run.path === 'many') G.addFood(run, 1);
+      if (act.turns >= a.turns - (wander || roam ? 1 : 0)) {
+        if (roam) { gainDna(run, 3); lines.push({ t: 'Roaming peoples learn on the road: +3 Influence', good: true }); }
         if (wander) { gainDna(run, 3); lines.push({ t: 'The road taught your people something: +3 Ideas', good: true }); }
         // Without the wits to choose, you end up wherever the road leads.
         const dest = act.dest || pick(G.biome(run).next);
         moveBiome(run, dest);
         G.addFood(run, 3, 'plants'); gainDna(run, 3);
         run.migrateReadyAt = run.turn + 10;
-        lines.push(finishActivity(run, `You reached the ${G.biome(run).name}: +3 Food and +3 ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}.`, true));
+        lines.push(finishActivity(run, `You reached the ${G.biome(run).name}: +3 Food and +3 ${G.dnaWord(run)}.`, true));
       } else lines.push({ t: `Migrating (${act.turns}/${a.turns}): −1 Food` });
     }
     if (act.id === 'war') {
@@ -1746,8 +1782,9 @@ window.G = window.G || {};
         t.pop = Math.max(0.5, t.pop * 0.35); t.opinion = -100; t.nemesis = true;
         G.addFood(run, 6, 'meat'); gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
         // Takers carry off what the beaten band knew.
-        if (t.band && run.stage === 'tribe' && G.temperament(run).id === 'taker') { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push({ t: `You took their knowledge: ${G.DISCOVERY[d].name}`, good: true }); } }
-        lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}. They will not forget.`, true));
+        if (run.stage === 'society' && run.socType === 'conquer') { gainDna(run, 4); lines.push({ t: 'Warlike peoples gain from every victory: +4 Influence', good: true }); }
+        if (t.band && G.people(run) && G.temperament(run).id === 'taker') { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push({ t: `You took their knowledge: ${G.DISCOVERY[d].name}`, good: true }); } }
+        lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 ${G.dnaWord(run)}. They will not forget.`, true));
       } else if (act.score <= -100) {
         t.opinion = -100; t.nemesis = true; addUnique(run.traits, 'scarred');
         lines.push({ t: `Defeat: −${damage(run, 2)} Population`, bad: true });
@@ -1757,9 +1794,9 @@ window.G = window.G || {};
     }
     if (act.id === 'court') {
       // Mask peoples win others over with Cunning.
-      const wooing = run.stage === 'tribe' && G.temperament(run).id === 'mask' ? Math.max(G.stat(run, 'cha'), G.stat(run, 'cun')) : G.stat(run, 'cha');
+      const wooing = G.people(run) && G.temperament(run).id === 'mask' ? Math.max(G.stat(run, 'cha'), G.stat(run, 'cun')) : G.stat(run, 'cha');
       // Another thinking people is harder to win over than an animal.
-      const chance = clamp(42 + (wooing - 2) * 8 + (run.stage === 'tribe' ? 15 * G.boonLevel('w_kin') : 0) - (t.band ? 15 : 0), 15, 90);
+      const chance = clamp(42 + (wooing - 2) * 8 + (run.stage === 'tribe' ? 15 * G.boonLevel('w_kin') : 0) + (G.hasFlag(run, 'messengers') ? 15 : 0) - (t.band ? 15 : 0), 15, 90);
       const gain = t.band ? 7 : 12;
       if (rand() * 100 < chance) { t.opinion = clamp(t.opinion + gain, -100, 100); lines.push({ t: `Courting the ${t.name}: opinion +${gain}`, good: true }); }
       else { t.opinion = clamp(t.opinion - 2, -100, 100); lines.push({ t: `The ${t.name} were not impressed: opinion −2` }); }
@@ -1782,7 +1819,7 @@ window.G = window.G || {};
     if (act.id === 'hunt') {
       const chance = clamp(45 + (Math.max(G.stat(run, 'str'), G.stat(run, 'spd')) - G.speciesStat(t, 'spd')) * 8 + G.mod(run, 'huntBonus') * 4, 10, 90);
       if (rand() * 100 < chance) {
-        const food = Math.round((2 + Math.floor(G.heads(run) / 8)) * (run.stage === 'tribe' && G.temperament(run).id === 'hunter' ? 1.5 : 1));
+        const food = Math.round((2 + Math.floor(G.heads(run) / 8)) * (G.people(run) && G.temperament(run).id === 'hunter' ? 1.5 : 1));
         G.addFood(run, food, 'meat'); t.pop = Math.max(0, t.pop - t.cap * 0.08); t.opinion = clamp(t.opinion - 6, -100, 100);
         if (G.gimmick(run) === 'predator') { run.hunger = 0; if (rand() < 0.15) run.pendingSpecial = { name: t.name, source: 'devour' }; }
         lines.push({ t: `You hunted the ${t.name}: +${food} Food`, good: true });
@@ -1838,11 +1875,11 @@ window.G = window.G || {};
       const starve = hungry;
       const starved = Math.min(run.pop, starve * G.POP_SCALE);
       run.pop -= starved;
-      lines.push({ t: `Starving: −${starved} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
+      lines.push({ t: `Starving: −${starved} ${G.popWord(run)}`, bad: true });
     } else {
       // Spare Food becomes young: bigger herds can raise more at once.
       // A people raises its young slowly: one a year, and each costs more.
-      const tribe = run.stage === 'tribe';
+      const tribe = G.people(run);
       const cost = G.growthCost(run) + (tribe ? G.TRIBE_CHILD_COST : 0);
       let born = 0;
       // Each brood costs spare Food and adds about ten young (a few more or fewer).
@@ -1867,18 +1904,18 @@ window.G = window.G || {};
       // A thinking band keeps up with you: its strength is never far below your own, and grows with the years.
       const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 1 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
       // In the Tribe stage the wild grows more dangerous with the years.
-      const yearsAtk = run.stage === 'tribe' ? Math.floor(run.stageTurn / 8) : 0;
+      const yearsAtk = G.people(run) ? Math.floor(run.stageTurn / 8) : 0;
       // ...and its hunters keep pace with a strong people: never more than G.TRIBE_THREAT below your defence.
       const def0 = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
-      const paceAtk = run.stage === 'tribe' && run.stageTurn > G.TRIBE_GRACE && !s.band && G.TRIBE_THREAT != null ? Math.max(0, def0 - G.TRIBE_THREAT - Math.floor(G.harsh(run) / 2) - G.speciesStat(s, 'str')) : 0;
+      const paceAtk = G.people(run) && run.stageTurn > G.TRIBE_GRACE && !s.band && G.TRIBE_THREAT != null ? Math.max(0, def0 - G.TRIBE_THREAT - Math.floor(G.harsh(run) / 2) - G.speciesStat(s, 'str')) : 0;
       const atk = G.speciesStat(s, 'str') + bandAtk + yearsAtk + paceAtk + Math.floor(G.harsh(run) / 2) + (run.stage !== 'cell' ? run.era - 1 : 0) + Math.min(3, Math.floor(run.stageTurn / 10));
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
-      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, run.stage === 'tribe' ? G.TRIBE_HIT_CAP : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
+      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, G.people(run) ? G.TRIBE_HIT_CAP : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (run.stage === 'tribe' && run.stageTurn > G.TRIBE_GRACE ? G.TRIBE_BLOW : 0);
-      lines.push({ t: s.band ? `The ${s.name} raided your ${G.kind(run).camp}: −${damage(run, n)} members` : `The ${s.name} hunted you: −${damage(run, n)} ${run.stage === 'tribe' ? 'members' : 'Population'}`, bad: true });
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (G.people(run) && run.stageTurn > G.TRIBE_GRACE ? G.TRIBE_BLOW : 0);
+      lines.push({ t: s.band ? `The ${s.name} raided your ${G.kind(run).camp}: −${damage(run, n)} members` : `The ${s.name} hunted you: −${damage(run, n)} ${G.popWord(run)}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
     if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} Population from symbionts`, good: true }); }
@@ -1890,8 +1927,9 @@ window.G = window.G || {};
     const stored = run.meat + run.plants;
     if (stored > cap) { let over = stored - cap; const m = Math.min(run.meat, over); run.meat -= m; over -= m; run.plants -= over; lines.push({ t: `${stored - cap} Food spoiled (storage ${cap})`, bad: true }); }
     G.syncFood(run);
-    lines.push({ t: `+${gainDna(run, G.dnaPerTurn(run))} ${run.stage === 'tribe' ? 'Ideas' : 'DNA'}`, good: true });
-    if (run.stage === 'tribe') tribeTurn(run, lines);
+    lines.push({ t: `+${gainDna(run, G.dnaPerTurn(run))} ${G.dnaWord(run)}`, good: true });
+    if (G.people(run)) tribeTurn(run, lines);
+    if (run.stage === 'society') societyTurn(run, lines);
     if (run.mind && run.stage === 'creature') {
       const ins = G.insightPerTurn(run);
       run.insight += ins;
@@ -1948,13 +1986,13 @@ window.G = window.G || {};
   G.SPECIAL_CAP = 20;
   G.kind = (run) => G.KINDS[run.path] && G.KINDS[run.path][run.habitat === 'sea' ? 'sea' : 'land'];
   // Fire (or vent-heat) is lit once your Toolmakers have at least 3: it warms you through the cold and keeps hunters away.
-  G.firelit = (run) => run.stage === 'tribe' && run.path === 'tool' && (run.special || 0) >= 3;
+  G.firelit = (run) => G.people(run) && run.path === 'tool' && (run.special || 0) >= 3;
   // Many Minds hide in their Light once they have 3.
-  G.lightHidden = (run) => run.stage === 'tribe' && run.path === 'many' && (run.special || 0) >= 3;
+  G.lightHidden = (run) => G.people(run) && run.path === 'many' && (run.special || 0) >= 3;
   // How much less often hunters and raiders reach your camp.
-  G.campShield = (run) => (G.firelit(run) ? 0.75 : 1) * (G.lightHidden(run) ? 0.75 : 1) * (run.stage === 'tribe' ? 1 - 0.15 * G.boonLevel('w_watch') : 1)
+  G.campShield = (run) => (G.firelit(run) ? 0.75 : 1) * (G.lightHidden(run) ? 0.75 : 1) * (run.stage === 'tribe' ? 1 - 0.15 * G.boonLevel('w_watch') : 1) * (G.hasFlag(run, 'closed') ? 0.8 : 1)
     // Gardeners' tamed animals guard the gardens.
-    * (run.stage === 'tribe' && run.path === 'garden' ? 1 - 0.1 * Math.min(3, run.species.filter((x) => x.tamed && !x.extinct).length) : 1);
+    * (G.people(run) && run.path === 'garden' ? 1 - 0.1 * Math.min(3, run.species.filter((x) => x.tamed && !x.extinct).length) : 1);
   G.wisdomOpen = () => G.stageStarts().length > 0 || (G.meta.codex.tribeEndings || []).length > 0;
   G.ruler = (run) => (G.kind(run) && G.kind(run).leader) || 'Leader';
   // What your body lets your people do.
@@ -2019,7 +2057,7 @@ window.G = window.G || {};
     }
     // Bands compete for the same land: unless you are allies, they slowly sour on you.
     // Even allies need tending: friendship with another people never lasts on its own.
-    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.BAND_SOUR)); });
+    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.hasFlag(run, 'peaceful') ? 1 : G.BAND_SOUR)); });
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
@@ -2029,6 +2067,7 @@ window.G = window.G || {};
   // Singers: when many die at once, verses are lost, and with them, discoveries.
   function songLoss(run, dmg) {
     if (run.path !== 'song' || dmg < 3) return; // dmg is in heads
+    if (G.hasFlag(run, 'songSafe')) return;
     if (run.songSafe) { run.songSafe = false; run.notices.push('Your teaching held: no verses were lost.'); return; }
     run.special = Math.max(0, (run.special || 0) - Math.round(dmg));
     const known = run.discoveries || [];
@@ -2040,9 +2079,9 @@ window.G = window.G || {};
     }
   }
   // A rival band: your old nemesis (or a rival) has learned to think too.
-  function makeBand(run, second) {
+  function makeBand(run, second, limit) {
     const bands = run.species.filter((x) => x.band && !x.extinct);
-    if (bands.length >= (second ? 2 : 1)) return null;
+    if (bands.length >= (limit || (second ? 2 : 1))) return null;
     const alive = run.species.filter((x) => !x.extinct && !x.tamed && !x.band && !bands.some((b) => b.from === x.name));
     const src = (!second && alive.find((x) => x.nemesis)) || alive.filter((x) => x.role === 'rival' || x.role === 'predator').sort((a, b) => a.opinion - b.opinion)[0] || alive.sort((a, b) => b.pop - a.pop)[0];
     if (!src) return null;
@@ -2107,11 +2146,19 @@ window.G = window.G || {};
     if (id === 'raise' && (run.special || 0) < 5) return 'Needs 5 Brood';
     if (id === 'raise' && (run.mound || 0) >= 6) return `Your ${G.kind(run).camp} is as big as it can be`;
     if (id === 'watch' && s && s.tamed) return 'Watch something wilder';
-    if ((id === 'craft' || id === 'teach' || id === 'ceremony' || id === 'raise' || id === 'tend') && !run.specialOn) return `Your people have no ${G.kind(run).resource} yet`;
+    if ((id === 'craft' || id === 'teach' || id === 'ceremony' || id === 'raise' || id === 'tend') && !run.specialOn && run.stage === 'tribe') return `Your people have no ${G.kind(run).resource} yet`;
+    if (id === 'found' && (run.settlements || []).length >= 8) return 'Your region is full (8 settlements)';
+    if (id === 'found' && run.food < 6) return 'Needs 6 Food';
+    if (id === 'found' && run.pop < G.maxPop(run) * 0.5) return 'Needs your people at half their maximum or more';
+    if (id === 'build' && !(run.settlements || []).some((x) => x.size < 4)) return 'Every settlement is as big as it gets';
+    if ((id === 'gift' || id === 'trade' || id === 'raid') && s && !s.band) return 'Only neighbour peoples';
+    if (id === 'gift' && run.food < 3) return 'Needs 3 Food';
+    if (id === 'trade' && s && s.opinion < 10) return 'They need to like you first (opinion 10)';
     return null;
   }
   function tribeActivityTurn(run, act, t, lines) {
     const a = G.ACTIVITY[act.id];
+    if (['found', 'build', 'gift', 'trade', 'raid'].includes(act.id)) { societyActivityTurn(run, act, t, lines); return; }
     if (act.id === 'tame') {
       const bonus = (G.temperament(run).id === 'bond' ? 20 : 0) + 15 * G.boonLevel('w_kin');
       const chance = clamp(35 + (G.stat(run, 'cha') - 3) * 8 + bonus, 15, 90);
@@ -2148,6 +2195,39 @@ window.G = window.G || {};
       if (act.turns >= a.turns) { run.blightSafeUntil = run.turn + 12; lines.push(finishActivity(run, 'The gardens are weeded and healthy. Blight cannot strike for 12 turns.', true)); }
     }
   }
+  function societyActivityTurn(run, act, t, lines) {
+    const a = G.ACTIVITY[act.id];
+    if (act.id === 'found') {
+      lines.push({ t: `Settlers on the road (${act.turns}/${a.turns})` });
+      if (act.turns >= a.turns) {
+        const settlers = Math.round(run.pop * 0.2); run.pop -= settlers; G.spendFood(run, 6);
+        const name = settlementName(run); run.settlements.push({ name, size: 1 });
+        lines.push(finishActivity(run, `${settlers} settlers founded ${name}, a new ${G.socKind(run).settlement}.`, true));
+      }
+    }
+    if (act.id === 'build' && act.turns >= a.turns - (run.socType === 'settle' ? 1 : 0)) {
+      const st = run.settlements.slice().sort((x, y) => x.size - y.size)[0];
+      if ((run.special || 0) >= 4) run.special -= 4; else G.spendFood(run, 6);
+      st.size += 1;
+      lines.push(finishActivity(run, `${st.name} has grown (size ${st.size}).`, true));
+    }
+    if (act.id === 'gift' && act.turns >= a.turns) {
+      G.spendFood(run, 3); const g = 15 + (G.hasFlag(run, 'messengers') ? 5 : 0) + (G.hasFlag(run, 'guests') ? 5 : 0);
+      t.opinion = clamp(t.opinion + g, -100, 100);
+      lines.push(finishActivity(run, `The ${t.name} accept your gifts: opinion +${g}.`, true));
+    }
+    if (act.id === 'trade') {
+      if (t.opinion < 0) { lines.push(finishActivity(run, `The ${t.name} will no longer trade with you.`, false)); return; }
+      G.addFood(run, 1 + (G.hasFlag(run, 'open') ? 1 : 0)); gainDna(run, 1); t.opinion = clamp(t.opinion + 1, -100, 100);
+      lines.push({ t: `Trading with the ${t.name}: +${1 + (G.hasFlag(run, 'open') ? 1 : 0)} Food, +1 Influence`, good: true });
+    }
+    if (act.id === 'raid' && act.turns >= a.turns) {
+      const win = G.stat(run, 'str') + rand() * 6 > G.speciesStat(t, 'str') + Math.floor(G.harsh(run) / 2) + rand() * 6;
+      t.opinion = clamp(t.opinion - 25, -100, 100);
+      if (win) { G.addFood(run, 5, 'meat'); gainDna(run, run.socType === 'conquer' ? 5 : 2); t.pop = Math.max(0, t.pop - t.cap * 0.1); lines.push(finishActivity(run, `The raid on the ${t.name} brought back food and glory.`, true)); }
+      else lines.push(finishActivity(run, `The raid on the ${t.name} failed: −${damage(run, 2)} people.`, false));
+    }
+  }
   // Ancestral Wisdom that every Tribe starts with.
   function tribeStart(run) {
     run.dna = 0; run.totalDna = 0; run.draftsTaken = 0; run.finaleRetryAt = 0; run.finaleTries = 0;
@@ -2181,11 +2261,11 @@ window.G = window.G || {};
   }
   // Stage Select: the start of each Tribe you have reached is kept, one per kind, so a new run can begin there.
   function saveStageStart(run) {
-    const m = G.meta; const key = `${run.path}|${run.habitat === 'sea' ? 'sea' : 'land'}`;
+    const m = G.meta; const key = `${run.path}|${run.habitat === 'sea' ? 'sea' : 'land'}${run.stage === 'society' ? '|society' : ''}`;
     const snap = JSON.parse(JSON.stringify(run));
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null; snap.event = null; snap.scene = null; snap.draft = null; snap.result = null;
     m.stageStarts = (m.stageStarts || []).filter((x) => x.key !== key);
-    m.stageStarts.unshift({ key, date: Date.now(), archetype: run.archetype, ending: G.endingName(run), kind: G.kind(run).name, body: G.bodyOf(run), run: snap });
+    m.stageStarts.unshift({ key, stage: run.stage, date: Date.now(), archetype: run.archetype, ending: run.stage === 'society' ? G.tribeEndingName(run) : G.endingName(run), kind: run.stage === 'society' ? G.socKind(run).name : G.kind(run).name, body: G.bodyOf(run), run: snap });
     G.saveMeta();
   }
   G.stageStarts = () => G.meta.stageStarts || [];
@@ -2199,7 +2279,7 @@ window.G = window.G || {};
     run.baseFoodCap = G.FOOD_CAP + 2 * G.boonLevel('pantry');
     run.secondChanceUsed = false; run.power = G.power();
     run.result = null; run.phase = 'evolved';
-    tribeStart(run);
+    if (run.stage === 'society') societyStart(run); else tribeStart(run);
     run.notices = [`Stage Select: your ${st.kind} begins again, from ${st.ending}.`];
     m.stats.runs += 1;
     G.run = run;
@@ -2222,6 +2302,102 @@ window.G = window.G || {};
     run.checkpointGenes = genes;
     run.notices.push(`${G.endingName(run)}: +${genes} Genetic Memory, kept whatever happens next.`);
     G.saveMeta();
+  }
+  // ---------- The Society stage (Update 16) ----------
+  G.popWord = (run) => (run.stage === 'society' ? 'people' : run.stage === 'tribe' ? 'members' : 'Population');
+  G.dnaWord = (run) => (run.stage === 'society' ? 'Influence' : run.stage === 'tribe' ? 'Ideas' : 'DNA');
+  G.socKind = (run) => G.SOCIETY_KINDS[run.path] && G.SOCIETY_KINDS[run.path][run.habitat === 'sea' ? 'sea' : 'land'];
+  G.hasFlag = (run, flag) => run.stage === 'society' && (run.traditions || []).some((id) => G.TRADITION[id] && G.TRADITION[id].flag === flag);
+  G.mythName = (run) => run.myth || 'The First Days';
+  G.societyEndingName = (run) => { const e = run.societyEnding && G.SOCIETY_ENDINGS[run.path] && G.SOCIETY_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.societyEnding]; return e ? e.name : ''; };
+  function settlementName(run) {
+    const A = G.SETTLEMENT_SYLLABLES; let n; let guard = 0;
+    do { n = pick(A.a) + pick(A.b); } while ((run.settlements || []).some((x) => x.name === n) && guard++ < 30);
+    return n;
+  }
+  function newCouncillor(run, role) {
+    const l = newLeader(run);
+    return { name: l.name, traits: l.traits.slice(0, 1), role, loyalty: 20 + Math.floor(rand() * 30) };
+  }
+  // Everything the Society stage adds: your kind of society, your traditions, your council and your founding myth.
+  function societyMods(run) {
+    const list = [];
+    const st = G.SOCIETY_TYPES[run.socType]; if (st) list.push(st.mods);
+    list.push({ cha: 1, influencePerTurn: 1 }); // the founding myth
+    (run.traditions || []).forEach((id) => { if (G.TRADITION[id]) list.push(G.TRADITION[id].mods); });
+    // A councillor who has turned against the ruler gives nothing.
+    (run.council || []).forEach((c) => { if (c.loyalty > -30) { list.push(G.COUNCIL_ROLES[c.role].mods); c.traits.forEach((t) => list.push(G.LEADER_TRAITS[t].mods)); } });
+    // Allies share their food.
+    const allies = run.species.filter((x) => x.band && !x.extinct && x.opinion >= 60).length;
+    if (allies) list.push({ foodPerTurn: Math.min(2, allies) });
+    return list;
+  }
+  G.influencePerTurn = (run) => Math.max(1, 1 + Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 3) + G.mod(run, 'influencePerTurn') + Math.floor(G.mod(run, 'ideasPerTurn') / 2) + Math.floor(G.stat(run, 'cha') / 10) + (run.instinct === 'explore' ? 1 : 0));
+  // One generation of society: the council's loyalty shifts, and grudges may become plots.
+  function societyTurn(run, lines) {
+    const ruler = run.leader;
+    (run.council || []).forEach((c, i) => {
+      const pull = (ruler && ruler.traits.includes('kind') ? 1 : 0) + (ruler && ruler.traits.includes('cruel') ? -2 : 0) + (G.hasFlag(run, 'loyal') ? 1 : 0);
+      c.loyalty = clamp(c.loyalty + pull + Math.round((rand() - 0.55) * 6), -100, 100);
+      if (c.loyalty < -40 && run.plot == null && rand() < 0.35) { run.plot = i; run.notices.push(`${G.COUNCIL_ROLES[c.role].name} ${c.name} is plotting against your ruler.`); }
+    });
+  }
+  // Traditions on offer: 1 of 3 (or 4). Tiers open as you learn more; a chosen tradition locks out its opposite.
+  function traditionOptions(run) {
+    const known = run.traditions || []; const hab = run.habitat === 'sea' ? 'sea' : 'land';
+    const locked = new Set(known.map((id) => G.TRADITION[id] && G.TRADITION[id].excl).filter(Boolean));
+    const n = known.length;
+    let pool = G.TRADITIONS.filter((t) => !known.includes(t.id) && !locked.has(t.id) && (t.tier === 1 || (t.tier === 2 && n >= 2) || (t.tier === 3 && n >= 4))
+      && (!t.path || t.path === run.path) && (!t.habitat || t.habitat === hab) && (!t.society || t.society === run.socType));
+    const out = []; const k = G.meta.boons.choice ? 4 : 3;
+    while (out.length < k && pool.length) { const t = weightedPick(pool, (x) => (x.path ? 1.5 : 1) * (x.tier > 1 ? 1.3 : 1)); out.push(t.id); pool = pool.filter((x) => x.id !== t.id); }
+    return out;
+  }
+  function learnTradition(run, id) {
+    const t = G.TRADITION[id];
+    run.traditions.push(id);
+    addUnique(G.meta.codex.traditions = G.meta.codex.traditions || [], id);
+    log(run, `Tradition: ${t.name}.${t.excl ? ` (${G.TRADITION[t.excl].name} is no longer possible.)` : ''}`);
+    if (!run.draft.source) run.draftsTaken += 1;
+    run.draft = null;
+    run.scene = { title: 'Tradition', label: `Your people adopt ${t.name}`, text: '', lines: [], anim: 'social', mood: 'proud', mutation: true, tradition: id };
+    run.phase = 'mutated';
+    save();
+  }
+  // The Founding has been paid out; the Society stage begins.
+  function stageCheckpoint(run) {
+    const r = stageReward(run, true); const m = G.meta;
+    const genes = Math.round((r.base + r.progress + r.winBonus + r.firstEnding) * r.mult);
+    m.genes += genes; m.stats.wins += 1;
+    if (r.endKey) addUnique(m.codex[r.codexList] = m.codex[r.codexList] || [], r.endKey);
+    run.checkpointGenes = (run.checkpointGenes || 0) + genes;
+    run.notices.push(`${G.tribeEndingName(run)}: +${genes} Genetic Memory, kept whatever happens next.`);
+    G.saveMeta();
+  }
+  function societyStart(run) {
+    run.dna = 0; run.totalDna = 0; run.draftsTaken = 0; run.finaleRetryAt = 0; run.finaleTries = 0;
+    run.traditions = []; run.plot = null; run.lastStandUsed = false;
+    const st = G.SOCIETY_TYPES[run.socType] || G.SOCIETY_TYPES.settle;
+    run.settlements = Array.from({ length: st.start }, (_, i) => ({ name: i === 0 ? G.socKind(run).capital.replace(/^the /, 'The ') : settlementName(run), size: i === 0 ? 2 : 1 }));
+    run.council = ['steward', 'marshal', 'keeper'].map((r) => newCouncillor(run, r));
+    // Old rivals become neighbour peoples, with their grudges; new peoples join them until there are three.
+    run.species.filter((x) => x.band && !x.extinct).forEach((b) => { b.pop = Math.max(b.pop, 14); b.cap = Math.max(b.cap, 20); });
+    for (let i = 0; i < 3; i++) makeBand(run, true, 3);
+  }
+  function becomeSociety(run) {
+    stageCheckpoint(run);
+    run.socType = run.tribeEnding || 'settle';
+    run.myth = `The Myth of ${G.endingName(run).replace(/^The /, '')}`;
+    run.stage = 'society'; run.stageTurn = 1; run.eraTurn = 1;
+    societyStart(run);
+    if (!run.leader) run.leader = newLeader(run);
+    run.needLeader = false; run.activity = null; run.chains = [];
+    run.pop = G.maxPop(run);
+    run.evolved = { society: true, kind: G.socKind(run).name, ending: G.tribeEndingName(run) };
+    run.notices = [];
+    log(run, `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes the ${G.socKind(run).name}, a ${G.SOCIETY_TYPES[run.socType].name.toLowerCase()} people.`);
+    run.phase = 'evolved';
+    saveStageStart(run);
   }
   G.tribeEndingName = (run) => { const e = run.tribeEnding && G.TRIBE_ENDINGS[run.path] && G.TRIBE_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.tribeEnding]; return e ? e.name : ''; };
 
@@ -2278,7 +2454,7 @@ window.G = window.G || {};
     const st = G.STAGES[run.stage];
     const k = 1 - 0.08 * G.boonLevel('short_road');
     // A Tribe's first milestone comes straight away; everywhere else goals need at least 1.
-    const f = (n) => (n > 0 || run.stage !== 'tribe' ? Math.max(1, Math.round(n * k)) : 0);
+    const f = (n) => (n > 0 || !G.people(run) ? Math.max(1, Math.round(n * k)) : 0);
     return { drafts: st.drafts.map(f), milestones: st.milestones.map((m) => ({ ...m, at: f(m.at) })), evolveAt: st.evolveAt && f(st.evolveAt) };
   };
 
@@ -2290,13 +2466,16 @@ window.G = window.G || {};
     if (ms) { setEvent(run, G.EVENT[ms.event.replace('{path}', run.path)]); return; }
     // A leader has died: choose the next one.
     if (run.stage === 'tribe' && run.needLeader) { run.candidates = Array.from({ length: G.boonLevel('w_choosing') ? 4 : 3 }, () => newLeader(run)); run.needLeader = false; setEvent(run, G.EVENT.succession); return; }
+    // In a society, the council chooses from among themselves, or an heir.
+    if (run.stage === 'society' && run.needLeader) { run.candidates = run.council.map((c) => ({ ...c, since: run.turn, life: 14 + Math.floor(rand() * 12) })).concat([newLeader(run)]); run.needLeader = false; setEvent(run, G.EVENT.soc_succession); return; }
+    if (run.stage === 'society' && run.plot != null && run.council[run.plot]) { setEvent(run, G.EVENT.council_plot); return; }
     // Lineages that reached the Spark before Paths existed choose one now.
     if (run.stage === 'creature' && run.mind && !run.path) { setEvent(run, G.EVENT.path_choice); return; }
     if (needsFascination(run)) { run.phase = 'mind'; return; }
     const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'creature' ? !!run.path && run.innovations.includes(`${run.path}_cap`) : run.dna >= st.evolveAt);
     if (finaleReady) {
       const hab = run.habitat === 'sea' ? 'sea' : 'land';
-      const id = run.stage === 'cell' ? 'cell_finale' : run.stage === 'tribe' ? `founding_${run.path}_${hab}` : `finale_${run.path}_${hab}`;
+      const id = run.stage === 'cell' ? 'cell_finale' : run.stage === 'society' ? `union_${run.path}_${hab}` : run.stage === 'tribe' ? `founding_${run.path}_${hab}` : `finale_${run.path}_${hab}`;
       setEvent(run, G.EVENT[id]);
       return;
     }
@@ -2315,6 +2494,7 @@ window.G = window.G || {};
 
   // ---------- Mutation drafts ----------
   function draftOptions(run) {
+    if (run.stage === 'society') return traditionOptions(run);
     if (run.stage === 'tribe') return discoveryOptions(run);
     const n = G.meta.boons.choice ? 4 : 3;
     const boost = G.ORIGIN[run.origin].boostKeyword;
@@ -2342,6 +2522,7 @@ window.G = window.G || {};
   G.pickDraft = function (pid, mode, socket) {
     const run = G.run;
     if (!run || run.phase !== 'draft' || !run.draft.options.includes(pid)) return;
+    if (run.stage === 'society') { learnTradition(run, pid); return; }
     if (run.stage === 'tribe') { learnDiscovery(run, pid, mode === 'combine' ? socket : null); return; }
     const text = installPart(run, G.PART[pid], mode, socket);
     log(run, `Mutation: ${text}.`);
@@ -2364,7 +2545,7 @@ window.G = window.G || {};
     const run = G.run;
     if (!run || run.phase !== 'draft') return;
     G.addFood(run, 3);
-    run.notices.push(`You skipped a ${run.stage === 'tribe' ? 'discovery' : 'mutation'} and gained 3 Food.`);
+    run.notices.push(`You skipped a ${run.stage === 'society' ? 'tradition' : run.stage === 'tribe' ? 'discovery' : 'mutation'} and gained 3 Food.`);
     if (!run.draft.source) run.draftsTaken += 1;
     run.draft = null;
     nextStep(run, false);
@@ -2449,13 +2630,14 @@ window.G = window.G || {};
   // ---------- Fossils and history ----------
   // How far a run got, in words.
   G.reachedLabel = (run) => {
+    if (run.stage === 'society') return `Society stage: ${G.socKind(run).name}`;
     if (run.stage === 'tribe') return `Tribe stage: ${G.kind(run).name}`;
     if (run.stage === 'cell') return run.multicellular ? 'Multicellular' : 'Single cell';
     if (run.mind) return 'Spark of Mind';
     if (run.era >= 2) return 'Age of Giants';
     return run.habitat === 'sea' ? 'Creature of the sea' : 'Creature of the land';
   };
-  const reviveKey = (run) => (run.stage === 'tribe' ? 'tribe' : run.stage === 'cell' ? 'multicellular' : run.mind ? 'mind' : run.era >= 2 ? 'giants' : 'creature');
+  const reviveKey = (run) => (run.stage === 'society' ? 'society' : run.stage === 'tribe' ? 'tribe' : run.stage === 'cell' ? 'multicellular' : run.mind ? 'mind' : run.era >= 2 ? 'giants' : 'creature');
   G.amberSlots = () => 1 + G.boonLevel('amber');
   // Save a fossil of the run as it is now. Called after each milestone and each new stage.
   G.fossilize = function (run) {

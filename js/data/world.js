@@ -18,10 +18,11 @@ G.MOD_LABELS = {
   dnaPerTurn: 'DNA per turn',
   insightPerTurn: 'Insight per turn',
   ideasPerTurn: 'Ideas per turn',
+  influencePerTurn: 'Influence per turn',
   specialPerTurn: 'of your people\'s resource per turn',
   forageBonus: 'Food while Foraging',
   huntBonus: 'Food while Hunting',
-  exploreBonus: 'DNA (or Ideas) while Exploring',
+  exploreBonus: 'DNA (Ideas, Influence) while Exploring',
   upkeep: 'Food eaten per turn',
   damageReduce: 'damage taken',
   foodCap: 'Food storage',
@@ -1014,12 +1015,97 @@ G.WISDOM = [
 
 // Activities only for the Tribe stage.
 G.ACTIVITIES.push(
-  { id: 'tame', name: 'Tame', target: 'species', stage: 'tribe', desc: 'Win a species\' trust, slowly, with Charm, until it lives alongside your people. Each tamed species gives 1 Food a turn and never attacks you.' },
-  { id: 'revere', name: 'Revere', target: 'species', stage: 'tribe', turns: 2, desc: 'Make a species your totem: your people take on a little of its strength, and it grows friendlier. You can only have one totem.' },
-  { id: 'ceremony', name: 'Ceremony', stage: 'tribe', turns: 2, desc: 'Gather everyone for two turns of dance and story (−1 Food a turn): +2 of your special resource and +1 Idea each turn. Needs 8 turns between ceremonies.' },
-  { id: 'craft', name: 'Craft', stage: 'tribe', path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
-  { id: 'teach', name: 'Teach the songs', stage: 'tribe', path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
+  { id: 'tame', name: 'Tame', target: 'species', stage: ['tribe', 'society'], desc: 'Win a species\' trust, slowly, with Charm, until it lives alongside your people. Each tamed species gives 1 Food a turn and never attacks you.' },
+  { id: 'revere', name: 'Revere', target: 'species', stage: ['tribe', 'society'], turns: 2, desc: 'Make a species your totem: your people take on a little of its strength, and it grows friendlier. You can only have one totem.' },
+  { id: 'ceremony', name: 'Ceremony', stage: ['tribe', 'society'], turns: 2, desc: 'Gather everyone for two turns of dance and story (−1 Food a turn): +2 of your special resource and +1 Idea each turn. Needs 8 turns between ceremonies.' },
+  { id: 'craft', name: 'Craft', stage: ['tribe', 'society'], path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
+  { id: 'teach', name: 'Teach the songs', stage: ['tribe', 'society'], path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
   { id: 'watch', name: 'Watch and learn', target: 'species', stage: 'tribe', path: 'many', turns: 3, desc: 'Spend three turns secretly watching a species. Watch a rival band and you copy one of its discoveries; watch any other species and you learn +2 Ideas and +3 Light.' },
   { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +2 max members per level, and +1 Toughness every second level.' },
   { id: 'tend', name: 'Tend the gardens', stage: 'tribe', path: 'garden', turns: 3, desc: 'Three turns of weeding and planting (−1 Food a turn): +2 Growth each turn, and Blight cannot strike for 12 turns after.' },
+);
+
+// ---------- The Society stage (Update 16) ----------
+G.STAGES.society = {
+  name: 'Society Stage', turnName: 'Generation',
+  drafts: [6, 15, 26, 38, 52, 68, 85, 104],
+  milestones: [{ at: 0, event: 'society_founded' }, { at: 30, event: 'the_council' }, { at: 62, event: 'neighbours_gather' }],
+  evolveAt: 125,
+};
+G.SOCIETY_PATHS = ['tool', 'song'];
+// Your Founding decides what kind of society you become.
+G.SOCIETY_TYPES = {
+  settle: { name: 'Settled', mods: { foodPerTurn: 1, tou: 1 }, start: 4, rule: 'Settled peoples start with four settlements and grow them faster (Build up costs less).' },
+  roam: { name: 'Roaming', mods: { spd: 1, exploreBonus: 2 }, start: 2, rule: 'Roaming peoples start with two settlements, but migrating is quick and always pays Influence.' },
+  conquer: { name: 'Warlike', mods: { str: 2 }, start: 3, rule: 'Warlike peoples hit harder, and every war won or raid made earns Influence.' },
+};
+G.SOCIETY_KINDS = {
+  tool: {
+    land: { name: 'Hearthlands', settlement: 'village', capital: 'the Great Hearth' },
+    sea: { name: 'Vent Holds', settlement: 'hold', capital: 'the Deep Forge' },
+  },
+  song: {
+    land: { name: 'Song-circles', settlement: 'circle', capital: 'the First Circle' },
+    sea: { name: 'Pod League', settlement: 'calving ground', capital: 'the Singing Deep' },
+  },
+};
+G.SETTLEMENT_SYLLABLES = { a: ['Ash', 'Brin', 'Cor', 'Del', 'Fen', 'Gar', 'Hal', 'Ir', 'Kel', 'Lor', 'Mar', 'Nor', 'Ost', 'Pel', 'Ros', 'Sar', 'Tor', 'Vel', 'Wen', 'Yar'], b: ['ford', 'hold', 'mere', 'stone', 'deep', 'fall', 'wick', 'reach', 'shore', 'hollow', 'ridge', 'well', 'brook', 'haven'] };
+// The council: three advisers, each with a role and an opinion of your ruler.
+G.COUNCIL_ROLES = {
+  steward: { name: 'Steward', mods: { foodPerTurn: 1, foodCap: 3 }, desc: 'Keeps the stores.' },
+  marshal: { name: 'Marshal', mods: { str: 1, tou: 1 }, desc: 'Leads the defence.' },
+  keeper: { name: 'Keeper', mods: { influencePerTurn: 1 }, desc: 'Keeps the stories and the special resource.' },
+};
+// Traditions and Laws: your culture tree. Drafted 1 of 3, like discoveries. Some come in pairs that exclude each other.
+// tier 1 is open at once; tier 2 needs 2 traditions, tier 3 needs 4.
+G.TRADITIONS = [
+  { id: 'war_bands', name: 'War Bands', tier: 1, excl: 'peace_vows', mods: { str: 2 }, desc: 'Every grown member can fight. Warlike.' },
+  { id: 'peace_vows', name: 'Peace Vows', tier: 1, excl: 'war_bands', mods: { cha: 2 }, flag: 'peaceful', desc: 'Neighbours sour on you more slowly. Peaceful.' },
+  { id: 'open_gates', name: 'Open Gates', tier: 1, excl: 'closed_gates', mods: { foodPerTurn: 1, cha: 1 }, flag: 'open', desc: 'Strangers welcome, and trade earns more. Open.' },
+  { id: 'closed_gates', name: 'Closed Gates', tier: 1, excl: 'open_gates', mods: { tou: 2 }, flag: 'closed', desc: 'Walls and watchmen: raids land less often. Closed.' },
+  { id: 'elder_rule', name: 'Rule of Elders', tier: 1, excl: 'young_blood', mods: { influencePerTurn: 1 }, desc: 'The old decide. Slow, but wise.' },
+  { id: 'young_blood', name: 'Young Blood', tier: 1, excl: 'elder_rule', mods: { spd: 1, popPerTurn: 1 }, desc: 'The young decide. Fast, and fearless.' },
+  { id: 'law_of_shares', name: 'Law of Shares', tier: 1, mods: { foodPerTurn: 2 }, desc: 'Every catch and every harvest is shared out.' },
+  { id: 'old_ways', name: 'The Old Ways', tier: 2, excl: 'new_reason', mods: { cha: 1, influencePerTurn: 1 }, desc: 'Rites and omens guide every choice. Faith.' },
+  { id: 'new_reason', name: 'Reason', tier: 2, excl: 'old_ways', mods: { cun: 2 }, desc: 'Why? How? Prove it. Reason.' },
+  { id: 'law_of_guests', name: 'Law of Guests', tier: 2, mods: { cha: 1 }, flag: 'guests', desc: 'A guest is sacred: envoys always come back friendlier.' },
+  { id: 'law_of_spear', name: 'Law of the Spear', tier: 2, mods: { str: 1, tou: 1 }, desc: 'Disputes end in a fight. Nobody starts many.' },
+  { id: 'hearth_law', name: 'Hearth Law', tier: 2, excl: 'road_law', mods: { maxPop: 4 }, desc: 'Home is where the fire is: settlements hold more.' },
+  { id: 'road_law', name: 'Road Law', tier: 2, excl: 'hearth_law', mods: { exploreBonus: 2, spd: 1 }, desc: 'Home is the road between settlements.' },
+  { id: 'great_hall', name: 'The Great Hall', tier: 3, society: 'settle', mods: { maxPop: 4, influencePerTurn: 1 }, desc: 'One hall big enough for everyone. Settled peoples only.' },
+  { id: 'caravan_law', name: 'Caravan Law', tier: 3, society: 'roam', mods: { foodPerTurn: 2, spd: 1 }, desc: 'Every settlement can be packed and moved. Roaming peoples only.' },
+  { id: 'warrior_lodges', name: 'Warrior Lodges', tier: 3, society: 'conquer', mods: { str: 3 }, desc: 'Where the young learn to fight. Warlike peoples only.' },
+  { id: 'councils_of_all', name: 'Council of All', tier: 3, mods: { cha: 2, influencePerTurn: 1 }, flag: 'loyal', desc: 'Everyone has a voice: the council stays loyal.' },
+  // Toolmakers
+  { id: 'kilns', name: 'Kilns', tier: 1, path: 'tool', habitat: 'land', mods: { foodCap: 6, tou: 1 }, desc: 'Fired clay: pots, walls, ovens.' },
+  { id: 'vent_kilns', name: 'Vent Kilns', tier: 1, path: 'tool', habitat: 'sea', mods: { foodCap: 6, tou: 1 }, desc: 'Shells baked hard in the vents.' },
+  { id: 'masonry', name: 'Masonry', tier: 2, path: 'tool', mods: { tou: 2, maxPop: 2 }, desc: 'Stone on stone, built to last.' },
+  { id: 'smiths', name: 'Smiths', tier: 2, path: 'tool', mods: { str: 2, specialPerTurn: 1 }, desc: 'Keepers of the hottest fires.' },
+  { id: 'roads', name: 'Roads', tier: 3, path: 'tool', habitat: 'land', mods: { spd: 1, influencePerTurn: 1 }, desc: 'Paths between every village.' },
+  { id: 'harbours', name: 'Harbours', tier: 3, path: 'tool', habitat: 'sea', mods: { spd: 1, influencePerTurn: 1 }, desc: 'Sheltered water between every hold.' },
+  // Singers
+  { id: 'song_law', name: 'Song-Law', tier: 1, path: 'song', mods: { cha: 1, influencePerTurn: 1 }, desc: 'The law is a song everyone knows by heart.' },
+  { id: 'messenger_songs', name: 'Messenger Songs', tier: 2, path: 'song', mods: { cha: 2 }, flag: 'messengers', desc: 'Songs carried between peoples: courting and gifts work better.' },
+  { id: 'memory_halls', name: 'Halls of Memory', tier: 2, path: 'song', mods: { specialPerTurn: 1, cun: 1 }, flag: 'songSafe', desc: 'Every verse sung in many places: no great loss costs a discovery.' },
+  { id: 'echo_roads', name: 'Echo Roads', tier: 3, path: 'song', habitat: 'land', mods: { exploreBonus: 2, influencePerTurn: 1 }, desc: 'Songs that map the whole region.' },
+  { id: 'migration_songs', name: 'Migration Songs', tier: 3, path: 'song', habitat: 'sea', mods: { exploreBonus: 2, influencePerTurn: 1 }, desc: 'Every route around the ocean, sung.' },
+];
+G.TRADITION = {}; G.TRADITIONS.forEach((t) => { G.TRADITION[t.id] = t; });
+// How a Society stage ends (Update 16: three of the four; the Wonder comes in Update 17).
+G.SOCIETY_ENDINGS = {
+  tool: {
+    land: { conquest: { name: 'The Hearth-Kingdom', desc: 'Every village in the region bows to one hearth.' }, trade: { name: 'The Market Towns', desc: 'Roads, markets, and a region bound by trade.' }, faith: { name: 'The Keepers of the Flame', desc: 'One fire, one faith, from the hills to the sea.' } },
+    sea: { conquest: { name: 'The Forge-Lords', desc: 'Every hold in the deep answers to the Deep Forge.' }, trade: { name: 'The Current Markets', desc: 'Goods flow along the currents from hold to hold.' }, faith: { name: 'The Vent Faith', desc: 'The warm vents are holy, and so are their keepers.' } },
+  },
+  song: {
+    land: { conquest: { name: 'The Howling Realm', desc: 'One song drowns out every other in the region.' }, trade: { name: 'The Song-Roads', desc: 'A league of circles, trading along the old songs.' }, faith: { name: 'The First Hymn', desc: 'A song so old and true that every people sings it.' } },
+    sea: { conquest: { name: 'The Thunder League', desc: 'The ocean goes quiet when the League sings.' }, trade: { name: 'The Great Circuit', desc: 'Pods meet and trade at every calving ground.' }, faith: { name: 'The Deep Hymn', desc: 'The whole sea sings one song of the deep.' } },
+  },
+};
+G.ACTIVITIES.push(
+  { id: 'found', name: 'Found a settlement', stage: 'society', turns: 3, desc: 'Send settlers to found a new settlement (up to 8). Costs 6 Food and a fifth of your people, but every settlement holds more people and earns Influence.' },
+  { id: 'build', name: 'Build up a settlement', stage: 'society', turns: 2, desc: 'Grow your smallest settlement one size (up to 4). Costs 4 of your special resource, or 6 Food if you have too little.' },
+  { id: 'gift', name: 'Send gifts', target: 'species', stage: 'society', turns: 1, desc: 'Send 3 Food to a neighbour people: they like you a good deal more.' },
+  { id: 'trade', name: 'Trade', target: 'species', stage: 'society', desc: 'Trade with a friendly neighbour people (opinion 10 or more): +1 Food and +1 Influence a turn, and they warm to you. Ends if they turn against you.' },
+  { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
