@@ -75,6 +75,9 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 15 | **Many Kinds** ✅ | Tribe stage, part 2: Den, Hive, Reef-colony, Grove and Kelp Garden; Ancestral Wisdom | Large |
 | 15.1 | Patch ✅ | Population in the hundreds, meat and plants, fairer odds, dust-cloud fights, body-plan mutations, eyes, icons, editor dice | Medium |
 | 16 | Peoples ✅ | **Society stage**, part 1: settlements, council, traditions, neighbours | Large |
+| 16.1 | Patch ✅ | Soft and hard population caps, nothing useless offered for your diet, a bold diet badge, disaster scenes, distinct and more meaningful biomes | Medium |
+| 16.2 | Patch | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
+| 16.3 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
 | 19 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+ | Large |
@@ -381,6 +384,29 @@ From the playtest after Update 13, to make a solid platform for the Tribe stage:
 - **Toolmakers and Singers** on land and at sea.
 - **Neighbour peoples** of any kind, with gifts, trade, alliances, raids and wars.
 - Shipped: 28 traditions, 41 Society events, the Union finale with 12 Society endings (force, trade, faith), council plots and coups, and Stage Select for Societies. See DESIGN.md.
+
+## Patch 16.1: Listening ✅
+
+From play-testing feedback:
+- **Soft and hard caps:** your maximum Population is a comfortable size. Past it, crowded members eat twice, broods cost up to twice as much, and crowding sickness takes a tenth of the excess each turn, up to a hard cap of 1.5×.
+- **Only what you can use:** hunting ideas, discoveries, the Hunt Instinct and Activity, and diet-locked event choices are hidden from herbivores; foraging ones from predators.
+- **Diet badge:** bold and coloured in the top bar and the lineage sheet.
+- **Disaster scenes:** floods, storms, cold, sickness, drought, fire, dust and quakes build up and engulf the screen before the outcome; bad outcomes leave drips, frost, a sickly haze or smoke instead of a cartoon bonk.
+- **Distinct biomes:** each land and sea biome has its own sky, ground, weather and life, in events and on the map; its own danger level and common disasters; stronger effects; cold blood struggles in cold places.
+- **Strong builds feel strong:** the wild and rival bands keep pace less closely with a powerful people.
+
+## Patch 16.2: Tribe rework (planned)
+
+- **The resource matters:** Fire, Song, Light, Brood and Growth become the cost of discoveries, more for advanced ones, changed by a percentage from events, the Mind tree, stats, population and your leader (always rounded to whole numbers), so a tribe builds up its technology step by step. Soft and hard caps, and real threats to it.
+- **Leaders:** candidates with backgrounds, ambitions and relationships; the choice changes what your people can do, and it carries into later stages.
+- **The Tribe world screen:** camps placed near friendly species and away from rivals, camps that grow as you progress, an animation when you move camp, and expeditions whose size depends on population, diet and how social you are.
+- **A wider world:** the map opens out in the Tribe stage, so the world feels bigger and closer at once.
+
+## Patch 16.3: Mind tree rebuild (planned)
+
+- Many more nodes, some of them awakenings and skills that change how you play rather than stat boosts.
+- Nodes open from their own prerequisites, not a whole row at once, and some nodes block others.
+- The tree runs on through the Tribe stage, and cannot be finished until late in it.
 
 ## Update 17: Faith and Neighbours (Society stage, part 2)
 

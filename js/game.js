@@ -561,7 +561,7 @@ window.G = window.G || {};
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
   G.RAID_BELOW = 20;
   G.SOC_RAID_BELOW = -10; // neighbour peoples only raid when they truly hate you
-  G.TRIBE_THREAT = 2; // see predation
+  G.TRIBE_THREAT = 3; // see predation
   G.TRIBE_CHILD_COST = 2;
   G.TRIBE_HIT_CAP = 0.6; // the most often a hunter or band can strike in a year
   G.TRIBE_BLOW = 1; // extra members lost to every strike
@@ -1964,7 +1964,7 @@ window.G = window.G || {};
       if (s.role !== 'predator' && !hostile && !raider) return;
       if (s.tamed) return;
       // A thinking band keeps up with you: its strength is never far below your own, and grows with the years.
-      const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 1 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
+      const bandAtk = s.band ? Math.max(0, G.stat(run, 'str') - 3 - G.speciesStat(s, 'str')) + 2 + Math.floor(run.stageTurn / 8) - (G.temperament(run).id === 'hunter' ? 2 : 0) : 0;
       // In the Tribe stage the wild grows more dangerous with the years.
       const yearsAtk = G.people(run) ? Math.floor(run.stageTurn / 8) : 0;
       // ...and its hunters keep pace with a strong people: never more than G.TRIBE_THREAT below your defence.

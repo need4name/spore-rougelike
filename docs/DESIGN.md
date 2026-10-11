@@ -79,6 +79,15 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Patch 16.1 (play-testing feedback)
+
+- **Soft and hard population caps.** `G.maxPop` is now the comfortable size (soft cap); `G.hardPop` is 1.5× it (`G.HARD_CAP`). Gains past the soft cap land at half strength (`G.capGain`); broods cost `1 + 2 × crowding` times as much (`G.crowding` = share over the soft cap); members past it eat twice (`G.upkeep`); crowding sickness takes a tenth of the excess each turn. Clamps use the hard cap.
+- **Only what you can use** (`G.useless`): anything whose `diet`/`req.diet` excludes yours, any hunting bonus for herbivores and Grazers, and any foraging bonus for Predators is hidden: Mind innovations (`innovationVisible`), discoveries, the Hunt Instinct and Activity for herbivores, and event options whose diet or archetype lock you can never meet (`optionState(...).hidden`).
+- **Diet badge** (`dietBadge` in ui.js): green Herbivore, red Carnivore, gold Omnivore, in the top bar and the lineage sheet.
+- **Disaster scenes.** `G.HAZARD_OF` maps events to eight hazards (flood, storm, cold, sickness, drought, fire, dust, quake); an event can also set `hazard`. With no species involved, the scene builds up for 1.8 s while the hazard closes in and engulfs the screen (`hazardLayer`), then clears to show the outcome; bad outcomes leave marks (`hazardMarks`) and no comic words, dizzy stars or red flash. The face shows worry, fear or sadness instead of dizziness.
+- **Biomes.** Each biome has a `danger` (attack multiplier: jungle 1.35, plains 1.15, desert 0.7, kelp 0.7...), `hazards` (its disasters weigh ×3 in events; other disasters ×0.35), a `rule` shown on the World Map tab, stronger `mods`, and `cold` (cold blood: −2 Speed, −1 Food). `BIOME_LOOK` and `biomeAtmosphere` (render.js) give each biome its own sky, hills, ground and weather in event scenes and on the map.
+- **Strong builds.** `G.TRIBE_THREAT` 3 (was 2) and rival bands match your Strength minus 3 (was 1): a powerful people pulls further ahead.
+
 ## Instinct (CK3-style focus)
 
 Forage, Hunt, Breed, Explore or Lie low. Your Instinct sets your Food income and makes matching events more likely. You can change it at any time.

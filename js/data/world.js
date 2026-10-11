@@ -712,19 +712,18 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16';
+G.VERSION = '16.1';
 G.WHATS_NEW = {
-  title: 'Update 16: Peoples',
+  title: 'Patch 16.1: Listening',
   items: [
-    'The Society stage. Toolmakers and Singers, on land and at sea, go on from the Founding to become a people of many settlements: the Hearthlands, the Vent Holds, the Song-circles and the Pod League.',
-    'How you Founded your tribe decides what kind of society you become. Settled peoples farm and build faster, Roaming peoples move and learn on the road, and Warlike peoples gain from every victory.',
-    'Influence replaces Ideas. It comes from your settlements, your Keeper and your traditions.',
-    'Settlements: found new ones and build them up from Activities. Each one feeds you and lets your people grow bigger. Your capital shows on the map, and the others spread across the region.',
-    'The council: a Steward, a Marshal and a Keeper govern with your ruler. Keep them loyal, or they withhold their help and start plotting. When the ruler dies, the council chooses who rules next.',
-    'Traditions and Laws: your culture tree, drafted like discoveries. Some come in opposed pairs (War Bands or Peace Vows, Open Gates or Closed Gates), and higher tiers open as you learn more.',
-    'Neighbour peoples: your old rivals and new peoples share the region. Send gifts, trade with friends, or raid them. Allies share their food; hated neighbours raid you.',
-    'Over 35 new events, and the Union: unite the region by force, by trade or by faith, for 12 new Society endings.',
-    'Stage Select can start a run at the Society stage too.',
+    'Your maximum Population is now a comfortable size, not a wall. You can grow past it, up to half as many again, but crowded members eat twice as much, young cost more Food, and crowding sickness takes a tenth of the excess every turn.',
+    'Nothing your kind can never use is offered any more: no hunting ideas, discoveries, Instinct or event choices for herbivores, and no foraging ones for predators that only eat what they kill.',
+    'Your diet is shown in bold colour at the top of the screen and on your lineage sheet: green for herbivores, red for carnivores, gold for omnivores.',
+    'Disasters get their own scenes. Floods rise, storms close in, blizzards white out the screen, fevers drift through, droughts blaze, sandstorms roll over you and the ground shakes. Only when it clears do you see what happened, and a bad outcome leaves its mark (drips, frost, a sickly haze, smoke) instead of a cartoon bonk.',
+    'Every biome looks different now, in events and on the map: a blazing desert sun, tundra snow and auroras, jungle vines and haze, swamp fog and fireflies, gulls on the shore; kelp forests, polar ice, glowing vent fields and sandy coasts at sea.',
+    'Biomes matter more. Each has its own danger (hunters are a third more common in the jungle, rarer in the desert and the kelp) and its own disasters (blizzards in the tundra, fevers in the swamp, droughts in the desert), and the effects are stronger. Cold blood struggles in cold places. The World Map tab shows each biome\'s rules.',
+    'Strong builds are allowed to be strong: the wild and rival bands no longer keep pace quite so closely with a powerful people.',
+    'Update 16 (Peoples): Toolmakers and Singers who win the Founding go on to the Society stage: settlements, a ruler and council, Traditions and Laws, neighbour peoples, and the Union with 12 new endings.',
   ],
 };
 
@@ -748,6 +747,10 @@ G.TUTORIALS = [
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
   { id: 'tribe', title: 'The Tribe stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe',
     text: 'Your kind is a people now. Population is now your members, and Ideas replace DNA: each goal brings a Discovery. Your body no longer changes, but what it can do decides which discoveries come. The People tab shows your leader, your Fire or Song, and your talents. Reach the Founding to choose your people\'s future.' },
+  { id: 'crowding', title: 'Crowded', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.pop > G.maxPop(run),
+    text: 'You have grown past your comfortable size. You can keep going, up to half as many again, but crowded members eat twice, young cost more and crowding sickness takes a tenth of the excess every turn.' },
+  { id: 'biomes', title: 'Biomes', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.biome && run.biome !== G.HOME_BIOME[run.habitat],
+    text: 'Every biome has its own rules: how often hunters find you, which disasters come, and what it gives and takes. Tap a biome on the World Map tab to see them before you migrate.' },
   { id: 'society', title: 'The Society stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society',
     text: 'Your people live in many settlements now. Influence replaces Ideas, and each goal brings a Tradition. Found and build settlements from Activities to grow bigger and earn more. The Society tab shows your settlements and neighbours; the Council tab shows who might turn against your ruler.' },
   { id: 'council', title: 'Your council', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society' && (run.council || []).some((c) => c.loyalty < 0),
