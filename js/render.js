@@ -49,10 +49,34 @@ window.G = window.G || {};
         accent = kw ? G.KEYWORDS[kw].color : hsl(40, 80, 65);
       }
     });
+    // The merged half of a slot is the recessive card: it is drawn as a second, smaller piece tucked behind the base part
+    // (a fork in the tail, a second crest further down the back, a seam between two skins), never on top of it.
+    const REC = new Set(); const baseIds = new Set();
+    const chain = (id, set) => { if (!id || set.has(id)) return; set.add(id); const part = G.PART[id]; if (part && part.from) part.from.forEach((x) => chain(x, set)); };
+    Object.entries(b.parts || {}).forEach(([slot, s]) => { if (s && !(b.off && b.off.includes(slot))) chain(s.id, baseIds); });
+    Object.entries(b.parts || {}).forEach(([slot, s]) => { if (s && s.merged && !(b.off && b.off.includes(slot))) { const r = new Set(); chain(s.merged, r); r.forEach((id) => { if (!baseIds.has(id)) REC.add(id); }); } });
     p.__H = H; p.__E = E;
-    return { p, accent, L: b.look || {}, H, E, eyes: G.eyesFrom([...H]) };
+    return { p, accent, L: b.look || {}, H, E, REC, eyes: G.eyesFrom([...H]) };
   }
 
+  // Merged parts, drawn like stacked cut-out cards. set(H, E) swaps the part set and evolutions a draw function reads.
+  // cards(slot, place, block, after): the recessive half of the slot first (moved by place(), without evolution extras),
+  // then the base half on top. With nothing merged in that slot, the block just draws once.
+  function makeCards(H0, E0, REC, set) {
+    const slotRec = (slot) => [...REC].filter((id) => G.PART[id] && G.PART[id].slot === slot);
+    const cards = (slot, place, block) => {
+      const rec = slotRec(slot);
+      if (!rec.length) { block(); return; }
+      set(new Set(rec), {});
+      ctx.save(); place(); block(); ctx.restore();
+      set(new Set([...H0].filter((id) => !rec.includes(id))), E0);
+      block();
+      set(H0, E0);
+    };
+    cards.has = (slot) => slotRec(slot).length > 0;
+    cards.rec = slotRec;
+    return cards;
+  }
   // A body's frame: inner bones, an outer shell, or soft with no skeleton at all.
   function skel(b) {
     if (b.skeleton) return b.skeleton;
@@ -224,7 +248,9 @@ window.G = window.G || {};
   // ======================= LAND CREATURE =======================
   function drawLand(b, cx, ground, S, t) {
     const hue = b.hue;
-    const { p, accent, L, H, E } = look(b);
+    const { p, accent, L, H: H0, E: E0, REC } = look(b);
+    let H = H0; let E = E0;
+    const cards = makeCards(H0, E0, REC, (h, e) => { H = h; E = e; });
     const nSeg = b.segments != null ? b.segments : 2;
     // Some limb pairs can be arms. Old bodies used the "on two legs" posture for one pair of arms.
     const legacyArms = nSeg === 2 && (b.look ? L.posture === 'two' : H.has('upright_legs')) ? 1 : 0;
@@ -340,7 +366,9 @@ window.G = window.G || {};
 
     // Tail, back parts and the body itself all live in the tilted body frame.
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt); ctx.translate(-cx, -cy);
-    // Tail
+    // Tail. A merged second tail forks off the first: angled up, a little smaller, behind it.
+    const tailRoot = [cx - rx * 0.85, biped ? cy + ry * 0.5 : cy - ry * 0.2];
+    cards('tail', () => { ctx.translate(tailRoot[0], tailRoot[1]); ctx.rotate(biped ? -0.45 : 0.42); ctx.scale(0.82, 0.82); ctx.translate(-tailRoot[0], -tailRoot[1]); }, () => {
     if (p.tail) {
       const tx = cx - rx * 0.85; const ty = biped ? cy + ry * 0.5 : cy - ry * 0.2;
       const tk = L.tailSize || 1; ctx.save(); ctx.translate(tx, ty); ctx.scale(tk, tk); ctx.translate(-tx, -ty);
@@ -360,12 +388,15 @@ window.G = window.G || {};
       if (H.has('web_weaver')) { const wx = tEnd[0] - S * 0.12; const wy = tEnd[1] + S * 0.04; ctx.strokeStyle = 'rgba(240,240,250,0.45)'; ctx.lineWidth = 0.8; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * S * 0.12, wy + Math.sin(a) * S * 0.12); ctx.stroke(); } for (let r = 1; r <= 3; r++) { ctx.beginPath(); for (let k = 0; k <= 8; k++) { const a = k * Math.PI / 4; ctx.lineTo(wx + Math.cos(a) * S * 0.04 * r, wy + Math.sin(a) * S * 0.04 * r); } ctx.stroke(); } }
       ctx.restore();
     }
+    });
 
     // Back parts behind body (sized by the editor's back part slider, from the top of the back)
     const backTopX = cx - rx * 0.1; const backTopY = cy - ry * 0.85;
     const bk = L.backSize || 1;
     const backScale = () => { ctx.save(); ctx.translate(backTopX, cy - ry * 0.6); ctx.scale(bk, bk); ctx.translate(-backTopX, -(cy - ry * 0.6)); };
     backScale();
+    const backCard = () => { const ax = backTopX; const ay = cy - ry * 0.6; ctx.translate(ax - rx * 0.42, ay + ry * 0.12); ctx.scale(0.78, 0.78); ctx.translate(-ax, -ay); };
+    cards('back', backCard, () => {
     if (H.has('display_frill') || H.has('lumen_sail')) {
       const isGlow = H.has('lumen_sail');
       for (let i = 0; i < 7; i++) {
@@ -385,6 +416,7 @@ window.G = window.G || {};
       for (let i = 1; i < 5; i++) { const x = cx - rx + (i / 5) * rx * 2; line(x, cy - ry * 0.2, x - (x - cx) * 0.2, cy - ry * 1.3, '#7f8c93', S * 0.01); }
     }
     if (H.has('egg_sac')) for (let k = 0; k < 7; k++) { const ex = cx - rx * 0.45 + (k % 4) * rx * 0.2 + (k > 3 ? rx * 0.1 : 0); const ey = cy - ry * (k > 3 ? 1.25 : 0.95); dot(ex, ey, S * 0.03, '#f1ead2'); dot(ex - 2, ey - 2, S * 0.01, 'rgba(255,255,255,0.8)'); }
+    });
 
     ctx.restore();
     ctx.restore();
@@ -395,9 +427,11 @@ window.G = window.G || {};
       const ev = front ? E.frontLimbs : E.hindLimbs;
       const evoLimb = E[front ? 'frontLimbs' : 'hindLimbs'] || 0;
       const muscle = (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h') ? 1.5 : 1) * legThick * (1 + 0.12 * evoLimb);
-      if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); }
+      // The limb's own line, so its mutations sit on it (armor bands, muscle, joints) instead of floating beside it.
+      let path = [[x, top], [x + swing, gy]]; let thickPx = S * 0.03 * muscle;
+      if (kind === 'pillar_legs' || kind === 'pillar_forelegs') { ctx.fillStyle = col; ctx.fillRect(x - S * 0.035 * muscle, top, S * 0.07 * muscle, len); path = [[x, top], [x, gy]]; thickPx = S * 0.07 * muscle; }
       else if (kind === 'fore_tentacles' || H.has(front ? 'boneless_f' : '__none')) { wavy(x, top, len + S * 0.02, Math.PI / 2, S * 0.04, t, col, S * 0.03 * muscle, front ? 2 : 0); if (kind === 'fore_tentacles') return; }
-      else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); }
+      else if (kind === 'stubby_forelegs' || kind === 'stubby_hindlegs') { line(x, top, x + swing * 0.5, gy - 3, col, S * 0.05 * muscle); path = [[x, top], [x + swing * 0.5, gy - 3]]; thickPx = S * 0.05 * muscle; }
       else if (kind === 'jointed_legs' || kind === 'insect_wings') {
         // Thin armored legs that bend twice, like a beetle's.
         const k1 = [x + S * 0.06, top - len * 0.15]; const k2 = [x + S * 0.09 + swing, top + len * 0.5];
@@ -418,15 +452,24 @@ window.G = window.G || {};
         const kx = x + (kind === 'runner_legs' || kind === 'hopping_legs' ? -S * 0.05 : S * 0.03) + swing;
         ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(kx, top + len * 0.5); ctx.lineTo(x + swing, gy);
         ctx.strokeStyle = col; ctx.lineWidth = S * thick; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+        path = [[x, top], [kx, top + len * 0.5], [x + swing, gy]]; thickPx = S * thick;
       }
+      // A point and direction a fraction u of the way down the limb.
+      const segs = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1]));
+      const total = segs.reduce((a, c) => a + c, 0) || 1;
+      const along = (u) => { let d = u * total; for (let i = 0; i < segs.length; i++) { if (d <= segs[i] || i === segs.length - 1) { const f = segs[i] ? Math.min(1, d / segs[i]) : 0; const a = path[i]; const c = path[i + 1]; return { x: a[0] + (c[0] - a[0]) * f, y: a[1] + (c[1] - a[1]) * f, ang: Math.atan2(c[1] - a[1], c[0] - a[0]) }; } d -= segs[i]; } return { x: path[0][0], y: path[0][1], ang: Math.PI / 2 }; };
+      const onLimb = (u, fn) => { const q = along(u); ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.ang - Math.PI / 2); fn(); ctx.restore(); };
       // Limb mutations show on the limb itself.
-      if (H.has(front ? 'bony_plates_f' : 'bony_plates_h')) for (let i = 0; i < 3; i++) { ctx.fillStyle = SHELL; ctx.fillRect(x - S * 0.03 + swing * (i / 3), top + len * (0.15 + i * 0.25), S * 0.06, S * 0.025); }
-      if (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h')) dot(x + swing * 0.3, top + len * 0.25, S * 0.035, col);
-      if (front && H.has('skin_flaps_f') && !flying) tri(x, top, x - S * 0.18, top + len * 0.15, x - S * 0.02, top + len * 0.7, hsl(hue, 45, 60, 0.55));
-      if (front && H.has('flight_feathers') && !flying) for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(x - S * 0.05 - i * 6, top + len * 0.3 + i * 4, S * 0.05, S * 0.012, -0.5, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 30 + i * 15, 60, 62); ctx.fill(); }
+      if (H.has(front ? 'bony_plates_f' : 'bony_plates_h')) for (let i = 0; i < 3; i++) onLimb(0.18 + i * 0.25, () => { const wdt = Math.max(thickPx * 1.5, S * 0.035); ctx.beginPath(); ctx.ellipse(0, 0, wdt / 2, S * 0.016, 0, 0, Math.PI * 2); ctx.fillStyle = SHELL; ctx.fill(); });
+      if (H.has(front ? 'thick_muscle_f' : 'thick_muscle_h')) onLimb(0.25, () => { ctx.beginPath(); ctx.ellipse(0, 0, Math.max(thickPx * 0.95, S * 0.025), S * 0.05, 0, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); });
+      if (front && H.has('skin_flaps_f') && !flying) { const q = along(0.7); tri(x, top, x - S * 0.18, top + len * 0.15, q.x, q.y, hsl(hue, 45, 60, 0.55)); }
+      if (front && H.has('flight_feathers') && !flying) for (let i = 0; i < 4; i++) onLimb(0.15 + i * 0.15, () => { ctx.beginPath(); ctx.ellipse(-S * 0.045, 0, S * 0.05, S * 0.012, 0.35, 0, Math.PI * 2); ctx.fillStyle = hsl(hue + 30 + i * 15, 60, 62); ctx.fill(); });
       if (front && H.has('gripping_pads_f')) dot(x + swing + 4, gy - 4, S * 0.018, '#f3b3a6');
-      if (H.has(front ? 'chitin_joints_f' : 'chitin_joints_h')) for (let i = 1; i < 4; i++) dot(x + swing * (i / 4) + (i === 2 ? S * 0.02 : 0), top + len * i / 4, S * 0.013, SHELL);
-      if (!front && H.has('springy_tendons_h')) { ctx.beginPath(); for (let i = 0; i <= 6; i++) ctx.lineTo(x - 6 + (i % 2) * 10, top + len * (0.2 + i * 0.1)); ctx.strokeStyle = BONE; ctx.lineWidth = 1.5; ctx.stroke(); }
+      if (H.has(front ? 'chitin_joints_f' : 'chitin_joints_h')) for (let i = 1; i < 4; i++) { const q = along(i / 4); dot(q.x, q.y, Math.max(S * 0.013, thickPx * 0.55), SHELL); }
+      if (!front && H.has('springy_tendons_h')) { ctx.beginPath(); for (let i = 0; i <= 8; i++) { const q = along(0.15 + i * 0.08); const side = (i % 2 ? 1 : -1) * thickPx * 0.45; ctx.lineTo(q.x + Math.cos(q.ang + Math.PI / 2) * side, q.y + Math.sin(q.ang + Math.PI / 2) * side); } ctx.strokeStyle = BONE; ctx.lineWidth = 1.5; ctx.stroke(); }
+      // A merged foot or hand is a smaller card tucked just behind the main one.
+      const rid = cards.rec(front ? 'hands' : 'feet')[0];
+      if (rid && foot) { const rf = G.PART[rid].looks || rid; const fx = x + swing; ctx.save(); ctx.translate(fx - S * 0.025, gy - S * 0.004); ctx.scale(0.72, 0.72); ctx.translate(-fx, -gy); drawFootInner(fx, gy, rf, col); ctx.restore(); }
       drawFoot(x + swing, gy, foot, col, (front ? E.hands : E.feet) ? 1.8 : 1);
     }
     function drawFoot(x, y, foot, col, big) {
@@ -489,6 +532,7 @@ window.G = window.G || {};
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(-rx + i * rx * 0.35, -ry, -rx + i * rx * 0.35 + rx * 0.3, ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     pattern(L, rx, ry, S, hue, t);
     if (nSeg >= 4) for (let i = 1; i < nSeg; i++) { const x = -rx + (i / nSeg) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.06, 0, x, ry); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); }
+    const skinBlock = () => {
     if (H.has('scales') || H.has('swift_scales')) {
       for (let y = -ry; y < ry; y += S * 0.03) for (let x = -rx; x < rx; x += S * 0.04) {
         const off = (Math.round(y / (S * 0.03)) % 2) * S * 0.02;
@@ -503,6 +547,13 @@ window.G = window.G || {};
     if (H.has('down_feathers')) for (let y = -ry; y < ry * 0.7; y += S * 0.035) for (let x = -rx; x < rx; x += S * 0.045) { ctx.beginPath(); ctx.arc(x + (Math.round(y / (S * 0.035)) % 2) * S * 0.022, y, S * 0.024, 0, Math.PI); ctx.fillStyle = hsl(hue + 15, 35, 72, 0.35); ctx.fill(); }
     if (H.has('chitin')) { for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * rx * 0.28, -ry); ctx.quadraticCurveTo(i * rx * 0.28 + rx * 0.05, 0, i * rx * 0.28, ry); ctx.strokeStyle = hsl(hue, 30, 22, 0.7); ctx.lineWidth = 2; ctx.stroke(); } ctx.beginPath(); ctx.ellipse(-rx * 0.15, -ry * 0.5, rx * 0.55, ry * 0.15, -0.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill(); }
     if (H.has('mucus_skin')) { ctx.beginPath(); ctx.ellipse(-rx * 0.2, -ry * 0.45, rx * 0.5, ry * 0.16, -0.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); for (let i = 0; i < 5; i++) dot(-rx * 0.6 + i * rx * 0.3, -ry * 0.1 + (i % 2) * ry * 0.3, S * 0.008, 'rgba(255,255,255,0.6)'); }
+    };
+    if (cards.has('skin')) {
+      // Two skins: the base covers the front, the merged one the back, meeting at a stitched seam.
+      const seam = (side) => { ctx.beginPath(); ctx.moveTo(side * rx * 1.2, -ry * 1.2); ctx.lineTo(-rx * 0.08, -ry * 1.2); for (let k = 0; k <= 8; k++) ctx.lineTo(-rx * 0.08 + (k % 2 ? rx * 0.07 : -rx * 0.07), -ry + (k / 8) * ry * 2); ctx.lineTo(side * rx * 1.2, ry * 1.2); ctx.closePath(); };
+      cards('skin', () => { seam(-1); ctx.clip(); }, () => { if (E === E0) { ctx.save(); seam(1); ctx.clip(); skinBlock(); ctx.restore(); } else skinBlock(); });
+      ctx.save(); ctx.setLineDash([3, 3]); ctx.beginPath(); for (let k = 0; k <= 8; k++) ctx.lineTo(-rx * 0.08 + (k % 2 ? rx * 0.07 : -rx * 0.07), -ry + (k / 8) * ry * 2); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
+    } else skinBlock();
     if (frame === 'shell') for (let i = 1; i < 6; i++) { const x = -rx + (i / 6) * rx * 2; ctx.beginPath(); ctx.moveTo(x, -ry); ctx.quadraticCurveTo(x + rx * 0.08, 0, x, ry); ctx.strokeStyle = hsl(hue, 30, 25, 0.55); ctx.lineWidth = 2; ctx.stroke(); }
     finish(L, 0, 0, rx, ry);
     ctx.restore();
@@ -517,6 +568,7 @@ window.G = window.G || {};
     ctx.restore();
     if (H.has('fur')) for (let a = Math.PI * 1.05; a < Math.PI * 1.95; a += 0.09) { const x = cx + Math.cos(a) * rx; const y = cy + Math.sin(a) * ry; line(x, y, x + Math.cos(a) * 6, y + Math.sin(a) * 9, dark, 2); }
     backScale();
+    cards('back', backCard, () => {
     if (H.has('back_spines') || H.has('venom_quills')) {
       for (let i = 0; i < 7; i++) {
         const a = Math.PI * 1.15 + i * 0.11; const x = cx + Math.cos(a) * rx; const y = cy + Math.sin(a) * ry;
@@ -534,6 +586,7 @@ window.G = window.G || {};
       if (H.has('citadel_shell')) for (let k = 0; k < 6; k++) { const a = Math.PI * 1.1 + k * 0.17; tri(sx0 + Math.cos(a) * R0 * 0.95 - 4, sy0 + Math.sin(a) * R0 * 0.95, sx0 + Math.cos(a) * R0 * 1.3, sy0 + Math.sin(a) * R0 * 1.3, sx0 + Math.cos(a) * R0 * 0.95 + 4, sy0 + Math.sin(a) * R0 * 0.95, SHELL); }
     }
     if (H.has('rolling_armor')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.75 + i * rx * 0.3; tri(x - 4, cy - ry * 1.05, x, cy - ry * 1.6, x + 4, cy - ry * 1.05, BONE); }
+    });
     ctx.restore();
     ctx.restore();
 
@@ -617,7 +670,9 @@ window.G = window.G || {};
   // ======================= SEA CREATURE =======================
   function drawSea(b, cx, cy, S, t) {
     const hue = b.hue;
-    const { p, accent, L, H, E } = look(b);
+    const { p, accent, L, H: H0, E: E0, REC } = look(b);
+    let H = H0; let E = E0;
+    const cards = makeCards(H0, E0, REC, (h, e) => { H = h; E = e; });
     const body = hsl(hue, 50, 55); const dark = hsl(hue, 40, 30); const light = hsl(hue, 60, 72);
     const SEA_SHAPES = { long: [1.2, 1], slim: [0.95, 0.8], round: [1, b.look ? 1.12 : 1], torpedo: [1.12, 0.82], ray: [0.85, 0.55], puffer: [0.72, 1.7], deep: [0.78, 1.7] };
     const [sx, sy] = SEA_SHAPES[L.shape] || [1, 1];
@@ -626,7 +681,8 @@ window.G = window.G || {};
     const tailX = cx - rx * 0.95;
     const sw = Math.sin(t * 3) * 0.25;
 
-    // Tail
+    // Tail. A merged second tail fans out above the first, a little smaller.
+    cards('tail', () => { ctx.translate(tailX, y0); ctx.rotate(-0.5); ctx.scale(0.8, 0.8); ctx.translate(-tailX, -y0); }, () => {
     ctx.save(); ctx.translate(tailX, y0); ctx.rotate(sw * 0.4); ctx.scale(L.tailSize || 1, L.tailSize || 1);
     if (H.has('thresher_tail') || H.has('whip_lash')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.2, -S * 0.05, -S * 0.42, -S * 0.2 + sw * 20); ctx.quadraticCurveTo(-S * 0.2, -S * 0.01, 0, S * 0.03); ctx.fillStyle = dark; ctx.fill(); tri(0, 0, -S * 0.1, S * 0.08, -S * 0.06, 0, dark); }
     if (H.has('paddle_tail') || H.has('whip_lash')) { ctx.beginPath(); ctx.ellipse(-S * 0.1, 0, S * 0.12, S * 0.07, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
@@ -638,6 +694,7 @@ window.G = window.G || {};
     else if (H.has('glow_tail')) { line(0, 0, -S * 0.18, 0, body, S * 0.03); glow(GLOW, 16, () => dot(-S * 0.2, 0, S * 0.03, GLOW)); }
     else if (H.has('prehensile_tail') || H.has('seahorse_tail')) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-S * 0.15, S * 0.05, -S * 0.15, S * 0.12); ctx.arc(-S * 0.12, S * 0.12, S * 0.03, Math.PI, Math.PI * 2.5); ctx.strokeStyle = body; ctx.lineWidth = S * 0.025; ctx.stroke(); }
     ctx.restore();
+    });
 
     // Ray wings sit behind the body
     if (L.shape === 'ray') { const flap = Math.sin(t * 2.2) * ry * 1.2; ctx.beginPath(); ctx.moveTo(cx + rx * 0.9, y0); ctx.quadraticCurveTo(cx - rx * 0.1, y0 - ry * 6 - flap, cx - rx * 0.7, y0); ctx.quadraticCurveTo(cx - rx * 0.1, y0 + ry * 6 + flap, cx + rx * 0.9, y0); ctx.fillStyle = hsl(hue, 50, 62); ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke(); }
@@ -646,11 +703,16 @@ window.G = window.G || {};
     const dk = L.backSize || 1; ctx.save(); ctx.translate(cx, y0 - ry * 0.8); ctx.scale(dk, dk); ctx.translate(-cx, -(y0 - ry * 0.8));
     if (H.has('sail_fin') || H.has('great_sail')) { const tall = H.has('great_sail') ? 3.6 : 2.8; ctx.beginPath(); ctx.moveTo(cx - rx * 0.6, y0 - ry * 0.8); ctx.quadraticCurveTo(cx - rx * 0.3, y0 - ry * tall, cx + rx * 0.4, y0 - ry * (tall - 0.4)); ctx.lineTo(cx + rx * 0.4, y0 - ry * 0.8); ctx.closePath(); ctx.fillStyle = hsl(hue + 200, 55, 45, 0.85); ctx.fill(); for (let i = 0; i < 7; i++) line(cx - rx * 0.5 + i * rx * 0.14, y0 - ry * 0.8, cx - rx * 0.45 + i * rx * 0.14, y0 - ry * (tall - 0.6), dark, 1.2); }
     if (H.has('angler_rod')) { const tx = cx + rx * 1.2; const ty = y0 - ry * 1.6 + Math.sin(t * 2) * 4; ctx.beginPath(); ctx.moveTo(cx + rx * 0.3, y0 - ry * 0.8); ctx.quadraticCurveTo(cx + rx * 0.7, y0 - ry * 3.2, tx, ty); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(tx, ty, S * 0.025, GLOW)); }
+    cards('hands', () => { ctx.translate(-rx * 0.28, ry * 0.15); ctx.translate(cx, y0); ctx.scale(0.8, 0.8); ctx.translate(-cx, -y0); }, () => {
     if (H.has('feeding_arms') || H.has('clever_arms') || H.has('death_veil')) for (let k = 0; k < 2; k++) { const len = S * (0.32 + k * 0.05); wavy(cx + rx * 0.8, y0 + ry * 0.4, len, 0.25 + k * 0.25, 4, t, dark, S * 0.014, k + 3); dot(cx + rx * 0.8 + Math.cos(0.25 + k * 0.25) * len, y0 + ry * 0.4 + Math.sin(0.25 + k * 0.25) * len, S * 0.022, hsl(hue, 40, 40)); }
     if (H.has('stinging_arms') || H.has('death_veil')) for (let k = 0; k < 6; k++) wavy(cx + rx * 0.2 - k * rx * 0.15, y0 + ry * 0.8, S * 0.3, Math.PI / 2 + 0.2, 5, t, hsl(280, 60, 72, 0.8), 1.5, k);
     if (H.has('feather_arms') || H.has('sorting_claws')) for (let k = 0; k < 3; k++) { const ax = cx + rx * 0.75; const ay = y0 + ry * 0.3; const a = -0.3 + k * 0.4 + Math.sin(t * 2 + k) * 0.1; const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; line(ax, ay, ex, ey, dark, 2); for (let j = 1; j <= 5; j++) { const fx = ax + (ex - ax) * j / 6; const fy = ay + (ey - ay) * j / 6; line(fx, fy, fx + 4, fy - 6, light, 1.2); line(fx, fy, fx + 4, fy + 6, light, 1.2); } }
 
-    // Dorsal
+    });
+
+    // Dorsal. A merged second dorsal piece sits further back, smaller.
+    const seaBackCard = () => { ctx.translate(cx - rx * 0.42, y0 - ry * 0.75); ctx.scale(0.75, 0.75); ctx.translate(-cx, -(y0 - ry * 0.8)); };
+    cards('back', seaBackCard, () => {
     if (H.has('dorsal_fin')) tri(cx - rx * 0.3, y0 - ry * 0.85, cx - rx * 0.05, y0 - ry * 2.2, cx + rx * 0.25, y0 - ry * 0.85, dark);
     if (H.has('display_frill') || H.has('lumen_sail')) {
       const isGlow = H.has('lumen_sail');
@@ -662,6 +724,7 @@ window.G = window.G || {};
     if (H.has('segment_plates')) for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.7 + i * rx * 0.28, y0 - ry * 0.2, rx * 0.17, ry * 0.85, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.fillStyle = hsl(hue, 22, 48 - (i % 2) * 6); ctx.fill(); }
     if (H.has('kelp_garden')) for (let i = 0; i < 5; i++) wavy(cx - rx * 0.5 + i * rx * 0.2, y0 - ry * 0.8, S * 0.12, -Math.PI / 2, 4, t, PLANT, 3, i);
     if (H.has('back_spines') || H.has('venom_quills')) for (let i = 0; i < 6; i++) { const x = cx - rx * 0.6 + i * rx * 0.22; H.has('venom_quills') ? line(x, y0 - ry * 0.8, x - 6, y0 - ry * 1.9, VENOM, 2) : tri(x - 5, y0 - ry * 0.8, x, y0 - ry * 1.6, x + 5, y0 - ry * 0.8, BONE); }
+    });
     ctx.restore();
 
     // Hind fins / tentacles (far)
@@ -674,12 +737,19 @@ window.G = window.G || {};
     ctx.fillStyle = grad; ctx.fill(); ctx.clip();
     if (accent) { ctx.globalAlpha = 0.45; for (let i = -3; i <= 3; i++) line(cx + i * rx * 0.3, y0 - ry, cx + i * rx * 0.3 + rx * 0.2, y0 + ry, accent, S * 0.008); ctx.globalAlpha = 1; }
     ctx.save(); ctx.translate(cx, y0); pattern(L, rx, ry, S, hue, t); ctx.restore();
+    const skinBlock = () => {
     if (H.has('scales') || H.has('swift_scales')) for (let y = y0 - ry; y < y0 + ry; y += S * 0.03) for (let x = cx - rx; x < cx + rx; x += S * 0.04) { ctx.beginPath(); ctx.arc(x + ((Math.round((y - y0) / (S * 0.03)) % 2) * S * 0.02), y, S * 0.018, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
     if (H.has('chitin')) for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(cx + i * rx * 0.28, y0 - ry); ctx.quadraticCurveTo(cx + i * rx * 0.28 + rx * 0.05, y0, cx + i * rx * 0.28, y0 + ry); ctx.strokeStyle = hsl(hue, 30, 22, 0.7); ctx.lineWidth = 2; ctx.stroke(); }
     if (skel(b) === 'shell') for (let i = 1; i < 6; i++) { const x = cx - rx + (i / 6) * rx * 2; ctx.beginPath(); ctx.moveTo(x, y0 - ry); ctx.quadraticCurveTo(x + rx * 0.06, y0, x, y0 + ry); ctx.strokeStyle = hsl(hue, 30, 25, 0.45); ctx.lineWidth = 2; ctx.stroke(); }
     if (H.has('warning_skin')) [[-0.5, -0.3], [0, -0.4], [0.4, 0], [-0.2, 0.3]].forEach(([dx, dy]) => { dot(cx + dx * rx, y0 + dy * ry, S * 0.025, '#f2c14e'); dot(cx + dx * rx, y0 + dy * ry, S * 0.01, '#1c1414'); });
     if (H.has('biolume_skin')) glow(GLOW, 10, () => { for (let i = 0; i < 9; i++) dot(cx - rx * 0.8 + i * rx * 0.2, y0 + Math.sin(i) * ry * 0.4, S * 0.01 * (1.2 + 0.5 * Math.sin(t * 3 + i)), GLOW); });
     if (H.has('cleaner_skin')) for (let i = 0; i < 5; i++) dot(cx - rx * 0.6 + i * rx * 0.3, y0 + ry * 0.3, S * 0.012, '#f6a6a0');
+    };
+    if (cards.has('skin')) {
+      const seam = (side) => { ctx.beginPath(); ctx.moveTo(cx + side * rx * 1.2, y0 - ry * 1.3); ctx.lineTo(cx - rx * 0.08, y0 - ry * 1.3); for (let k = 0; k <= 8; k++) ctx.lineTo(cx - rx * 0.08 + (k % 2 ? rx * 0.06 : -rx * 0.06), y0 - ry + (k / 8) * ry * 2); ctx.lineTo(cx + side * rx * 1.2, y0 + ry * 1.3); ctx.closePath(); };
+      cards('skin', () => { seam(-1); ctx.clip(); }, () => { if (E === E0) { ctx.save(); seam(1); ctx.clip(); skinBlock(); ctx.restore(); } else skinBlock(); });
+      ctx.save(); ctx.setLineDash([3, 3]); ctx.beginPath(); for (let k = 0; k <= 8; k++) ctx.lineTo(cx - rx * 0.08 + (k % 2 ? rx * 0.06 : -rx * 0.06), y0 - ry + (k / 8) * ry * 2); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
+    } else skinBlock();
     finish(L, cx, y0, rx, ry);
     ctx.restore();
     if (H.has('blubber')) { ctx.beginPath(); ctx.ellipse(cx, y0, rx * 1.03, ry * 1.08, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(hue, 30, 80, 0.6); ctx.lineWidth = 3; ctx.stroke(); }
@@ -697,13 +767,15 @@ window.G = window.G || {};
     if (H.has('spiral_shell') || H.has('nautilus_shell')) { const sx0 = cx - rx * 0.15; const sy0 = y0 - ry * 0.9; const R0 = ry * (H.has('nautilus_shell') ? 1.35 : 1.05); dot(sx0, sy0, R0, '#e9d8b8'); ctx.beginPath(); for (let a = 0; a < Math.PI * 5; a += 0.2) { const r = R0 * (1 - a / (Math.PI * 5.5)); ctx.lineTo(sx0 + Math.cos(a) * r, sy0 + Math.sin(a) * r); } ctx.strokeStyle = '#a67c52'; ctx.lineWidth = 2; ctx.stroke(); for (let k = 0; k < 5; k++) { const a = k * 1.2; line(sx0 + Math.cos(a) * R0 * 0.3, sy0 + Math.sin(a) * R0 * 0.3, sx0 + Math.cos(a) * R0, sy0 + Math.sin(a) * R0, '#c49a6c', 1.5); } }
     if (H.has('anemone_crown') || H.has('living_reef')) for (let k = 0; k < 4; k++) { const ax = cx - rx * 0.45 + k * rx * 0.3; const ay = y0 - ry * 0.85; for (let j = -2; j <= 2; j++) wavy(ax, ay, S * 0.07, -Math.PI / 2 + j * 0.3, 2, t, hsl(330 + k * 15, 70, 70), 2.2, j + k); dot(ax, ay, 3, hsl(330, 50, 50)); }
     if (H.has('living_reef')) for (let k = 0; k < 3; k++) dot(cx - rx * 0.3 + k * rx * 0.3 + Math.sin(t + k) * 6, y0 - ry * 2 - Math.cos(t * 1.3 + k) * 5, S * 0.015, hsl(40 + k * 60, 80, 60));
-    // Underside
+    // Underside. A merged second set sits further back, smaller.
+    cards('feet', () => { ctx.translate(cx - rx * 0.3, y0 + ry * 0.9); ctx.scale(0.8, 0.8); ctx.translate(-cx, -(y0 + ry * 0.9)); }, () => {
     if (H.has('walking_legs') || H.has('reef_walkers')) for (let k = 0; k < 4; k++) { const lx = cx - rx * 0.5 + k * rx * 0.3; const step = Math.sin(t * 5 + k * 1.5) * 4; ctx.beginPath(); ctx.moveTo(lx, y0 + ry * 0.8); ctx.lineTo(lx + 6 + step, y0 + ry * 1.5); ctx.lineTo(lx + 2 + step, y0 + ry * 2.2); ctx.strokeStyle = dark; ctx.lineWidth = 2.5; ctx.stroke(); }
     if (H.has('sucker_pads') || H.has('thousand_feet') || H.has('reef_walkers')) for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.6 + k * rx * 0.24, y0 + ry * 0.93, 4, 2.5, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 78); ctx.fill(); }
     if (H.has('tube_feet') || H.has('thousand_feet')) for (let k = 0; k < 16; k++) { const lx = cx - rx * 0.7 + k * rx * 0.09; line(lx, y0 + ry * 0.85, lx + Math.sin(t * 4 + k) * 2, y0 + ry * 1.25, hsl(hue, 45, 70), 1.5); }
     if (H.has('crawling_fins')) for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(cx - rx * 0.2 + k * rx * 0.45, y0 + ry * 1.1, rx * 0.1, ry * 0.3, 0.3 + Math.sin(t * 3 + k) * 0.2, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); }
     if (H.has('belly_plate') || H.has('lantern_plate')) { ctx.beginPath(); ctx.ellipse(cx, y0 + ry * 0.55, rx * 0.75, ry * 0.45, 0, 0, Math.PI); ctx.fillStyle = SHELL; ctx.fill(); }
     if (H.has('belly_lights') || H.has('lantern_plate')) glow(GLOW, 10, () => { for (let k = 0; k < 7; k++) dot(cx - rx * 0.6 + k * rx * 0.2, y0 + ry * 0.8, S * 0.01 * (1.2 + 0.4 * Math.sin(t * 3 + k)), GLOW); });
+    });
 
     // Fins (near)
     const finSwing = Math.sin(t * 2.5) * 0.3;
