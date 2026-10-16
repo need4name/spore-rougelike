@@ -1,5 +1,7 @@
 # From Mind to Empire
 
+> **Update (Patch 16.4 planning):** the game now has **seven stages**: Cell, Multicellular, Creature, Tribe, Society, Renaissance and the Colonial Age (Empire). Each stage after the cell has its own tree, kept as a page in the Book of the Lineage, and your choices earn a **Disposition** (Peaceful, Territorial or Warmongering) that opens and closes later Gates, the way diet does at the start. The current plan is in [ROADMAP.md](ROADMAP.md); this document's Empire section now covers the Renaissance and Colonial Age together.
+
 How intelligence works at the end of the Creature stage, and how it leads into the three stages after it: **Tribe**, **Society** and **Empire**.
 
 This is the plan for Updates 13–19. **Update 13 (the Mind tree, Paths of Mind and the ten endings) is built;** the rest is not yet.
