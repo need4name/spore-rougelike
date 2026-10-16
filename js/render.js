@@ -1984,13 +1984,19 @@ window.G = window.G || {};
       }
     } else {
       // A Tribe stays close to its camp.
-      if (run.stage === 'tribe' || run.stage === 'society') { tx = h.hx + (Math.random() - (h.hx < 0.35 ? 0.7 : 0.3)) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
+      if (run.stage === 'tribe') { tx = h.hx + (Math.random() - 0.5) * 0.12; ty = h.hy + (Math.random() - 0.5) * 0.1; }
+      if (run.stage === 'society') { tx = h.hx + (Math.random() - (h.hx < 0.35 ? 0.7 : 0.3)) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
       // Your own herd follows your Activity.
       const act = run.activity;
       const th = act && act.target && herds.get(act.target);
       if (th && (act.id === 'hunt' || act.id === 'war')) { tx = th.x + (Math.random() - 0.5) * 0.1; ty = th.y + (Math.random() - 0.5) * 0.1; }
       if (th && act.id === 'avoid') { tx = th.x > 0.5 ? 0.12 : 0.88; ty = th.y > 0.5 ? 0.15 : 0.85; }
       if (act && (act.id === 'migrate' || act.id === 'scout')) { tx = Math.random() < 0.5 ? 0.1 : 0.9; ty = Math.random(); }
+    }
+    // Wild animals and other peoples keep their distance from a Tribe's camp.
+    if (run.stage === 'tribe' && key !== 'you' && campState.run === run) {
+      const dx = tx - campState.x; const dy = (ty - campState.y) * 1.4; const d = Math.hypot(dx, dy);
+      if (d < 0.24) { const k = 0.24 / Math.max(0.01, d); tx = campState.x + dx * k; ty = campState.y + (dy * k) / 1.4; }
     }
     h.tx = Math.max(0.06, Math.min(0.94, tx)); h.ty = Math.max(0, Math.min(1, ty));
   }
@@ -2223,6 +2229,102 @@ window.G = window.G || {};
     }
   }
 
+  // ---------- The Tribe's world ----------
+  // How far your people's world reaches: it opens out as they learn and the years pass (0 to 1).
+  const worldReach = (run) => (run.stage === 'tribe' ? Math.min(1, ((run.discoveries || []).length + run.stageTurn / 12) / 12) : 0);
+  // How big the camp has grown (1 to 7): discoveries, years, and gear or a great home.
+  const campLevel = (run) => Math.max(1, Math.min(7, 1 + Math.floor((run.discoveries || []).length / 2) + Math.floor(run.stageTurn / 20) + Math.floor(((run.gear || 0) + (run.mound || 0)) / 3)));
+  // Where to camp: close to friends and tamed animals, far from hunters and rival bands.
+  const campState = { key: null, x: 0.45, y: 0.6, tx: 0.45, ty: 0.6, moving: false };
+  function campSpot(run) {
+    let best = [0.45, 0.6]; let bestScore = -1e9;
+    for (let gx = 0; gx < 6; gx++) for (let gy = 0; gy < 4; gy++) {
+      const x = 0.18 + gx * 0.128; const y = 0.34 + gy * 0.12;
+      let score = -Math.abs(x - 0.5) * 0.3;
+      // A settled people don't up sticks for a small gain: staying put counts for a lot.
+      if (campState.run === run && campState.biome === run.biome) score -= Math.hypot(x - campState.x, (y - campState.y) * 1.4) * 0.9;
+      run.species.forEach((s) => {
+        if (s.extinct) return; const hd = herds.get(s.name); if (!hd) return;
+        const dist = Math.hypot(hd.hx - x, (hd.hy - y) * 1.4);
+        const danger = s.role === 'predator' || s.band || G.speciesStatus(s) === 'hostile';
+        if (danger) score += Math.min(0.6, dist) * (s.band ? 1.4 : 1);
+        else if (s.tamed || G.speciesStatus(s) === 'allied' || G.speciesStatus(s) === 'friendly') score -= dist * 0.8;
+      });
+      if (score > bestScore) { bestScore = score; best = [x, y]; }
+    }
+    return best;
+  }
+  function updateCamp(run, dt) {
+    const migrating = run.activity && run.activity.id === 'migrate';
+    const key = `${run.biome}|${Math.floor(run.stageTurn / 10)}|${run.species.filter((s) => !s.extinct && (s.band || s.role === 'predator')).length}`;
+    const fresh = campState.run !== run;
+    if (fresh || campState.biome !== run.biome) {
+      // A new land: the people arrive walking in from the edge and make camp. (A new or loaded game just starts there.)
+      const [tx, ty] = campSpot(run);
+      campState.x = fresh ? tx : (tx < 0.5 ? 0.02 : 0.98); campState.y = ty; campState.tx = tx; campState.ty = ty;
+      campState.biome = run.biome; campState.key = key; campState.run = run;
+    } else if (campState.key !== key) { campState.key = key; [campState.tx, campState.ty] = campSpot(run); }
+    if (migrating) { campState.tx = campState.x < 0.5 ? 0.04 : 0.96; }
+    const dx = campState.tx - campState.x; const dy = campState.ty - campState.y; const d = Math.hypot(dx, dy);
+    campState.moving = d > 0.01 || migrating;
+    if (d > 0.002) { const step = Math.min(d, 0.035 * dt); campState.x += (dx / d) * step; campState.y += (dy / d) * step; }
+    return campState;
+  }
+  // A camp that grows: shelters around the heart of the camp, a palisade later, and a totem.
+  function drawTribeCamp(run, x, y, k, t, level, packing) {
+    const sea = run.habitat === 'sea'; const hue = run.hue != null ? run.hue : (G.bodyOf(run).hue || 30);
+    if (packing) {
+      // Everything rolled up into bundles, ready to carry.
+      for (let i = 0; i < Math.min(5, level + 1); i++) { ctx.beginPath(); ctx.ellipse(x - k * 0.9 + i * k * 0.45, y - k * 0.12, k * 0.2, k * 0.13, 0.2, 0, Math.PI * 2); ctx.fillStyle = sea ? '#c9b9a0' : '#8a6a44'; ctx.fill(); line(x - k * 1.1 + i * k * 0.45, y - k * 0.2, x - k * 0.7 + i * k * 0.45, y - k * 0.05, 'rgba(60,40,20,0.7)', 1.5); }
+      return;
+    }
+    const n = Math.min(8, level + 1);
+    // A cleared, trodden patch of ground: this is a place now.
+    ctx.beginPath(); ctx.ellipse(x, y - k * 0.1, k * (2.2 + 0.18 * level), k * (0.75 + 0.05 * level), 0, 0, Math.PI * 2); ctx.fillStyle = sea ? 'rgba(220, 205, 170, 0.35)' : 'rgba(120, 92, 58, 0.55)'; ctx.fill();
+    // Shelters in an arc behind the heart of the camp.
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI * (1.08 + (i / Math.max(1, n - 1)) * 0.84); const r = k * (1.3 + 0.2 * (i % 2));
+      const hx = x + Math.cos(a) * r * 1.4; const hy = y + Math.sin(a) * r * 0.45 - k * 0.05; const hk = k * (0.5 + 0.06 * Math.min(4, level));
+      if (sea) { ctx.beginPath(); ctx.ellipse(hx, hy, hk * 0.55, hk * 0.45, 0, Math.PI, 0); ctx.fillStyle = 'rgba(214, 198, 172, 0.95)'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.2; ctx.stroke(); for (let j = 1; j < 3; j++) { ctx.beginPath(); ctx.ellipse(hx, hy, hk * 0.55 * (1 - j * 0.25), hk * 0.45 * (1 - j * 0.25), 0, Math.PI, 0); ctx.stroke(); } }
+      else if (run.path === 'swarm') { ctx.beginPath(); ctx.ellipse(hx, hy, hk * 0.45, hk * 0.7, 0, Math.PI, 0); ctx.fillStyle = '#9b7a4e'; ctx.fill(); dot(hx, hy - hk * 0.25, hk * 0.08, '#2b1d10'); }
+      else if (run.path === 'garden') { ctx.beginPath(); ctx.ellipse(hx, hy, hk * 0.55, hk * 0.4, 0, Math.PI, 0); ctx.fillStyle = '#6f8f45'; ctx.fill(); dot(hx - hk * 0.2, hy - hk * 0.35, hk * 0.12, '#e9c46a'); }
+      else { tri(hx - hk * 0.5, hy, hx, hy - hk * 0.95, hx + hk * 0.5, hy, i % 2 ? '#8b6440' : '#a07a50'); tri(hx - hk * 0.12, hy, hx, hy - hk * 0.4, hx + hk * 0.12, hy, '#3b2a1a'); line(hx - hk * 0.1, hy - hk * 0.95, hx + hk * 0.08, hy - hk * 1.12, '#5a3e24', 1.5); }
+    }
+    // A pen for tamed animals.
+    if (run.species.some((s) => s.tamed && !s.extinct)) { const px = x + k * 1.9; for (let i = 0; i < 5; i++) line(px + i * k * 0.18, y + k * 0.1, px + i * k * 0.18, y - k * 0.25, '#6b4b2b', 2); line(px, y - k * 0.18, px + k * 0.72, y - k * 0.18, '#6b4b2b', 2); }
+    // A totem pole for the revered species.
+    if (run.totem) { const tx = x - k * 1.9; ctx.fillStyle = '#7a5530'; ctx.fillRect(tx - k * 0.08, y - k * 1.5, k * 0.16, k * 1.5); for (let i = 0; i < 3; i++) dot(tx, y - k * (0.4 + i * 0.42), k * 0.13, ['#c0392b', '#f2c14e', '#2e86ab'][i]); }
+    // A palisade once the camp is big.
+    if (level >= 5 && !sea) { for (let i = 0; i < 22; i++) { const a = Math.PI * (0.98 + i * 0.048); const fx = x + Math.cos(a) * k * 3.1; const fy = y + Math.sin(a) * k * 1.0; tri(fx - k * 0.07, fy + k * 0.05, fx, fy - k * 0.5, fx + k * 0.07, fy + k * 0.05, '#6b4b2b'); } }
+    // The heart of the camp: the fire, the vent, the singing stones, the light or the great home.
+    drawCamp(run, x, y, k * (0.7 + 0.04 * level), t);
+  }
+  // A small party out from the camp and back: hunters, scouts, tamers. Bigger peoples send more; social ones go together.
+  function drawExpedition(run, from, to, w, top, bottom, base, depthOf, t) {
+    const body = G.bodyOf(run); const spr = spriteFor(body);
+    const n = Math.max(2, Math.min(8, Math.round(G.heads(run) / 25 * (1 + (G.stat(run, 'cha') - 5) * 0.04) * (G.diet(run) === 'carn' ? 1.25 : 1))));
+    const cycle = 14; const u = ((t / cycle) % 1); const out = u < 0.5; const q = out ? u * 2 : 2 - u * 2; const e = q * q * (3 - 2 * q);
+    for (let i = 0; i < n; i++) {
+      const lag = i * 0.035; const qq = Math.max(0, Math.min(1, e - (out ? lag : -lag)));
+      const x = from[0] + (to[0] - from[0]) * qq + Math.sin(i * 2.1) * 0.012; const y = from[1] + (to[1] - from[1]) * qq + Math.cos(i * 1.7) * 0.01;
+      const size = base * depthOf(y) * 0.8; const X = x * w; const Y = top + y * (bottom - top) + Math.abs(Math.sin(t * 8 + i)) * -2;
+      ctx.save(); ctx.translate(X, Y); if ((to[0] - from[0]) * (out ? 1 : -1) < 0) ctx.scale(-1, 1); ctx.drawImage(spr, -size / 2, -size / 2, size, size); ctx.restore();
+    }
+  }
+  // The lands next door, at the edges of the map, appear as your people's world opens out.
+  function drawNeighbourLands(run, w, h, top, reach) {
+    if (reach <= 0.05 || run.habitat !== 'land') return;
+    const here = G.biome(run); const list = G.biomeList(run);
+    const next = here.next.map((id) => list.find((b) => b.id === id)).filter(Boolean).slice(0, 2);
+    const LOOK = { plains: '#5d8a3e', jungle: '#244f29', desert: '#e0b673', tundra: '#e9f0f4', swamp: '#36432a', shore: '#e0c78e' };
+    next.forEach((b, i) => {
+      const left = i === 0; const bw = w * 0.16 * reach;
+      const g = ctx.createLinearGradient(left ? 0 : w, 0, left ? bw : w - bw, 0);
+      g.addColorStop(0, LOOK[b.id] || '#5d8a3e'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = g; ctx.fillRect(left ? 0 : w - bw, top - h * 0.06, bw, h - top + h * 0.06); ctx.restore();
+      if (reach > 0.3) { ctx.save(); ctx.globalAlpha = Math.min(1, (reach - 0.3) * 2); ctx.font = "700 11px 'Atkinson Hyperlegible', sans-serif"; ctx.textAlign = left ? 'left' : 'right'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(left ? `← ${b.name}` : `${b.name} →`, left ? 8 : w - 8, top + 14); ctx.restore(); }
+    });
+  }
   G.startMap = function (canvas, onTap) {
     if (mapFrame) cancelAnimationFrame(mapFrame);
     let last = performance.now();
@@ -2245,7 +2347,11 @@ window.G = window.G || {};
       const land = !wet;
       const seaMap = isSeaMap(run);
       const top = land ? h * 0.3 : seaMap ? h * 0.05 : h * 0.12; const bottom = seaMap ? h * 0.98 : h * 0.93;
-      const base = Math.min(w, h) * 0.12;
+      // The Tribe's world opens out: everything is drawn a little smaller as your people learn more.
+      const reach = worldReach(run);
+      const base = Math.min(w, h) * 0.12 * (1 - 0.28 * reach);
+      if (run.stage === 'tribe') drawNeighbourLands(run, w, h, top, reach);
+      const camp = run.stage === 'tribe' ? updateCamp(run, dt) : null;
       const flies = (b2) => b2.stage === 'creature' && ['feathered_wings', 'true_wings', 'insect_wings'].some((id) => Object.values(b2.parts || {}).some((sl) => sl && (sl.id === id || sl.merged === id)));
       // Keep the herd list in sync with the world.
       const live = [{ key: 'you', s: null, pop: G.heads(run), body: G.bodyOf(run) }].concat(run.species.filter((s) => !s.extinct).map((s) => ({ key: s.name, s, pop: s.pop, body: G.speciesBody(s) })));
@@ -2253,6 +2359,8 @@ window.G = window.G || {};
       live.forEach((l, i) => {
         let hd = herds.get(l.key);
         if (!hd) { const [hx0, hy0] = homeFor(i, l.key, run, l.s); hd = { x: hx0, y: hy0, hx: hx0, hy: hy0, dir: 1 }; herds.set(l.key, hd); behaviour(run, l.key, l.s, hd); }
+        // A Tribe lives around its camp, wherever the camp is.
+        if (camp && l.key === 'you') { hd.hx = camp.x + (camp.x < 0.5 ? 0.24 : -0.24); hd.hy = camp.y - 0.03; if (camp.moving && Math.hypot(hd.tx - camp.x, hd.ty - camp.y) > 0.12) { hd.tx = camp.x; hd.ty = camp.y + 0.03; } }
         // A parasite rides inside its host's herd.
         const hostNow = l.key === 'you' && G.hostOf(run);
         const hostHerd = hostNow && herds.get(hostNow.name);
@@ -2281,7 +2389,17 @@ window.G = window.G || {};
           drawCamp(run, X, Y, k, t);
           ctx.save(); ctx.font = '600 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillText(st.name, X, Y + k * 0.9 + 10); ctx.restore(); } });
       });
-      if ((run.stage === 'tribe' || run.stage === 'society') && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx + (youHd.hx < 0.35 ? 0.13 : -0.13)) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
+      if (run.stage === 'society' && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx + (youHd.hx < 0.35 ? 0.13 : -0.13)) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
+      if (camp) {
+        drawables.push({ y: camp.y + 0.04, draw: () => drawTribeCamp(run, camp.x * w, top + camp.y * (bottom - top), base * depthOf(camp.y) * 1.35, t, campLevel(run), camp.moving) });
+        // Parties head out and come back: to the species you are dealing with, or out to the far edge to explore.
+        const act = run.activity; const tgt = act && act.target && herds.get(act.target);
+        const going = (act && ['scout', 'watch', 'tame', 'revere', 'hunt', 'court', 'war'].includes(act.id)) || run.instinct === 'explore' || run.instinct === 'hunt';
+        if (going && !camp.moving) {
+          const to = tgt ? [tgt.x, tgt.y] : [camp.x < 0.5 ? 0.9 : 0.1, 0.35 + ((Math.floor(t / 14) * 0.37) % 0.5)];
+          drawables.push({ y: (camp.y + to[1]) / 2, draw: () => drawExpedition(run, [camp.x, camp.y + 0.02], to, w, top, bottom, base, depthOf, t) });
+        }
+      }
       mapHits = [];
       const labelBoxes = []; const labelDraws = [];
       live.forEach((l) => {
@@ -2290,7 +2408,8 @@ window.G = window.G || {};
           const depth = depthOf(hd.y);
           const size = base * depth * herdScale(run, l.s);
           const pop = Math.max(0, Math.round(l.pop));
-          const icons = Math.max(1, pop <= 16 ? pop : Math.min(32, Math.round(16 + (pop - 16) / 3)));
+          // A Tribe shows fewer of its own members: the camp is the centre of the picture now.
+          const icons = Math.max(1, Math.min(l.key === 'you' && camp ? 9 : 32, pop <= 16 ? pop : Math.round(16 + (pop - 16) / 3)));
           const hx = hd.x * w; const groundY = top + hd.y * (bottom - top);
           const air = flies(l.body) ? h * 0.16 + Math.sin(t * 1.3 + hd.hx * 9) * 8 : 0;
           const hy = groundY - air;
@@ -2308,8 +2427,10 @@ window.G = window.G || {};
             ctx.restore();
           }
           const bond = !l.s ? '' : l.s.name === run.partner && G.gimmick(run) === 'symbiote' ? '♥ ' : l.s.name === run.host && G.gimmick(run) === 'parasite' ? 'Host · ' : l.s.bud ? '✦ ' : l.s.name === run.mimic && G.gimmick(run) === 'mimic' ? '🎭 ' : '';
-          const label = `${bond}${l.key === 'you' ? 'You' : l.key} · ${l.key === 'you' ? run.pop : Math.round(l.pop * G.POP_SCALE)}${run.stage === 'cell' ? '' : ` · ${G.sizeLabel(realSize(run, l.s), run.stage)}`}`;
-          ctx.font = `700 ${Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
+          // A crowded world keeps other species' labels short (tap one for the details).
+          const brief = l.key !== 'you' && live.length > 8 && !bond;
+          const label = brief ? l.key : `${bond}${l.key === 'you' ? 'You' : l.key} · ${l.key === 'you' ? run.pop : Math.round(l.pop * G.POP_SCALE)}${run.stage === 'cell' ? '' : ` · ${G.sizeLabel(realSize(run, l.s), run.stage)}`}`;
+          ctx.font = `700 ${brief ? 10 : Math.round(Math.max(10, 11 * depth))}px 'Atkinson Hyperlegible', sans-serif`;
           const tw = ctx.measureText(label).width + 12;
           const lx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, hx));
           let ly = hy - spread * 0.35 - size * 0.55;

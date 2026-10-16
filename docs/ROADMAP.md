@@ -79,7 +79,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.2 | Patch ✅ | **Cut Paper:** creatures as layers of cut card with a choppier frame rate; merged parts drawn as stacked cards | Medium |
 | 16.2.1 | Patch ✅ | **Stop Motion:** scenes on one 10 fps clock (removed in 16.2.2: it caused motion sickness) | Small |
 | 16.2.2 | Patch ✅ | **Smooth Paper:** everything smooth again, the cut-paper look kept | Small |
-| 16.3 | Patch | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
+| 16.3 | Patch ✅ | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
 | 16.4 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
@@ -404,12 +404,12 @@ From play-testing feedback:
 - **Merged parts as stacked cards:** the recessive half of a merged slot is drawn as a smaller card behind the base part, placed for its slot (a forked tail, a second back piece further down the spine, a seam between two skins, a merged foot behind the main one, a second set of sea arms or underside parts). No extra art per combination.
 - **Limb details follow the limb.**
 
-## Patch 16.3: Tribe rework (planned)
+## Patch 16.3: Tribe rework ✅
 
-- **The resource matters:** Fire, Song, Light, Brood and Growth become the cost of discoveries, more for advanced ones, changed by a percentage from events, the Mind tree, stats, population and your leader (always rounded to whole numbers), so a tribe builds up its technology step by step. Soft and hard caps, and real threats to it.
-- **Leaders:** candidates with backgrounds, ambitions and relationships; the choice changes what your people can do, and it carries into later stages.
-- **The Tribe world screen:** camps placed near friendly species and away from rivals, camps that grow as you progress, an animation when you move camp, and expeditions whose size depends on population, diet and how social you are.
-- **A wider world:** the map opens out in the Tribe stage, so the world feels bigger and closer at once.
+- **The resource matters:** Fire, Song, Light, Brood and Growth are the cost of discoveries, by tier (5 plain, 6 habitat or talent, 8 path, 12 combined), changed by a percentage from your leader, legacies, Cunning, population and events, always rounded to whole numbers. Soft cap 20 (gains halved past it, a tenth of the excess spoils), hard cap 30, upkeep for big tribes, and events that spoil or steal it. Discoveries you can't afford can be remembered (up to 3) and learned later.
+- **Leaders:** candidates with backgrounds and ambitions, pitched in the succession event; a fulfilled ambition leaves a lasting legacy; a line of rulers in the People and Society tabs.
+- **The Tribe world screen:** a camp placed near friendly and tamed species and away from hunters and rival bands, that grows (huts, pen, totem, palisade), packs up and walks when you migrate, and sends out expeditions sized by population, diet and Charm.
+- **A wider world:** the map draws smaller as your people learn, and neighbouring lands appear at its edges.
 
 ## Patch 16.4: Mind tree rebuild (planned)
 

@@ -713,14 +713,16 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.2.2';
+G.VERSION = '16.3';
 G.WHATS_NEW = {
-  title: 'Patch 16.2.2: Smooth Paper',
+  title: 'Patch 16.3: The Tribe Reworked',
   items: [
-    'Everything is smooth again. The stop-motion stepping and the frame-to-frame jitter are gone, and scenes run at their old pace.',
-    'The cut-paper look stays: creatures are layers of card with crisp shadows, a pale cut edge, flat colours and paper grain, and merged parts are stacked cards (forked tails, back pieces further down the spine, skins meeting at a seam).',
-    'Cut-outs lean, pivot and hop instead of squashing and stretching.',
-    'A scene\'s set (the moon, the fire, the storm) is in place from the first frame of the build-up.',
+    'Fire, Song, Light, Brood and Growth are now what discoveries cost. Simple ones cost about 5, the best combinations 12 or more, so a tribe climbs step by step. Your leader, your Cunning, your size and events change the price by a percentage (always rounded to whole numbers).',
+    'Your resource has a soft cap of 20 (gains past it are halved, and a little spoils each turn) and a hard cap of 30. Big tribes use some up every turn, and new events can spoil or steal it.',
+    'Can\'t afford a discovery? Remember it for later (up to 3) and learn it from the Discoveries tab when you can.',
+    'Leaders have a background (hunter, elder, healer, stranger...) and an ambition. Fulfil the ambition during their reign and it leaves a lasting legacy for your people. The People tab shows your line of rulers.',
+    'A new Tribe world: your camp settles near friendly and tamed species and away from hunters and rival bands, grows huts, a pen, a totem and a palisade, packs up and walks when you migrate, and sends out parties sized by your numbers, diet and Charm.',
+    'The world opens out as your people learn: everything draws a little smaller, and the neighbouring lands appear at the edges of the map.',
   ],
 };
 
@@ -761,9 +763,9 @@ G.TUTORIALS = [
   { id: 'kind_garden', title: 'Gardeners', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'garden',
     text: 'Growth feeds you, and tamed species feed you twice as well. But big gardens attract Blight: Tend the gardens now and then to keep it away.' },
   { id: 'discoveries', title: 'Discoveries', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'tribe',
-    text: 'Learn a discovery, or combine it with one you know. Combining keeps only the result, but the result is stronger. New combinations go in your Codex and earn Genetic Memory.' },
+    text: 'Each discovery costs some of your Fire, Song or other resource (shown on the card); better ones cost more. Learn one, combine it with one you know (stronger, but it costs more), or remember it for later. New combinations go in your Codex and earn Genetic Memory.' },
   { id: 'succession', title: 'Leaders', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && run.event.id === 'succession',
-    text: 'Each candidate has two traits that change your stats while they lead. Leaders grow old, so the choice comes round again.' },
+    text: 'Each candidate has a background and two traits that change your people while they lead, and an ambition. A leader who fulfils their ambition leaves a legacy that lasts for good. Leaders grow old, so the choice comes round again.' },
   { id: 'paths', title: 'Paths of Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['spark_of_mind', 'path_choice'].includes(run.event.id),
     text: 'How your kind thinks depends on what it is. Your body and history open some Paths and lock others (locked ones say what they need). Your Path is fixed for this lineage and decides which ending, and which kind of people, you can become.' },
   { id: 'foundations', title: 'Foundations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['the_frame', 'the_young', 'the_blood'].includes(run.event.id),
