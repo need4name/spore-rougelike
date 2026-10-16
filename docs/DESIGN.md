@@ -79,6 +79,12 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Patch 16.3.1: Tap to Explain
+
+- **Labelled modifiers:** every entry in `modSources` (and `tribeMods` / `societyMods`) carries a `src` label; `G.modBreakdown(run, key)` sums a modifier by source. `G.mod` is unchanged.
+- **Explain panels** (`explainPanel` in ui.js): top-bar items carry `data-act="explain"`; `G.ui.explain` opens a panel under the top bar (food gathered and eaten, comfortable size, resource flow, leader, Ideas/DNA/Influence per turn, season, biome, diet, archetype rule, activity, insight, settlements, council). Time is paused while one is open.
+- **Max Population** is kept unrounded until the end of `G.maxPop` (size, Many Minds and Herd multipliers no longer round small bonuses away), and `describeMods` shows `maxPop` as individuals for the current creature.
+
 ## Patch 16.3: Tribe rework
 
 - **Resource economy** (game.js): `G.SPECIAL_SOFT` 20 and `G.SPECIAL_HARD` 30. All gains go through `addSpecial` (past the soft cap they are halved; never past the hard cap); a tenth of the excess over the soft cap spoils each turn, and `G.specialUpkeep` takes 1 per 20 heads. Base gain is 2 + `specialPerTurn` a turn. Events `t_too_much`, `t_thieves`, `t_rains` and `t_song_frays` threaten it.

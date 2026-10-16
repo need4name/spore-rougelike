@@ -668,6 +668,11 @@ window.G = window.G || {};
     if (eyes && L.eyes === 'fierce') line(ex - er * 1.3, ey - er * 1.5, ex + er * 1.2, ey - er * 0.6, dark, Math.max(2, er * 0.45));
   }
 
+  // The editor's eye style on any eye: a heavy lid when sleepy, a hard brow when fierce.
+  function eyeStyle(L, x, y, r, skin, dark) {
+    if (L.eyes === 'sleepy') { ctx.beginPath(); ctx.arc(x, y, r * 1.08, Math.PI, Math.PI * 2); ctx.fillStyle = skin; ctx.fill(); line(x - r * 1.08, y, x + r * 1.08, y, dark, Math.max(1, r * 0.25)); }
+    if (L.eyes === 'fierce') line(x - r * 1.3, y - r * 1.5, x + r * 1.2, y - r * 0.6, dark, Math.max(2, r * 0.45));
+  }
   // ======================= SEA CREATURE =======================
   function drawSea(b, cx, cy, S, t) {
     const hue = b.hue;
@@ -837,14 +842,16 @@ window.G = window.G || {};
     if (H.has('sucker_arms') || H.has('clever_arms') || H.has('builders_arms') || H.has('clasper_fins')) for (let k = 0; k < (H.has('clasper_fins') && !H.has('sucker_arms') ? 2 : 4); k++) { const a = Math.PI / 2 - 0.9 + k * 0.25; const ax = cx + rx * 0.55 + k * 4; const ay = y0 + ry * 0.7; ctx.beginPath(); ctx.moveTo(ax, ay); const ex = ax + Math.cos(a) * S * 0.2; const ey = ay + Math.sin(a) * S * 0.2; const cx2 = ax + Math.cos(a) * S * 0.12 + Math.sin(t * 2 + k) * 8; ctx.quadraticCurveTo(cx2, ay + Math.sin(a) * S * 0.08, ex, ey); ctx.strokeStyle = body; ctx.lineWidth = S * 0.022 * (1 - k * 0.1); ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; for (let j = 1; j <= 3; j++) dot(ax + (ex - ax) * j / 4, ay + (ey - ay) * j / 4 + 2, 1.6, hsl(hue, 30, 85)); }
     if (H.has('baleen') || H.has('grinding_beak')) for (let k = 0; k < 6; k++) line(mx - rx * 0.25 + k * 5, my - 2, mx - rx * 0.25 + k * 5, my + 6, BONE, 1.5);
     if (H.has('lure_jaw')) { ctx.beginPath(); ctx.moveTo(hx, y0 - ry); ctx.quadraticCurveTo(hx + rx * 0.4, y0 - ry * 3, hx + rx * 0.6, y0 - ry * 1.4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke(); glow(GLOW, 18, () => dot(hx + rx * 0.6, y0 - ry * 1.4 + Math.sin(t * 3) * 3, S * 0.022, GLOW)); }
-    FACE = { x: hx, y: hy, r: er * (H.has('big_eyes') ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5, noEyes: !eyes };
+    const bigEye = H.has('big_eyes') || L.eyes === 'huge';
+    FACE = { x: hx, y: hy, r: er * (bigEye ? 1.8 : 1.1), mx: hx + er * 2, my: hy + ry * 0.55, top: y0 - ry * 1.3, skin: body, s: S * 0.5, noEyes: !eyes };
     if (E.senses && eyes) for (let k = 0; k < 1 + E.senses; k++) { dot(hx - er * (3 + k * 2.4), hy - er * (0.6 + (k % 2)), er * 0.8, '#fff'); dot(hx - er * (3 + k * 2.4) + 1, hy - er * (0.6 + (k % 2)), er * 0.45, '#1c1414'); }
     if (E.mouth) for (let k = 0; k < 5; k++) tri(mx - rx * 0.3 + k * 6, my - 1, mx - rx * 0.28 + k * 6, my + 9, mx - rx * 0.26 + k * 6, my - 1, BONE);
     if (!eyes) { /* no eye mutation: no eyes */ }
     else if (H.has('compound_eyes')) { dot(hx, hy, er * 1.6, '#2c2238'); for (let k = 0; k < 7; k++) { const a = k * 2.4; dot(hx + Math.cos(a) * er * 0.8, hy + Math.sin(a) * er * 0.8, er * 0.3, hsl(160 + k * 20, 50, 45, 0.8)); } }
-    else if (H.has('big_eyes')) { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
+    else if (bigEye) { dot(hx, hy, er * 1.8, '#fff'); dot(hx + 2, hy, er, '#1c1414'); }
     else if (H.has('glow_eyes')) glow(GLOW, 14, () => dot(hx, hy, er * 1.2, GLOW));
     else { dot(hx, hy, er, '#fff'); dot(hx + 1, hy, er * 0.55, '#1c1414'); }
+    if (eyes) eyeStyle(L, hx, hy, bigEye ? er * 1.8 : er, body, dark);
     if (H.has('antennae')) { wavy(hx, hy - er, S * 0.15, -Math.PI * 0.35, 4, t, dark, 2); }
     if (H.has('electroreceptors') || H.has('tremor_whiskers')) for (let k = 0; k < 4; k++) dot(hx + 6 + k * 5, hy + 8, 1.5, BONE);
     if (H.has('echolocation')) { ctx.beginPath(); ctx.ellipse(hx - 4, hy - ry * 0.6, ry * 0.5, ry * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); }
@@ -871,7 +878,7 @@ window.G = window.G || {};
       if (H.has('back_spines') || E.back) for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * (Math.PI / 7); tri(cx + Math.cos(a) * R * 1.35 - 4, by + Math.sin(a) * R * 1.05, cx + Math.cos(a) * R * 1.75, by + Math.sin(a) * R * 1.45, cx + Math.cos(a) * R * 1.35 + 4, by + Math.sin(a) * R * 1.05, accent || BONE); }
       if (H.has('biolume_skin') || H.has('glow_eyes') || accent) glow(accent || GLOW, 12, () => { for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.15, S * 0.008, accent || GLOW); });
       const eyes = G.eyesFrom([...H]) + (E.senses && G.eyesFrom([...H]) ? 2 : 0);
-      for (let i = 0; i < eyes; i++) { const ex = cx - R * 0.45 + i * (R * 0.9 / Math.max(1, eyes - 1)); dot(ex, by - R * 0.45, R * 0.13, '#fff'); dot(ex + 1, by - R * 0.45, R * 0.07, '#1c1414'); }
+      for (let i = 0; i < eyes; i++) { const ex = cx - R * 0.45 + i * (R * 0.9 / Math.max(1, eyes - 1)); const er = R * 0.13 * (L.eyes === 'huge' ? 1.5 : 1); dot(ex, by - R * 0.45, er, '#fff'); dot(ex + 1, by - R * 0.45, er * 0.54, '#1c1414'); eyeStyle(L, ex, by - R * 0.45, er, hsl(hue, 55, 58), hsl(hue, 40, 30)); }
       FACE = { x: cx + R * 0.15, y: by - R * 0.45, r: R * 0.13, mx: cx, my: by - R * 0.1, top: by - R * 1.2, skin: body, s: S * 0.5, noEyes: !eyes };
       return;
     }
@@ -902,7 +909,7 @@ window.G = window.G || {};
     ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, ccy); pattern(L, R, R * 0.75, S, hue, t); ctx.restore();
     if (E.skin || H.has('biolume_skin')) glow(accent || GLOW, 12, () => { ctx.beginPath(); ctx.ellipse(cx, ccy, R * 1.05, R * 0.8, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 2; ctx.stroke(); });
     const eyes = Math.min(8, G.eyesFrom([...H]) + (E.senses && G.eyesFrom([...H]) ? 3 : 0));
-    for (let i = 0; i < eyes; i++) { const a = Math.PI * 1.1 + (i / Math.max(1, eyes - 1)) * Math.PI * 0.8; const ex = cx + Math.cos(a) * R * 0.55; const ey = ccy + Math.sin(a) * R * 0.4; dot(ex, ey, R * 0.14, '#fff'); dot(ex + 1, ey, R * 0.07, '#1c1414'); }
+    for (let i = 0; i < eyes; i++) { const a = Math.PI * 1.1 + (i / Math.max(1, eyes - 1)) * Math.PI * 0.8; const ex = cx + Math.cos(a) * R * 0.55; const ey = ccy + Math.sin(a) * R * 0.4; const er = R * 0.14 * (L.eyes === 'huge' ? 1.5 : 1); dot(ex, ey, er, '#fff'); dot(ex + 1, ey, er * 0.5, '#1c1414'); eyeStyle(L, ex, ey, er, body, dark); }
     if (H.has('fangs') || H.has('venom_fangs') || H.has('crushing_jaws') || H.has('mandibles')) for (let k = -2; k <= 2; k++) tri(cx + k * 5 - 2, ccy + R * 0.3, cx + k * 5, ccy + R * 0.55, cx + k * 5 + 2, ccy + R * 0.3, H.has('venom_fangs') ? VENOM : BONE);
     FACE = { x: cx + R * 0.1, y: ccy - R * 0.3, r: R * 0.14, mx: cx, my: ccy + R * 0.25, top: ccy - R * 0.9, skin: body, s: S * 0.5, noEyes: !eyes };
   }
@@ -932,7 +939,7 @@ window.G = window.G || {};
     if (E.skin || accent) glow(accent || GLOW, 10, () => { for (let i = 0; i < 8; i++) dot(cx - R + (i * 37 % 20) / 10 * R, by - R * 0.4 + ((i * 53) % 10) / 10 * R * 0.8, S * 0.008, accent || GLOW); });
     const eyes = G.eyesFrom([...H]) ? G.eyesFrom([...H]) + 1 + (E.senses ? 2 : 0) : 0;
     const spots = [[0.3, -0.35], [-0.35, -0.2], [0.65, 0], [-0.7, 0.05], [0.05, -0.65], [0.45, 0.3]];
-    for (let i = 0; i < Math.min(eyes, spots.length); i++) { const [dx, dy] = spots[i]; dot(cx + dx * R, by + dy * R, R * 0.11, '#fff'); dot(cx + dx * R + 1, by + dy * R, R * 0.06, '#1c1414'); }
+    for (let i = 0; i < Math.min(eyes, spots.length); i++) { const [dx, dy] = spots[i]; const er = R * 0.11 * (L.eyes === 'huge' ? 1.5 : 1); dot(cx + dx * R, by + dy * R, er, '#fff'); dot(cx + dx * R + 1, by + dy * R, er * 0.55, '#1c1414'); eyeStyle(L, cx + dx * R, by + dy * R, er, body, dark); }
     if (p.mouth) { ctx.beginPath(); ctx.ellipse(cx + R * 0.35, by + R * 0.25, R * 0.2, R * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); }
     FACE = { x: cx + R * 0.3, y: by - R * 0.35, r: R * 0.11, mx: cx + R * 0.35, my: by + R * 0.25, top: by - R, skin: body, s: S * 0.5, noEyes: !eyes };
   }

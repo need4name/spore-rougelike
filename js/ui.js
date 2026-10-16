@@ -230,7 +230,7 @@ window.G = window.G || {};
     const hostility = m.maxHostility > 0 ? `
       <section class="setup-group">
         <h2>Hostility</h2>
-        <p class="note">Harder worlds give more Genetic Memory (+25% per level). Level 2 and up: eat 1 more Food. Level 4 and up: −2 max Population. Every level makes checks harder.</p>
+        <p class="note">Harder worlds give more Genetic Memory (+25% per level). Level 2 and up: eat 1 more Food. Level 4 and up: −20 max Population. Every level makes checks harder.</p>
         <div class="segmented">${Array.from({ length: m.maxHostility + 1 }, (_, i) => `<button class="seg ${st.hostility === i ? 'selected' : ''}" data-act="pick-hostility" data-arg="${i}" aria-pressed="${st.hostility === i}">${i}</button>`).join('')}</div>
       </section>` : '';
     return `
@@ -263,24 +263,132 @@ window.G = window.G || {};
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
         <div class="tb-main">
-          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}<span>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
+          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}<span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
-            <span class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
-            <span class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
+            <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
+            <span ${tappable('food')} class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${tribeChips(run)}
-            ${run.mind && run.stage === 'creature' ? `<span class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
+            ${run.mind && run.stage === 'creature' ? `<span ${tappable('insight')} class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
             ${gimmickChip(run)}
-            ${run.activity ? `<span class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
-            ${G.season(run) ? `<span class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
+            ${run.activity ? `<span ${tappable('activity')} class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
+            ${G.season(run) ? `<span ${tappable('season')} class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
-          <div class="evo" title="${G.dnaWord(run)}">
+          <div class="evo" ${tappable('progress')} title="${G.dnaWord(run)}">
             <span class="evo-label">${run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
         <button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>
         <div class="tb-row2">${speedControls(run)}</div>
+        ${explainPanel(run)}
       </header>`;
+  }
+
+  // ---------- Tap to explain (Patch 16.3.1) ----------
+  // Every number in the top bar can be tapped: it opens a panel saying what it means and where it comes from.
+  const sgn = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}`;
+  const xrow = (label, v, cls) => `<div class="xrow ${cls || ''}"><span>${esc(label)}</span><b class="${typeof v === 'number' ? (v < 0 ? 'neg' : v > 0 ? 'pos' : '') : ''}">${typeof v === 'number' ? sgn(v) : esc(v)}</b></div>`;
+  const xtotal = (label, v) => `<div class="xrow total"><span>${esc(label)}</span><b>${typeof v === 'number' ? sgn(v) : esc(v)}</b></div>`;
+  const xsrc = (run, key, scale) => G.modBreakdown(run, key).map((x) => xrow(x.src, Math.round(x.v * (scale || 1)))).join('');
+  const tappable = (key) => `data-act="explain" data-arg="${key}" role="button" tabindex="0"`;
+  function explainPanel(run) {
+    const key = G.ui.explain; if (!key) return '';
+    const k = G.people(run) ? G.kind(run) : null;
+    const word = G.people(run) ? 'members' : 'Population';
+    let title = ''; let body = '';
+    if (key === 'pop') {
+      const max = G.maxPop(run); const hard = G.hardPop(run); const over = Math.max(0, run.pop - max);
+      const size = G.SIZES[G.sizeOf(run)]; const many = G.people(run) && run.path === 'many' ? 0.5 : 1; const graze = G.gimmick(run) === 'grazer' ? 1.6 : 1;
+      const per = Math.round(size.popMult * many * graze * G.POP_SCALE * 10) / 10;
+      title = G.people(run) ? 'Members' : 'Population';
+      body = `<p>You are <b>${run.pop}</b>. Your comfortable size is <b>${max}</b> and you can never go above <b>${hard}</b>.</p>
+        ${over ? `<p class="bad-note"><b>Crowded</b> by ${over}. Past your comfortable size, crowded members eat twice, young cost more, gains are halved, and crowding sickness takes a tenth of the excess every turn (about ${Math.ceil(over / 10)} now).</p>` : `<p>Spare Food raises young: a brood of about ${G.POP_SCALE} costs ${G.growthCost(run) + (G.people(run) ? G.TRIBE_CHILD_COST : 0)} Food.</p>`}
+        <h4>Comfortable size</h4>
+        ${run.stage === 'society' ? xrow(`Your ${G.socKind(run).settlement}s`, Math.round((4 + (run.settlements || []).reduce((t, x) => t + x.size * 5, 0)) * per)) : xrow('Your kind', Math.round((run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 + 2 * G.boonLevel('w_blood') : 0) + (run.era - 1) * 3) * per))}
+        ${xsrc(run, 'maxPop', per)}
+        ${xtotal('Comfortable size', String(max))}
+        <p class="note">Each +1 in a description is about ${Math.round(per)} ${word} for you: ${esc(size.name.toLowerCase())} creatures${many < 1 ? ', Many Minds (half)' : ''}${graze > 1 ? ', a Herd (60% more)' : ''}.</p>`;
+    } else if (key === 'food') {
+      const inc = G.income(run); const up = G.upkeep(run); const net = inc.total - up;
+      const heads = G.heads(run); const exc = Math.max(0, run.pop - G.maxPop(run)) / G.POP_SCALE; const div = G.SIZES[G.sizeOf(run)].eatDiv;
+      const eatAll = Math.ceil((heads + exc) / div); const eatBase = Math.ceil(heads / div);
+      title = 'Food';
+      body = `<p>${esc(G.DIET_NAMES[G.diet(run)])}s eat ${esc(G.edible(run).join(' and '))}. You have ${G.edible(run).map((f) => `<b>${Math.max(0, run[f] == null ? run.food : run[f])}</b> ${f}`).join(' and ')}, and can store up to ${G.foodCap(run)}.</p>
+        <h4>Gathered each turn</h4>
+        ${inc.parts.filter((x) => x.v).map((x) => xrow(x.label, x.v)).join('')}
+        ${G.modBreakdown(run, 'foodPerTurn').length ? `<p class="note">“Helpers and allies” is: ${esc(G.modBreakdown(run, 'foodPerTurn').map((x) => `${x.src} ${sgn(x.v)}`).join(', '))}.</p>` : ''}
+        ${xtotal('Gathered', inc.total)}
+        <h4>Eaten each turn</h4>
+        ${xrow(`${run.pop} ${word} (1 Food per ${div * G.POP_SCALE})`, -eatBase)}
+        ${eatAll > eatBase ? xrow('Crowded members eat twice', -(eatAll - eatBase)) : ''}
+        ${G.modBreakdown(run, 'upkeep').map((x) => xrow(x.src, -x.v)).join('')}
+        ${xtotal('Eaten', -up)}
+        ${xtotal('Each turn', net)}
+        <p class="note">Meat feeds 1.5 each, but a fifth of it rots every turn; plants keep.${net < 0 ? ' Short of food, you lose members.' : ''}</p>`;
+    } else if (key === 'progress') {
+      const w = G.dnaWord(run); const goal = nextGoal(run);
+      title = w;
+      const per = G.dnaPerTurn(run);
+      const srcKey = run.stage === 'society' ? 'influencePerTurn' : run.stage === 'tribe' ? 'ideasPerTurn' : 'dnaPerTurn';
+      body = `<p>${run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
+        <h4>Each turn</h4>
+        ${run.stage === 'tribe' ? xrow('Base', 1) + (Math.floor(G.stat(run, 'cun') / 10) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 10)) : '') + (run.instinct === 'explore' ? xrow('Exploring', 1 + Math.floor(G.mod(run, 'exploreBonus') / 2)) : '') : ''}
+        ${xsrc(run, srcKey)}
+        ${xtotal('Each turn', per)}
+        <p class="note">Events give and take ${esc(w)} too.</p>`;
+    } else if (key === 'special' && k) {
+      const gain = Math.max(0, 2 + G.mod(run, 'specialPerTurn')); const use = G.specialUpkeep(run); const over = Math.max(0, (run.special || 0) - G.SPECIAL_SOFT);
+      title = k.resource;
+      body = `<p>${esc(G.sub(G.KINDS[run.path].desc, run))}</p>
+        <p>You have <b>${run.special || 0}</b>. Discoveries cost ${esc(k.resource)}. Comfortable up to ${G.SPECIAL_SOFT} (gains past it are halved, and a tenth of the excess spoils each turn); never more than ${G.SPECIAL_HARD}.</p>
+        <h4>Each turn</h4>
+        ${xrow('Your people make', 2)}
+        ${xsrc(run, 'specialPerTurn')}
+        ${use ? xrow(`${run.pop} members use`, -use) : ''}
+        ${over ? xrow('Spoils (over the comfortable amount)', -Math.max(1, Math.round(over * 0.1))) : ''}
+        ${xtotal('Each turn', gain - use - (over ? Math.max(1, Math.round(over * 0.1)) : 0))}
+        <p class="note">Right now discoveries cost ${sgn(G.discoveryCostPct(run))}% of their base price.</p>`;
+    } else if (key === 'leader') {
+      const l = run.leader;
+      title = G.people(run) ? `Your ${G.kind(run).leader ? G.kind(run).leader.toLowerCase() : 'leader'}` : 'Leader';
+      if (!l) body = '<p>No one leads right now. A new leader is chosen soon.</p>';
+      else {
+        const bg = l.bg && G.LEADER_BACKGROUND[l.bg]; const amb = l.amb && G.AMBITIONS[l.amb]; const pr = G.ambitionProgress(run, l);
+        const left = Math.max(0, l.life - (run.turn - l.since));
+        body = `<p><b>${esc(G.leaderTitle ? G.leaderTitle(l) : l.name)}</b>. About ${left} more years of life.</p>
+          <h4>While they lead</h4>
+          ${bg ? xrow(`${bg.name}: ${G.sub(bg.text, run)}`, G.describeMods(bg.mods)) : ''}
+          ${l.traits.map((t) => xrow(G.LEADER_TRAITS[t].name, G.describeMods(G.LEADER_TRAITS[t].mods))).join('')}
+          ${amb ? `<h4>Ambition: ${esc(amb.name)}</h4><p>Wants to ${esc(G.sub(amb.want, run))}${pr ? ` (${pr.now} of ${pr.goal})` : ''}. If they manage it, your people keep <b>${esc(G.describeMods(amb.legacy))}</b> for good.</p>` : ''}
+          <p class="note">These bonuses and penalties last only while they lead. Legacies stay. When they die, you choose again.</p>`;
+      }
+    } else if (key === 'season') {
+      const se = G.season(run); title = se ? se.name : 'Season';
+      body = se ? `<p>${esc(se.desc)}</p>${Object.keys(se.mods || {}).length ? xrow('While it lasts', G.describeMods(se.mods)) : ''}<p class="note">Seasons change every ${G.SEASON_LENGTH} turns.</p>` : '';
+    } else if (key === 'biome') {
+      const b = G.biome(run); title = b.name;
+      body = `<p>${esc(b.rule || b.desc || '')}</p>${b.mods && Object.keys(b.mods).length ? xrow('While you live here', G.describeMods(b.mods)) : ''}${b.danger ? xrow('Hunters find you', `${Math.round(b.danger * 100)}% as often`) : ''}${(b.hazards || []).length ? xrow('Disasters', b.hazards.join(', ')) : ''}<p class="note">Open the World Map tab to compare biomes and migrate.</p>`;
+    } else if (key === 'diet') {
+      const d = G.diet(run); title = G.DIET_NAMES[d];
+      const g = G.gimmick(run);
+      body = `<p>${esc(G.DIET_NAMES[d])}s eat ${esc(G.edible(run).join(' and '))}. Your diet comes from your mouth: a plant-eating mouth makes you a Herbivore, a meat-eating one a Carnivore, and an omnivore mouth (or one of each, merged) an Omnivore.</p>
+        <p>${g === 'grazer' ? 'As a Herd, you can never grow a meat-eating mouth.' : g === 'predator' ? 'As a Hunter, you can never grow a plant-only mouth.' : 'You can change diet at any time with a new mouth.'}</p>
+        <p class="note">Only things your diet can use are offered to you.</p>`;
+    } else if (key === 'gimmick') {
+      title = G.ARCHETYPE[run.archetype].name; body = `<p>${esc(G.ARCHETYPE[run.archetype].ruleDesc || G.ARCHETYPE[run.archetype].rule || '')}</p>`;
+    } else if (key === 'activity' && run.activity) {
+      const a = G.ACTIVITY[run.activity.id]; title = a.name; body = `<p>${esc(G.sub ? G.sub(a.desc, run) : a.desc)}</p>${run.activity.target ? xrow('With', run.activity.target) : ''}${run.activity.turns ? xrow('Turns left', String(run.activity.turns)) : ''}`;
+    } else if (key === 'insight') {
+      const f = run.fascination && G.INNOVATION[run.fascination]; title = 'Insight';
+      body = `<p>Insight builds toward the Mind tree idea your kind is fascinated by${f ? `: <b>${esc(G.innovationName(f, run))}</b> (${run.insight} of ${f.cost})` : '. Choose one in the Mind tab'}.</p>${xrow('Base', 1)}${Math.floor(G.stat(run, 'cun') / 5) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 5)) : ''}${xsrc(run, 'insightPerTurn')}${xtotal('Each turn', G.insightPerTurn(run))}`;
+    } else if (key === 'settlements') {
+      title = `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`;
+      body = `<p>You have ${run.settlements.length} of at most 8. Each one holds more people and earns Influence; found and build them from Activities.</p>${run.settlements.map((x) => xrow(x.name, `size ${x.size}`)).join('')}`;
+    } else if (key === 'council') {
+      title = 'Your council'; body = `<p>Councillors give their bonuses while their loyalty is above −30. Below −25 they may start plotting.</p>${(run.council || []).map((c) => xrow(`${G.COUNCIL_ROLES[c.role].name} ${c.name}`, c.loyalty)).join('')}`;
+    }
+    if (!title) return '';
+    return `<div class="explain" role="dialog" aria-label="${esc(title)}"><div class="explain-head"><h3>${esc(title)}</h3><button class="btn ghost small icon" data-act="explain" data-arg="" aria-label="Close">${ICON.close}</button></div><div class="explain-body">${body}</div></div>`;
   }
 
   // What your kind eats, impossible to miss.
@@ -288,20 +396,20 @@ window.G = window.G || {};
     if (run.stage === 'cell' && !run.parts) return '';
     const d = G.diet(run);
     const icon = { herb: '🌿', carn: '🥩', omni: '🍽️' }[d] || '';
-    return `<b class="diet-badge ${d}" title="${esc(`${G.DIET_NAMES[d]}: eats ${G.edible(run).join(' and ')}`)}">${icon} ${esc(G.DIET_NAMES[d])}</b>`;
+    return `<b ${tappable('diet')} class="diet-badge ${d}" title="${esc(`${G.DIET_NAMES[d]}: eats ${G.edible(run).join(' and ')}`)}">${icon} ${esc(G.DIET_NAMES[d])}</b>`;
   }
   // The Tribe stage at a glance: your special resource and your leader.
   function tribeChips(run) {
     if (!G.people(run)) return '';
     const k = G.kind(run);
-    const sp = run.specialOn ? `<span class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b><i class="${(run.special || 0) > G.SPECIAL_SOFT ? 'neg' : ''}">/${G.SPECIAL_SOFT}</i>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
+    const sp = run.specialOn ? `<span ${tappable('special')} class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b><i class="${(run.special || 0) > G.SPECIAL_SOFT ? 'neg' : ''}">/${G.SPECIAL_SOFT}</i>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
     const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
-    const ld = `<span class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
+    const ld = `<span ${tappable('leader')} class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
     if (run.stage !== 'society') return sp + ld;
     const sk = G.socKind(run);
     const restless = (run.council || []).filter((c) => c.loyalty < -10).length;
-    const st = `<span class="res gimmick" title="${esc(`Your ${sk.settlement}s and their sizes. Each one holds more people and earns Influence.`)}">🏘️ ${run.settlements.length}<i>/8</i></span>`;
-    const co = `<span class="res gimmick ${run.plot != null || restless ? 'warn' : ''}" title="${esc(run.plot != null ? 'Someone on your council is plotting.' : restless ? 'Some of your council are restless.' : 'Your council is loyal.')}">⚖️ ${run.plot != null ? 'Plot!' : restless ? `${restless} restless` : 'Loyal'}</span>`;
+    const st = `<span ${tappable('settlements')} class="res gimmick" title="${esc(`Your ${sk.settlement}s and their sizes. Each one holds more people and earns Influence.`)}">🏘️ ${run.settlements.length}<i>/8</i></span>`;
+    const co = `<span ${tappable('council')} class="res gimmick ${run.plot != null || restless ? 'warn' : ''}" title="${esc(run.plot != null ? 'Someone on your council is plotting.' : restless ? 'Some of your council are restless.' : 'Your council is loyal.')}">⚖️ ${run.plot != null ? 'Plot!' : restless ? `${restless} restless` : 'Loyal'}</span>`;
     return sp + ld + st + co;
   }
 
@@ -316,7 +424,7 @@ window.G = window.G || {};
     if (g === 'grazer') { t = `Herd DNA +${G.dnaPerTurn(run)}`; tip = 'Bigger herds earn more DNA.'; }
     if (g === 'colony') t = `Offshoots ${G.budsOf(run).length}/3`;
     if (g === 'mimic') { const m = G.mimicOf(run); t = m ? `Disguised: ${m.name}` : 'Undisguised'; }
-    return t ? `<span class="res gimmick ${warn ? 'warn' : ''}" title="${esc(tip)}">${esc(t)}</span>` : '';
+    return t ? `<span ${tappable('gimmick')} class="res gimmick ${warn ? 'warn' : ''}" title="${esc(tip)}">${esc(t)}</span>` : '';
   }
 
   // Time controls live in the top bar, well away from event buttons.
@@ -1620,6 +1728,7 @@ window.G = window.G || {};
       case 'view': G.ui.viewer = arg; parts = ['viewer']; break;
       case 'close-view': G.ui.viewer = null; parts = ['viewer']; break;
       case 'speed': G.ui.speed = Number(arg); parts = ['top']; break;
+      case 'explain': G.ui.explain = arg && G.ui.explain !== arg ? arg : null; parts = ['top']; break;
       case 'dismiss': if (run) run.notices.splice(Math.max(0, run.notices.length - 3) + Number(arg), 1); parts = ['hud']; break;
       case 'abandon': G.ui.confirmAbandon = true; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'abandon-no': G.ui.confirmAbandon = false; G.ui.keepScroll = true; parts = ['sheet']; break;
@@ -1671,7 +1780,7 @@ window.G = window.G || {};
     const dt = Math.min(0.25, (now - lastT) / 1000);
     lastT = now;
     const run = G.run;
-    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && !G.ui.tip && G.ui.speed > 0;
+    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && !G.ui.tip && !G.ui.explain && G.ui.speed > 0;
     const per = G.SPEEDS[G.ui.speed] || 1;
     if (running) {
       acc += dt;

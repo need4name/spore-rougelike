@@ -80,6 +80,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.2.1 | Patch ✅ | **Stop Motion:** scenes on one 10 fps clock (removed in 16.2.2: it caused motion sickness) | Small |
 | 16.2.2 | Patch ✅ | **Smooth Paper:** everything smooth again, the cut-paper look kept | Small |
 | 16.3 | Patch ✅ | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
+| 16.3.1 | Patch ✅ | **Tap to Explain:** every top-bar number opens a breakdown of where it comes from; max Population upgrades always count and show real numbers; sea eye styles; leader-choice label fix | Small |
 | 16.4 | Patch | **Mind tree rebuild:** many more nodes, awakenings and skills (not just stats), nodes that block each other, partial prerequisites, and a tree that runs on into the late Tribe stage | Large |
 | 17 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings | Large |
 | 18 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |

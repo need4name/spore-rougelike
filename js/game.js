@@ -444,40 +444,48 @@ window.G = window.G || {};
   };
 
   // ---------- Stats and modifiers ----------
+  // Every source of a modifier, each labelled with where it comes from (for the tap-to-explain panels).
+  const tag = (m, src) => (m ? Object.assign({}, m, { src }) : m);
   function modSources(run) {
     const list = [];
-    list.push(G.ARCHETYPE[run.archetype].mods);
-    list.push(G.ORIGIN[run.origin].mods);
-    G.partIds(run).forEach((pid) => list.push(G.PART[pid].mods));
-    run.traits.forEach((t) => { if (G.TRAITS[t]) list.push(G.TRAITS[t].mods); });
-    run.innovations.forEach((i) => { if (G.INNOVATION[i]) list.push(G.INNOVATION[i].mods); });
-    G.activeSynergies(run).forEach((s) => list.push(s.mods));
+    list.push(tag(G.ARCHETYPE[run.archetype].mods, `Archetype: ${G.ARCHETYPE[run.archetype].name}`));
+    list.push(tag(G.ORIGIN[run.origin].mods, `Origin: ${G.ORIGIN[run.origin].name}`));
+    G.partIds(run).forEach((pid) => list.push(tag(G.PART[pid].mods, G.PART[pid].name)));
+    run.traits.forEach((t) => { if (G.TRAITS[t]) list.push(tag(G.TRAITS[t].mods, G.TRAITS[t].name)); });
+    run.innovations.forEach((i) => { if (G.INNOVATION[i]) list.push(tag(G.INNOVATION[i].mods, `Mind: ${G.innovationName(G.INNOVATION[i], run)}`)); });
+    G.activeSynergies(run).forEach((s) => list.push(tag(s.mods, `${G.KEYWORDS[s.keyword].name} set (${s.tier})`)));
     const allies = run.species.filter((s) => !s.extinct && G.speciesStatus(s) === 'allied').length;
-    if (allies) list.push({ foodPerTurn: allies });
-    if (run.instinct === 'hide') list.push({ damageReduce: 1 });
-    if (run.stage !== 'cell') { list.push(G.SYMMETRY[G.symmetry(run)].mods); list.push(G.segmentPlan(run).mods); }
-    if (run.stage !== 'cell' && run.habitat === 'sea') list.push(G.SEA_ZONE[G.zone(run)].mods);
-    if (G.people(run)) tribeMods(run).forEach((m) => list.push(m));
-    if (run.stage === 'society') societyMods(run).forEach((m) => list.push(m));
+    if (allies) list.push(tag({ foodPerTurn: allies }, 'Allied species'));
+    if (run.instinct === 'hide') list.push(tag({ damageReduce: 1 }, 'Hiding'));
+    if (run.stage !== 'cell') { list.push(tag(G.SYMMETRY[G.symmetry(run)].mods, G.SYMMETRY[G.symmetry(run)].name)); list.push(tag(G.segmentPlan(run).mods, 'Body plan')); }
+    if (run.stage !== 'cell' && run.habitat === 'sea') list.push(tag(G.SEA_ZONE[G.zone(run)].mods, `Zone: ${G.SEA_ZONE[G.zone(run)].name}`));
+    if (G.people(run)) tribeMods(run).forEach((m) => list.push(m.src ? m : tag(m, 'Your people')));
+    if (run.stage === 'society') societyMods(run).forEach((m) => list.push(m.src ? m : tag(m, 'Your society')));
     const season = G.season(run);
     // Warm blood shrugs off the food cost of cold seasons.
     const warm = run.traits.includes('blood_warm') || G.firelit(run);
-    if (season) list.push(warm && (season.mods.foodPerTurn || 0) < 0 ? { ...season.mods, foodPerTurn: 0 } : season.mods);
-    if (G.biomeMatters(run)) { list.push(G.biome(run).mods); if (G.biome(run).cold && run.traits.includes('blood_cold')) list.push({ spd: -2, foodPerTurn: -1 }); }
+    if (season) list.push(tag(warm && (season.mods.foodPerTurn || 0) < 0 ? { ...season.mods, foodPerTurn: 0 } : season.mods, `Season: ${season.name}`));
+    if (G.biomeMatters(run)) { list.push(tag(G.biome(run).mods, `Biome: ${G.biome(run).name}`)); if (G.biome(run).cold && run.traits.includes('blood_cold')) list.push(tag({ spd: -2, foodPerTurn: -1 }, 'Cold blood in a cold land')); }
     if (run.traits.includes('blood_cold')) {
       const cold = (season && ['winter', 'cold'].includes(season.id)) || ['tundra', 'polar'].includes(G.biome(run).id);
       const hot = (season && ['summer', 'bloom'].includes(season.id)) || ['desert', 'vents'].includes(G.biome(run).id);
-      if (cold && !G.firelit(run)) list.push({ spd: -2, foodPerTurn: -1 });
-      else if (hot) list.push({ spd: 1 });
+      if (cold && !G.firelit(run)) list.push(tag({ spd: -2, foodPerTurn: -1 }, 'Cold blood in the cold'));
+      else if (hot) list.push(tag({ spd: 1 }, 'Cold blood in the heat'));
     }
     // Symbiotes share a third of their partner's strengths.
     const partner = G.partnerOf(run);
-    if (partner) { const m = {}; G.STATS.forEach((st) => { m[st.id] = Math.floor(G.speciesStat(partner, st.id) / 6); }); list.push(m); }
-    G.BOONS.forEach((b) => { const lvl = G.boonLevel(b.id); if (b.mods && lvl) { const m = {}; Object.entries(b.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(m); } });
-    if (run.hostility >= 2) list.push({ upkeep: 1 });
-    if (run.hostility >= 4) list.push({ maxPop: -2 });
+    if (partner) { const m = {}; G.STATS.forEach((st) => { m[st.id] = Math.floor(G.speciesStat(partner, st.id) / 6); }); list.push(tag(m, `Partner: ${partner.name}`)); }
+    G.BOONS.forEach((b) => { const lvl = G.boonLevel(b.id); if (b.mods && lvl) { const m = {}; Object.entries(b.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(tag(m, `Evolution Tree: ${b.name}`)); } });
+    if (run.hostility >= 2) list.push(tag({ upkeep: 1 }, 'A hostile world'));
+    if (run.hostility >= 4) list.push(tag({ maxPop: -2 }, 'A hostile world'));
     return list;
   }
+  // Where a modifier comes from: [{ src, v }], biggest first, sources added together.
+  G.modBreakdown = (run, key) => {
+    const by = new Map();
+    modSources(run).forEach((m) => { const v = (m && m[key]) || 0; if (v) by.set(m.src || 'Other', (by.get(m.src || 'Other') || 0) + v); });
+    return [...by.entries()].map(([src, v]) => ({ src, v })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+  };
 
   G.mod = (run, key) => modSources(run).reduce((s, m) => s + ((m && m[key]) || 0), 0);
   // Cells start a little sturdier so early checks are not hopeless.
@@ -501,14 +509,15 @@ window.G = window.G || {};
     // A society's size is its settlements.
     const base = run.stage === 'society' ? 4 + (run.settlements || []).reduce((t, x) => t + x.size * 5, 0) + G.mod(run, 'maxPop')
       : run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 : 0) + (run.era - 1) * 3 + G.mod(run, 'maxPop');
-    let max = Math.max(3, Math.round((base + (run.stage === 'tribe' ? 2 * G.boonLevel('w_blood') : 0)) * G.SIZES[G.sizeOf(run)].popMult));
+    // Kept unrounded until the end, so every +1 counts whatever your size.
+    let max = Math.max(3, (base + (run.stage === 'tribe' ? 2 * G.boonLevel('w_blood') : 0)) * G.SIZES[G.sizeOf(run)].popMult);
     // Many Minds are few, but each one is brilliant.
-    if (G.people(run) && run.path === 'many') max = Math.max(3, Math.round(max * 0.5));
+    if (G.people(run) && run.path === 'many') max = Math.max(3, max * 0.5);
     const g = G.gimmick(run);
-    if (g === 'grazer') max = Math.round(max * 1.6);
+    if (g === 'grazer') max *= 1.6;
     // A parasite can never outgrow its host.
     if (g === 'parasite') { const h = G.hostOf(run); max = Math.min(max, h ? Math.max(3, Math.floor(h.pop * 0.6)) : 3); }
-    return max * G.POP_SCALE;
+    return Math.round(max * G.POP_SCALE);
   };
   G.foodCap = (run) => { const cap = Math.max(4, run.baseFoodCap + G.mod(run, 'foodCap')); return G.gimmick(run) === 'predator' ? Math.max(4, Math.floor(cap / 2)) : cap; };
   // Every member eats a share: mid-sized creatures 1 Food per 2 members, small per 3, giants per 1.5.
@@ -616,11 +625,13 @@ window.G = window.G || {};
       Object.assign(w, { herd: k.band, band: k.band, Band: cap(k.band), resource: k.resource, keeper: k.keeper, camp: k.camp,
         leader: run.leader ? run.leader.name : 'the eldest', ruler: k.leader ? k.leader.toLowerCase() : 'leader', Ruler: k.leader || 'Leader' });
       (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = G.leaderTitle(c); w[`cand${i}h`] = G.leaderPitch(run, c); });
+      for (let i = (run.candidates || []).length; i < 4; i++) { w[`cand${i}`] = 'Another candidate'; w[`cand${i}h`] = ''; }
       w.Herd = w.Band;
       if (run.stage === 'society') {
         const sk = G.socKind(run);
         Object.assign(w, { ruler: 'ruler', Ruler: 'Ruler', people: sk.name, settlement: sk.settlement, settlements: `${sk.settlement}s`, capital: sk.capital, herd: 'people', Herd: 'People' });
         (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = `${c.role ? `${G.COUNCIL_ROLES[c.role].name} ` : 'The heir, '}${G.leaderTitle(c)}`; w[`cand${i}h`] = G.leaderPitch(run, c); });
+        for (let i = (run.candidates || []).length; i < 4; i++) { w[`cand${i}`] = 'The heir'; w[`cand${i}h`] = ''; }
         const pl = run.plot != null && run.council && run.council[run.plot];
         w.plotter = pl ? `${G.COUNCIL_ROLES[pl.role].name} ${pl.name}` : 'a councillor';
         w.myth = G.mythName(run);
@@ -2152,22 +2163,22 @@ window.G = window.G || {};
   // Everything the Tribe stage adds to your stats.
   function tribeMods(run) {
     const list = [];
-    const tm = G.TRIBE_TEMPER[G.temperament(run).id]; if (tm) list.push(tm.mods);
-    if (run.leader) { run.leader.traits.forEach((t) => list.push(G.LEADER_TRAITS[t].mods)); if (run.leader.bg && G.LEADER_BACKGROUND[run.leader.bg]) list.push(G.LEADER_BACKGROUND[run.leader.bg].mods); }
+    const tm = G.TRIBE_TEMPER[G.temperament(run).id]; if (tm) list.push(tag(tm.mods, 'Temperament'));
+    if (run.leader) { run.leader.traits.forEach((t) => list.push(tag(G.LEADER_TRAITS[t].mods, `Leader: ${G.LEADER_TRAITS[t].name}`))); if (run.leader.bg && G.LEADER_BACKGROUND[run.leader.bg]) list.push(tag(G.LEADER_BACKGROUND[run.leader.bg].mods, `Leader: ${G.LEADER_BACKGROUND[run.leader.bg].name}`)); }
     // Legacies of leaders who achieved what they set out to do.
-    (run.legacies || []).forEach((x) => { if (G.AMBITIONS[x.amb]) list.push(G.AMBITIONS[x.amb].legacy); });
-    (run.discoveries || []).forEach((d) => list.push(G.DISCOVERY[d].mods));
-    if (run.gear) list.push({ str: run.gear, tou: Math.floor(run.gear / 2) });
+    (run.legacies || []).forEach((x) => { if (G.AMBITIONS[x.amb]) list.push(tag(G.AMBITIONS[x.amb].legacy, `Legacy: ${x.name} the ${G.AMBITIONS[x.amb].name}`)); });
+    (run.discoveries || []).forEach((d) => list.push(tag(G.DISCOVERY[d].mods, G.DISCOVERY[d].name)));
+    if (run.gear) list.push(tag({ str: run.gear, tou: Math.floor(run.gear / 2) }, `Gear ${run.gear}`));
     const totem = run.totem && run.species.find((x) => x.name === run.totem && !x.extinct);
-    if (totem) { const best = G.STATS.map((x) => x.id).sort((a, b) => G.speciesStat(totem, b) - G.speciesStat(totem, a))[0]; list.push({ [best]: 1 }); }
+    if (totem) { const best = G.STATS.map((x) => x.id).sort((a, b) => G.speciesStat(totem, b) - G.speciesStat(totem, a))[0]; list.push(tag({ [best]: 1 }, `Totem: ${totem.name}`)); }
     const tamed = run.species.filter((x) => x.tamed && !x.extinct).length;
-    if (tamed) list.push({ foodPerTurn: Math.min(3, tamed) });
+    if (tamed) list.push(tag({ foodPerTurn: Math.min(3, tamed) }, 'Tamed species'));
     if (run.path === 'song') list.push({ cha: Math.min(3, Math.floor((run.special || 0) / 6)), ideasPerTurn: Math.min(2, Math.floor((run.special || 0) / 10)) });
     if (run.path === 'many') list.push({ cun: 2 });
-    if (run.path === 'swarm') { list.push(G.CASTES[run.caste || 'workers'].mods); if (run.mound) list.push({ maxPop: 2 * run.mound, tou: Math.floor(run.mound / 2) }); }
+    if (run.path === 'swarm') { list.push(tag(G.CASTES[run.caste || 'workers'].mods, `Caste: ${G.CASTES[run.caste || 'workers'].name}`)); if (run.mound) list.push(tag({ maxPop: 2 * run.mound, tou: Math.floor(run.mound / 2) }, `Home level ${run.mound}`)); }
     // Gardeners: Growth feeds you, and tamed species feed you twice as well.
-    if (run.path === 'garden') list.push({ foodPerTurn: Math.min(4, Math.floor((run.special || 0) / 4)) + Math.min(3, tamed) });
-    const hardy = G.boonLevel('w_hardy'); if (hardy) list.push({ tou: hardy });
+    if (run.path === 'garden') list.push(tag({ foodPerTurn: Math.min(4, Math.floor((run.special || 0) / 4)) + Math.min(3, tamed) }, 'Gardens'));
+    const hardy = G.boonLevel('w_hardy'); if (hardy) list.push(tag({ tou: hardy }, 'Ancestral Wisdom'));
     return list;
   }
   G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.floor(G.mod(run, 'exploreBonus') / 2) : 0));
@@ -2497,15 +2508,15 @@ window.G = window.G || {};
   // Everything the Society stage adds: your kind of society, your traditions, your council and your founding myth.
   function societyMods(run) {
     const list = [];
-    const st = G.SOCIETY_TYPES[run.socType]; if (st) list.push(st.mods);
-    list.push({ cha: 1 }); // the founding myth
+    const st = G.SOCIETY_TYPES[run.socType]; if (st) list.push(tag(st.mods, st.name));
+    list.push(tag({ cha: 1 }, 'Founding myth'));
     (run.socBoons || []).forEach((m) => list.push(m));
-    (run.traditions || []).forEach((id) => { if (G.TRADITION[id]) list.push(G.TRADITION[id].mods); });
+    (run.traditions || []).forEach((id) => { if (G.TRADITION[id]) list.push(tag(G.TRADITION[id].mods, G.TRADITION[id].name)); });
     // A councillor who has turned against the ruler gives nothing.
-    (run.council || []).forEach((c) => { if (c.loyalty > -30) { list.push(G.COUNCIL_ROLES[c.role].mods); c.traits.forEach((t) => list.push(G.LEADER_TRAITS[t].mods)); } });
+    (run.council || []).forEach((c) => { if (c.loyalty > -30) { list.push(tag(G.COUNCIL_ROLES[c.role].mods, `Council: ${G.COUNCIL_ROLES[c.role].name}`)); c.traits.forEach((t) => list.push(tag(G.LEADER_TRAITS[t].mods, `Council: ${c.name}`))); } });
     // Allies share their food.
     const allies = run.species.filter((x) => x.band && !x.extinct && x.opinion >= 60).length;
-    if (allies) list.push({ foodPerTurn: Math.min(2, allies) });
+    if (allies) list.push(tag({ foodPerTurn: Math.min(2, allies) }, 'Allied peoples'));
     return list;
   }
   G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + Math.floor(G.mod(run, 'ideasPerTurn') / 3) + (run.instinct === 'explore' ? 1 : 0));
@@ -2915,6 +2926,8 @@ window.G = window.G || {};
       if (k === 'damageReduce') return `−${v} damage taken`;
       if (k === 'discoveryCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)}% discovery cost`;
       if (k === 'growthCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)} Food needed to grow`;
+      // Max Population is stored in 'heads' but shown as individuals, scaled for your size (and halved for Many Minds).
+      if (k === 'maxPop') { const r = G.run; const mult = r ? G.SIZES[G.sizeOf(r)].popMult * (G.people(r) && r.path === 'many' ? 0.5 : 1) : 1; const n = Math.max(1, Math.round(Math.abs(v) * mult * G.POP_SCALE)); return `${v > 0 ? '+' : '−'}${n} ${G.MOD_LABELS[k]}`; }
       return `${v > 0 ? '+' : '−'}${Math.abs(v)} ${G.MOD_LABELS[k] || k}`;
     }).join(', ');
   };

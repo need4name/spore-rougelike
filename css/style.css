@@ -621,3 +621,21 @@ button.rival:hover { border-color: var(--accent); }
 details.rulers { margin: 4px 0 10px; font-size: 0.85rem; color: var(--muted); }
 details.rulers summary { cursor: pointer; color: var(--text, #e8efe4); }
 details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
+
+/* ---------- Tap to explain (Patch 16.3.1) ---------- */
+[data-act="explain"][role="button"] { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.28); text-underline-offset: 3px; }
+.diet-badge[data-act="explain"], .evo[data-act="explain"] { text-decoration: none; }
+.explain { position: absolute; top: calc(100% + 6px); left: 8px; right: 8px; z-index: 20; box-shadow: 0 12px 30px rgba(0,0,0,0.5); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; max-height: 55vh; overflow-y: auto; font-size: 0.88rem; }
+.explain-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.explain-head h3 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; }
+.explain-body p { margin: 6px 0; color: var(--fg); line-height: 1.4; }
+.explain-body h4 { margin: 10px 0 4px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.explain-body .note { color: var(--muted); font-size: 0.8rem; }
+.explain-body .bad-note { color: var(--bad); }
+.xrow { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.07); }
+.xrow span { color: var(--muted); min-width: 0; }
+.xrow b { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.xrow b.pos { color: var(--good); }
+.xrow b.neg { color: var(--bad); }
+.xrow.total { border-bottom: 0; border-top: 1px solid var(--line); margin-top: 2px; }
+.xrow.total span { color: var(--fg); font-weight: 700; }

@@ -984,7 +984,7 @@ G.EVENTS = [
     text: 'How will your kind bring new life into the world?',
     options: [
       { label: 'Give birth to live young', hint: 'Live Young: +1 TOU, +1 CHA, but at most 1 birth a turn', result: { text: 'Few babies, but well protected.', trait: 'young_live', anim: 'social' } },
-      { label: 'Lay eggs', hint: 'Eggs: twice the births, +1 max Population, but eggs can be stolen', result: { text: 'Clutches of eggs, laid in hidden places.', trait: 'young_eggs', anim: 'grow' } },
+      { label: 'Lay eggs', hint: 'Eggs: twice the births, +10 max Population, but eggs can be stolen', result: { text: 'Clutches of eggs, laid in hidden places.', trait: 'young_eggs', anim: 'grow' } },
       { label: 'Bud new members off your body', hint: 'Budding: +1 Population a turn, −1 CHA. Radial or no-symmetry bodies only', req: { budding: true }, result: { text: 'Little copies of you grow and break away.', trait: 'young_budding', anim: 'grow' } },
     ],
   },
@@ -1000,9 +1000,9 @@ G.EVENTS = [
     id: 'age_of_giants', stage: 'creature', milestone: true, title: 'The Age of Giants',
     text: 'The world has filled with life, and some of it has grown enormous. Every lineage faces the same question: grow huge, or stay small and many?',
     options: [
-      { label: 'Grow into giants', hint: 'Giant: +2 STR, +2 TOU, +2 max Pop, −1 SPD, eat 2 more', result: { text: 'Generation by generation, your kind grows. Everything makes way for you.', trait: 'giant', anim: 'grow' } },
-      { label: 'Stay mid-sized', hint: 'Mid-sized: +1 STR, +1 TOU', result: { text: 'Big enough to fight, small enough to hide.', trait: 'mid_sized', anim: 'grow' } },
-      { label: 'Stay small and many', hint: 'Small: +2 SPD, +1 CUN, grow faster, eat 1 less', result: { text: 'Your kind becomes quick, clever and everywhere.', trait: 'small_many', anim: 'flee' } },
+      { label: 'Grow into giants', hint: 'Giant: +3 STR, +3 TOU, −1 damage taken, −1 SPD; about two-thirds as many of you, and each eats more', result: { text: 'Generation by generation, your kind grows. Everything makes way for you.', trait: 'giant', anim: 'grow' } },
+      { label: 'Stay mid-sized', hint: 'Mid-sized: +1 STR, +1 TOU, +20 max Population', result: { text: 'Big enough to fight, small enough to hide.', trait: 'mid_sized', anim: 'grow' } },
+      { label: 'Stay small and many', hint: 'Small: +2 SPD, +1 CUN, grow faster; half as many again of you, and each eats less', result: { text: 'Your kind becomes quick, clever and everywhere.', trait: 'small_many', anim: 'flee' } },
     ],
   },
   {

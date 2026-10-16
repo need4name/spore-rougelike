@@ -33,7 +33,7 @@ G.MOD_LABELS = {
 // Synergies. Having 2 or 3 parts with the same keyword unlocks a bonus. Tier 3 adds to tier 2.
 G.KEYWORDS = {
   venom: { name: 'Venom', color: '#b98cf2', tiers: { 2: { mods: { str: 2 }, desc: '+2 Strength' }, 3: { mods: { huntBonus: 2, damageReduce: 1 }, desc: 'Hunting gives +2 Food, and predators think twice (−1 damage taken)' } } },
-  armor: { name: 'Armor', color: '#a9b6bd', tiers: { 2: { mods: { tou: 2 }, desc: '+2 Toughness' }, 3: { mods: { damageReduce: 1, maxPop: 2 }, desc: '−1 damage taken and +2 max Population' } } },
+  armor: { name: 'Armor', color: '#a9b6bd', tiers: { 2: { mods: { tou: 2 }, desc: '+2 Toughness' }, 3: { mods: { damageReduce: 1, maxPop: 2 }, desc: '−1 damage taken and +20 max Population' } } },
   swift: { name: 'Swift', color: '#f2c14e', tiers: { 2: { mods: { spd: 2 }, desc: '+2 Speed' }, 3: { mods: { exploreBonus: 2, dnaPerTurn: 1 }, desc: '+1 DNA every turn, +2 more while Exploring' } } },
   glow: { name: 'Glow', color: '#6fe0d4', tiers: { 2: { mods: { cha: 2 }, desc: '+2 Charm' }, 3: { mods: { dnaPerTurn: 1, cun: 1 }, desc: '+1 DNA every turn and +1 Cunning' } } },
   symbiont: { name: 'Symbiont', color: '#8fd16a', tiers: { 2: { mods: { foodPerTurn: 1 }, desc: '+1 Food every turn' }, 3: { mods: { popPerTurn: 1 }, desc: 'Regrow 1 Population every turn' } } },
@@ -381,8 +381,8 @@ G.ARCHETYPES = [
 G.ORIGINS = [
   { id: 'tidal', name: 'Tidal Pools', cost: 0, hue: 185, desc: 'Warm, shallow and forgiving. No modifiers.', mods: {}, dnaMult: 1 },
   { id: 'vents', name: 'Volcanic Vents', cost: 40, hue: 18, desc: 'Mutations come fast here: +25% DNA. Food is scarce: eat 1 more per turn.', mods: { upkeep: 1 }, dnaMult: 1.25 },
-  { id: 'frozen', name: 'Frozen Sea', cost: 40, hue: 210, desc: 'Cold makes life tough and slow: +3 max Population, −1 Speed.', mods: { maxPop: 3, spd: -1 }, dnaMult: 1 },
-  { id: 'toxic', name: 'Toxic Bloom', cost: 60, needsEvo: 4, hue: 290, desc: 'Poisoned water: −2 max Population, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
+  { id: 'frozen', name: 'Frozen Sea', cost: 40, hue: 210, desc: 'Cold makes life tough and slow: +30 max Population, −1 Speed.', mods: { maxPop: 3, spd: -1 }, dnaMult: 1 },
+  { id: 'toxic', name: 'Toxic Bloom', cost: 60, needsEvo: 4, hue: 290, desc: 'Poisoned water: −20 max Population, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
 ];
 
 // Mutation packs add parts to the draft pool.
@@ -397,7 +397,7 @@ G.PACKS = [
 //   costs  one price per level      req   nodes that must be bought first
 //   mods   stat changes per level   twin  slot that gains a second socket
 G.BOONS = [
-  { id: 'hardy', name: 'Hardy Ancestors', col: 0, tier: 1, costs: [8, 18, 35], desc: '+1 max Population per level.' },
+  { id: 'hardy', name: 'Hardy Ancestors', col: 0, tier: 1, costs: [8, 18, 35], desc: '+10 max Population per level.' },
   { id: 'pantry', name: 'Ancestral Pantry', col: 1, tier: 1, costs: [6, 15], desc: '+3 starting Food and +2 Food storage per level.' },
   { id: 'memory', name: 'Deep Memory', col: 2, tier: 1, costs: [8, 20], desc: 'Start each stage with +3 DNA per level.' },
   { id: 'rich_genes', name: 'Rich Genes', col: 3, tier: 1, costs: [12, 28, 50], desc: '+10% DNA from everything, per level.' },
@@ -713,16 +713,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.3';
+G.VERSION = '16.3.1';
 G.WHATS_NEW = {
-  title: 'Patch 16.3: The Tribe Reworked',
+  title: 'Patch 16.3.1: Tap to Explain',
   items: [
-    'Fire, Song, Light, Brood and Growth are now what discoveries cost. Simple ones cost about 5, the best combinations 12 or more, so a tribe climbs step by step. Your leader, your Cunning, your size and events change the price by a percentage (always rounded to whole numbers).',
-    'Your resource has a soft cap of 20 (gains past it are halved, and a little spoils each turn) and a hard cap of 30. Big tribes use some up every turn, and new events can spoil or steal it.',
-    'Can\'t afford a discovery? Remember it for later (up to 3) and learn it from the Discoveries tab when you can.',
-    'Leaders have a background (hunter, elder, healer, stranger...) and an ambition. Fulfil the ambition during their reign and it leaves a lasting legacy for your people. The People tab shows your line of rulers.',
-    'A new Tribe world: your camp settles near friendly and tamed species and away from hunters and rival bands, grows huts, a pen, a totem and a palisade, packs up and walks when you migrate, and sends out parties sized by your numbers, diet and Charm.',
-    'The world opens out as your people learn: everything draws a little smaller, and the neighbouring lands appear at the edges of the map.',
+    'Tap anything in the top bar (your numbers, food, resource, leader, season, biome, diet, the progress bar) to see what it means and where every + and − comes from. The game pauses while you read.',
+    'Food shows exactly what you gathered and what was eaten, including crowded members eating twice, so you can see why you are at −1.',
+    'Max Population upgrades now always count, whatever your size (they could round away to nothing for giants and Many Minds), and every description shows the real number of individuals (+20, not +2).',
+    'Eye styles (Sleepy, Fierce, Huge) now show on fish, jellyfish, starfish and colonies.',
+    'A leader choice no longer shows "{cand3}" when there is no fourth candidate.',
   ],
 };
 
@@ -883,13 +882,13 @@ G.AMBITIONS = {
 };
 // Where each leader comes from, and what that gives while they rule.
 G.LEADER_BACKGROUNDS = [
-  { id: 'hunter', text: 'the best hunter of their generation', mods: { str: 1 } },
-  { id: 'keeper', text: 'raised beside the {resource}', mods: { specialPerTurn: 1 } },
-  { id: 'elder', text: 'the oldest still standing', mods: { cun: 1, discoveryCost: -10 }, life: -6 },
-  { id: 'child', text: "the last leader's child", mods: { cha: 1 } },
-  { id: 'stranger', text: 'a stranger who joined as a child', mods: { spd: 1, exploreBonus: 1 } },
-  { id: 'healer', text: 'a healer', mods: { popPerTurn: 1 } },
-  { id: 'young', text: 'young and untested', mods: { ideasPerTurn: 1 }, life: 8 },
+  { id: 'hunter', name: 'Hunter', text: 'the best hunter of their generation', mods: { str: 1 } },
+  { id: 'keeper', name: 'Keeper-raised', text: 'raised beside the {resource}', mods: { specialPerTurn: 1 } },
+  { id: 'elder', name: 'Elder', text: 'the oldest still standing', mods: { cun: 1, discoveryCost: -10 }, life: -6 },
+  { id: 'child', name: 'Heir', text: "the last leader's child", mods: { cha: 1 } },
+  { id: 'stranger', name: 'Stranger', text: 'a stranger who joined as a child', mods: { spd: 1, exploreBonus: 1 } },
+  { id: 'healer', name: 'Healer', text: 'a healer', mods: { popPerTurn: 1 } },
+  { id: 'young', name: 'Young', text: 'young and untested', mods: { ideasPerTurn: 1 }, life: 8 },
 ];
 G.LEADER_BACKGROUND = {}; G.LEADER_BACKGROUNDS.forEach((x) => { G.LEADER_BACKGROUND[x.id] = x; });
 
@@ -1027,7 +1026,7 @@ G.TRIBE_ENDINGS = {
 // Stored with the Evolution Tree's levels (meta.boons), but kept out of its hidden power.
 G.WISDOM = [
   { id: 'w_stories', name: 'Old Stories', col: 0, tier: 1, costs: [15, 35], desc: 'Every Tribe begins with +6 Ideas per level.' },
-  { id: 'w_blood', name: 'Strong Blood', col: 1, tier: 1, costs: [15, 35, 60], desc: '+2 max members per level in the Tribe stage.' },
+  { id: 'w_blood', name: 'Strong Blood', col: 1, tier: 1, costs: [15, 35, 60], desc: '+20 max members per level in the Tribe stage.' },
   { id: 'w_keepers', name: 'Born Keepers', col: 2, tier: 1, costs: [20, 45], desc: 'Start with +3 of your Fire, Song, Light, Brood or Growth per level.' },
   { id: 'w_elders', name: 'Elders\' Counsel', col: 3, tier: 1, costs: [25, 50, 80], desc: 'Every Tribe-stage check is 1 easier per level.' },
   { id: 'w_peace', name: 'Peacemakers', col: 4, tier: 1, costs: [20, 45], desc: 'Rival bands start 20 friendlier per level.' },
@@ -1048,7 +1047,7 @@ G.ACTIVITIES.push(
   { id: 'craft', name: 'Craft', stage: ['tribe', 'society'], path: 'tool', turns: 2, desc: 'Spend 4 of your Fire or Vent-heat to craft gear for your people: each level of gear gives +1 Strength (and +1 Toughness every second level), up to 5.' },
   { id: 'teach', name: 'Teach the songs', stage: ['tribe', 'society'], path: 'song', turns: 3, desc: 'Three turns of teaching (−1 Food a turn): +2 Song each turn, and the next time many of you die, no verses are lost.' },
   { id: 'watch', name: 'Watch and learn', target: 'species', stage: 'tribe', path: 'many', turns: 3, desc: 'Spend three turns secretly watching a species. Watch a rival band and you copy one of its discoveries; watch any other species and you learn +2 Ideas and +3 Light.' },
-  { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +2 max members per level, and +1 Toughness every second level.' },
+  { id: 'raise', name: 'Grow your home', stage: 'tribe', path: 'swarm', turns: 2, desc: 'Spend 5 Brood to make your great building one level bigger (up to 6): +20 max members per level, and +1 Toughness every second level.' },
   { id: 'tend', name: 'Tend the gardens', stage: 'tribe', path: 'garden', turns: 3, desc: 'Three turns of weeding and planting (−1 Food a turn): +2 Growth each turn, and Blight cannot strike for 12 turns after.' },
 );
 
