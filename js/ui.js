@@ -679,13 +679,12 @@ window.G = window.G || {};
   // are frozen as they stood when their stage ended; the current one is live.
   const BOOK_PAGES = [
     { id: 'origin', name: 'Origin', stage: 'Cell' },
-    { id: 'form', name: 'Form', stage: 'Multicellular', later: 'Update 19' },
     { id: 'mind', name: 'Mind', stage: 'Creature' },
     { id: 'lore', name: 'Lore', stage: 'Tribe' },
     { id: 'law', name: 'Law', stage: 'Society' },
-    { id: 'reason', name: 'Reason', stage: 'Renaissance', later: 'Update 21' },
-    { id: 'crown', name: 'Crown', stage: 'Colonial Age', later: 'Update 22' },
-    { id: 'legacy', name: 'Legacy', stage: 'the end', later: 'Update 23' },
+    { id: 'reason', name: 'Reason', stage: 'Renaissance', later: 'Update 20' },
+    { id: 'crown', name: 'Crown', stage: 'Colonial Age', later: 'Update 21' },
+    { id: 'legacy', name: 'Legacy', stage: 'the end', later: 'Update 22' },
   ];
   const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society'];
   const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society' };
@@ -726,7 +725,7 @@ window.G = window.G || {};
         ${lo.legacies.length ? `<h4>Legacies</h4><p>${esc(lo.legacies.map((x) => `${x.name} the ${G.AMBITIONS[x.amb].name}`).join(', '))}</p>` : ''}`;
     }
     if (id === 'law') {
-      return `<h3>Law (growing)</h3><p class="note">The Society's own tree arrives in Update 20. Until then, its page is your traditions.</p><p>${esc((run.traditions || []).map((t) => G.TRADITION[t] ? G.TRADITION[t].name : t).join(', ') || 'No traditions yet')}</p>`;
+      return `<h3>Law (growing)</h3><p class="note">The Society's own tree arrives in Update 19. Until then, its page is your traditions.</p><p>${esc((run.traditions || []).map((t) => G.TRADITION[t] ? G.TRADITION[t].name : t).join(', ') || 'No traditions yet')}</p>`;
     }
     return '';
   }

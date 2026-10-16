@@ -84,12 +84,11 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.4 | Patch ✅ | **Fair Fights:** the species you meet evolve too; checks against a species use its real stats, so a weak foe is easy, a strong one is hard, and your stats mean what they say | Medium |
 | 17 | **The Book of the Lineage** ✅ | **The hook, part 1:** the book of trees (one page per stage), the **Mind tree** rebuilt three times bigger, and the first **leanings** toward Peaceful, Territorial or Warmongering | Large |
 | 18 | **The Lore Tree** | **The hook, part 2:** the Tribe stage's own tree, from discoveries, leaders and deeds; the **Memory of Kinds** (every species remembers what you did to it); a harder Tribe; Ancestral Wisdom doubled | Large |
-| 19 | **The Many** | **Multicellular becomes its own stage**, between the cell and the creature, with its own small tree, the **Form tree** (symmetry, body plan, first organs) | Medium |
-| 20 | **Faith and Neighbours** | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
-| 21 | **Renaissance** | **A new stage:** neighbours become nations that remember your history; science, invention and art; schisms and alliances; the **Reason tree** | Large |
-| 22 | **Colonial Age** | **Empire, part 1:** the realm, dynasty, fleets and colonies across the World Map, and the **Crown tree** | Large |
-| 23 | **Empires** | Empire, part 2: rival empires descended from species you met, wonders, the grand endings (one per Disposition and kind of people), New Game+, and the book's last page, **the Legacy** | Large |
-| 24 | The Final Polish | Balance, art, sound, settings, offline app, challenges and achievements | Large |
+| 19 | **Faith and Neighbours** | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
+| 20 | **Renaissance** | **A new stage:** neighbours become nations that remember your history; science, invention and art; schisms and alliances; the **Reason tree** | Large |
+| 21 | **Colonial Age** | **Empire, part 1:** the realm, dynasty, fleets and colonies across the World Map, and the **Crown tree** | Large |
+| 22 | **Empires** | Empire, part 2: rival empires descended from species you met, wonders, the grand endings (one per Disposition and kind of people), New Game+, and the book's last page, **the Legacy** | Large |
+| 23 | The Final Polish | Balance, art, sound, settings, offline app, challenges and achievements | Large |
 
 **The plan for how each stage flows into the next is in [LATER_STAGES.md](LATER_STAGES.md):** how your start, your Path of Mind and your ending flow into the Tribe, Society and Empire stages.
 
@@ -122,7 +121,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 
 - **One theme per update.** Ideas that don't fit go on the "waiting" list at the bottom.
 - **Each update is playable on its own.** Nothing is left half-built between updates.
-- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 24. Between updates we only fix what blocks testing or is clearly broken.
+- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 23. Between updates we only fix what blocks testing or is clearly broken.
 - **Saves.** Unlocks and the Codex always carry over. A run in progress may restart when a new stage arrives; the game will say so.
 - **What's new.** From Update 6 on, the title screen shows a short "What's new" note.
 - **Every update is tested on land and in the sea**, and with at least one creature that isn't bilateral.
@@ -425,17 +424,16 @@ From play-testing feedback:
 
 ## The shape of the whole game
 
-Seven stages, from a single cell to an empire:
+Six stages, from a single cell to an empire. Becoming many (multicellular) stays a moment inside the Cell stage, not a stage of its own:
 
 | # | Stage | You are | Its page in the book | Paid with | Its Gate (ends the stage) |
 |---|---|---|---|---|---|
-| 1 | **Cell** | a single cell | **Origin** (a story page, not a tree) | | becoming many |
-| 2 | **Multicellular** | a colony becoming a body | **Form** tree | DNA | your first body plan |
-| 3 | **Creature** | a species | **Mind** tree | Insight | your Path's awakening |
-| 4 | **Tribe** | a band | **Lore** tree | Ideas | the Founding |
-| 5 | **Society** | a people among neighbours | **Law** tree | Influence | the Union |
-| 6 | **Renaissance** | a nation among nations | **Reason** tree | (Renaissance currency) | the Age of Sail |
-| 7 | **Colonial Age** | an empire across the world | **Crown** tree | (Empire currency) | a grand ending |
+| 1 | **Cell** | a single cell, then a colony becoming a body | **Origin** (a story page, not a tree) | | leaving the primordial sea |
+| 2 | **Creature** | a species | **Mind** tree | Insight | your Path's awakening |
+| 3 | **Tribe** | a band | **Lore** tree | Ideas | the Founding |
+| 4 | **Society** | a people among neighbours | **Law** tree | Influence | the Union |
+| 5 | **Renaissance** | a nation among nations | **Reason** tree | (Renaissance currency) | the Age of Sail |
+| 6 | **Colonial Age** | an empire across the world | **Crown** tree | (Empire currency) | a grand ending |
 | | | | **Legacy** (the last page: your ending, and how far each tree grew) | | |
 
 **What each stage builds for the next.** Later conflict only means something if it has roots, so each stage lays a foundation the next ones use:
@@ -461,7 +459,7 @@ At the start of the game your mouth makes you a **Herbivore, Omnivore or Carnivo
 
 ## The Book of the Lineage (the hook)
 
-Every stage after the cell has **its own tree**, built from that stage's decisions, and finished trees are kept as **pages of a book**. In the Colonial Age you can flick through Origin, Form, Mind, Lore, Law, Reason, Crown and Legacy: your whole journey.
+Every stage after the cell has **its own tree**, built from that stage's decisions, and finished trees are kept as **pages of a book**. In the Colonial Age you can flick through Origin, Mind, Lore, Law, Reason, Crown and Legacy: your whole journey.
 
 **Rules every tree page shares:**
 
@@ -475,7 +473,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 ## Update 17: The Book of the Lineage (Mind tree) ✅
 
-- **The book:** a new screen with one tab per stage reached; finished pages are frozen, the current one is live. The **Origin** page tells the story of your cell.
+- **The book:** a new screen with one tab per stage reached; finished pages are frozen, the current one is live. The **Origin** page tells the story of your cell, including how it became many.
 - **The Mind tree, rebuilt (148 ideas, usually 25–40 visible in a run):**
   - *Roots* from your temperament, *trunk* from land or sea and your home (as now);
   - **Body branches** from what you are: venom, armour, eyes, wings, hands, glow, size, diet, frame, young and blood (about 30 nodes);
@@ -494,13 +492,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **The Memory of Kinds:** every species keeps a record of what your lineage did to it (from the Creature stage), shown on its card; rival bands are born from species that hold grudges.
 - **A harder Tribe;** **Ancestral Wisdom** doubles to about 25 nodes.
 
-## Update 19: The Many (Multicellular stage)
-
-- Becoming many is no longer a moment inside the Cell stage: it is **its own stage**, between the cell and the creature, where your colony becomes a body.
-- **The Form tree:** a small page (about 30 nodes) built from how you came together: symmetry, body plan, the first organs and senses, your foundations. Its Gate is your first true body plan.
-- The Cell stage becomes shorter and sharper, and its story becomes the **Origin** page.
-
-## Update 20: Faith and Neighbours (Society stage, part 2)
+## Update 19: Faith and Neighbours (Society stage, part 2)
 
 - **Culture:** faiths built from your own history (your ancestor, your ending, your nemesis species), arts and myths.
 - **Traditions** deepen, and carry forward into the nations of the Renaissance.
@@ -509,7 +501,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Disposition:** your leaning settles into **Peaceful, Territorial or Warmongering**, shown as a badge, and decides which Union endings are open.
 - **Heritage:** the Society stage's between-lineage tree.
 
-## Update 21: Renaissance (a new stage)
+## Update 20: Renaissance (a new stage)
 
 - **Neighbours become nations,** each remembering its history with you.
 - **Science and art:** inventions, patrons, movements; your kind of people shapes what you discover (a Swarm's Renaissance is not a Choir's).
@@ -517,7 +509,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **The Reason tree:** built from your inventions, movements and the patrons you back. Its Gate is the **Age of Sail**, which opens the world.
 - **Patronage:** the Renaissance's between-lineage tree.
 
-## Update 22: Colonial Age (Empire stage, part 1)
+## Update 21: Colonial Age (Empire stage, part 1)
 
 *The most Crusader Kings 3 part of the game.*
 
@@ -527,7 +519,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Technology:** engines on land; electricity, living light and coral-shaping at sea, changed again by your kind of people.
 - **The Crown tree:** built from your rulers, heirs, wars and technology.
 
-## Update 23: Empires (Empire stage, part 2)
+## Update 22: Empires (Empire stage, part 2)
 
 - **Rival empires** descended from the species you met along the way, and from lineages in your Fossil Record, carrying the Memory of Kinds.
 - **Wars, treaties, betrayals, faiths that spread and split, wonders and disasters.**
@@ -535,7 +527,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Dynasty:** the Empire's between-lineage tree.
 - **The Legacy page:** the last page of the book.
 
-## Update 24: The Final Polish
+## Update 23: The Final Polish
 
 *Everything we've been saving for the end.*
 
