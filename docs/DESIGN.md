@@ -79,6 +79,21 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Update 18: The Lore Tree
+
+- **Lore ideas are discoveries** (`G.DISCOVERIES`) with a `lore` band: `trunk` (your Path's discoveries, always there), `graft` (anyone or talent discoveries, in the tree once chosen: `run.grafts`), `combo` (visible when both halves are in the tree, learnable when both are known; both halves are kept), `way` (`when.bg`: open while a leader with that background leads), `legacy` (`when.amb`: grafted by a fulfilled ambition), `deed` (`when.deed`: grafted by `G.addDeed`), `gate` (`founding_gate`) and `beyond` (2 per Path; `req.known`, `req.some`/`n`; `inherit` mods apply in the Society stage via `societyMods`). `G.loreVisible`, `G.loreAvailable`, `G.loreKnown`, `G.loreName` (the gate's name depends on your Path).
+- **Branch drafts:** Ideas goals now offer 3 graft branches (`discoveryOptions`; +1 with Wider Gene Pool, +1 with Many Branches). "Add and learn it" grafts and pays; "Add to the tree" grafts only (`G.holdDiscovery`). Learning later: `G.learnLore` from the Lore tab. Old saves' held discoveries become grafts.
+- **Costs** (`G.DISCOVERY_BASE`): plain 5, habitat/talent 6, path 8, combined 12, way/legacy/deed 8, gate 12, beyond 22, with the 16.3 percentage (plus Lorekeepers −10% per level) and Voices of the Ancestors (Beyond −15% per level).
+- **The Founding** (`founding_gate`) needs the stage's Ideas goal (`evolveAt`, 120) and `G.FOUNDING_NEED` (6, minus Founding Stones) Lore ideas known; learning it brings the founding finale (`nextStep`). Beyond ideas can't be learned after it.
+- **Deeds** (`G.DEEDS`, Tribe stage only): tamed (effect or activity), totem, a war won against a band, a band at 50+ opinion, a band raid, moving biome, a finished ceremony, below 20% of comfortable size.
+- **Rules and leanings** work in the Lore tree too: `G.mindRule` also reads known discoveries in the Tribe and Society stages, and `G.leaning` counts their `lean` (old discoveries get one from their strongest mod).
+- **The Memory of Kinds:** `G.remember(s, what)` counts hunted, fought, attacked, warred, befriended, tamed, revered on `s.history`; `G.grudge(s)` (−40..+30) is halved into the starting opinion of a band descended from it (which also inherits the history). Species cards show "They remember".
+- **Ancestral Wisdom** doubles to 24 (tiers 3–4): Lorekeepers, Strong Arms, Many Branches, Founding Stones, Old Friends, Palisades, Voices of the Ancestors, Sharp Minds, Long Lives, Remembered Deeds, Open Hands, Undying Fires. Wisdom `mods` apply through `tribeMods`.
+- **A harder Tribe, earned with Ancestral Wisdom:** `G.TRIBE_HARSH` 7 (was 5), Tribe raids strike more often (`G.TRIBE_HIT_CAP` 0.7) and harder (`G.TRIBE_BLOW` 2; the Society stage keeps 0.6 and 1), and the Founding needs 8 Lore ideas (Founding Stones: −2 per level). Test bots with a fully upgraded Creature stage but no Wisdom found their people 13–94% of the time (Singers 13%, Many Minds 94%); with one level of every Wisdom upgrade, 92–100%. In the progressive campaign, a brand-new lineage founds its people about 1 time in 8.
+- **Swarm Brood** hatches only from 14 (was 8), and not while the Founding is open, so a Hive can save for it.
+- A branch draft with nothing left to offer passes with +3 Food.
+- **The Book's Lore page** is `run.book.lore` (`seen`, `known`, `leaning`, rulers) frozen in `becomeSociety`, drawn with `loreTree(run, page)`.
+
 ## Update 17: The Book of the Lineage
 
 - **Mind tree bands** (rows, in order): root, home (trunk + home), **body**, **memory**, path tier 3, path tier 4, cap (the Awakening), **beyond**. `bandOf` in ui.js. Lines wrap at 4 nodes; the tree's height follows its content.

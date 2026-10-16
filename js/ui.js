@@ -589,30 +589,30 @@ window.G = window.G || {};
   function discoveryTags(d) {
     return `${d.talent ? `<span class="kw">${esc(G.TALENT_NAMES[d.talent])}</span>` : ''}${d.path ? `<span class="kw">${esc(G.PATH[d.path].name)}</span>` : ''}${d.from ? '<span class="kw unlocked">Combined</span>' : ''}`;
   }
+  // A new branch for the Lore tree (Update 18): choose one of three to graft on; learn it now if you can pay.
   function discoveryCard(run) {
     const d = run.draft;
-    const res = G.kind(run).resource; const icon = G.kind(run).icon; const have = run.special || 0;
-    const known = run.discoveries || [];
-    const seen = G.meta.codex.discoveries || [];
+    const k = G.kind(run); const have = run.special || 0;
+    const inTree = (id) => G.DISCOVERY[id] && G.loreVisible(run, G.DISCOVERY[id]);
     return `
       <article class="card draft">
-        <p class="eyebrow">Discovery</p>
-        <h2>What will your people learn?</h2>
-        <p class="note">Learn something new, or combine it with something you already know. The right pairs become a greater discovery (you keep only the result). Every discovery costs ${esc(res)}: you have <b>${have}</b>. Can't afford one yet? Remember it, and learn it later from the Discoveries tab.</p>
+        <p class="eyebrow">The Lore tree</p>
+        <h2>A new branch</h2>
+        <p class="note">Your people's Ideas open a new branch of Lore. Choose one to add to your tree: learn it now for ${esc(k.resource)} (you have <b>${have}</b>), or keep it in the tree and learn it later from the Lore tab. Branches that pair with ones already in your tree open combinations.</p>
         <div class="draft-list">
           ${d.options.map((id) => {
             const x = G.DISCOVERY[id];
-            const combos = known.map((k) => ({ k, c: G.discoveryCombo(k, id) })).filter((o) => o.c);
+            const combos = G.DISCOVERIES.filter((c) => c.from && c.from.includes(id) && inTree(c.from.find((f) => f !== id)));
             const cost = G.discoveryCost(run, id);
             return `
             <div class="part-card ${cost > have ? 'cant' : ''}">
-              <span class="opt-label">${esc(x.name)}${discoveryTags(x)}<span class="cost ${cost > have ? 'bad' : ''}">${icon} ${cost}</span></span>
+              <span class="opt-label">${esc(x.name)}${discoveryTags(x)}${x.lean ? `<span class="kw">${G.LEAN_ICONS[x.lean]}</span>` : ''}<span class="cost ${cost > have ? 'bad' : ''}">${k.icon} ${cost}</span></span>
               <span class="opt-meta"><span>${esc(G.describeMods(x.mods))}</span></span>
               <span class="opt-desc">${esc(x.desc)}</span>
+              ${combos.length ? `<span class="opt-desc good-text">Opens: ${esc(combos.map((c) => `${c.name} (with ${G.DISCOVERY[c.from.find((f) => f !== id)].name})`).join(', '))}</span>` : ''}
               <div class="row tight">
-                <button class="btn small primary" ${cost <= have ? `data-act="draft" data-arg="${id}" data-mode="learn"` : 'disabled'}>Learn it (${icon} ${cost})</button>
-                ${combos.map((o) => { const cc = G.discoveryCost(run, o.c); return `<button class="btn small primary evo" ${cc <= have ? `data-act="draft" data-arg="${id}" data-mode="combine" data-socket="${o.k}"` : 'disabled'}>Combine with ${esc(G.DISCOVERY[o.k].name)} → ${seen.includes(o.c) ? esc(G.DISCOVERY[o.c].name) : '✨ something new?'} (${icon} ${cc})</button>`; }).join('')}
-                <button class="btn small ghost" data-act="hold-discovery" data-arg="${id}">Remember for later</button>
+                <button class="btn small primary" ${cost <= have ? `data-act="draft" data-arg="${id}" data-mode="learn"` : 'disabled'}>Add and learn it (${k.icon} ${cost})</button>
+                <button class="btn small" data-act="hold-discovery" data-arg="${id}">Add to the tree</button>
               </div>
             </div>`;
           }).join('')}
@@ -718,11 +718,10 @@ window.G = window.G || {};
     }
     if (id === 'lore') {
       const live = run.stage === 'tribe';
-      const lo = live ? { discoveries: run.discoveries || [], rulers: run.rulers || [], legacies: run.legacies || [] } : b.lore || { discoveries: run.discoveries || [], rulers: run.rulers || [], legacies: run.legacies || [] };
-      return `<h3>Lore ${live ? '(growing)' : ''}</h3><p class="note">The Tribe's own tree arrives in Update 18. Until then, its page is what your people learned and who led them.</p>
-        <h4>Discoveries (${lo.discoveries.length})</h4><p>${esc(lo.discoveries.map((d) => G.DISCOVERY[d] ? G.DISCOVERY[d].name : d).join(', ') || 'None')}</p>
-        <h4>Leaders</h4><p>${esc(lo.rulers.map((x) => x.title || x.name).join(' → ') || (live && run.leader ? G.leaderTitle(run.leader) : 'None recorded'))}</p>
-        ${lo.legacies.length ? `<h4>Legacies</h4><p>${esc(lo.legacies.map((x) => `${x.name} the ${G.AMBITIONS[x.amb].name}`).join(', '))}</p>` : ''}`;
+      const lo = live ? null : (b.lore && b.lore.seen ? b.lore : { seen: (b.lore && b.lore.discoveries) || run.discoveries || [], known: (b.lore && b.lore.discoveries) || run.discoveries || [], leaning: G.leaning(run) });
+      const rulers = live ? run.rulers || [] : (b.lore && b.lore.rulers) || [];
+      return `<h3>Lore ${live ? '(growing)' : ''}</h3><p class="note">${live ? 'Learn it from the Lore tab.' : 'Frozen as it stood at your Founding.'}</p>${loreTree(run, lo)}
+        ${rulers.length ? `<h4>The line of leaders</h4><p>${esc(rulers.map((x) => x.title || x.name).join(' → '))}</p>` : ''}`;
     }
     if (id === 'law') {
       return `<h3>Law (growing)</h3><p class="note">The Society's own tree arrives in Update 19. Until then, its page is your traditions.</p><p>${esc((run.traditions || []).map((t) => G.TRADITION[t] ? G.TRADITION[t].name : t).join(', ') || 'No traditions yet')}</p>`;
@@ -730,19 +729,91 @@ window.G = window.G || {};
     return '';
   }
 
+  // ---------- The Lore tree (Update 18) ----------
+  const LORE_BANDS = [['trunk', 'Your people'], ['graft', 'Branches'], ['combo', 'Combined'], ['way', 'Leader'], ['legacy', 'Legacies'], ['deed', 'Deeds'], ['gate', 'Founding'], ['beyond', 'Beyond']];
+  // Lay out tree nodes in bands of up to 4 per line; returns positions (x in %, y in px) and the height.
+  function treeLayout(visible, bands, bandOf) {
+    const PER = 4; const LINE = 74; const GAP = 16;
+    const pos = {}; const labels = []; let y = 34;
+    bands.forEach(([band, label]) => {
+      const list = visible.filter((n) => bandOf(n) === band);
+      if (!list.length) return;
+      labels.push({ y, label });
+      for (let i = 0; i < list.length; i += PER) {
+        const row = list.slice(i, i + PER);
+        row.forEach((n, j) => { pos[n.id] = { x: 14 + ((j + 0.5) / row.length) * 80, y }; });
+        y += LINE;
+      }
+      y += GAP;
+    });
+    return { pos, labels, H: y };
+  }
+  function loreTree(run, page) {
+    const known = (id) => (page ? page.known : run.discoveries || []).includes(id);
+    const visible = page ? page.seen.map((id) => G.DISCOVERY[id]).filter(Boolean) : G.DISCOVERIES.filter((d) => G.loreVisible(run, d));
+    const have = run.special || 0; const k = G.kind(run) || { icon: '', resource: '' };
+    const live = !page && run.stage === 'tribe';
+    const state = (d) => {
+      if (known(d.id)) return 'done';
+      if (!live) return 'locked';
+      const av = G.loreAvailable(run, d);
+      return av.ok ? (G.discoveryCost(run, d.id) <= have ? 'open' : 'cant') : 'locked';
+    };
+    const sel = (G.ui.loreSel && visible.find((d) => d.id === G.ui.loreSel)) || (live && visible.find((d) => state(d) === 'open')) || visible.find((d) => d.lore === 'gate') || visible[0];
+    const { pos, labels, H } = treeLayout(visible, LORE_BANDS, (d) => d.lore);
+    const edges = [];
+    const edge = (pid, d) => {
+      const a = pos[pid]; const b = pos[d.id]; if (!a || !b) return;
+      const cls = known(pid) && known(d.id) ? 'done' : known(pid) ? 'lit' : 'dim';
+      const ay = (a.y + 26) / H * 100; const by = (b.y - 26) / H * 100;
+      edges.push(`<path class="edge ${cls}" d="M${a.x} ${ay} C ${a.x} ${ay + 5}, ${b.x} ${by - 5}, ${b.x} ${by}" vector-effect="non-scaling-stroke"/>`);
+    };
+    visible.forEach((d) => { (d.from || []).concat((d.req || {}).some || []).forEach((pid) => edge(pid, d)); });
+    const icon = { done: '✓', open: '', cant: k.icon, locked: '🔒' };
+    const lean = page ? page.leaning : G.leaning(run);
+    return `
+      <div class="mind-head">${leaningBar(lean)}</div>
+      <div class="skill-tree mind-tree lore-tree" style="height:${H}px">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
+        ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
+        ${visible.map((d) => {
+          const st = state(d); const name = G.loreName(d, run);
+          return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === d.id ? 'sel' : ''} ${d.lore === 'gate' ? 'apex' : ''} ${d.lore === 'beyond' ? 'beyond' : ''} ${d.lean ? `lean-${d.lean}` : ''}" style="left:${pos[d.id].x}%;top:${pos[d.id].y}px" data-act="lore-sel" data-arg="${d.id}" aria-pressed="${sel && sel.id === d.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${d.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
+        }).join('')}
+      </div>
+      ${sel ? loreDetail(run, sel, state(sel), live) : ''}`;
+  }
+  function loreDetail(run, d, st, live) {
+    const k = G.kind(run) || { icon: '', resource: '' }; const cost = G.discoveryCost(run, d.id) || G.DISCOVERY_BASE[G.discoveryTier(d)];
+    const av = live ? G.loreAvailable(run, d) : { ok: false };
+    const where = { trunk: `Your people: ${G.PATH[run.path] ? G.PATH[run.path].name : ''}`, graft: 'A branch your people chose', combo: `Combined: ${(d.from || []).map((f) => G.DISCOVERY[f].name).join(' + ')}`, way: 'A Way, open while this leader leads (kept once learned)', legacy: 'A Legacy: grafted by a fulfilled ambition', deed: `A Deed: ${d.when ? G.DEEDS[d.when.deed] : ''}`, gate: `The Founding: ends the Tribe stage. Needs ${G.goals(run).evolveAt || 120} Ideas and ${G.foundingNeed()} Lore ideas known`, beyond: 'Beyond the Founding: learn before it; an Inheritance in the Society stage' }[d.lore];
+    let action = '';
+    if (st === 'done') action = '<span class="note good-text">Known</span>';
+    else if (live && av.ok) action = `<button class="btn primary small" ${cost <= (run.special || 0) ? `data-act="learn-lore" data-arg="${d.id}"` : 'disabled'}>Learn it (${k.icon} ${cost})</button>${cost > (run.special || 0) ? `<span class="reason">Needs ${cost} ${esc(k.resource)} (you have ${run.special || 0})</span>` : ''}`;
+    return `
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(G.loreName(d, run))}</strong><span>${k.icon} ${cost}</span></div>
+        <span class="inv-where">${esc(where)}${d.lean ? ` · ${G.LEAN_ICONS[d.lean]} ${esc(G.LEAN_NAMES[d.lean])}` : ''}</span>
+        <span class="inv-mods">${esc(G.describeMods(d.mods))}</span>
+        ${d.rule ? `<span class="inv-rule">★ ${esc(G.MIND_RULES[d.rule])}</span>` : ''}
+        ${d.inherit ? `<span class="inv-rule">Inheritance in the Society stage: ${esc(G.describeMods(d.inherit))}</span>` : ''}
+        <span class="inv-desc">${esc(d.desc)}</span>
+        ${live && !av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
+        <div class="row tight">${action}</div>
+      </div>`;
+  }
   function discoveriesTab(run) {
-    const known = run.discoveries || [];
     const seen = G.meta.codex.discoveries || [];
-    const k = G.kind(run); const have = run.special || 0; const held = run.held || [];
-    const parts = G.discoveryCostParts(run); const pct = G.discoveryCostPct(run);
-    const heldHtml = held.length ? `<h3>Remembered</h3><p class="note">Discoveries your people know of but haven't learned yet. You have ${have} ${esc(k.resource)}.</p>${held.map((id) => { const x = G.DISCOVERY[id]; const cost = G.discoveryCost(run, id); const combos = known.map((kk) => ({ kk, c: G.discoveryCombo(kk, id) })).filter((o) => o.c); const live = run.phase === 'map'; return `<div class="callout"><strong>${esc(x.name)} ${discoveryTags(x)} <span class="cost ${cost > have ? 'bad' : ''}">${k.icon} ${cost}</span></strong><span>${esc(G.describeMods(x.mods))}. ${esc(x.desc)}</span><div class="row tight"><button class="btn small primary" ${cost <= have && live ? `data-act="learn-held" data-arg="${id}"` : 'disabled'}>Learn it</button>${combos.map((o) => { const cc = G.discoveryCost(run, o.c); return `<button class="btn small primary evo" ${cc <= have && live ? `data-act="learn-held" data-arg="${id}" data-socket="${o.kk}"` : 'disabled'}>Combine with ${esc(G.DISCOVERY[o.kk].name)} (${k.icon} ${cc})</button>`; }).join('')}</div></div>`; }).join('')}` : '';
-    return `<p class="note">${known.length} discover${known.length === 1 ? 'y' : 'ies'}. New ones come as your people gather Ideas, and each costs ${esc(k.resource)}: basic ones ${G.DISCOVERY_BASE.plain}, home and talent ones ${G.DISCOVERY_BASE.talent}, Path ones ${G.DISCOVERY_BASE.path}, combinations ${G.DISCOVERY_BASE.combined}, changed by ${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)}% right now${parts.length ? ` (${esc(parts.map(([w, v]) => `${w}: ${v > 0 ? '+' : '−'}${Math.abs(v)}%`).join(', '))})` : ''}.</p>
-      ${heldHtml}
-      ${held.length ? '<h3>Known</h3>' : ''}
-      ${known.length ? known.map((id) => { const x = G.DISCOVERY[id]; return `<div class="callout"><strong>${esc(x.name)} ${discoveryTags(x)}</strong><span>${esc(G.describeMods(x.mods))}. ${esc(x.desc)}</span></div>`; }).join('') : '<p class="empty">Nothing yet.</p>'}
+    const k = G.kind(run); const parts = G.discoveryCostParts(run); const pct = G.discoveryCostPct(run);
+    const live = run.stage === 'tribe';
+    const page = live ? null : (run.book && run.book.lore && run.book.lore.seen ? run.book.lore : { seen: run.discoveries || [], known: run.discoveries || [], leaning: G.leaning(run) });
+    return `${live ? `<p class="note">Your Lore tree: ${G.loreKnown(run)} ideas known. It grows from your people's own discoveries, the branches you choose as Ideas come in, your leaders, their legacies and your deeds. Learning an idea costs ${esc(k.resource)} (you have <b>${run.special || 0}</b>), changed by ${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)}% right now${parts.length ? ` (${esc(parts.map(([w, v]) => `${w}: ${v > 0 ? '+' : '−'}${Math.abs(v)}%`).join(', '))})` : ''}.</p>
+      <p class="note"><b>The Founding</b> needs ${G.goals(run).evolveAt} Ideas (you have ${run.dna}) and ${G.foundingNeed()} Lore ideas (you have ${G.loreKnown(run)}). Ideas Beyond the Founding must be learned before it.</p>` : '<p class="note">Your Lore tree, as it stood at the Founding. Its ideas still work for your people.</p>'}
+      ${loreTree(run, page)}
       <h3>Combinations found (all lineages)</h3>
       <p class="note">${esc(listJoin(G.DISCOVERIES.filter((x) => x.from && seen.includes(x.id)).map((x) => `${x.name} (${G.DISCOVERY[x.from[0]].name} + ${G.DISCOVERY[x.from[1]].name})`)) || 'None yet.')}</p>`;
   }
+
 
   // ---------- Society stage ----------
   function traditionCard(run) {
@@ -1435,6 +1506,7 @@ window.G = window.G || {};
       ${!s.extinct && run.phase !== 'end' ? `<div class="row tight">${['war', 'court', 'avoid', 'hunt'].map((id) => { const st2 = G.activityState(run, id, s.name); const on = run.activity && run.activity.id === id && run.activity.target === s.name; return `<button class="btn small ${on ? 'primary' : ''}" ${st2.ok && !on ? `data-act="act-start" data-arg="${id}" data-target="${esc(s.name)}"` : 'disabled'} title="${esc(st2.ok ? G.ACTIVITY[id].desc : st2.why)}">${on ? '✓ ' : ''}${esc(G.ACTIVITY[id].name)}</button>`; }).join('')}</div>` : ''}
       ${speciesTags(run, s) ? `<p class="tags">${speciesTags(run, s)}</p>` : ''}
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
+      ${s.history && Object.keys(s.history).length ? `<p class="note kin-memory"><b>They remember:</b> your lineage ${esc(listJoin(Object.entries(s.history).map(([k, n]) => `${G.KIND_MEMORY[k] || k} them${n > 1 ? ` ${n} times` : ''}`.replace('were attacked by them', 'was attacked by them'))))}.${s.band && s.from ? ` (Their ancestors, the ${esc(s.from)}, remembered it too.)` : ''}</p>` : ''}
       <h3>Compared with you</h3>
       <div class="compare">${G.STATS.map((k) => {
         // Their evolved stats: what you are really up against (Fair Fights).
@@ -1457,9 +1529,9 @@ window.G = window.G || {};
     if (!tab) return '';
     const tribe = G.people(run);
     const tabs = run.stage === 'society'
-      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Traditions'], ['book', 'Book'], ['found', 'Discoveries'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Traditions'], ['book', 'Book'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : tribe
-      ? [['people', 'People'], ['found', 'Discoveries'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['people', 'People'], ['found', 'Lore'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
     const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, book: bookTab };
     const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
@@ -1626,7 +1698,7 @@ window.G = window.G || {};
   // Ancestral Wisdom: the Tribe stage's tree, built the same way.
   function wisdomSection() {
     if (!G.wisdomOpen()) return '<p class="note">Opens once one of your lineages becomes a people (reaches the Tribe stage). Its upgrades only work in the Tribe stage.</p>';
-    return `<p class="note">Upgrades for the Tribe stage. A people's first Tribe is hard; these make every later one easier.</p>${skillTree(G.WISDOM, G.ui.wisSel, 'wis-sel', 'short')}`;
+    return `<p class="note">Upgrades for the Tribe stage. A people's first Tribe is hard; these make every later one easier.</p>${skillTree(G.WISDOM, G.ui.wisSel, 'wis-sel', '')}`;
   }
   function skillTree(LIST, selId, act, extra) {
     const m = G.meta;
@@ -1791,7 +1863,9 @@ window.G = window.G || {};
       case 'reroll': G.rerollDraft(); parts = ['modal']; break;
       case 'skip-draft': G.skipDraft(); parts = ['top', 'hud', 'modal']; break;
       case 'hold-discovery': G.holdDiscovery(arg); parts = ['top', 'hud', 'modal']; break;
-      case 'learn-held': G.ui.sheet = null; G.learnHeld(arg, el.dataset.socket); parts = ['top', 'hud', 'modal', 'sheet']; break;
+      case 'learn-held': G.ui.sheet = null; G.learnHeld(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
+      case 'learn-lore': G.ui.sheet = null; G.learnLore(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
+      case 'lore-sel': G.ui.loreSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
       case 'book-page': G.ui.bookPage = arg; G.ui.mindSel = null; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;

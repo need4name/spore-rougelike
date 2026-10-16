@@ -670,3 +670,8 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .book-page h4 { margin: 10px 0 4px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .book-origin-row { display: flex; gap: 12px; align-items: center; }
 .book-origin { width: 110px; height: 80px; flex: 0 0 auto; border-radius: 10px; background: #132b30; }
+
+/* ---------- Update 18: the Lore tree ---------- */
+.node.cant { border-style: dashed; box-shadow: none; }
+.node.cant i { font-size: 0.6rem; }
+.kin-memory { border-left: 3px solid var(--accent); padding-left: 8px; }

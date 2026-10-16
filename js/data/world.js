@@ -861,17 +861,18 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '17';
+G.VERSION = '18';
 G.WHATS_NEW = {
-  title: 'Update 17: The Book of the Lineage',
+  title: 'Update 18: The Lore Tree',
   items: [
-    'The Mind tree is grown from your choices. Besides your temperament, home and Path, it now has Body branches (from your hands, voice, venom, armour, wings, eyes, diet, size and foundations) and Memories (floods survived, rivals beaten, friends made, near extinction), so no two trees look alike.',
-    'Path rows are doubled, with forks: taking one idea can rule out another. Some ideas need "2 of these 4" instead of one fixed idea.',
-    'Awakenings (★) change the rules, not just your stats: Strength checks with Cunning, a second chance on a failed check, warning before disasters, checks against enemies made easier, and more.',
-    'Your Awakening ends the Creature stage, but it is not the last idea. Ideas Beyond the Gate cost a lot and need several of the deepest ideas; learn them before you awaken and they become Inheritances that carry power into every later stage.',
-    'Every idea leans Peaceful (🕊️), Territorial (🛡️) or Warmongering (⚔️). Your leaning will one day decide which futures are open to your people.',
-    'The Book (a new tab) keeps a page for every stage: the Origin of your cell, your Mind tree frozen as it stood at your Awakening, and pages for the stages still to come.',
-    'Evolution Tree: Deep Thought (+1 Insight per turn) and Old Paths (cheaper Beyond-the-Gate ideas) let each lineage reach further into its tree.',
+    'The Tribe stage has its own tree: the Lore tree (the Lore tab). Your kind of people gives it a trunk, and every time your Ideas fill up you choose a new branch to graft on. Learn ideas with your Fire, Song, Light, Brood or Growth, now or later.',
+    'Two branches that belong together open a combination, and you keep both halves.',
+    'Leaders shape the tree: each leader opens their own Way while they lead, and a leader who fulfils their ambition grafts a branch of Legacies for good.',
+    'Deeds shape it too: taming, choosing a totem, beating or befriending a rival band, surviving a raid, moving to a new land, a great ceremony, coming back from the brink.',
+    'The Founding is the Lore tree\'s Gate: it needs your Ideas and enough Lore. Ideas Beyond the Founding are costly, must be learned before it, and carry into the Society stage.',
+    'The Memory of Kinds: every species remembers what your lineage did to it (hunted, fought, befriended, tamed), shown on its card. Rival bands descended from it bring the grudge or the debt with them.',
+    'Ancestral Wisdom doubles to 24 upgrades, with ways to reach deeper into the Lore tree: cheaper Lore, more branches to choose from, an easier Founding, a deed remembered from the start.',
+    'The Book keeps your Lore tree as a page, frozen at the Founding. The roadmap no longer has a separate Multicellular stage: it stays part of the Cell stage.',
   ],
 };
 
@@ -912,9 +913,9 @@ G.TUTORIALS = [
   { id: 'kind_garden', title: 'Gardeners', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'garden',
     text: 'Growth feeds you, and tamed species feed you twice as well. But big gardens attract Blight: Tend the gardens now and then to keep it away.' },
   { id: 'discoveries', title: 'Discoveries', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'tribe',
-    text: 'Each discovery costs some of your Fire, Song or other resource (shown on the card); better ones cost more. Learn one, combine it with one you know (stronger, but it costs more), or remember it for later. New combinations go in your Codex and earn Genetic Memory.' },
+    text: 'Your people have their own tree now: the Lore tree. Each new branch you choose is added to it; learn it now with your Fire, Song or other resource, or later from the Lore tab. Two branches that belong together open a combination. Leaders, their ambitions and your deeds add branches of their own, and the Founding (which ends the Tribe stage) needs enough Ideas and Lore.' },
   { id: 'succession', title: 'Leaders', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && run.event.id === 'succession',
-    text: 'Each candidate has a background and two traits that change your people while they lead, and an ambition. A leader who fulfils their ambition leaves a legacy that lasts for good. Leaders grow old, so the choice comes round again.' },
+    text: 'Each candidate has a background and two traits that change your people while they lead, and an ambition. A leader opens their own Way in the Lore tree while they lead, and one who fulfils their ambition grafts a whole branch of Legacies for good. Leaders grow old, so the choice comes round again.' },
   { id: 'mind_grown', title: 'A tree grown from your choices', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.mind && run.innovations.length >= 2,
     text: 'Your Mind tree grows new branches from your body and from what happens to you: lived through a flood, beaten a rival, made a friend. Ideas marked ★ change the rules. Your Awakening ends the stage, so learn any Beyond-the-Gate ideas you want before it: they carry on into every stage after. The Book tab keeps every page.' },
   { id: 'paths', title: 'Paths of Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['spark_of_mind', 'path_choice'].includes(run.event.id),
@@ -1148,6 +1149,82 @@ G.DISCOVERIES = [
   { id: 'herd_gardens', name: 'Pastures', from: ['herding', 'living_fences'], mods: { foodPerTurn: 2, tou: 2 }, desc: 'Fenced, fed and safe.' },
   { id: 'medicine_garden', name: 'Medicine Garden', from: ['herb_lore', 'weeding'], mods: { popPerTurn: 2, tou: 1 }, desc: 'Every cure, grown on purpose.' },
 ];
+// ======================= UPDATE 18: THE LORE TREE =======================
+// The Tribe stage's own tree. Discoveries are its ideas, paid for with your people's resource.
+// Bands (rows): People (your kind's own discoveries, always there), Branches (grafted: each Ideas goal
+// lets you choose one of three to add), Combinations (when both halves are in the tree), Leaders (a
+// leader's Way, open while they lead), Legacies (grafted by a fulfilled ambition), Deeds (grafted by
+// what your people did), the Founding (the Gate: ends the Tribe stage) and Beyond the Founding.
+//   lore   trunk | graft | combo | way | legacy | deed | gate | beyond (set below for the old ones)
+//   when   { bg } (a leader's background), { amb } (a fulfilled ambition), { deed }
+//   req    { known: n } (Lore ideas known), { some, n }; `inherit` mods apply in the Society stage on
+//   `lean` and `rule` work as in the Mind tree.
+G.DEEDS = {
+  deed_tamed: 'Your people tamed another species.',
+  deed_totem: 'Your people chose a totem.',
+  deed_war: 'Your people beat a rival band.',
+  deed_peace: 'A rival band became your ally.',
+  deed_raid: 'Your people lived through a raid.',
+  deed_migrate: 'Your people moved to a new land.',
+  deed_ceremony: 'Your people held a great ceremony.',
+  deed_near_end: 'Your people were almost wiped out.',
+};
+G.FOUNDING_NEED = 8; // Lore ideas your people must know before the Founding
+G.DISCOVERIES.push(
+  // ----- Leaders: a leader's Way, open while they lead (kept once learned) -----
+  { id: 'way_hunter', lore: 'way', when: { bg: 'hunter' }, name: "The Hunter's Way", mods: { str: 1, huntBonus: 2 }, lean: 'war', desc: 'Taught by the best hunter of a generation.' },
+  { id: 'way_keeper', lore: 'way', when: { bg: 'keeper' }, name: "The Keeper's Way", mods: { specialPerTurn: 1, tou: 1 }, lean: 'guard', desc: 'The old keeper shows everyone how it is done.' },
+  { id: 'way_elder', lore: 'way', when: { bg: 'elder' }, name: "The Elders' Way", mods: { cun: 1, ideasPerTurn: 1 }, lean: 'peace', desc: 'Listen to the old ones, and you will not repeat their mistakes.' },
+  { id: 'way_heir', lore: 'way', when: { bg: 'child' }, name: 'The Line of Heirs', mods: { cha: 1, tou: 1 }, lean: 'guard', desc: 'Leadership passed from parent to child, and everyone knows who is next.' },
+  { id: 'way_stranger', lore: 'way', when: { bg: 'stranger' }, name: "The Stranger's Roads", mods: { spd: 1, exploreBonus: 2 }, lean: 'peace', desc: 'A leader from outside knows the roads beyond.' },
+  { id: 'way_healer', lore: 'way', when: { bg: 'healer' }, name: "The Healer's Way", mods: { popPerTurn: 1, tou: 1 }, lean: 'peace', desc: 'The sick are cared for, and more of them live.' },
+  { id: 'way_young', lore: 'way', when: { bg: 'young' }, name: 'Young Blood', mods: { str: 1, spd: 1 }, lean: 'war', desc: 'A young leader, and a restless people.' },
+  // ----- Legacies: grafted for good when a leader fulfils an ambition -----
+  { id: 'leg_lodges', lore: 'legacy', when: { amb: 'conquer' }, name: 'Warrior Lodges', mods: { str: 2 }, lean: 'war', desc: 'Where the young learn to fight.' },
+  { id: 'leg_tribute', lore: 'legacy', when: { amb: 'conquer' }, name: 'Tribute', mods: { foodPerTurn: 1 }, rule: 'know_foe', lean: 'war', desc: 'The beaten pay, every season.' },
+  { id: 'leg_houses', lore: 'legacy', when: { amb: 'learn' }, name: 'Houses of Learning', mods: { ideasPerTurn: 1, cun: 1 }, lean: 'peace', desc: 'A place where everything known is taught.' },
+  { id: 'leg_counsel', lore: 'legacy', when: { amb: 'learn' }, name: 'Wise Counsel', mods: { cun: 1 }, rule: 'reroll', lean: 'guard', desc: 'Before every choice, someone asks: what did the Sage say?' },
+  { id: 'leg_hearths', lore: 'legacy', when: { amb: 'grow' }, name: 'Great Hearths', mods: { maxPop: 3 }, lean: 'guard', desc: 'Room for everyone around the fire.' },
+  { id: 'leg_children', lore: 'legacy', when: { amb: 'grow' }, name: 'Many Children', mods: { popPerTurn: 1, growthCost: -1 }, lean: 'peace', desc: 'Every family a big one.' },
+  { id: 'leg_councils', lore: 'legacy', when: { amb: 'befriend' }, name: 'Peace Councils', mods: { cha: 2 }, rule: 'calm_presence', lean: 'peace', desc: 'Every quarrel talked out, by the fire.' },
+  { id: 'leg_gift_roads', lore: 'legacy', when: { amb: 'befriend' }, name: 'Gift Roads', mods: { foodPerTurn: 1, cha: 1 }, lean: 'peace', desc: 'Paths worn between peoples by gifts carried back and forth.' },
+  { id: 'leg_lodge', lore: 'legacy', when: { amb: 'keep' }, name: "Keepers' Lodge", mods: { specialPerTurn: 1, tou: 1 }, lean: 'guard', desc: 'A house for the keepers and what they keep.' },
+  { id: 'leg_stores', lore: 'legacy', when: { amb: 'keep' }, name: 'Sacred Stores', mods: { foodCap: 5, tou: 1 }, lean: 'guard', desc: 'What is kept for hard times is never touched in good ones.' },
+  { id: 'leg_pens', lore: 'legacy', when: { amb: 'tame' }, name: 'Beast Pens', mods: { foodPerTurn: 1, tou: 1 }, lean: 'guard', desc: 'Tame animals, kept close and kept well.' },
+  { id: 'leg_riders', lore: 'legacy', when: { amb: 'tame' }, name: 'Riders', mods: { spd: 2, str: 1 }, lean: 'war', desc: 'Why walk, when something stronger can carry you?' },
+  // ----- Deeds: grafted by what your people did -----
+  { id: 'deed_beasts', lore: 'deed', when: { deed: 'deed_tamed' }, name: 'Beasts of Burden', mods: { foodCap: 4, str: 1 }, lean: 'guard', desc: 'Tamed animals carry what your people cannot.' },
+  { id: 'deed_spirit', lore: 'deed', when: { deed: 'deed_totem' }, name: 'Spirit Animal', mods: { cha: 1, tou: 1 }, lean: 'peace', desc: 'Your totem watches over every child.' },
+  { id: 'deed_feast', lore: 'deed', when: { deed: 'deed_war' }, name: 'Victory Feast', mods: { str: 2 }, lean: 'war', desc: 'Every year, the day you won is remembered.' },
+  { id: 'deed_pipe', lore: 'deed', when: { deed: 'deed_peace' }, name: 'The Peace Pipe', mods: { cha: 2 }, rule: 'calm_presence', lean: 'peace', desc: 'Old enemies, sitting at one fire.' },
+  { id: 'deed_walls', lore: 'deed', when: { deed: 'deed_raid' }, name: 'Walls Remembered', mods: { tou: 2 }, rule: 'last_refuge', lean: 'guard', desc: 'They came once. You built walls so they never would again.' },
+  { id: 'deed_wander', lore: 'deed', when: { deed: 'deed_migrate' }, name: 'The Wandering Years', mods: { exploreBonus: 2, spd: 1 }, lean: 'peace', desc: 'Stories of every land your people ever crossed.' },
+  { id: 'deed_gathering', lore: 'deed', when: { deed: 'deed_ceremony' }, name: 'The Great Gathering', mods: { ideasPerTurn: 1, cha: 1 }, lean: 'peace', desc: 'Everyone, in one place, for one night.' },
+  { id: 'deed_remnant', lore: 'deed', when: { deed: 'deed_near_end' }, name: 'The Remnant', mods: { tou: 1 }, rule: 'reroll', lean: 'guard', desc: 'So few were left. Never again.' },
+  // ----- The Founding: the Gate of the Lore tree -----
+  { id: 'founding_gate', lore: 'gate', name: { tool: 'The Founding Fire', song: 'The Founding Song', many: 'The Meeting of Minds', swarm: "The First Queen's Hall", garden: 'The First Fields' }, mods: { cha: 1 }, desc: 'Your people become something more than a band. This ends the Tribe stage.' },
+  // ----- Beyond the Founding: learn them before it; they carry into the Society stage -----
+  { id: 'lb_tool_flame', lore: 'beyond', path: 'tool', name: 'The Eternal Flame', mods: { specialPerTurn: 1 }, inherit: { influencePerTurn: 1, tou: 1 }, req: { known: 9 }, lean: 'guard', desc: 'A fire that has not gone out since the first one was lit.' },
+  { id: 'lb_tool_edge', lore: 'beyond', path: 'tool', name: 'Masters of the Edge', mods: { str: 2 }, inherit: { str: 2 }, req: { known: 8, some: ['spears', 'knapping', 'hafted_axes', 'shell_lances', 'hardened_spears', 'vent_blades', 'poison_spears'], n: 2 }, lean: 'war', desc: 'Weapons no one else can make.' },
+  { id: 'lb_song_founding', lore: 'beyond', path: 'song', name: 'The Song of Founding', mods: { cha: 2 }, inherit: { cha: 2, influencePerTurn: 1 }, req: { known: 9 }, lean: 'peace', desc: 'Every child will know it by heart.' },
+  { id: 'lb_song_chants', lore: 'beyond', path: 'song', name: 'War Chants', mods: { str: 1, cha: 1 }, inherit: { str: 2 }, req: { known: 8, some: ['chorus_hunts', 'drumming', 'signal_drums', 'leg_lodges', 'deed_feast'], n: 2 }, lean: 'war', desc: 'A song that moves feet toward the enemy.' },
+  { id: 'lb_many_council', lore: 'beyond', path: 'many', name: 'The Hidden Council', mods: { cun: 2 }, inherit: { cun: 2, influencePerTurn: 1 }, req: { known: 9 }, lean: 'peace', desc: 'Decisions made where no one can see.' },
+  { id: 'lb_many_masks', lore: 'beyond', path: 'many', name: 'Masks of State', mods: { cun: 1, tou: 1 }, inherit: { cun: 1, tou: 2 }, req: { known: 8, some: ['mimicry', 'hidden_lairs', 'ink_clouds', 'way_stranger', 'deed_walls'], n: 2 }, lean: 'guard', desc: 'No one outside the den ever knows who leads it.' },
+  { id: 'lb_swarm_brood', lore: 'beyond', path: 'swarm', name: 'The Endless Brood', mods: { maxPop: 3 }, inherit: { maxPop: 4 }, req: { known: 9 }, lean: 'guard', desc: 'There will always be more.' },
+  { id: 'lb_swarm_march', lore: 'beyond', path: 'swarm', name: 'The Marching Hive', mods: { str: 2 }, inherit: { str: 2, tou: 1 }, req: { known: 8, some: ['swarm_tactics', 'leg_lodges', 'deed_feast', 'scent_trails'], n: 2 }, lean: 'war', desc: 'A hive that moves, and eats everything in its way.' },
+  { id: 'lb_garden_covenant', lore: 'beyond', path: 'garden', name: 'The Green Covenant', mods: { foodPerTurn: 2 }, inherit: { foodPerTurn: 2, cha: 1 }, req: { known: 9 }, lean: 'peace', desc: 'Every living thing your people touch, cared for.' },
+  { id: 'lb_garden_thorns', lore: 'beyond', path: 'garden', name: 'Thorn Kingdoms', mods: { tou: 2 }, inherit: { tou: 2, str: 1 }, req: { known: 8, some: ['living_fences', 'weeding', 'leg_stores', 'deed_walls'], n: 2 }, lean: 'guard', desc: 'Gardens no army can cross.' },
+);
+// The discoveries from before Update 18 take their place in the tree, and a leaning from what they do.
+G.DISCOVERIES.forEach((d) => {
+  if (!d.lore) d.lore = d.from ? 'combo' : d.path ? 'trunk' : 'graft';
+  if (!d.lean && (d.lore === 'trunk' || d.lore === 'graft' || d.lore === 'combo')) {
+    const m = d.mods || {};
+    const war = (m.str || 0) + (m.huntBonus || 0) / 2; const peace = (m.cha || 0) + (m.foodPerTurn || 0) + (m.popPerTurn || 0) - (m.growthCost || 0); const guard = (m.tou || 0) + (m.damageReduce || 0) + (m.maxPop || 0) / 2 + (m.foodCap || 0) / 5;
+    const best = Math.max(war, peace, guard);
+    if (best > 0) d.lean = best === war ? 'war' : best === peace ? 'peace' : 'guard';
+  }
+});
 G.DISCOVERY = {}; G.DISCOVERIES.forEach((d) => { G.DISCOVERY[d.id] = d; });
 
 // How a Tribe stage ends: settle down, take to the road, or conquer. Named by kind.
@@ -1189,6 +1266,19 @@ G.WISDOM = [
   { id: 'w_founding', name: 'The Founders\' Path', col: 3, tier: 2, req: ['w_elders'], costs: [60], desc: 'The Founding is 2 easier.' },
   { id: 'w_kin', name: 'Kinship', col: 4, tier: 2, req: ['w_peace'], costs: [45], desc: 'Taming and courting succeed more often (+15%).' },
   { id: 'w_stand', name: 'Last Stand', col: 5, tier: 2, req: ['w_watch'], costs: [50], desc: 'Once per Tribe, when your people would die out, a few survive.' },
+  // Update 18: reach deeper into the Lore tree.
+  { id: 'w_lore', name: 'Lorekeepers', col: 0, tier: 3, req: ['w_choosing'], costs: [45, 90, 140], desc: 'Lore ideas cost 10% less per level.' },
+  { id: 'w_strength', name: 'Strong Arms', col: 1, tier: 3, req: ['w_hardy'], costs: [40, 80], mods: { str: 1 }, desc: '+1 Strength per level in the Tribe stage.' },
+  { id: 'w_graft', name: 'Many Branches', col: 2, tier: 3, req: ['w_ways'], costs: [60], desc: 'Every new branch of Lore offers one more choice.' },
+  { id: 'w_stone', name: 'Founding Stones', col: 3, tier: 3, req: ['w_founding'], costs: [55, 110], desc: 'The Founding needs one fewer Lore idea per level.' },
+  { id: 'w_friends', name: 'Old Friends', col: 4, tier: 3, req: ['w_kin'], costs: [50], mods: { foodPerTurn: 1 }, desc: '+1 Food a turn in the Tribe stage, from the kinds that trust you.' },
+  { id: 'w_walls', name: 'Palisades', col: 5, tier: 3, req: ['w_stand'], costs: [45, 90], mods: { damageReduce: 1 }, desc: 'Every raid or hunt kills one fewer per level in the Tribe stage.' },
+  { id: 'w_ancestors', name: 'Voices of the Ancestors', col: 0, tier: 4, req: ['w_lore'], costs: [70, 140], desc: 'Ideas Beyond the Founding cost 15% less per level.' },
+  { id: 'w_cunning', name: 'Sharp Minds', col: 1, tier: 4, req: ['w_strength'], costs: [60, 120], mods: { cun: 1 }, desc: '+1 Cunning per level in the Tribe stage.' },
+  { id: 'w_long', name: 'Long Lives', col: 2, tier: 4, req: ['w_graft'], costs: [70], desc: 'Leaders live 5 years longer, with more time to fulfil their ambitions.' },
+  { id: 'w_deeds', name: 'Remembered Deeds', col: 3, tier: 4, req: ['w_stone'], costs: [80], desc: 'Every Tribe begins with one deed already remembered in its Lore tree.' },
+  { id: 'w_charm', name: 'Open Hands', col: 4, tier: 4, req: ['w_friends'], costs: [60, 120], mods: { cha: 1 }, desc: '+1 Charm per level in the Tribe stage.' },
+  { id: 'w_fires', name: 'Undying Fires', col: 5, tier: 4, req: ['w_walls'], costs: [70, 140], mods: { specialPerTurn: 1 }, desc: '+1 Fire, Song, Light, Brood or Growth a turn per level.' },
 ];
 
 // Activities only for the Tribe stage.

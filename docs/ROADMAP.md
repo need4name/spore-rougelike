@@ -83,7 +83,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.3.1 | Patch ✅ | **Tap to Explain:** every top-bar number opens a breakdown of where it comes from; max Population upgrades always count and show real numbers; sea eye styles; leader-choice label fix | Small |
 | 16.4 | Patch ✅ | **Fair Fights:** the species you meet evolve too; checks against a species use its real stats, so a weak foe is easy, a strong one is hard, and your stats mean what they say | Medium |
 | 17 | **The Book of the Lineage** ✅ | **The hook, part 1:** the book of trees (one page per stage), the **Mind tree** rebuilt three times bigger, and the first **leanings** toward Peaceful, Territorial or Warmongering | Large |
-| 18 | **The Lore Tree** | **The hook, part 2:** the Tribe stage's own tree, from discoveries, leaders and deeds; the **Memory of Kinds** (every species remembers what you did to it); a harder Tribe; Ancestral Wisdom doubled | Large |
+| 18 | **The Lore Tree** ✅ | **The hook, part 2:** the Tribe stage's own tree, from discoveries, leaders and deeds; the **Memory of Kinds** (every species remembers what you did to it); a harder Tribe; Ancestral Wisdom doubled | Large |
 | 19 | **Faith and Neighbours** | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
 | 20 | **Renaissance** | **A new stage:** neighbours become nations that remember your history; science, invention and art; schisms and alliances; the **Reason tree** | Large |
 | 21 | **Colonial Age** | **Empire, part 1:** the realm, dynasty, fleets and colonies across the World Map, and the **Crown tree** | Large |
@@ -484,7 +484,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Leanings begin:** Mind nodes lean 🕊️, 🛡️ or ⚔️, and the book shows your balance.
 - **Evolution Tree additions** that let each lineage reach further into the Mind tree.
 
-## Update 18: The Lore Tree (Tribe stage)
+## Update 18: The Lore Tree (Tribe stage) ✅
 
 - **The Lore tree replaces the discovery draft:** each time your people gather enough Ideas, a draft offers new branches to graft on, and discoveries are its nodes, paid with Ideas and your Fire, Song, Light, Brood or Growth.
 - **Grown from your people's history:** your kind of people, each **leader** (a background adds a node while they lead; a fulfilled ambition grafts a whole branch), your totem and tamed species, wars won and peace kept, and your Mind tree's Inheritances.

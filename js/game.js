@@ -64,6 +64,8 @@ window.G = window.G || {};
   G.migratePop(G.run);
   // Ideas from before Update 13 no longer exist.
   if (G.run && G.run.innovations) { const ids = new Set(G.INNOVATIONS.map((i) => i.id)); G.run.innovations = G.run.innovations.filter((id) => ids.has(id)); if (G.run.fascination && !ids.has(G.run.fascination)) G.run.fascination = null; }
+  // Update 18: discoveries held for later become branches of the Lore tree.
+  if (G.run && G.run.held && G.run.held.length) { G.run.grafts = (G.run.grafts || []).concat(G.run.held); G.run.held = []; }
   G.saveMeta = () => store(SAVE_META, G.meta);
   G.saveRun = () => store(SAVE_RUN, G.run);
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
@@ -570,15 +572,15 @@ window.G = window.G || {};
   };
   G.harsh = (run) => G.HARSH + Math.round(4 * (run.power || 0));
   // A new stage is hard: your first Tribe should usually fail. Ancestral Wisdom pays it back.
-  G.TRIBE_HARSH = 5;
+  G.TRIBE_HARSH = 7;
   G.SOC_HARSH = 3; // Society's own events are harder already; its danger is the council, the neighbours and the crowds
   G.BAND_SOUR = 2; // opinion a band loses each year, unless you are allies
   G.RAID_BELOW = 20;
   G.SOC_RAID_BELOW = -10; // neighbour peoples only raid when they truly hate you
   G.TRIBE_THREAT = 3; // see predation
   G.TRIBE_CHILD_COST = 2;
-  G.TRIBE_HIT_CAP = 0.6; // the most often a hunter or band can strike in a year
-  G.TRIBE_BLOW = 1; // extra members lost to every strike
+  G.TRIBE_HIT_CAP = 0.7; // the most often a hunter or band can strike in a year
+  G.TRIBE_BLOW = 2; // extra members lost to every strike
   G.TRIBE_GRACE = 5; // years before the wild keeps pace and strikes harder // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
@@ -1178,8 +1180,8 @@ window.G = window.G || {};
       if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} Food`, bad: d < 0 });
     }
     if (eff.dna) lines.push({ t: `+${gainDna(run, eff.dna)} ${G.dnaWord(run)}`, good: true });
-    if (eff.tame && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx] && !run.species[speciesIdx].band) { const sp = run.species[speciesIdx]; sp.tamed = true; sp.opinion = 100; lines.push({ t: `The ${sp.name} are tamed`, good: true }); }
-    if (eff.totem && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) { run.totem = run.species[speciesIdx].name; lines.push({ t: `The ${run.totem} are your totem`, good: true }); }
+    if (eff.tame && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx] && !run.species[speciesIdx].band) { const sp = run.species[speciesIdx]; sp.tamed = true; sp.opinion = 100; G.remember(sp, 'tamed'); G.addDeed(run, 'deed_tamed'); lines.push({ t: `The ${sp.name} are tamed`, good: true }); }
+    if (eff.totem && speciesIdx != null && speciesIdx >= 0 && run.species[speciesIdx]) { run.totem = run.species[speciesIdx].name; G.remember(run.species[speciesIdx], 'revered'); G.addDeed(run, 'deed_totem'); lines.push({ t: `The ${run.totem} are your totem`, good: true }); }
     if (eff.insight) {
       const before = run.insight;
       run.insight = Math.max(0, run.insight + eff.insight);
@@ -1500,6 +1502,9 @@ window.G = window.G || {};
     const hz0 = hazardOf(ev, sp);
     if (hz0 && G.HAZARD_MEMORY[hz0]) G.addMemory(run, G.HAZARD_MEMORY[hz0]);
     if (story === 'brawl_win') G.addMemory(run, 'mem_victory');
+    // The Memory of Kinds: every species remembers what your lineage did to it.
+    const foe0 = sp != null && sp >= 0 ? run.species[sp] : null;
+    if (foe0) { if (story === 'chase') G.remember(foe0, 'hunted'); else if (story === 'brawl_win' || story === 'brawl_lose') G.remember(foe0, 'fought'); else if (success !== false && sceneAnim(res, opt, success) === 'social') G.remember(foe0, 'befriended'); }
     if (story === 'chase' && sp != null && sp >= 0) G.addMemory(run, 'mem_hunt');
     const anim0 = sceneAnim(res, opt, success);
     if (success !== false && anim0 === 'flee') G.addMemory(run, 'mem_flight');
@@ -1749,6 +1754,7 @@ window.G = window.G || {};
     const b = G.biomeList(run).find((x) => x.id === id);
     if (!b) return;
     run.biome = id;
+    if (run.stage === 'tribe') G.addDeed(run, 'deed_migrate');
     run.seenBiomes = run.seenBiomes || [];
     if (!run.seenBiomes.includes(id)) run.seenBiomes.push(id);
     if (!keepSpecies) {
@@ -1886,7 +1892,8 @@ window.G = window.G || {};
         G.addFood(run, 6, 'meat'); gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
         // Takers carry off what the beaten band knew.
         if (run.stage === 'society' && run.socType === 'conquer') { gainDna(run, 4); lines.push({ t: 'Warlike peoples gain from every victory: +4 Influence', good: true }); }
-        if (t.band) run.bandWins = (run.bandWins || 0) + 1;
+        if (t.band) { run.bandWins = (run.bandWins || 0) + 1; G.addDeed(run, 'deed_war'); }
+        G.remember(t, 'warred');
         if (t.band && G.people(run) && G.temperament(run).id === 'taker') { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push({ t: `You took their knowledge: ${G.DISCOVERY[d].name}`, good: true }); } }
         lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 ${G.dnaWord(run)}. They will not forget.`, true));
       } else if (act.score <= -100) {
@@ -2024,9 +2031,10 @@ window.G = window.G || {};
       const def = G.stat(run, 'tou') + Math.floor(G.stat(run, 'spd') / 2);
       // The bigger the gap, the more often and harder they strike; even the strong are never quite safe.
       const gap = atk - def;
-      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, G.people(run) ? G.TRIBE_HIT_CAP : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
+      const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, run.stage === 'tribe' ? G.TRIBE_HIT_CAP : G.people(run) ? 0.6 : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (G.biomeMatters(run) ? G.biome(run).danger || 1 : 1) * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (G.people(run) && run.stageTurn > G.TRIBE_GRACE ? G.TRIBE_BLOW : 0);
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (G.people(run) && run.stageTurn > G.TRIBE_GRACE ? (run.stage === 'tribe' ? G.TRIBE_BLOW : 1) : 0);
+      if (s.band) G.addDeed(run, 'deed_raid'); G.remember(s, 'attacked');
       lines.push({ t: s.band ? `The ${s.name} raided your ${run.stage === 'society' ? G.socKind(run).settlement : G.kind(run).camp}: −${damage(run, n)} ${G.popWord(run)}` : `The ${s.name} hunted you: −${damage(run, n)} ${G.popWord(run)}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
@@ -2118,7 +2126,7 @@ window.G = window.G || {};
   // What an idea costs: Beyond-the-Gate ideas are cheaper with Old Paths (Evolution Tree).
   G.innovationCost = (run, inv) => Math.max(1, Math.round(inv.cost * (inv.group === 'beyond' ? 1 - 0.15 * G.boonLevel('old_paths') : 1)));
   // Awakenings: does your Mind know an idea with this rule?
-  G.mindRule = (run, id) => !!run && (run.innovations || []).some((i) => G.INNOVATION[i] && G.INNOVATION[i].rule === id);
+  G.mindRule = (run, id) => !!run && ((run.innovations || []).some((i) => G.INNOVATION[i] && G.INNOVATION[i].rule === id) || (G.people(run) && (run.discoveries || []).some((i) => G.DISCOVERY[i] && G.DISCOVERY[i].rule === id)));
   // The stat a check really uses: some awakenings let one stat stand in for another.
   const SWAPS = { outwit: ['str', 'cun'], charm_wit: ['cha', 'cun'], swift_strike: ['str', 'spd'] };
   G.checkStat = (run, stat) => {
@@ -2130,8 +2138,14 @@ window.G = window.G || {};
   G.leaning = (run) => {
     const out = { peace: 0, guard: 0, war: 0 };
     (run.innovations || []).forEach((id) => { const inv = G.INNOVATION[id]; if (inv && inv.lean) out[inv.lean] += 1; });
+    (run.discoveries || []).forEach((id) => { const d = G.DISCOVERY[id]; if (d && d.lean) out[d.lean] += 1; });
     return out;
   };
+  // The Memory of Kinds: what your lineage has done to each species, kept for good. Their descendants
+  // (rival bands, neighbour peoples) start with the grudge or the debt.
+  G.KIND_MEMORY = { hunted: 'hunted', fought: 'fought', attacked: 'were attacked by', warred: 'went to war with', befriended: 'befriended', tamed: 'tamed', revered: 'revered' };
+  G.remember = (s, what) => { if (!s) return; s.history = s.history || {}; s.history[what] = (s.history[what] || 0) + 1; };
+  G.grudge = (s) => { const h = (s && s.history) || {}; return clamp(-4 * ((h.hunted || 0) + (h.fought || 0) + 2 * (h.warred || 0)) + 5 * ((h.befriended || 0) + 2 * (h.tamed || 0) + 2 * (h.revered || 0)), -40, 30); };
   // Memories: what happened to your lineage in the Creature stage grafts new ideas onto the Mind tree.
   G.addMemory = (run, id) => {
     if (!run || run.stage !== 'creature' || !G.MEMORIES[id]) return;
@@ -2156,13 +2170,14 @@ window.G = window.G || {};
   G.addSpecial = addSpecial;
   // What a discovery costs: more for advanced ones, then changed by a percentage (always rounded to whole numbers)
   // from your Cunning, your leader, how many you are, your discoveries, and events.
-  G.DISCOVERY_BASE = { plain: 5, habitat: 6, talent: 6, path: 8, combined: 12 };
-  G.discoveryTier = (d) => (d.from ? 'combined' : d.path ? 'path' : d.talent ? 'talent' : d.habitat ? 'habitat' : 'plain');
+  G.DISCOVERY_BASE = { plain: 5, habitat: 6, talent: 6, path: 8, combined: 12, way: 8, legacy: 8, deed: 8, gate: 12, beyond: 22 };
+  G.discoveryTier = (d) => (['way', 'legacy', 'deed', 'gate', 'beyond'].includes(d.lore) ? d.lore : d.from ? 'combined' : d.path ? 'path' : d.talent ? 'talent' : d.habitat ? 'habitat' : 'plain');
   G.discoveryCostParts = (run) => {
     const parts = [];
     const cun = G.stat(run, 'cun'); const c = clamp((10 - cun) * 2, -30, 20); if (c) parts.push([`Cunning ${cun}`, c]);
     const big = -Math.min(20, Math.floor(Math.max(0, run.pop - 100) / 100) * 5); if (big) parts.push([`${run.pop} ${G.popWord(run)}`, big]);
     const m = G.mod(run, 'discoveryCost'); if (m) parts.push(['Leader, legacies and discoveries', m]);
+    const lw = G.boonLevel('w_lore'); if (lw) parts.push(['Ancestral Wisdom: Lorekeepers', -10 * lw]);
     (run.costMods || []).forEach((x) => { if (run.turn < x.until) parts.push([x.why, x.pct]); });
     return parts;
   };
@@ -2170,7 +2185,8 @@ window.G = window.G || {};
   G.discoveryCost = (run, id) => {
     const d = G.DISCOVERY[id]; if (!d) return 0;
     if (run.stage !== 'tribe') return 0;
-    return Math.max(1, Math.round(G.DISCOVERY_BASE[G.discoveryTier(d)] * (1 + G.discoveryCostPct(run) / 100)));
+    const anc = d.lore === 'beyond' ? 1 - 0.15 * G.boonLevel('w_ancestors') : 1;
+    return Math.max(1, Math.round(G.DISCOVERY_BASE[G.discoveryTier(d)] * (1 + G.discoveryCostPct(run) / 100) * anc));
   };
   G.kind = (run) => G.KINDS[run.path] && G.KINDS[run.path][run.habitat === 'sea' ? 'sea' : 'land'];
   // Fire (or vent-heat) is lit once your Toolmakers have at least 3: it warms you through the cold and keeps hunters away.
@@ -2205,7 +2221,7 @@ window.G = window.G || {};
     while (traits.length < 2) { const t = pick(keys); if (!traits.includes(t)) traits.push(t); }
     const queen = run.path === 'swarm';
     const bg = pick(G.LEADER_BACKGROUNDS); const amb = pick(Object.keys(G.AMBITIONS));
-    return { name: pick(A.a) + pick(A.b), traits, bg: bg.id, amb, since: run.turn, life: Math.max(8, 14 + Math.floor(rand() * 12) + (queen ? 8 : 0) + 5 * G.boonLevel('w_choosing') + (bg.life || 0)), queen };
+    return { name: pick(A.a) + pick(A.b), traits, bg: bg.id, amb, since: run.turn, life: Math.max(8, 14 + Math.floor(rand() * 12) + (queen ? 8 : 0) + 5 * G.boonLevel('w_choosing') + 5 * G.boonLevel('w_long') + (bg.life || 0)), queen };
   }
   // What a candidate brings, in one line: where they come from, what they want, and what they'd change.
   G.leaderPitch = (run, c) => {
@@ -2248,7 +2264,8 @@ window.G = window.G || {};
     if (run.leader) { run.leader.traits.forEach((t) => list.push(tag(G.LEADER_TRAITS[t].mods, `Leader: ${G.LEADER_TRAITS[t].name}`))); if (run.leader.bg && G.LEADER_BACKGROUND[run.leader.bg]) list.push(tag(G.LEADER_BACKGROUND[run.leader.bg].mods, `Leader: ${G.LEADER_BACKGROUND[run.leader.bg].name}`)); }
     // Legacies of leaders who achieved what they set out to do.
     (run.legacies || []).forEach((x) => { if (G.AMBITIONS[x.amb]) list.push(tag(G.AMBITIONS[x.amb].legacy, `Legacy: ${x.name} the ${G.AMBITIONS[x.amb].name}`)); });
-    (run.discoveries || []).forEach((d) => list.push(tag(G.DISCOVERY[d].mods, G.DISCOVERY[d].name)));
+    (run.discoveries || []).forEach((d) => { if (G.DISCOVERY[d]) list.push(tag(G.DISCOVERY[d].mods, G.loreName(G.DISCOVERY[d], run))); });
+    G.WISDOM.forEach((w) => { const lvl = G.boonLevel(w.id); if (w.mods && lvl && w.id !== 'w_hardy') { const m = {}; Object.entries(w.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(tag(m, `Ancestral Wisdom: ${w.name}`)); } });
     if (run.gear) list.push(tag({ str: run.gear, tou: Math.floor(run.gear / 2) }, `Gear ${run.gear}`));
     const totem = run.totem && run.species.find((x) => x.name === run.totem && !x.extinct);
     if (totem) { const best = G.STATS.map((x) => x.id).sort((a, b) => G.speciesStat(totem, b) - G.speciesStat(totem, a))[0]; list.push(tag({ [best]: 1 }, `Totem: ${totem.name}`)); }
@@ -2265,6 +2282,10 @@ window.G = window.G || {};
   G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.floor(G.mod(run, 'exploreBonus') / 2) : 0));
   // One turn of tribe life: the special resource, and the leader growing old.
   function tribeTurn(run, lines) {
+    if (run.stage === 'tribe') {
+      if (run.species.some((x) => x.band && !x.extinct && x.opinion >= 50)) G.addDeed(run, 'deed_peace');
+      if (run.pop < G.maxPop(run) * 0.2) G.addDeed(run, 'deed_near_end');
+    }
     if (run.specialOn && G.kind(run)) {
       // Your people make their resource, and use it: the more of them, the more it takes to keep going.
       const gain = Math.max(0, 2 + G.mod(run, 'specialPerTurn'));
@@ -2289,7 +2310,9 @@ window.G = window.G || {};
       log(run, `${G.leaderTitle(L0)} achieved their ambition (${A0.name}).`);
     }
     // The Swarm: brood hatches into new members.
-    if (run.path === 'swarm' && (run.special || 0) >= 8 && run.pop < G.maxPop(run)) { run.special -= 6; const n = Math.min(G.hardPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
+    // (Update 18: it waits until there is plenty, and the colony saves its brood while the Founding is within reach.)
+    const saving = run.stage === 'tribe' && G.DISCOVERY.founding_gate && G.loreAvailable(run, G.DISCOVERY.founding_gate).ok;
+    if (run.path === 'swarm' && !saving && (run.special || 0) >= 14 && run.pop < G.maxPop(run)) { run.special -= 6; const n = Math.min(G.hardPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
     // Gardeners: the bigger the garden, the likelier Blight.
     if (run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) && rand() < 0.03 + 0.01 * (run.special - 8)) {
       const lost = Math.ceil(run.special / 2); run.special -= lost; G.spendFood(run, 3);
@@ -2334,23 +2357,78 @@ window.G = window.G || {};
     const b = JSON.parse(JSON.stringify(src));
     b.name = `${src.name.replace(/s$/, '')} ${word[0].toUpperCase()}${word.slice(1)}`;
     b.band = true; b.role = 'rival'; b.cap = 14; b.pop = 10; b.size = Math.max(src.size, 0.9); b.from = src.name; b.kindPath = kindPath;
-    b.opinion = clamp(src.opinion - (src.nemesis ? 30 : 0) + 20 * G.boonLevel('w_peace'), -100, 60); b.nemesis = !!src.nemesis; b.tamed = false; b.extinct = false;
+    b.opinion = clamp(src.opinion - (src.nemesis ? 30 : 0) + 20 * G.boonLevel('w_peace') + Math.round(G.grudge(src) / 2), -100, 60); b.history = Object.assign({}, src.history); b.nemesis = !!src.nemesis; b.tamed = false; b.extinct = false;
     b.hue = (src.hue + 30) % 360;
     run.species.push(b);
     run.notices.push(`${second ? 'More strangers' : 'Strangers'}: the ${b.name}, ${G.PATH[kindPath].name.toLowerCase()} descended from the ${src.name}.${src.nemesis ? ' They remember the old feud.' : ''}`);
     log(run, `The ${b.name} appeared: ${src.name} who learned to think.`);
     return b;
   }
+  // ---------- The Lore tree (Update 18) ----------
+  G.loreName = (d, run) => (d.name && typeof d.name === 'object' ? d.name[run.path] || Object.values(d.name)[0] : d.name);
+  const loreFits = (run, d) => (!d.path || d.path === run.path) && (!d.habitat || d.habitat === (run.habitat === 'sea' ? 'sea' : 'land')) && (!d.talent || G.talents(run).has(d.talent)) && !G.useless(run, d);
+  G.loreVisible = (run, d) => {
+    if ((run.discoveries || []).includes(d.id)) return true;
+    if (!loreFits(run, d)) return false;
+    switch (d.lore) {
+      case 'trunk': return true;
+      case 'graft': return (run.grafts || []).includes(d.id);
+      case 'combo': return d.from.every((f) => G.DISCOVERY[f] && G.loreVisible(run, G.DISCOVERY[f]));
+      case 'way': return !!run.leader && run.leader.bg === d.when.bg;
+      case 'legacy': return (run.legacies || []).some((x) => x.amb === d.when.amb);
+      case 'deed': return (run.deeds || []).includes(d.when.deed);
+      case 'gate': return true;
+      case 'beyond': return true;
+      default: return false;
+    }
+  };
+  G.loreKnown = (run) => (run.discoveries || []).filter((id) => G.DISCOVERY[id] && G.DISCOVERY[id].lore !== 'gate').length;
+  G.foundingNeed = () => Math.max(3, G.FOUNDING_NEED - 2 * G.boonLevel('w_stone'));
+  // Can this Lore idea be learned now (ignoring its cost)?
+  G.loreAvailable = (run, d) => {
+    if ((run.discoveries || []).includes(d.id)) return { ok: false, reason: 'Known' };
+    if (!G.loreVisible(run, d)) return { ok: false, hidden: true, reason: 'Not in your tree' };
+    if (d.lore === 'combo') { const miss = d.from.filter((f) => !run.discoveries.includes(f)); if (miss.length) return { ok: false, reason: `Needs ${miss.map((f) => G.DISCOVERY[f].name).join(' and ')}` }; }
+    if (d.lore === 'gate') {
+      const need = G.foundingNeed(); const have = G.loreKnown(run); const ideas = G.goals(run).evolveAt;
+      if (run.dna < ideas) return { ok: false, reason: `Needs ${ideas} Ideas (you have ${run.dna})` };
+      if (have < need) return { ok: false, reason: `Needs ${need} Lore ideas known (you have ${have})` };
+    }
+    const r = d.req || {};
+    if (r.known && G.loreKnown(run) < r.known) return { ok: false, reason: `Needs ${r.known} Lore ideas known (you have ${G.loreKnown(run)})` };
+    if (r.some) { const have = r.some.filter((id) => run.discoveries.includes(id)).length; if (have < r.n) return { ok: false, reason: `Needs ${r.n} of: ${r.some.filter((id) => G.DISCOVERY[id]).map((id) => G.loreName(G.DISCOVERY[id], run)).join(', ')} (you have ${have})` }; }
+    if (d.lore === 'beyond' && run.discoveries.includes('founding_gate')) return { ok: false, reason: 'Too late: your people have already been founded' };
+    return { ok: true };
+  };
+  // Learn a Lore idea now, paying its cost.
+  G.learnLore = function (id) {
+    const run = G.run; const d = G.DISCOVERY[id];
+    if (!run || run.stage !== 'tribe' || run.phase !== 'map' || !d || !G.loreAvailable(run, d).ok) return;
+    const cost = G.discoveryCost(run, id);
+    if (cost > (run.special || 0)) return;
+    run.special -= cost;
+    run.draft = { options: [id], source: 'lore' };
+    learnDiscovery(run, id, null);
+  };
+  // Deeds: what your people did grafts new ideas onto the Lore tree.
+  G.addDeed = (run, id) => {
+    if (!run || run.stage !== 'tribe' || !G.DEEDS[id]) return;
+    run.deeds = run.deeds || [];
+    if (run.deeds.includes(id)) return;
+    run.deeds.push(id);
+    const d = G.DISCOVERIES.find((x) => x.lore === 'deed' && x.when.deed === id);
+    if (d) run.notices.push(`A deed remembered: ${G.DEEDS[id]} Your Lore tree grows a new idea: ${d.name}.`);
+  };
   G.discoveryCombo = (a, b) => { const r = G.DISCOVERIES.find((d) => d.from && ((d.from[0] === a && d.from[1] === b) || (d.from[0] === b && d.from[1] === a))); return r ? r.id : null; };
   // Discoveries on offer: 1 of 3 (or 4), from your Path, your home and your body's talents.
   function discoveryOptions(run) {
     const talents = G.talents(run); const hab = run.habitat === 'sea' ? 'sea' : 'land';
     const known = run.discoveries || [];
     const usedUp = new Set(known.concat(G.DISCOVERIES.filter((d) => d.from && known.includes(d.id)).flatMap((d) => d.from)));
-    let pool = G.DISCOVERIES.filter((d) => !d.from && !usedUp.has(d.id) && (!d.path || d.path === run.path) && (!d.habitat || d.habitat === hab) && (!d.talent || talents.has(d.talent)) && !G.useless(run, d) && !(run.held || []).includes(d.id));
-    const n = G.meta.boons.choice ? 4 : 3; const out = [];
+    let pool = G.DISCOVERIES.filter((d) => d.lore === 'graft' && !usedUp.has(d.id) && (!d.path || d.path === run.path) && (!d.habitat || d.habitat === hab) && (!d.talent || talents.has(d.talent)) && !G.useless(run, d) && !(run.grafts || []).includes(d.id));
+    const n = (G.meta.boons.choice ? 4 : 3) + G.boonLevel('w_graft'); const out = [];
     while (out.length < n && pool.length) {
-      const d = weightedPick(pool, (x) => (x.talent ? 1.6 : 1) * (x.path ? 1.4 : 1) * (known.some((k) => G.discoveryCombo(k, x.id)) ? 1.8 : 1));
+      const d = weightedPick(pool, (x) => (x.talent ? 1.6 : 1) * (x.path ? 1.4 : 1) * (known.concat(run.grafts || []).some((k) => G.discoveryCombo(k, x.id)) ? 1.8 : 1));
       out.push(d.id); pool = pool.filter((x) => x.id !== d.id);
     }
     return out;
@@ -2359,33 +2437,21 @@ window.G = window.G || {};
   G.holdDiscovery = function (pid) {
     const run = G.run;
     if (!run || run.phase !== 'draft' || run.stage !== 'tribe' || !run.draft.options.includes(pid)) return;
-    run.held = (run.held || []).filter((x) => x !== pid);
-    if (run.held.length >= 3) run.held.shift();
-    run.held.push(pid);
+    run.grafts = run.grafts || [];
+    addUnique(run.grafts, pid);
     if (!run.draft.source) run.draftsTaken += 1;
-    log(run, `Your people will remember ${G.DISCOVERY[pid].name}, to learn it when they can.`);
+    log(run, `A new branch of Lore: ${G.DISCOVERY[pid].name}, to learn when your people can.`);
     run.draft = null;
     nextStep(run, false);
     save();
   };
-  G.learnHeld = function (pid, combineWith) {
-    const run = G.run;
-    if (!run || run.phase !== 'map' || !(run.held || []).includes(pid)) return;
-    const combo = combineWith && run.discoveries.includes(combineWith) && G.discoveryCombo(combineWith, pid);
-    const cost = G.discoveryCost(run, combo || pid);
-    if (cost > (run.special || 0)) return;
-    run.special -= cost;
-    run.held = run.held.filter((x) => x !== pid);
-    run.draft = { options: [pid], source: 'held' };
-    learnDiscovery(run, pid, combo ? combineWith : null);
-  };
+  G.learnHeld = (pid) => G.learnLore(pid);
   function learnDiscovery(run, id, combineWith) {
     const d = G.DISCOVERY[id];
-    let text = `Your people discovered ${d.name}`;
+    let text = `Your people discovered ${G.loreName(d, run)}`;
     const combo = combineWith && run.discoveries.includes(combineWith) && G.discoveryCombo(combineWith, id);
     let evolved = null;
     if (combo) {
-      run.discoveries = run.discoveries.filter((x) => x !== combineWith);
       run.discoveries.push(combo);
       const first = !(G.meta.codex.discoveries || []).includes(combo);
       addUnique(G.meta.codex.discoveries = G.meta.codex.discoveries || [], combo);
@@ -2393,6 +2459,8 @@ window.G = window.G || {};
       text = `${G.DISCOVERY[combineWith].name} + ${d.name} became ${G.DISCOVERY[combo].name}!`;
       evolved = combo;
     } else run.discoveries.push(id);
+    if (d.from && !(G.meta.codex.discoveries || []).includes(id)) { G.meta.genes += 3; run.notices.push(`New combination: ${d.name}. +3 Genetic Memory, and it is now in your Codex.`); text = `${G.DISCOVERY[d.from[0]].name} + ${G.DISCOVERY[d.from[1]].name} became ${d.name}`; evolved = id; }
+    if (run.grafts) run.grafts = run.grafts.filter((x) => x !== id);
     addUnique(G.meta.codex.discoveries = G.meta.codex.discoveries || [], id);
     log(run, `Discovery: ${text}.`);
     if (!run.draft.source) run.draftsTaken += 1;
@@ -2431,14 +2499,14 @@ window.G = window.G || {};
       const chance = clamp(35 + (G.stat(run, 'cha') - 3) * 8 + bonus, 15, 90);
       if (rand() * 100 < chance) { act.score += 1; t.opinion = clamp(t.opinion + 10, -100, 100); lines.push({ t: `Taming the ${t.name} (${act.score}/3)`, good: true }); }
       else lines.push({ t: `The ${t.name} shy away` });
-      if (act.score >= 3) { t.tamed = true; t.opinion = 100; lines.push(finishActivity(run, `The ${t.name} now live alongside your people. +1 Food a turn.`, true)); }
+      if (act.score >= 3) { t.tamed = true; t.opinion = 100; G.remember(t, 'tamed'); G.addDeed(run, 'deed_tamed'); lines.push(finishActivity(run, `The ${t.name} now live alongside your people. +1 Food a turn.`, true)); }
       else if (act.turns >= 10) lines.push(finishActivity(run, `The ${t.name} will not be tamed, for now.`, false));
     }
-    if (act.id === 'revere' && act.turns >= a.turns) { run.totem = t.name; t.opinion = clamp(t.opinion + 40, -100, 100); lines.push(finishActivity(run, `The ${t.name} are now your totem.`, true)); }
+    if (act.id === 'revere' && act.turns >= a.turns) { run.totem = t.name; G.remember(t, 'revered'); G.addDeed(run, 'deed_totem'); t.opinion = clamp(t.opinion + 40, -100, 100); lines.push(finishActivity(run, `The ${t.name} are now your totem.`, true)); }
     if (act.id === 'ceremony') {
       G.spendFood(run, 1); run.special = (addSpecial(run, 2), run.special); gainDna(run, 1);
       lines.push({ t: `Ceremony: +2 ${G.kind(run).resource}, +1 Idea, −1 Food`, good: true });
-      if (act.turns >= a.turns) { run.ceremonyReadyAt = run.turn + 8; lines.push(finishActivity(run, 'The ceremony ends. Everyone feels closer.', true)); }
+      if (act.turns >= a.turns) { run.ceremonyReadyAt = run.turn + 8; G.addDeed(run, 'deed_ceremony'); lines.push(finishActivity(run, 'The ceremony ends. Everyone feels closer.', true)); }
     }
     if (act.id === 'craft' && act.turns >= a.turns) { run.special -= 4; run.gear = (run.gear || 0) + 1; lines.push(finishActivity(run, `New gear for your people (level ${run.gear}).`, true)); }
     if (act.id === 'teach') {
@@ -2502,6 +2570,8 @@ window.G = window.G || {};
     run.caste = 'workers'; run.blightSafeUntil = 0; run.lastStandUsed = false; run.songSafe = false;
     if (G.boonLevel('w_stories')) gainDna(run, 6 * G.boonLevel('w_stories'));
     if (G.boonLevel('w_ways')) { const opts = discoveryOptions(run); if (opts.length) run.discoveries.push(pick(opts)); }
+    run.grafts = []; run.deeds = [];
+    if (G.boonLevel('w_deeds')) G.addDeed(run, pick(Object.keys(G.DEEDS).filter((k) => k !== 'deed_near_end')));
   }
   G.setCaste = function (id) {
     const run = G.run;
@@ -2597,6 +2667,7 @@ window.G = window.G || {};
     list.push(tag({ cha: 1 }, 'Founding myth'));
     (run.socBoons || []).forEach((m) => list.push(m));
     (run.traditions || []).forEach((id) => { if (G.TRADITION[id]) list.push(tag(G.TRADITION[id].mods, G.TRADITION[id].name)); });
+    (run.discoveries || []).forEach((id) => { const d = G.DISCOVERY[id]; if (d && d.inherit) list.push(tag(d.inherit, `Inheritance: ${G.loreName(d, run)}`)); });
     // A councillor who has turned against the ruler gives nothing.
     (run.council || []).forEach((c) => { if (c.loyalty > -30) { list.push(tag(G.COUNCIL_ROLES[c.role].mods, `Council: ${G.COUNCIL_ROLES[c.role].name}`)); c.traits.forEach((t) => list.push(tag(G.LEADER_TRAITS[t].mods, `Council: ${c.name}`))); } });
     // Allies share their food.
@@ -2661,7 +2732,8 @@ window.G = window.G || {};
   function becomeSociety(run) {
     run.book = run.book || {};
     // Until the Lore tree arrives (Update 18), the Tribe's page is its discoveries and its leaders.
-    run.book.lore = { discoveries: (run.discoveries || []).slice(), rulers: (run.rulers || []).slice(), legacies: (run.legacies || []).slice(), path: run.path };
+    run.book.lore = { discoveries: (run.discoveries || []).slice(), rulers: (run.rulers || []).slice(), legacies: (run.legacies || []).slice(), path: run.path,
+      seen: G.DISCOVERIES.filter((d) => G.loreVisible(run, d)).map((d) => d.id), known: (run.discoveries || []).slice(), leaning: G.leaning(run) };
     stageCheckpoint(run);
     run.socType = run.tribeEnding || 'settle';
     run.myth = `The Myth of ${G.endingName(run).replace(/^The /, '')}`;
@@ -2755,7 +2827,7 @@ window.G = window.G || {};
     // Lineages that reached the Spark before Paths existed choose one now.
     if (run.stage === 'creature' && run.mind && !run.path) { setEvent(run, G.EVENT.path_choice); return; }
     if (needsFascination(run)) { run.phase = 'mind'; return; }
-    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'creature' ? !!run.path && run.innovations.includes(`${run.path}_cap`) : run.dna >= st.evolveAt);
+    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'creature' ? !!run.path && run.innovations.includes(`${run.path}_cap`) : run.stage === 'tribe' ? run.discoveries.includes('founding_gate') : run.dna >= st.evolveAt);
     if (finaleReady) {
       const hab = run.habitat === 'sea' ? 'sea' : 'land';
       const id = run.stage === 'cell' ? 'cell_finale' : run.stage === 'society' ? `union_${run.path}_${hab}` : run.stage === 'tribe' ? `founding_${run.path}_${hab}` : `finale_${run.path}_${hab}`;
@@ -2798,7 +2870,10 @@ window.G = window.G || {};
   }
 
   function startDraft(run) {
-    run.draft = { options: draftOptions(run), rerolls: G.meta.boons.reroll ? 1 : 0 };
+    const options = draftOptions(run);
+    // Nothing left to offer (every branch already in the Lore tree): the goal passes with a little food.
+    if (!options.length) { run.draftsTaken += 1; G.addFood(run, 3); run.notices.push(run.stage === 'tribe' ? 'Every branch your people could find is already in your Lore tree: +3 Food instead.' : 'Nothing new to choose: +3 Food instead.'); nextStep(run, false); return; }
+    run.draft = { options, rerolls: G.meta.boons.reroll ? 1 : 0 };
     run.phase = 'draft';
   }
 
@@ -2808,11 +2883,12 @@ window.G = window.G || {};
     if (run.stage === 'society') { learnTradition(run, pid); return; }
     if (run.stage === 'tribe') {
       // Knowledge costs your people's resource: you can only learn what you can pay for.
-      const combo = mode === 'combine' && socket && G.discoveryCombo(socket, pid);
-      const cost = G.discoveryCost(run, combo || pid);
-      if (cost > (run.special || 0)) return;
+      // Every choice grafts a new branch onto the Lore tree; learning it now costs your people's resource.
+      run.grafts = run.grafts || []; addUnique(run.grafts, pid);
+      const cost = G.discoveryCost(run, pid);
+      if (mode !== 'learn' || cost > (run.special || 0)) { G.holdDiscovery(pid); return; }
       run.special -= cost;
-      learnDiscovery(run, pid, mode === 'combine' ? socket : null);
+      learnDiscovery(run, pid, null);
       return;
     }
     const text = installPart(run, G.PART[pid], mode, socket);
