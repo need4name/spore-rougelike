@@ -452,9 +452,9 @@ window.G = window.G || {};
     return `<ul class="effects">${list.map((l) => `<li class="${l.bad ? 'bad' : l.good ? 'good' : ''}">${esc(l.t)}</li>`).join('')}</ul>`;
   }
 
-  function chanceTag(stat, chance) {
+  function chanceTag(stat, chance, foe) {
     const cls = chance >= 70 ? 'good' : chance <= 35 ? 'bad' : '';
-    return `<span class="chance ${cls}">${statName(stat)} · ${chance}%</span>`;
+    return `<span class="chance ${cls}">${statName(stat)} · ${chance}%</span>${foe ? `<span class="vs">your ${foe.you} vs their ${foe.them}</span>` : ''}`;
   }
 
   // A mutation's icon, ringed in its keyword's color.
@@ -499,7 +499,7 @@ window.G = window.G || {};
             return `
             <button class="option ${st.ok ? '' : 'locked'}" ${st.ok ? `data-act="option" data-arg="${i}"` : 'disabled'}>
               <span class="opt-label">${reqTag(o)}${esc(G.sub(o.label, run, sp))}</span>
-              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance) : '<span class="chance sure">Certain</span>'}${o.hint ? `<span>${esc(G.sub(o.hint, run, sp))}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
+              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance, st.foe) : '<span class="chance sure">Certain</span>'}${o.hint ? `<span>${esc(G.sub(o.hint, run, sp))}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
             </button>`;
           }).join('')}
         </div>
@@ -1347,7 +1347,8 @@ window.G = window.G || {};
       <div class="opinion big"><span class="opinion-bar"><span style="left:${(s.opinion + 100) / 2}%"></span></span><span class="status">${st[0].toUpperCase() + st.slice(1)} ${s.opinion > 0 ? '+' : ''}${s.opinion}</span></div>
       <h3>Compared with you</h3>
       <div class="compare">${G.STATS.map((k) => {
-        const them = G.speciesStat(s, k.id); const you = G.stat(run, k.id);
+        // Their evolved stats: what you are really up against (Fair Fights).
+        const them = G.foeStat(run, s, k.id); const you = G.stat(run, k.id);
         return `<div class="cmp"><span>${k.short}</span><b>${them}</b><small class="${them > you ? 'bad-text' : them < you ? 'good-text' : ''}">you ${you}</small></div>`;
       }).join('')}</div>
       <h3>Body</h3>

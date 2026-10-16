@@ -713,15 +713,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.3.1';
+G.VERSION = '16.4';
 G.WHATS_NEW = {
-  title: 'Patch 16.3.1: Tap to Explain',
+  title: 'Patch 16.4: Fair Fights',
   items: [
-    'Tap anything in the top bar (your numbers, food, resource, leader, season, biome, diet, the progress bar) to see what it means and where every + and − comes from. The game pauses while you read.',
-    'Food shows exactly what you gathered and what was eaten, including crowded members eating twice, so you can see why you are at −1.',
-    'Max Population upgrades now always count, whatever your size (they could round away to nothing for giants and Many Minds), and every description shows the real number of individuals (+20, not +2).',
-    'Eye styles (Sleepy, Fierce, Huge) now show on fish, jellyfish, starfish and colonies.',
-    'A leader choice no longer shows "{cand3}" when there is no fourth candidate.',
+    'The wild evolves too. Every species you meet grows stronger with the age of the world, so its stats are in the same range as yours, and its card shows its real stats next to yours.',
+    'Checks against a species now use its stats: a weak foe is easy and a strong one is hard. Each option shows "your 13 vs their 18", so your stats mean exactly what they say.',
+    'Overall difficulty is unchanged; only who is hard and who is easy has changed.',
+    'Also in 16.3.1: tap anything in the top bar to see what it means and where every + and − comes from.',
   ],
 };
 

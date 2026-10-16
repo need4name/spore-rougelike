@@ -79,6 +79,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Patch 16.4: Fair Fights
+
+- `G.wildEdge(run)` = round(`G.difficulty(run, 0)` + 6 − average foe stat (3.5 for cells, 5 after)). `G.foeStat(run, s, stat)` = `G.speciesStat` + edge: the species' evolved stat, shown on species cards.
+- `G.checkFoe(run)` is the event's species (not in finales). With a foe, `G.chance` uses difficulty = `foeStat` + (option diff − 6) instead of `G.difficulty`, so an even check is 50% when your stat equals theirs. Average difficulty matches the old one; weak foes are easier and strong foes harder (sampled: late Creature 41% vs 31%, Tribe 40% vs 26%).
+- `optionState` returns `foe: { name, them, you }` and the option shows "your X vs their Y".
+- Automatic hunts, raids and wars still compare raw stats (their balance is unchanged).
+
 ## Patch 16.3.1: Tap to Explain
 
 - **Labelled modifiers:** every entry in `modSources` (and `tribeMods` / `societyMods`) carries a `src` label; `G.modBreakdown(run, key)` sums a modifier by source. `G.mod` is unchanged.

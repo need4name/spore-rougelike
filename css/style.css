@@ -639,3 +639,5 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .xrow b.neg { color: var(--bad); }
 .xrow.total { border-bottom: 0; border-top: 1px solid var(--line); margin-top: 2px; }
 .xrow.total span { color: var(--fg); font-weight: 700; }
+
+.opt-meta .vs { font-size: 0.75rem; color: var(--muted); }

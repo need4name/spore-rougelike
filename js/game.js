@@ -584,8 +584,24 @@ window.G = window.G || {};
   G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (G.people(run) ? (run.stage === 'society' ? G.SOC_HARSH : G.TRIBE_HARSH - G.boonLevel('w_elders')) - (finaleEase(run) ? 2 * G.boonLevel('w_founding') : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   // Odds follow a gentle S-curve scaled to the check, so risky options are real choices at every stage:
   // equal to the difficulty is 50%, a few points short is still a gamble, and only big gaps get near 5% or 95%.
+  // ---------- Fair Fights (Patch 16.4) ----------
+  // The wild evolves too: every species gains an edge that keeps pace with the world's difficulty
+  // (era, stage, how long you linger, how strong your lineage has become), so its stats sit in the
+  // same range as yours. A check against a species uses its evolved stat: an even (6) check is a
+  // coin flip when your stat equals theirs, and every point either way shifts the odds.
+  const AVG_FOE = (run) => (run.stage === 'cell' ? 3.5 : 5);
+  G.wildEdge = (run) => Math.max(0, Math.round(G.difficulty(run, 0) + 6 - AVG_FOE(run)));
+  G.foeStat = (run, s, stat) => G.speciesStat(s, stat) + G.wildEdge(run);
+  // The species an event's check is against, if any (finales are against the world).
+  G.checkFoe = (run) => {
+    if (!run || run.phase !== 'event' || !run.event || run.event.species == null) return null;
+    const ev = G.EVENT[run.event.id]; if (!ev || ev.finale) return null;
+    const s = run.species[run.event.species];
+    return s && !s.extinct ? s : null;
+  };
   G.chance = (run, stat, base) => {
-    const d = G.difficulty(run, base);
+    const foe = G.checkFoe(run);
+    const d = foe ? G.foeStat(run, foe, stat) + (base - 6) : G.difficulty(run, base);
     return clamp(Math.round(50 + 45 * Math.tanh((G.stat(run, stat) - d) / (3 + 0.3 * Math.max(0, d)))), 5, 95);
   };
 
@@ -1445,7 +1461,7 @@ window.G = window.G || {};
     const out = { ok: !reason, reason };
     // Options your kind can never take (wrong diet, wrong archetype) are not shown at all.
     if (reason && ((req.diet && G.useless(run, { diet: req.diet })) || (req.gimmick && G.gimmick(run) !== req.gimmick))) out.hidden = true;
-    if (opt.check) out.chance = G.chance(run, opt.check.stat, opt.check.diff);
+    if (opt.check) { out.chance = G.chance(run, opt.check.stat, opt.check.diff); const foe = G.checkFoe(run); if (foe) out.foe = { name: foe.name, them: G.foeStat(run, foe, opt.check.stat) + (opt.check.diff - 6), you: G.stat(run, opt.check.stat) }; }
     return out;
   };
 
