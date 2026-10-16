@@ -89,6 +89,7 @@ window.G = window.G || {};
       const scroll = old ? old.scrollTop : 0;
       const el = put('#sheet', sheet(run));
       paintPortraits(el, run);
+      if (el && run.book && run.book.origin) el.querySelectorAll('canvas.book-origin').forEach((c) => G.drawPortrait(c, run.book.origin.body));
       const nb = app.querySelector('.sheet-body');
       if (nb && G.ui.keepScroll) nb.scrollTop = scroll;
       G.ui.keepScroll = false;
@@ -268,7 +269,7 @@ window.G = window.G || {};
             <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
             <span ${tappable('food')} class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${tribeChips(run)}
-            ${run.mind && run.stage === 'creature' ? `<span ${tappable('insight')} class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${fasc.cost}` : ''}</span>` : ''}
+            ${run.mind && run.stage === 'creature' ? `<span ${tappable('insight')} class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${G.innovationCost(run, fasc)}` : ''}</span>` : ''}
             ${gimmickChip(run)}
             ${run.activity ? `<span ${tappable('activity')} class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
             ${G.season(run) ? `<span ${tappable('season')} class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
@@ -380,7 +381,7 @@ window.G = window.G || {};
       const a = G.ACTIVITY[run.activity.id]; title = a.name; body = `<p>${esc(G.sub ? G.sub(a.desc, run) : a.desc)}</p>${run.activity.target ? xrow('With', run.activity.target) : ''}${run.activity.turns ? xrow('Turns left', String(run.activity.turns)) : ''}`;
     } else if (key === 'insight') {
       const f = run.fascination && G.INNOVATION[run.fascination]; title = 'Insight';
-      body = `<p>Insight builds toward the Mind tree idea your kind is fascinated by${f ? `: <b>${esc(G.innovationName(f, run))}</b> (${run.insight} of ${f.cost})` : '. Choose one in the Mind tab'}.</p>${xrow('Base', 1)}${Math.floor(G.stat(run, 'cun') / 5) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 5)) : ''}${xsrc(run, 'insightPerTurn')}${xtotal('Each turn', G.insightPerTurn(run))}`;
+      body = `<p>Insight builds toward the Mind tree idea your kind is fascinated by${f ? `: <b>${esc(G.innovationName(f, run))}</b> (${run.insight} of ${G.innovationCost(run, f)})` : '. Choose one in the Mind tab'}.</p>${xrow('Base', 1)}${Math.floor(G.stat(run, 'cun') / 5) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 5)) : ''}${xsrc(run, 'insightPerTurn')}${xtotal('Each turn', G.insightPerTurn(run))}`;
     } else if (key === 'settlements') {
       title = `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`;
       body = `<p>You have ${run.settlements.length} of at most 8. Each one holds more people and earns Influence; found and build them from Activities.</p>${run.settlements.map((x) => xrow(x.name, `size ${x.size}`)).join('')}`;
@@ -673,6 +674,63 @@ window.G = window.G || {};
     if (run.path === 'many') return `<h3>Few, but brilliant</h3><p class="note">Your den is smaller than other peoples (half the members), but every one of you gets +2 Cunning. ${G.lightHidden(run) ? 'Your Light hides you: attacks are 25% rarer.' : 'At 3 Light or more, you hide: attacks are 25% rarer.'} Migrating costs nothing.</p>`;
     return '';
   }
+  // ---------- The Book of the Lineage (Update 17) ----------
+  // One page per stage: Origin (the cell), then a tree page for every stage after it. Finished pages
+  // are frozen as they stood when their stage ended; the current one is live.
+  const BOOK_PAGES = [
+    { id: 'origin', name: 'Origin', stage: 'Cell' },
+    { id: 'form', name: 'Form', stage: 'Multicellular', later: 'Update 19' },
+    { id: 'mind', name: 'Mind', stage: 'Creature' },
+    { id: 'lore', name: 'Lore', stage: 'Tribe' },
+    { id: 'law', name: 'Law', stage: 'Society' },
+    { id: 'reason', name: 'Reason', stage: 'Renaissance', later: 'Update 21' },
+    { id: 'crown', name: 'Crown', stage: 'Colonial Age', later: 'Update 22' },
+    { id: 'legacy', name: 'Legacy', stage: 'the end', later: 'Update 23' },
+  ];
+  const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society'];
+  const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society' };
+  function bookTab(run) {
+    const at = STAGE_ORDER.indexOf(run.stage);
+    const reached = (pg) => PAGE_STAGE[pg.id] && STAGE_ORDER.indexOf(PAGE_STAGE[pg.id]) <= at;
+    const open = BOOK_PAGES.filter(reached);
+    const cur = open.find((pg) => pg.id === G.ui.bookPage) || open[open.length - 1];
+    const nav = `<div class="book-nav" role="tablist">${BOOK_PAGES.map((pg) => {
+      const ok = reached(pg);
+      return `<button role="tab" class="book-tab ${pg.id === cur.id ? 'on' : ''} ${ok ? '' : 'future'}" ${ok ? `data-act="book-page" data-arg="${pg.id}"` : 'disabled'} title="${esc(`${pg.stage}${pg.later ? ` (coming in ${pg.later})` : ok ? '' : ' (not reached yet)'}`)}"><b>${esc(pg.name)}</b><small>${esc(pg.stage)}</small></button>`;
+    }).join('')}</div>`;
+    return `<p class="note">The Book of your lineage: one page for every stage you have lived through. Each tree page is grown from that stage's choices and kept as it stood when the stage ended.</p>${nav}<div class="book-page">${bookPage(run, cur.id)}</div>`;
+  }
+  function bookPage(run, id) {
+    const b = run.book || {};
+    if (id === 'origin') {
+      const o = b.origin;
+      if (!o) return '<h3>Origin</h3><p class="note">This lineage began before the Book was kept, so the story of its cell was not written down.</p>';
+      return `<h3>Origin: the cell</h3>
+        <div class="book-origin-row"><canvas class="book-origin" aria-hidden="true"></canvas>
+        <p>A ${esc(G.ORIGIN[o.origin] ? G.ORIGIN[o.origin].name : '')} cell, ${esc((G.TEMPERAMENTS[o.archetype] || {}).name || '')} by temperament. For ${o.epochs} epochs it fed as a ${esc(G.DIET_NAMES[o.diet].toLowerCase())}${o.multicellular ? ', then learned to live as many' : ''}, and left the primordial sea for the ${o.habitat === 'sea' ? 'open sea' : 'land'}.</p></div>
+        <h4>What it carried out of the sea</h4><p>${esc(o.parts.join(', ') || 'Nothing but itself')}</p>`;
+    }
+    if (id === 'mind') {
+      const live = run.stage === 'creature';
+      const page = live ? null : b.mind || { seen: (run.innovations || []).slice(), known: (run.innovations || []).slice(), leaning: G.leaning(run) };
+      if (live && !run.mind) return `<h3>Mind</h3><p class="note">Your kind has not woken yet. When it does, its Mind tree will grow from your temperament, your home, your body and what has happened to you${(run.memories || []).length ? `. Already remembered: ${esc(run.memories.map((m) => G.MEMORIES[m]).join(' '))}` : ''}.</p>`;
+      const known = page ? page.known.length : run.innovations.length; const seen = page ? page.seen.length : G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv)).length;
+      return `<h3>Mind ${live ? '(growing)' : ''}</h3><p class="note">${known} of the ${seen} ideas your lineage could see${live ? ' so far' : ''}. ${live ? 'Research it from the Mind tab.' : 'Frozen as it stood at your Awakening.'}</p>${mindTree(run, page || { seen: G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv)).map((x) => x.id), known: run.innovations, leaning: G.leaning(run) })}`;
+    }
+    if (id === 'lore') {
+      const live = run.stage === 'tribe';
+      const lo = live ? { discoveries: run.discoveries || [], rulers: run.rulers || [], legacies: run.legacies || [] } : b.lore || { discoveries: run.discoveries || [], rulers: run.rulers || [], legacies: run.legacies || [] };
+      return `<h3>Lore ${live ? '(growing)' : ''}</h3><p class="note">The Tribe's own tree arrives in Update 18. Until then, its page is what your people learned and who led them.</p>
+        <h4>Discoveries (${lo.discoveries.length})</h4><p>${esc(lo.discoveries.map((d) => G.DISCOVERY[d] ? G.DISCOVERY[d].name : d).join(', ') || 'None')}</p>
+        <h4>Leaders</h4><p>${esc(lo.rulers.map((x) => x.title || x.name).join(' → ') || (live && run.leader ? G.leaderTitle(run.leader) : 'None recorded'))}</p>
+        ${lo.legacies.length ? `<h4>Legacies</h4><p>${esc(lo.legacies.map((x) => `${x.name} the ${G.AMBITIONS[x.amb].name}`).join(', '))}</p>` : ''}`;
+    }
+    if (id === 'law') {
+      return `<h3>Law (growing)</h3><p class="note">The Society's own tree arrives in Update 20. Until then, its page is your traditions.</p><p>${esc((run.traditions || []).map((t) => G.TRADITION[t] ? G.TRADITION[t].name : t).join(', ') || 'No traditions yet')}</p>`;
+    }
+    return '';
+  }
+
   function discoveriesTab(run) {
     const known = run.discoveries || [];
     const seen = G.meta.codex.discoveries || [];
@@ -844,74 +902,107 @@ window.G = window.G || {};
       </article>`;
   }
 
-  // The Mind as a skill tree, built from this lineage's pieces: roots (temperament), trunk (land or
-  // sea, plus home), its Path's ideas, and the Path's capstone. Rows are tiers.
-  const TIER_LABEL = { 1: 'Roots', 2: 'Home', 3: 'Path', 4: 'Path', 5: 'Awakening' };
-  function mindHeader(run) {
-    const tm = G.temperament(run); const pth = run.path && G.PATH[run.path];
+  // The Mind as a skill tree, built from this lineage's pieces (Update 17: the Mind tree grown from
+  // your choices). Bands, top to bottom: Roots, Home, Body, Memories, Path, Path, Awakening, Beyond.
+  const BANDS = [
+    ['root', 'Roots'], ['home', 'Home'], ['body', 'Body'], ['memory', 'Memories'], ['path3', 'Path'], ['path4', 'Path'], ['cap', 'Awakening'], ['beyond', 'Beyond'],
+  ];
+  const bandOf = (inv) => (inv.group === 'trunk' || inv.group === 'home' ? 'home' : inv.group === 'path' ? `path${inv.tier}` : inv.group);
+  function leaningBar(lean) {
+    const tot = lean.peace + lean.guard + lean.war;
+    if (!tot) return '<span class="lean-bar empty">No leaning yet</span>';
+    const top = Object.entries(lean).sort((a, b) => b[1] - a[1])[0][0];
+    return `<span class="lean-bar" title="Your leaning: ${esc(Object.entries(lean).map(([k, v]) => `${G.LEAN_NAMES[k]} ${v}`).join(', '))}">${['peace', 'guard', 'war'].map((k) => lean[k] ? `<i class="lean ${k}" style="flex:${lean[k]}">${G.LEAN_ICONS[k]} ${lean[k]}</i>` : '').join('')}</span><span class="lean-top">Leaning ${esc(G.LEAN_NAMES[top])}</span>`;
+  }
+  function mindHeader(run, page) {
+    const tm = page ? G.TEMPERAMENTS[run.archetype] : G.temperament(run); const pth = run.path && G.PATH[run.path];
     const end = G.endingFor(run);
     return `<div class="mind-head">
-        <span class="chip">${esc(tm.name)}</span>
+        <span class="chip">${esc(tm ? tm.name : '')}</span>
         ${pth ? `<span class="chip path">${pth.icon} ${esc(pth.name)}</span>` : ''}
-        ${end ? `<span class="mind-goal">Leads to <b>${esc(G.endingName(run, end))}</b>: ${esc(G.LEGACIES[end].desc)}</span>` : ''}
+        ${leaningBar(page ? page.leaning : G.leaning(run))}
+        ${end && !page ? `<span class="mind-goal">Leads to <b>${esc(G.endingName(run, end))}</b>: ${esc(G.LEGACIES[end].desc)}</span>` : ''}
       </div>`;
   }
-  function mindTree(run) {
-    const visible = G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv));
-    const sel = (G.ui.mindSel && visible.find((i) => i.id === G.ui.mindSel)) || (run.fascination && G.INNOVATION[run.fascination]) || visible.find((i) => G.innovationAvailable(run, i).ok) || visible[0];
+  // page: a frozen page of the Book ({ seen, known }); without it, the live tree.
+  function mindTree(run, page) {
+    const known = (id) => (page ? page.known : run.innovations).includes(id);
+    const visible = page ? page.seen.map((id) => G.INNOVATION[id]).filter(Boolean) : G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv));
+    const sel = (G.ui.mindSel && visible.find((i) => i.id === G.ui.mindSel)) || (!page && run.fascination && G.INNOVATION[run.fascination]) || (!page && visible.find((i) => G.innovationAvailable(run, i).ok)) || visible[0];
     const state = (inv) => {
-      if (run.innovations.includes(inv.id)) return 'done';
+      if (known(inv.id)) return 'done';
+      if (page) return 'locked';
       if (run.fascination === inv.id) return 'current';
       const av = G.innovationAvailable(run, inv);
       return av.ok ? 'open' : av.blocked ? 'blocked' : 'locked';
     };
-    const tiers = {}; visible.forEach((inv) => { (tiers[inv.tier] = tiers[inv.tier] || []).push(inv); });
-    const pos = {};
-    Object.entries(tiers).forEach(([tier, list]) => list.forEach((inv, i) => { pos[inv.id] = { x: 14 + ((i + 0.5) / list.length) * 80, y: 7 + (Number(tier) - 1) * 21.5 }; }));
-    const known = (id) => run.innovations.includes(id);
+    // Lay out each band in lines of at most 4 nodes.
+    const PER = 4; const LINE = 74; const GAP = 16;
+    const pos = {}; const labels = []; let y = 34;
+    BANDS.forEach(([band, label]) => {
+      const list = visible.filter((inv) => bandOf(inv) === band);
+      if (!list.length) return;
+      labels.push({ y, label });
+      for (let i = 0; i < list.length; i += PER) {
+        const row = list.slice(i, i + PER);
+        row.forEach((inv, j) => { pos[inv.id] = { x: 14 + ((j + 0.5) / row.length) * 80, y }; });
+        y += LINE;
+      }
+      y += GAP;
+    });
+    const H = y;
     const edges = [];
     const edge = (par, inv) => {
+      if (!pos[par.id] || !pos[inv.id]) return;
       const cls = known(par.id) && known(inv.id) ? 'done' : known(par.id) ? 'lit' : 'dim';
       const a = pos[par.id]; const b = pos[inv.id];
-      edges.push(`<path class="edge ${cls}" d="M${a.x} ${a.y + 4} C ${a.x} ${a.y + 12}, ${b.x} ${b.y - 12}, ${b.x} ${b.y - 4}" vector-effect="non-scaling-stroke"/>`);
+      const ay = (a.y + 26) / H * 100; const by = (b.y - 26) / H * 100;
+      edges.push(`<path class="edge ${cls}" d="M${a.x} ${ay} C ${a.x} ${ay + 5}, ${b.x} ${by - 5}, ${b.x} ${by}" vector-effect="non-scaling-stroke"/>`);
     };
     visible.forEach((inv) => {
-      const explicit = ((inv.req || {}).innovation || []).map((id) => G.INNOVATION[id]).filter((p) => pos[p.id]);
-      // Rows 2 and 3 open from any idea in the row above: draw lines from the ones you know (or all, if none yet).
-      const implicit = inv.tier === 2 || inv.tier === 3 ? (tiers[inv.tier - 1] || []) : [];
-      const fromKnown = implicit.filter((p) => known(p.id));
-      (explicit.length ? explicit : fromKnown.length ? fromKnown : implicit).forEach((par) => edge(par, inv));
+      const r = inv.req || {};
+      const explicit = (r.innovation || []).concat(r.some || []).map((id) => G.INNOVATION[id]).filter((p) => p && pos[p.id]);
+      // Path ideas open from any home, body or memory idea; home from any root: lines from the ones you know.
+      const implicit = inv.tier === 3 ? visible.filter((p) => p.tier === 2 && known(p.id)) : inv.group === 'trunk' || inv.group === 'home' ? visible.filter((p) => p.tier === 1 && known(p.id)) : [];
+      (explicit.length ? explicit : implicit).forEach((par) => edge(par, inv));
     });
     const icon = { done: '✓', current: '◔', open: '', blocked: '✕', locked: '🔒' };
+    const capKnown = visible.some((inv) => inv.group === 'cap' && known(inv.id));
+    const beyondLeft = !page && !capKnown && visible.some((inv) => inv.group === 'beyond' && !known(inv.id));
     return `
-      ${mindHeader(run)}
-      <div class="skill-tree mind-tree">
+      ${mindHeader(run, page)}
+      ${beyondLeft ? '<p class="note beyond-note">Your Awakening ends the Creature stage. Ideas <b>Beyond the Gate</b> must be learned before it, and carry on into every stage after.</p>' : ''}
+      <div class="skill-tree mind-tree" style="height:${H}px">
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
-        ${Object.keys(tiers).map((t) => `<span class="tier-label" style="top:${7 + (Number(t) - 1) * 21.5 - 6}%">${TIER_LABEL[t]}</span>`).join('')}
+        ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
         ${visible.map((inv) => {
           const st = state(inv); const name = G.innovationName(inv, run);
-          return `<button class="node ${st} ${sel && sel.id === inv.id ? 'sel' : ''} ${inv.group === 'cap' ? 'apex' : ''}" style="left:${pos[inv.id].x}%;top:${pos[inv.id].y}%" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel && sel.id === inv.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}</button>`;
+          return `<button class="node ${st} ${sel && sel.id === inv.id ? 'sel' : ''} ${inv.group === 'cap' ? 'apex' : ''} ${inv.group === 'beyond' ? 'beyond' : ''} ${inv.lean ? `lean-${inv.lean}` : ''}" style="left:${pos[inv.id].x}%;top:${pos[inv.id].y}px" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel && sel.id === inv.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${inv.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
         }).join('')}
       </div>
-      ${sel ? mindDetail(run, sel, state(sel)) : ''}`;
+      ${sel ? mindDetail(run, sel, state(sel), page) : ''}`;
   }
 
-  function mindDetail(run, sel, st) {
-    const av = G.innovationAvailable(run, sel);
-    const excl = (sel.excludes || []).map((id) => G.innovationName(G.INNOVATION[id], run));
+  function mindDetail(run, sel, st, page) {
+    const av = page ? { ok: false } : G.innovationAvailable(run, sel);
+    const excl = (sel.excludes || []).map((id) => G.innovationName(G.INNOVATION[id], run)).concat(G.INNOVATIONS.filter((x) => (x.excludes || []).includes(sel.id)).map((x) => G.innovationName(x, run)));
+    const cost = G.innovationCost(run, sel);
     let action = '';
-    if (st === 'open') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${sel.cost} Insight)</button>`;
-    if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${sel.cost} Insight</span>`;
+    if (st === 'open') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${cost} Insight)</button>`;
+    if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${cost} Insight</span>`;
     if (st === 'done') action = '<span class="note good-text">Known</span>';
-    const where = { root: `Root: ${G.temperament(run).name}`, trunk: run.habitat === 'sea' ? 'Sea' : 'Land', home: 'Home', path: run.path ? G.PATH[run.path].name : 'Path', cap: 'Awakening: ends the Creature stage' }[sel.group];
+    const memo = sel.group === 'memory' ? G.MEMORIES[sel.when.memory] : '';
+    const where = { root: `Root: ${G.temperament(run).name}`, trunk: run.habitat === 'sea' ? 'Sea' : 'Land', home: 'Home', body: 'Body: grown from what you are', memory: `Memory: ${memo}`, path: run.path ? G.PATH[run.path].name : 'Path', cap: 'Awakening: ends the Creature stage', beyond: 'Beyond the Gate: learn before your Awakening; an Inheritance for every later stage' }[sel.group];
     return `
       <div class="inv-detail">
-        <div class="inv-head"><strong>${esc(G.innovationName(sel, run))}</strong><span>${ICON.insight} ${sel.cost}</span></div>
-        <span class="inv-where">${esc(where)}</span>
+        <div class="inv-head"><strong>${esc(G.innovationName(sel, run))}</strong><span>${ICON.insight} ${cost}</span></div>
+        <span class="inv-where">${esc(where)}${sel.lean ? ` · ${G.LEAN_ICONS[sel.lean]} ${esc(G.LEAN_NAMES[sel.lean])}` : ''}</span>
         <span class="inv-mods">${esc(G.describeMods(sel.mods))}${sel.vision ? ' · see more of the world map' : ''}</span>
+        ${sel.rule ? `<span class="inv-rule">★ ${esc(G.MIND_RULES[sel.rule])}</span>` : ''}
+        ${sel.inherit ? `<span class="inv-rule">Inheritance in every later stage: ${esc(G.describeMods(sel.inherit))}</span>` : ''}
         <span class="inv-desc">${esc(G.innovationDesc(sel, run))}</span>
-        ${excl.length ? `<span class="inv-excl">Rules out: ${esc(excl.join(', '))}</span>` : ''}
-        ${!av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
+        ${excl.length ? `<span class="inv-excl">Fork: rules out ${esc(excl.join(', '))}</span>` : ''}
+        ${!page && !av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
         <div class="row tight">${action}</div>
       </div>`;
   }
@@ -1367,11 +1458,11 @@ window.G = window.G || {};
     if (!tab) return '';
     const tribe = G.people(run);
     const tabs = run.stage === 'society'
-      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Traditions'], ['found', 'Discoveries'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Traditions'], ['book', 'Book'], ['found', 'Discoveries'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : tribe
-      ? [['people', 'People'], ['found', 'Discoveries'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
-      : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ['log', 'Chronicle']];
-    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab };
+      ? [['people', 'People'], ['found', 'Discoveries'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
+    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, book: bookTab };
     const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
@@ -1703,6 +1794,7 @@ window.G = window.G || {};
       case 'hold-discovery': G.holdDiscovery(arg); parts = ['top', 'hud', 'modal']; break;
       case 'learn-held': G.ui.sheet = null; G.learnHeld(arg, el.dataset.socket); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
+      case 'book-page': G.ui.bookPage = arg; G.ui.mindSel = null; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
       case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
       case 'editor-open': if (G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; G.ui.sheet = null; } parts = ['top', 'sheet', 'editor']; break;

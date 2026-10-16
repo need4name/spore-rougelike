@@ -453,6 +453,8 @@ window.G = window.G || {};
     G.partIds(run).forEach((pid) => list.push(tag(G.PART[pid].mods, G.PART[pid].name)));
     run.traits.forEach((t) => { if (G.TRAITS[t]) list.push(tag(G.TRAITS[t].mods, G.TRAITS[t].name)); });
     run.innovations.forEach((i) => { if (G.INNOVATION[i]) list.push(tag(G.INNOVATION[i].mods, `Mind: ${G.innovationName(G.INNOVATION[i], run)}`)); });
+    // Beyond-the-Gate ideas carry on into every later stage as Inheritances.
+    if (run.stage !== 'cell' && run.stage !== 'creature') run.innovations.forEach((i) => { const inv = G.INNOVATION[i]; if (inv && inv.inherit) list.push(tag(inv.inherit, `Inheritance: ${G.innovationName(inv, run)}`)); });
     G.activeSynergies(run).forEach((s) => list.push(tag(s.mods, `${G.KEYWORDS[s.keyword].name} set (${s.tier})`)));
     const allies = run.species.filter((s) => !s.extinct && G.speciesStatus(s) === 'allied').length;
     if (allies) list.push(tag({ foodPerTurn: allies }, 'Allied species'));
@@ -601,8 +603,8 @@ window.G = window.G || {};
   };
   G.chance = (run, stat, base) => {
     const foe = G.checkFoe(run);
-    const d = foe ? G.foeStat(run, foe, stat) + (base - 6) : G.difficulty(run, base);
-    return clamp(Math.round(50 + 45 * Math.tanh((G.stat(run, stat) - d) / (3 + 0.3 * Math.max(0, d)))), 5, 95);
+    const d = foe ? G.foeStat(run, foe, stat) + (base - 6) - (G.mindRule(run, 'know_foe') ? 2 : 0) : G.difficulty(run, base);
+    return clamp(Math.round(50 + 45 * Math.tanh((G.checkStat(run, stat) - d) / (3 + 0.3 * Math.max(0, d)))), 5, 95);
   };
 
   G.speciesStatus = (s) => (s.opinion >= 50 ? 'allied' : s.opinion <= -50 ? 'hostile' : s.opinion >= 15 ? 'friendly' : s.opinion <= -15 ? 'wary' : 'neutral');
@@ -1090,7 +1092,9 @@ window.G = window.G || {};
     // Worked out in whole heads (rounded up), then counted out in individuals, give or take a few.
     const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / G.POP_SCALE / 10);
     const heads = Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1));
-    const dmg = Math.max(1, Math.round(heads * G.POP_SCALE * (0.85 + rand() * 0.3)));
+    let dmg = Math.max(1, Math.round(heads * G.POP_SCALE * (0.85 + rand() * 0.3)));
+    // Last refuge: down to a quarter of your comfortable size, every loss is halved.
+    if (G.mindRule(run, 'last_refuge') && run.pop < G.maxPop(run) * 0.25) dmg = Math.max(1, Math.round(dmg / 2));
     run.pop -= dmg;
     if (G.people(run)) songLoss(run, dmg / G.POP_SCALE);
     return dmg;
@@ -1408,6 +1412,7 @@ window.G = window.G || {};
     // Where you live decides which disasters come: blizzards in the tundra, fevers in the swamp, never a drought at sea.
     const hz = HAZARD[e.id];
     if (hz && G.biomeMatters(run)) w *= (G.biome(run).hazards || []).includes(hz) ? 3 : 0.35;
+    if (hz && G.mindRule(run, 'hazard_sense')) w *= 0.6;
     return w;
   }
 
@@ -1461,7 +1466,7 @@ window.G = window.G || {};
     const out = { ok: !reason, reason };
     // Options your kind can never take (wrong diet, wrong archetype) are not shown at all.
     if (reason && ((req.diet && G.useless(run, { diet: req.diet })) || (req.gimmick && G.gimmick(run) !== req.gimmick))) out.hidden = true;
-    if (opt.check) { out.chance = G.chance(run, opt.check.stat, opt.check.diff); const foe = G.checkFoe(run); if (foe) out.foe = { name: foe.name, them: G.foeStat(run, foe, opt.check.stat) + (opt.check.diff - 6), you: G.stat(run, opt.check.stat) }; }
+    if (opt.check) { out.chance = G.chance(run, opt.check.stat, opt.check.diff); const foe = G.checkFoe(run); if (foe) out.foe = { name: foe.name, them: G.foeStat(run, foe, opt.check.stat) + (opt.check.diff - 6) - (G.mindRule(run, 'know_foe') ? 2 : 0), you: G.checkStat(run, opt.check.stat) }; }
     return out;
   };
 
@@ -1475,8 +1480,11 @@ window.G = window.G || {};
     if (!state.ok) return;
     let res = opt.result;
     let success = null;
+    let rerolled = false;
     if (opt.check) {
       success = rand() * 100 < state.chance;
+      // An awakening (The Few Who Lived): once per stage, a failed check is tried again.
+      if (!success && G.mindRule(run, 'reroll') && !(run.rerolls || {})[run.stage]) { run.rerolls = Object.assign({}, run.rerolls, { [run.stage]: true }); rerolled = true; success = rand() * 100 < state.chance; }
       res = success ? opt.success : opt.fail;
     }
     const sp = run.event.species;
@@ -1486,6 +1494,16 @@ window.G = window.G || {};
     run.lastEvolution = null;
     const lines = applyEffects(run, res, sp);
     const story = sceneStory(run, ev, opt, res, success, sp);
+    if (rerolled) lines.unshift({ t: `Second chance: it went wrong, and you tried again${success ? ', and it worked' : ''}`, good: success });
+    if (success && opt.check && run.mind && G.mindRule(run, 'insight_spark')) { run.insight += 2; lines.push({ t: '+2 Insight', good: true }); }
+    // What happened here may become a memory in the Mind tree.
+    const hz0 = hazardOf(ev, sp);
+    if (hz0 && G.HAZARD_MEMORY[hz0]) G.addMemory(run, G.HAZARD_MEMORY[hz0]);
+    if (story === 'brawl_win') G.addMemory(run, 'mem_victory');
+    if (story === 'chase' && sp != null && sp >= 0) G.addMemory(run, 'mem_hunt');
+    const anim0 = sceneAnim(res, opt, success);
+    if (success !== false && anim0 === 'flee') G.addMemory(run, 'mem_flight');
+    if (success !== false && anim0 === 'social' && sp != null && sp >= 0) G.addMemory(run, 'mem_friendship');
     // Hunting or beating a species thins its numbers on the world map.
     if (sp != null && sp >= 0 && (story === 'chase' || story === 'brawl_win')) {
       const target = run.species[sp];
@@ -2016,7 +2034,7 @@ window.G = window.G || {};
     const cap = G.foodCap(run);
     // Meat rots; and there is only so much room to store food.
     G.syncFood(run);
-    const rot = Math.floor(run.meat * G.MEAT_ROT);
+    const rot = Math.floor(run.meat * G.MEAT_ROT * (G.mindRule(run, 'no_rot') ? 0.5 : 1));
     if (rot) { run.meat -= rot; lines.push({ t: `${rot} meat rotted`, bad: true }); }
     const stored = run.meat + run.plants;
     if (stored > cap) { let over = stored - cap; const m = Math.min(run.meat, over); run.meat -= m; over -= m; run.plants -= over; lines.push({ t: `${stored - cap} Food spoiled (storage ${cap})`, bad: true }); }
@@ -2024,6 +2042,16 @@ window.G = window.G || {};
     lines.push({ t: `+${gainDna(run, G.dnaPerTurn(run))} ${G.dnaWord(run)}`, good: true });
     if (G.people(run)) tribeTurn(run, lines);
     if (run.stage === 'society') societyTurn(run, lines);
+    if (run.stage === 'creature') {
+      // Memories from the state of the world.
+      if (run.pop < G.maxPop(run) * 0.15) G.addMemory(run, 'mem_near_end');
+      if (G.biomeMatters(run) && run.biome && run.biome !== G.HOME_BIOME[run.habitat]) G.addMemory(run, 'mem_migration');
+      if (run.species.some((x) => x.extinct && !x.left && !x.bud)) G.addMemory(run, 'mem_extinction');
+      if (run.species.some((x) => !x.extinct && G.speciesStatus(x) === 'allied')) G.addMemory(run, 'mem_ally');
+      if (run.species.some((x) => !x.extinct && G.speciesStatus(x) === 'hostile')) G.addMemory(run, 'mem_nemesis');
+    }
+    // An awakening (Bonds Between Kinds and others): wary and hostile species warm to you a little.
+    if (G.mindRule(run, 'calm_presence')) run.species.forEach((x) => { if (!x.extinct && x.opinion < 0) x.opinion += 1; });
     if (run.mind && run.stage === 'creature') {
       const ins = G.insightPerTurn(run);
       run.insight += ins;
@@ -2074,7 +2102,44 @@ window.G = window.G || {};
     if (inv.group === 'root') return inv.temper === G.temperament(run).id;
     if (inv.group === 'trunk') return inv.habitat === hab;
     if (inv.group === 'home') return hab === 'land' ? G.biome(run).id === inv.home : G.zone(run) === inv.home;
+    if (inv.group === 'body') return G.bodyBranch(run, inv.when || {});
+    if (inv.group === 'memory') return (run.memories || []).includes((inv.when || {}).memory);
     return inv.path === run.path;
+  };
+  // Body branches of the Mind tree: does your body have what this idea grows from?
+  G.bodyBranch = (run, w) => {
+    if (w.talent) return G.talents(run).has(w.talent);
+    if (w.keyword) return !!G.keywordCounts(run)[w.keyword];
+    if (w.diet) return G.diet(run) === w.diet;
+    if (w.trait) return run.traits.includes(w.trait);
+    if (w.sym) return run.stage !== 'cell' && G.symmetry(run) === w.sym;
+    return false;
+  };
+  // What an idea costs: Beyond-the-Gate ideas are cheaper with Old Paths (Evolution Tree).
+  G.innovationCost = (run, inv) => Math.max(1, Math.round(inv.cost * (inv.group === 'beyond' ? 1 - 0.15 * G.boonLevel('old_paths') : 1)));
+  // Awakenings: does your Mind know an idea with this rule?
+  G.mindRule = (run, id) => !!run && (run.innovations || []).some((i) => G.INNOVATION[i] && G.INNOVATION[i].rule === id);
+  // The stat a check really uses: some awakenings let one stat stand in for another.
+  const SWAPS = { outwit: ['str', 'cun'], charm_wit: ['cha', 'cun'], swift_strike: ['str', 'spd'] };
+  G.checkStat = (run, stat) => {
+    let v = G.stat(run, stat);
+    Object.entries(SWAPS).forEach(([rule, [from, to]]) => { if (from === stat && G.mindRule(run, rule)) v = Math.max(v, G.stat(run, to)); });
+    return v;
+  };
+  // Your leaning: Peaceful, Territorial or Warmongering, from the ideas your lineage has learned.
+  G.leaning = (run) => {
+    const out = { peace: 0, guard: 0, war: 0 };
+    (run.innovations || []).forEach((id) => { const inv = G.INNOVATION[id]; if (inv && inv.lean) out[inv.lean] += 1; });
+    return out;
+  };
+  // Memories: what happened to your lineage in the Creature stage grafts new ideas onto the Mind tree.
+  G.addMemory = (run, id) => {
+    if (!run || run.stage !== 'creature' || !G.MEMORIES[id]) return;
+    run.memories = run.memories || [];
+    if (run.memories.includes(id)) return;
+    run.memories.push(id);
+    const inv = G.INNOVATIONS.find((x) => x.group === 'memory' && x.when.memory === id);
+    if (inv) run.notices.push(`A memory: ${G.MEMORIES[id]} ${run.mind ? `Your Mind tree grows a new idea: ${G.innovationName(inv, run)}.` : 'It will shape your Mind, when it wakes.'}`);
   };
 
   // ---------- The Tribe stage ----------
@@ -2447,7 +2512,11 @@ window.G = window.G || {};
     G.saveRun();
   };
   // Your kind becomes a people: the Creature stage's ending is a checkpoint, and the Tribe stage begins.
+  // A tree page of the Book, frozen as it stood when its stage ended.
+  G.freezeMind = (run) => ({ seen: G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv)).map((inv) => inv.id), known: run.innovations.slice(), path: run.path, habitat: run.habitat, temper: G.temperament(run).id, leaning: G.leaning(run), memories: (run.memories || []).slice() });
   function becomeTribe(run) {
+    run.book = run.book || {};
+    run.book.mind = G.freezeMind(run);
     checkpoint(run);
     const hab = run.habitat === 'sea' ? 'sea' : 'land';
     run.stage = 'tribe'; run.stageTurn = 1; run.eraTurn = 1;
@@ -2590,6 +2659,9 @@ window.G = window.G || {};
     for (let i = 0; i < 3; i++) { const b = makeBand(run, true, 3); if (b) { b.pop = 14; b.cap = 20; b.opinion = clamp(Math.round((rand() - 0.5) * 30), -100, 100); } }
   }
   function becomeSociety(run) {
+    run.book = run.book || {};
+    // Until the Lore tree arrives (Update 18), the Tribe's page is its discoveries and its leaders.
+    run.book.lore = { discoveries: (run.discoveries || []).slice(), rulers: (run.rulers || []).slice(), legacies: (run.legacies || []).slice(), path: run.path };
     stageCheckpoint(run);
     run.socType = run.tribeEnding || 'settle';
     run.myth = `The Myth of ${G.endingName(run).replace(/^The /, '')}`;
@@ -2616,14 +2688,15 @@ window.G = window.G || {};
     if (G.useless(run, inv)) return { ok: false, hidden: true, reason: 'Of no use to your kind' };
     const knownTier = (t) => run.innovations.some((id) => G.INNOVATION[id] && G.INNOVATION[id].tier === t);
     if (inv.tier === 2 && !knownTier(1)) return { ok: false, reason: 'Needs one of your root ideas first' };
-    if (inv.tier === 3 && !knownTier(2)) return { ok: false, reason: 'Needs a land, sea or home idea first' };
+    if (inv.tier === 3 && !knownTier(2)) return { ok: false, reason: 'Needs a home, body or memory idea first' };
     const blocker = run.innovations.find((id) => (inv.excludes || []).includes(id) || (G.INNOVATION[id].excludes || []).includes(inv.id));
     if (blocker) return { ok: false, blocked: true, reason: `Blocked by ${G.INNOVATION[blocker].name}` };
     const r = inv.req || {};
     if (r.tier3 && run.innovations.filter((id) => G.INNOVATION[id].tier === 3).length < r.tier3) return { ok: false, reason: `Needs ${r.tier3} ideas from the third row` };
     if (r.diet && !r.diet.includes(G.diet(run))) return { ok: false, reason: `Only for ${r.diet.map((d) => G.DIET_NAMES[d].toLowerCase()).join(' or ')}s` };
     if (r.stat && G.stat(run, r.stat[0]) < r.stat[1]) return { ok: false, reason: `Needs ${G.STATS.find((x) => x.id === r.stat[0]).name} ${r.stat[1]} (you have ${G.stat(run, r.stat[0])})` };
-    if (r.innovation && !r.innovation.some((id) => run.innovations.includes(id))) return { ok: false, reason: `Needs ${r.innovation.map((id) => G.INNOVATION[id].name).join(' or ')}` };
+    if (r.innovation && !r.innovation.some((id) => run.innovations.includes(id))) return { ok: false, reason: `Needs ${r.innovation.map((id) => G.innovationName(G.INNOVATION[id], run)).join(' or ')}` };
+    if (r.some) { const have = r.some.filter((id) => run.innovations.includes(id)).length; if (have < r.n) return { ok: false, reason: `Needs ${r.n} of: ${r.some.map((id) => G.innovationName(G.INNOVATION[id], run)).join(', ')} (you have ${have})` }; }
     if (r.trait && !r.trait.some((t) => run.traits.includes(t))) return { ok: false, reason: `Needs a ${r.trait.map((t) => G.TRAITS[t].name).join(', ')} trait` };
     if (r.tag === 'grasp' && !G.hasTag(run, 'grasp')) return { ok: false, reason: 'Needs a part that can grasp' };
     return { ok: true };
@@ -2632,8 +2705,9 @@ window.G = window.G || {};
   function researchProgress(run) {
     if (!run.mind || !run.fascination) return;
     const inv = G.INNOVATION[run.fascination];
-    if (run.insight >= inv.cost) {
-      run.insight -= inv.cost;
+    const cost = G.innovationCost(run, inv);
+    if (run.insight >= cost) {
+      run.insight -= cost;
       run.innovations.push(inv.id);
       run.fascination = null;
       run.notices.push(`Idea: ${G.innovationName(inv, run)}. ${G.describeMods(inv.mods)}.`);
@@ -2790,6 +2864,9 @@ window.G = window.G || {};
     const diet = G.diet(run);
     const heritage = diet === 'carn' ? 'predator_lineage' : diet === 'herb' ? 'grazer_lineage' : 'adaptable_lineage';
     const cellParts = Object.values(run.parts).map((s) => G.slotLabel(s));
+    // The Book of the Lineage: the Origin page, the story of your cell.
+    run.book = run.book || {};
+    run.book.origin = { parts: cellParts, diet, multicellular: !!run.multicellular, epochs: run.stageTurn, body: JSON.parse(JSON.stringify(G.bodyOf(run))), symmetry: run.symmetry || null, habitat: habitat || 'land', origin: run.origin, archetype: run.archetype };
     addUnique(run.traits, heritage);
     run.stage = 'creature';
     run.habitat = habitat || 'land';

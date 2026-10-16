@@ -229,6 +229,152 @@ G.INNOVATIONS = [
   I({ id: 'garden_cap', group: 'cap', path: 'garden', tier: 5, name: { land: 'The First Harvest', sea: 'The First Kelp Fields' }, cost: 20, mods: { forageBonus: 1, cha: 1 }, req: { innovation: ['herding', 'living_tools'] }, desc: 'You no longer find food. You grow it. This ends the Creature stage.' }),
 ];
 
+// ======================= UPDATE 17: THE MIND TREE, GROWN FROM YOUR CHOICES =======================
+// New bands of the tree (shown as rows in this order: Roots, Home, Body, Memories, Path, Path,
+// Awakening, Beyond the Gate):
+//   body    from what your body is (talents, diet, size, foundations, symmetry): `when` says which
+//   memory  grafted by what happened to your lineage (`when: { memory }`, see G.MEMORIES)
+//   path    more Path ideas, with forks (`excludes`) and partial prerequisites (`req.some`, `req.n`)
+//   beyond  Beyond the Gate: costly ideas that must be learned before your Awakening; their
+//           `inherit` mods carry on into every later stage.
+// `lean` is the idea's leaning: 'peace' (Peaceful), 'guard' (Territorial) or 'war' (Warmongering).
+// `rule` is an awakening that changes how the game plays (see G.MIND_RULES).
+G.MIND_RULES = {
+  outwit: 'Strength checks can use your Cunning instead, if it is higher.',
+  charm_wit: 'Charm checks can use your Cunning instead, if it is higher.',
+  swift_strike: 'Strength checks can use your Speed instead, if it is higher.',
+  reroll: 'Once per stage, a failed check is tried again.',
+  hazard_sense: 'Disasters find you 40% less often.',
+  know_foe: 'Checks against another species are 2 easier.',
+  no_rot: 'Your stored meat rots half as fast.',
+  last_refuge: 'When you are down to a quarter of your comfortable size, every loss is halved.',
+  calm_presence: 'Wary and hostile species warm to you a little every turn.',
+  insight_spark: 'Every check you pass brings +2 Insight.',
+};
+G.LEAN_NAMES = { peace: 'Peaceful', guard: 'Territorial', war: 'Warmongering' };
+G.LEAN_ICONS = { peace: '🕊️', guard: '🛡️', war: '⚔️' };
+// Leanings of the ideas that came before Update 17.
+G.OLD_LEANS = {
+  patience: 'guard', reading_prey: 'war', ambush: 'war', alarm_calls: 'guard', herd_memory: 'peace', safe_ground: 'guard', trust: 'peace', shared_signals: 'peace', gifts: 'peace',
+  host_reading: 'guard', exploiting: 'war', plain_sight: 'guard', division_of_labor: 'guard', common_will: 'peace', deception: 'war', imitation: 'peace', season_sense: 'peace',
+  fire_watching: 'guard', long_winter: 'guard', open_country: 'peace', first_tools: 'guard', crafting: 'war', shelters: 'guard', call_answer: 'peace', chorus: 'peace',
+  shapeshifting: 'guard', castes: 'guard', one_will: 'war', great_mound: 'guard', tending: 'peace', herding: 'peace', living_tools: 'peace',
+};
+// What can happen to your lineage in the Creature stage, and the memory it leaves in the Mind.
+G.MEMORIES = {
+  mem_flood: 'You lived through a flood or a great storm.',
+  mem_fire: 'You lived through a wildfire.',
+  mem_cold: 'You lived through a killing cold.',
+  mem_drought: 'You lived through a drought or a famine.',
+  mem_plague: 'You lived through a sickness.',
+  mem_quake: 'You lived through a stampede, a sandstorm or an eruption.',
+  mem_victory: 'You beat another species in a fight.',
+  mem_hunt: 'You ran another species down.',
+  mem_flight: 'You escaped by running.',
+  mem_friendship: 'You won another species over.',
+  mem_near_end: 'You were almost wiped out.',
+  mem_migration: 'You left your home for a new land.',
+  mem_extinction: 'A species died out while you lived.',
+  mem_ally: 'Another species became your ally.',
+  mem_nemesis: 'Another species became your enemy.',
+};
+G.HAZARD_MEMORY = { flood: 'mem_flood', storm: 'mem_flood', fire: 'mem_fire', cold: 'mem_cold', drought: 'mem_drought', sickness: 'mem_plague', quake: 'mem_quake', dust: 'mem_quake' };
+G.INNOVATIONS.push(
+  // ----- Body branches: what your body is -----
+  I({ id: 'deft_hands', group: 'body', when: { talent: 'hands' }, tier: 2, name: 'Deft Hands', cost: 10, mods: { cun: 1, forageBonus: 1 }, lean: 'peace', desc: 'Hands that untie, open and mend.' }),
+  I({ id: 'grip_throw', group: 'body', when: { talent: 'hands' }, tier: 2, name: 'Grip and Throw', cost: 10, mods: { str: 1, huntBonus: 1 }, lean: 'war', desc: 'A stone thrown is a tooth that flies.' }),
+  I({ id: 'mimic_calls', group: 'body', when: { talent: 'voice' }, tier: 2, name: 'Mimic Calls', cost: 10, mods: { cha: 1 }, rule: 'charm_wit', lean: 'peace', desc: 'Sound like a friend, and be treated like one.' }),
+  I({ id: 'war_cry', group: 'body', when: { talent: 'voice' }, tier: 2, name: 'War Cry', cost: 10, mods: { str: 1, cha: 1 }, lean: 'war', desc: 'A sound that makes the bravest freeze.' }),
+  I({ id: 'signal_lights', group: 'body', when: { talent: 'glow' }, tier: 2, name: 'Signal Lights', cost: 10, mods: { cha: 2 }, lean: 'peace', desc: 'Light that says "here, safe, come".' }),
+  I({ id: 'lure_lights', group: 'body', when: { talent: 'glow' }, tier: 2, name: 'Lure Lights', cost: 10, mods: { huntBonus: 2 }, lean: 'war', desc: 'Light that says "come closer".' }),
+  I({ id: 'warning_venom', group: 'body', when: { talent: 'venom' }, tier: 2, name: 'Warning Colors', cost: 10, mods: { tou: 1, cha: 1 }, excludes: ['killing_venom'], lean: 'guard', desc: 'Everyone knows not to touch you. Nobody has to learn the hard way.' }),
+  I({ id: 'killing_venom', group: 'body', when: { talent: 'venom' }, tier: 2, name: 'Killing Venom', cost: 10, mods: { str: 2 }, lean: 'war', desc: 'One bite, and it is over.' }),
+  I({ id: 'shell_wall', group: 'body', when: { talent: 'armor' }, tier: 2, name: 'Shell Wall', cost: 10, mods: { tou: 2 }, lean: 'guard', desc: 'Back to back, armour out. Nothing gets through.' }),
+  I({ id: 'battering_ram', group: 'body', when: { talent: 'armor' }, tier: 2, name: 'Battering Ram', cost: 10, mods: { str: 1, tou: 1 }, lean: 'war', desc: 'Armour is a weapon too.' }),
+  I({ id: 'sky_watch', group: 'body', when: { talent: 'wings' }, tier: 2, name: 'Sky Watch', cost: 10, mods: { exploreBonus: 1 }, vision: true, rule: 'hazard_sense', lean: 'guard', desc: 'From above, you see the storm before it comes.' }),
+  I({ id: 'stoop', group: 'body', when: { talent: 'wings' }, tier: 2, name: 'The Stoop', cost: 10, mods: { huntBonus: 2 }, rule: 'swift_strike', lean: 'war', desc: 'Fold the wings, and fall like a stone.' }),
+  I({ id: 'far_watchers', group: 'body', when: { talent: 'eyes' }, tier: 2, name: 'Far Watchers', cost: 10, mods: { cun: 1 }, vision: true, lean: 'guard', desc: 'Nothing moves on the horizon without your knowing.' }),
+  I({ id: 'reading_eyes', group: 'body', when: { talent: 'eyes' }, tier: 2, name: 'Reading Eyes', cost: 10, mods: { cha: 1, cun: 1 }, lean: 'peace', desc: 'See what another creature feels before it acts.' }),
+  I({ id: 'flight_instinct', group: 'body', when: { talent: 'speed' }, tier: 2, name: 'Flight Instinct', cost: 10, mods: { spd: 1 }, rule: 'last_refuge', lean: 'peace', desc: 'When it goes wrong, scatter, and live.' }),
+  I({ id: 'run_down', group: 'body', when: { talent: 'speed' }, tier: 2, name: 'Run Them Down', cost: 10, mods: { spd: 1, huntBonus: 1 }, lean: 'war', desc: 'Nothing outruns you for long.' }),
+  I({ id: 'living_partners', group: 'body', when: { keyword: 'symbiont' }, tier: 2, name: 'Living Partners', cost: 10, mods: { foodPerTurn: 1, cha: 1 }, lean: 'peace', desc: 'The life you carry looks after you, and you after it.' }),
+  I({ id: 'grazing_lore', group: 'body', when: { diet: 'herb' }, tier: 2, name: 'Grazing Lore', cost: 10, mods: { forageBonus: 2 }, lean: 'peace', desc: 'Which leaves heal, which feed, which kill.' }),
+  I({ id: 'blood_lore', group: 'body', when: { diet: 'carn' }, tier: 2, name: 'Meat That Keeps', cost: 10, mods: { huntBonus: 1 }, rule: 'no_rot', lean: 'war', desc: 'Bury it, dry it, guard it.' }),
+  I({ id: 'take_anything', group: 'body', when: { diet: 'omni' }, tier: 2, name: 'Take Anything', cost: 10, mods: { forageBonus: 1, huntBonus: 1 }, lean: 'guard', desc: 'Whatever there is, you can eat.' }),
+  I({ id: 'gentle_giants', group: 'body', when: { trait: 'giant' }, tier: 2, name: 'Gentle Giants', cost: 10, mods: { cha: 2 }, excludes: ['tyrants'], lean: 'peace', desc: 'So big that nothing needs to fear you, if you are kind.' }),
+  I({ id: 'tyrants', group: 'body', when: { trait: 'giant' }, tier: 2, name: 'Tyrants', cost: 10, mods: { str: 2 }, rule: 'know_foe', lean: 'war', desc: 'So big that everything fears you, and should.' }),
+  I({ id: 'numbers', group: 'body', when: { trait: 'small_many' }, tier: 2, name: 'Safety in Numbers', cost: 10, mods: { maxPop: 2 }, lean: 'guard', desc: 'There are always more of you.' }),
+  I({ id: 'scatter', group: 'body', when: { trait: 'small_many' }, tier: 2, name: 'Scatter', cost: 10, mods: { spd: 1 }, rule: 'last_refuge', lean: 'peace', desc: 'A hundred directions at once. They cannot catch you all.' }),
+  I({ id: 'balanced_body', group: 'body', when: { trait: 'mid_sized' }, tier: 2, name: 'Balanced Body', cost: 10, mods: { str: 1, spd: 1 }, lean: 'guard', desc: 'Not the biggest, not the fastest: always good enough.' }),
+  I({ id: 'strong_frame', group: 'body', when: { trait: 'skeleton_inner' }, tier: 2, name: 'Strong Frame', cost: 10, mods: { str: 1, tou: 1 }, lean: 'guard', desc: 'Bones that carry you anywhere.' }),
+  I({ id: 'living_fortress', group: 'body', when: { trait: 'skeleton_shell' }, tier: 2, name: 'Living Fortress', cost: 10, mods: { tou: 1, damageReduce: 1 }, lean: 'guard', desc: 'Your home is on your back, and it does not break.' }),
+  I({ id: 'squeeze_through', group: 'body', when: { trait: 'skeleton_soft' }, tier: 2, name: 'Squeeze Through', cost: 10, mods: { spd: 1 }, rule: 'outwit', lean: 'peace', desc: 'Any crack is a door.' }),
+  I({ id: 'long_childhood', group: 'body', when: { trait: 'young_live' }, tier: 2, name: 'Long Childhood', cost: 10, mods: { insightPerTurn: 1 }, lean: 'peace', desc: 'Young that stay long enough to learn everything.' }),
+  I({ id: 'hidden_clutches', group: 'body', when: { trait: 'young_eggs' }, tier: 2, name: 'Hidden Clutches', cost: 10, mods: { maxPop: 2 }, lean: 'guard', desc: 'Eggs where no thief would ever look.' }),
+  I({ id: 'many_selves', group: 'body', when: { trait: 'young_budding' }, tier: 2, name: 'Many Selves', cost: 10, mods: { popPerTurn: 1 }, lean: 'peace', desc: 'Every one of you is all of you.' }),
+  I({ id: 'tireless', group: 'body', when: { trait: 'blood_warm' }, tier: 2, name: 'Tireless', cost: 10, mods: { spd: 1, exploreBonus: 1 }, lean: 'war', desc: 'Warm blood keeps going long after the cold ones stop.' }),
+  I({ id: 'patient_blood', group: 'body', when: { trait: 'blood_cold' }, tier: 2, name: 'Patient Blood', cost: 10, mods: { cun: 1, foodCap: 3 }, lean: 'guard', desc: 'Lie still for days, and wait for the moment.' }),
+  I({ id: 'all_sides', group: 'body', when: { sym: 'radial' }, tier: 2, name: 'Every Side a Front', cost: 10, mods: { cun: 1, tou: 1 }, lean: 'guard', desc: 'Nothing can come at you from behind.' }),
+  I({ id: 'shared_body', group: 'body', when: { sym: 'colonial' }, tier: 2, name: 'One Body, Many Lives', cost: 10, mods: { tou: 1, maxPop: 2 }, lean: 'peace', desc: 'Lose a part, and the whole lives on.' }),
+
+  // ----- Memories: what happened to your lineage -----
+  I({ id: 'higher_ground', group: 'memory', when: { memory: 'mem_flood' }, tier: 2, name: 'Higher Ground', cost: 8, mods: { tou: 1 }, rule: 'hazard_sense', lean: 'guard', desc: 'When the sky darkens, you already know where to go.' }),
+  I({ id: 'fire_memory', group: 'memory', when: { memory: 'mem_fire' }, tier: 2, name: 'What the Fire Took', cost: 8, mods: { cun: 1, tou: 1 }, lean: 'guard', desc: 'You remember the smell of smoke, and you run before anyone else.' }),
+  I({ id: 'cold_memory', group: 'memory', when: { memory: 'mem_cold' }, tier: 2, name: 'The Year Without Summer', cost: 8, mods: { foodCap: 4, tou: 1 }, lean: 'guard', desc: 'Store, and store, and store again.' }),
+  I({ id: 'hunger_memory', group: 'memory', when: { memory: 'mem_drought' }, tier: 2, name: 'Hunger Remembered', cost: 8, mods: { foodCap: 3, forageBonus: 1 }, lean: 'peace', desc: 'You never again let the larder run empty.' }),
+  I({ id: 'fever_memory', group: 'memory', when: { memory: 'mem_plague' }, tier: 2, name: 'The Fever Years', cost: 8, mods: { tou: 2 }, lean: 'peace', desc: 'The ones who lived passed on something stronger.' }),
+  I({ id: 'ground_memory', group: 'memory', when: { memory: 'mem_quake' }, tier: 2, name: 'When the Ground Moved', cost: 8, mods: { spd: 1, tou: 1 }, lean: 'guard', desc: 'Feel it in your feet, and be gone before it comes.' }),
+  I({ id: 'victory_songs', group: 'memory', when: { memory: 'mem_victory' }, tier: 2, name: 'Remembered Victories', cost: 8, mods: { str: 1, cha: 1 }, lean: 'war', desc: 'Once, you won. You can win again.' }),
+  I({ id: 'great_hunts', group: 'memory', when: { memory: 'mem_hunt' }, tier: 2, name: 'The Great Hunts', cost: 8, mods: { huntBonus: 2 }, lean: 'war', desc: 'Stories of the chase, told to every hungry young one.' }),
+  I({ id: 'run_and_live', group: 'memory', when: { memory: 'mem_flight' }, tier: 2, name: 'Run and Live', cost: 8, mods: { spd: 1 }, rule: 'last_refuge', lean: 'peace', desc: 'Pride dies. Runners live.' }),
+  I({ id: 'old_friends', group: 'memory', when: { memory: 'mem_friendship' }, tier: 2, name: 'Old Friends', cost: 8, mods: { cha: 2 }, lean: 'peace', desc: 'You remember who was kind, and you are kind back.' }),
+  I({ id: 'the_few', group: 'memory', when: { memory: 'mem_near_end' }, tier: 2, name: 'The Few Who Lived', cost: 8, mods: { tou: 1 }, rule: 'reroll', lean: 'guard', desc: 'You came so close to the end that you will never let it happen again.' }),
+  I({ id: 'long_walk', group: 'memory', when: { memory: 'mem_migration' }, tier: 2, name: 'The Long Walk', cost: 8, mods: { exploreBonus: 1, spd: 1 }, vision: true, lean: 'peace', desc: 'You know that there is always somewhere else.' }),
+  I({ id: 'the_lost', group: 'memory', when: { memory: 'mem_extinction' }, tier: 2, name: 'Remember the Lost', cost: 8, mods: { insightPerTurn: 1 }, rule: 'insight_spark', lean: 'peace', desc: 'Whole kinds can vanish. You will not forget them, or how they fell.' }),
+  I({ id: 'bonds_kinds', group: 'memory', when: { memory: 'mem_ally' }, tier: 2, name: 'Bonds Between Kinds', cost: 8, mods: { foodPerTurn: 1 }, rule: 'calm_presence', lean: 'peace', desc: 'Another kind stood with you. Others might too.' }),
+  I({ id: 'know_enemy', group: 'memory', when: { memory: 'mem_nemesis' }, tier: 2, name: 'Know Your Enemy', cost: 8, mods: { cun: 1 }, rule: 'know_foe', lean: 'war', desc: 'Every hunt they made against you, remembered and understood.' }),
+
+  // ----- Path forks and deeper ideas -----
+  // Toolmakers
+  I({ id: 'stone_points', group: 'path', path: 'tool', tier: 3, name: 'Stone Points', cost: 12, mods: { str: 2, huntBonus: 1 }, excludes: ['digging_sticks'], lean: 'war', desc: 'A sharp edge on the end of a stick.' }),
+  I({ id: 'digging_sticks', group: 'path', path: 'tool', tier: 3, name: 'Digging Sticks', cost: 12, mods: { forageBonus: 2, foodCap: 3 }, lean: 'peace', desc: 'Roots, grubs and water, from under the ground.' }),
+  I({ id: 'trade_tools', group: 'path', path: 'tool', tier: 4, name: 'Tools for Trade', cost: 16, mods: { cha: 2 }, rule: 'charm_wit', excludes: ['war_clubs'], req: { innovation: ['first_tools', 'digging_sticks'] }, lean: 'peace', desc: 'Make one more than you need, and give it away.' }),
+  I({ id: 'war_clubs', group: 'path', path: 'tool', tier: 4, name: 'War Clubs', cost: 16, mods: { str: 2 }, rule: 'outwit', req: { innovation: ['first_tools', 'stone_points'] }, lean: 'war', desc: 'The first tool made only for hitting someone.' }),
+  I({ id: 'tool_memory', group: 'path', path: 'tool', tier: 4, name: 'The Way It Is Done', cost: 16, mods: { insightPerTurn: 1, cun: 1 }, req: { some: ['first_tools', 'teaching', 'stone_points', 'digging_sticks'], n: 2 }, lean: 'guard', desc: 'Every tool has a right way to be made, and everyone knows it.' }),
+  I({ id: 'tool_beyond_hearth', group: 'beyond', path: 'tool', tier: 6, name: { land: 'Keepers of the Flame', sea: 'Keepers of the Vent' }, cost: 34, mods: { cun: 1, tou: 1 }, inherit: { specialPerTurn: 1, discoveryCost: -10 }, req: { some: ['crafting', 'shelters', 'trade_tools', 'war_clubs', 'tool_memory'], n: 3 }, lean: 'guard', desc: 'Your people will be born knowing how to keep the heat alive.' }),
+  I({ id: 'tool_beyond_edge', group: 'beyond', path: 'tool', tier: 6, name: 'The Sharpest Edge', cost: 34, mods: { str: 2 }, inherit: { str: 2, tou: 1 }, req: { some: ['crafting', 'war_clubs', 'stone_points'], n: 2 }, lean: 'war', desc: 'Edges so fine your people will carry the art for ever.' }),
+  // Singers
+  I({ id: 'lullabies', group: 'path', path: 'song', tier: 3, name: 'Lullabies', cost: 12, mods: { cha: 1, popPerTurn: 1 }, excludes: ['battle_hymns'], lean: 'peace', desc: 'A song that makes the young sleep, and the old remember.' }),
+  I({ id: 'battle_hymns', group: 'path', path: 'song', tier: 3, name: 'Battle Hymns', cost: 12, mods: { str: 1, cha: 1 }, lean: 'war', desc: 'A song you can march to.' }),
+  I({ id: 'songs_of_others', group: 'path', path: 'song', tier: 4, name: 'Songs of Other Kinds', cost: 16, mods: { cha: 2 }, rule: 'calm_presence', req: { innovation: ['call_answer', 'lullabies'] }, lean: 'peace', desc: 'Learn their songs, and sing them back.' }),
+  I({ id: 'singing_borders', group: 'path', path: 'song', tier: 4, name: 'Singing the Borders', cost: 16, mods: { tou: 1, cha: 1 }, rule: 'know_foe', req: { innovation: ['battle_hymns', 'long_memory'] }, lean: 'guard', desc: 'Every border has a song, and everyone knows whose land it is.' }),
+  I({ id: 'song_lineage', group: 'path', path: 'song', tier: 4, name: 'The Song of Us', cost: 16, mods: { insightPerTurn: 1, cha: 1 }, req: { some: ['call_answer', 'long_memory', 'lullabies', 'battle_hymns'], n: 2 }, lean: 'peace', desc: 'Every ancestor, named in one long song.' }),
+  I({ id: 'song_beyond_echo', group: 'beyond', path: 'song', tier: 6, name: 'The Endless Echo', cost: 34, mods: { cha: 2 }, inherit: { cha: 2, specialPerTurn: 1 }, req: { some: ['song_maps', 'chorus', 'songs_of_others', 'singing_borders', 'song_lineage'], n: 3 }, lean: 'peace', desc: 'A song so old that your people will sing it without being taught.' }),
+  I({ id: 'song_beyond_voice', group: 'beyond', path: 'song', tier: 6, name: 'The Voice That Commands', cost: 34, mods: { cha: 1, str: 1 }, inherit: { cha: 1, str: 1, ideasPerTurn: 1 }, req: { some: ['chorus', 'singing_borders', 'battle_hymns'], n: 2 }, lean: 'war', desc: 'One voice, and everyone obeys.' }),
+  // Many Minds
+  I({ id: 'ink_and_shadow', group: 'path', path: 'many', tier: 3, name: 'Ink and Shadow', cost: 12, mods: { cun: 1, spd: 1 }, excludes: ['lure_and_strike'], lean: 'peace', desc: 'Vanish in a cloud, and be somewhere else.' }),
+  I({ id: 'lure_and_strike', group: 'path', path: 'many', tier: 3, name: 'Lure and Strike', cost: 12, mods: { huntBonus: 2 }, rule: 'outwit', lean: 'war', desc: 'Look like food. Then eat.' }),
+  I({ id: 'puzzle_minds', group: 'path', path: 'many', tier: 4, name: 'Puzzle Minds', cost: 16, mods: { cun: 2 }, rule: 'insight_spark', req: { innovation: ['arm_brains', 'ink_and_shadow'] }, lean: 'peace', desc: 'Every lid can be opened, every knot untied.' }),
+  I({ id: 'den_guard', group: 'path', path: 'many', tier: 4, name: 'The Guarded Den', cost: 16, mods: { tou: 1, cun: 1 }, rule: 'last_refuge', req: { some: ['arm_brains', 'color_talk', 'ink_and_shadow', 'lure_and_strike'], n: 2 }, lean: 'guard', desc: 'A den with one way in, and you watching it.' }),
+  I({ id: 'many_beyond_mirror', group: 'beyond', path: 'many', tier: 6, name: 'Minds Like Mirrors', cost: 34, mods: { cun: 2 }, inherit: { cun: 2, ideasPerTurn: 1 }, req: { some: ['shapeshifting', 'watch_learn', 'puzzle_minds', 'den_guard'], n: 3 }, lean: 'peace', desc: 'Your people will learn anything they see done once.' }),
+  I({ id: 'many_beyond_mask', group: 'beyond', path: 'many', tier: 6, name: 'A Thousand Masks', cost: 34, mods: { cun: 1, damageReduce: 1 }, inherit: { cun: 1, tou: 2 }, req: { some: ['shapeshifting', 'lure_and_strike', 'den_guard'], n: 2 }, lean: 'war', desc: 'Your people will be anyone they need to be.' }),
+  // The Swarm
+  I({ id: 'soldier_caste', group: 'path', path: 'swarm', tier: 3, name: 'Soldier Caste', cost: 12, mods: { str: 2 }, excludes: ['nurse_caste'], lean: 'war', desc: 'Born with jaws, born to fight.' }),
+  I({ id: 'nurse_caste', group: 'path', path: 'swarm', tier: 3, name: 'Nurse Caste', cost: 12, mods: { popPerTurn: 1, tou: 1 }, lean: 'peace', desc: 'Born to feed, born to tend.' }),
+  I({ id: 'raid_trails', group: 'path', path: 'swarm', tier: 4, name: 'Raid Trails', cost: 16, mods: { huntBonus: 2, str: 1 }, req: { innovation: ['soldier_caste', 'pheromone_paths'] }, lean: 'war', desc: 'A scent that means "take everything".' }),
+  I({ id: 'brood_halls', group: 'path', path: 'swarm', tier: 4, name: 'Brood Halls', cost: 16, mods: { maxPop: 3 }, req: { some: ['castes', 'pheromone_paths', 'soldier_caste', 'nurse_caste'], n: 2 }, lean: 'guard', desc: 'Chambers deep and warm, full of the young.' }),
+  I({ id: 'swarm_beyond_queen', group: 'beyond', path: 'swarm', tier: 6, name: 'The Undying Queen', cost: 34, mods: { tou: 2 }, inherit: { tou: 2, maxPop: 3 }, req: { some: ['great_mound', 'one_will', 'brood_halls', 'raid_trails'], n: 3 }, lean: 'guard', desc: 'Your people will never be without a queen.' }),
+  I({ id: 'swarm_beyond_tide', group: 'beyond', path: 'swarm', tier: 6, name: 'The Living Tide', cost: 34, mods: { str: 2 }, inherit: { str: 2, huntBonus: 2 }, req: { some: ['one_will', 'raid_trails', 'soldier_caste'], n: 2 }, lean: 'war', desc: 'Your people will move as one flood.' }),
+  // Gardeners
+  I({ id: 'thorn_hedges', group: 'path', path: 'garden', tier: 3, name: 'Thorn Hedges', cost: 12, mods: { tou: 2 }, excludes: ['open_fields'], lean: 'guard', desc: 'Grow a wall, and keep them out.' }),
+  I({ id: 'open_fields', group: 'path', path: 'garden', tier: 3, name: 'Open Fields', cost: 12, mods: { forageBonus: 1, cha: 1 }, lean: 'peace', desc: 'Plenty, for anyone who comes.' }),
+  I({ id: 'poison_gardens', group: 'path', path: 'garden', tier: 4, name: 'Poison Gardens', cost: 16, mods: { str: 1, tou: 1 }, rule: 'know_foe', req: { innovation: ['thorn_hedges', 'living_tools'] }, lean: 'war', desc: 'Some of what you grow is not for eating.' }),
+  I({ id: 'shared_harvest', group: 'path', path: 'garden', tier: 4, name: 'Shared Harvest', cost: 16, mods: { foodPerTurn: 1, cha: 1 }, rule: 'calm_presence', req: { some: ['tending', 'seed_memory', 'open_fields', 'thorn_hedges'], n: 2 }, lean: 'peace', desc: 'Feed your neighbours, and they will never raid you.' }),
+  I({ id: 'garden_beyond_seed', group: 'beyond', path: 'garden', tier: 6, name: 'The Seed of Everything', cost: 34, mods: { forageBonus: 2 }, inherit: { foodPerTurn: 2, specialPerTurn: 1 }, req: { some: ['herding', 'living_tools', 'shared_harvest', 'poison_gardens'], n: 3 }, lean: 'peace', desc: 'Your people will know how to grow anything, anywhere.' }),
+  I({ id: 'garden_beyond_wild', group: 'beyond', path: 'garden', tier: 6, name: 'The Tamed Wild', cost: 34, mods: { cha: 1, tou: 1 }, inherit: { cha: 1, tou: 1, foodPerTurn: 1 }, req: { some: ['herding', 'thorn_hedges', 'poison_gardens'], n: 2 }, lean: 'guard', desc: 'Your people will rule the green, and everything in it.' }),
+);
+G.INNOVATIONS.forEach((inv) => { if (!inv.lean && G.OLD_LEANS[inv.id]) inv.lean = G.OLD_LEANS[inv.id]; });
+
 // What each cell part grows into when your lineage leaves the Cell stage.
 G.CARRY = {
   filter_mouth: { land: 'grinding_beak', sea: 'baleen' },
@@ -417,6 +563,8 @@ G.BOONS = [
   { id: 'twin_back', name: 'Twin Backs', col: 5, tier: 3, req: ['twin_organ'], costs: [60], twin: 'back', desc: 'A second Back (or Dorsal) socket: a shell and a garden.' },
   { id: 'ancestral_armor', name: 'Ancestral Armor', col: 0, tier: 4, req: ['second_chance'], costs: [80], mods: { damageReduce: 1 }, desc: 'Every blow kills one fewer of you, every run.' },
   { id: 'head_start', name: 'Head Start', col: 2, tier: 4, req: ['short_road'], costs: [70], desc: 'Every run begins with a free mutation draft.' },
+  { id: 'deep_thought', name: 'Deep Thought', col: 1, tier: 4, req: ['quick_cells'], costs: [45, 90], mods: { insightPerTurn: 1 }, desc: '+1 Insight per turn per level once your kind has a Mind: reach further into the Mind tree.' },
+  { id: 'old_paths', name: 'Old Paths', col: 3, tier: 4, req: ['choice'], costs: [50, 100], desc: 'Beyond-the-Gate ideas in the Mind tree cost 15% less per level.' },
   { id: 'twin_hands', name: 'Twin Hands', col: 4, tier: 4, req: ['twin_senses'], costs: [90], twin: 'hands', desc: 'A second Hands (or Arms) socket: claws and clever fingers.' },
   { id: 'twin_skin', name: 'Twin Skins', col: 5, tier: 4, req: ['twin_back'], costs: [80], twin: 'skin', desc: 'A second Skin socket: armor and camouflage.' },
 ];
@@ -713,14 +861,17 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '16.4';
+G.VERSION = '17';
 G.WHATS_NEW = {
-  title: 'Patch 16.4: Fair Fights',
+  title: 'Update 17: The Book of the Lineage',
   items: [
-    'The wild evolves too. Every species you meet grows stronger with the age of the world, so its stats are in the same range as yours, and its card shows its real stats next to yours.',
-    'Checks against a species now use its stats: a weak foe is easy and a strong one is hard. Each option shows "your 13 vs their 18", so your stats mean exactly what they say.',
-    'Overall difficulty is unchanged; only who is hard and who is easy has changed.',
-    'Also in 16.3.1: tap anything in the top bar to see what it means and where every + and − comes from.',
+    'The Mind tree is grown from your choices. Besides your temperament, home and Path, it now has Body branches (from your hands, voice, venom, armour, wings, eyes, diet, size and foundations) and Memories (floods survived, rivals beaten, friends made, near extinction), so no two trees look alike.',
+    'Path rows are doubled, with forks: taking one idea can rule out another. Some ideas need "2 of these 4" instead of one fixed idea.',
+    'Awakenings (★) change the rules, not just your stats: Strength checks with Cunning, a second chance on a failed check, warning before disasters, checks against enemies made easier, and more.',
+    'Your Awakening ends the Creature stage, but it is not the last idea. Ideas Beyond the Gate cost a lot and need several of the deepest ideas; learn them before you awaken and they become Inheritances that carry power into every later stage.',
+    'Every idea leans Peaceful (🕊️), Territorial (🛡️) or Warmongering (⚔️). Your leaning will one day decide which futures are open to your people.',
+    'The Book (a new tab) keeps a page for every stage: the Origin of your cell, your Mind tree frozen as it stood at your Awakening, and pages for the stages still to come.',
+    'Evolution Tree: Deep Thought (+1 Insight per turn) and Old Paths (cheaper Beyond-the-Gate ideas) let each lineage reach further into its tree.',
   ],
 };
 
@@ -764,6 +915,8 @@ G.TUTORIALS = [
     text: 'Each discovery costs some of your Fire, Song or other resource (shown on the card); better ones cost more. Learn one, combine it with one you know (stronger, but it costs more), or remember it for later. New combinations go in your Codex and earn Genetic Memory.' },
   { id: 'succession', title: 'Leaders', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && run.event.id === 'succession',
     text: 'Each candidate has a background and two traits that change your people while they lead, and an ambition. A leader who fulfils their ambition leaves a legacy that lasts for good. Leaders grow old, so the choice comes round again.' },
+  { id: 'mind_grown', title: 'A tree grown from your choices', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.mind && run.innovations.length >= 2,
+    text: 'Your Mind tree grows new branches from your body and from what happens to you: lived through a flood, beaten a rival, made a friend. Ideas marked ★ change the rules. Your Awakening ends the stage, so learn any Beyond-the-Gate ideas you want before it: they carry on into every stage after. The Book tab keeps every page.' },
   { id: 'paths', title: 'Paths of Mind', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['spark_of_mind', 'path_choice'].includes(run.event.id),
     text: 'How your kind thinks depends on what it is. Your body and history open some Paths and lock others (locked ones say what they need). Your Path is fixed for this lineage and decides which ending, and which kind of people, you can become.' },
   { id: 'foundations', title: 'Foundations', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && ['the_frame', 'the_young', 'the_blood'].includes(run.event.id),

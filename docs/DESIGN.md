@@ -79,6 +79,18 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Update 17: The Book of the Lineage
+
+- **Mind tree bands** (rows, in order): root, home (trunk + home), **body**, **memory**, path tier 3, path tier 4, cap (the Awakening), **beyond**. `bandOf` in ui.js. Lines wrap at 4 nodes; the tree's height follows its content.
+- **Body branches** (`group: 'body'`, `when: { talent | keyword | diet | trait | sym }`, `G.bodyBranch`), 35 ideas, visible while your body has the feature (known ones stay).
+- **Memories** (`group: 'memory'`, `when: { memory }`), 15 ideas. `G.addMemory(run, id)` records one (Creature stage only) from: hazard events (`G.HAZARD_MEMORY`), a won brawl, a hunt, a successful flight or social option with a species, and each turn: below 15% of comfortable size, living outside the home biome, any extinction, any allied or hostile species. Memories made before the Spark of Mind count.
+- **Forks and partial prerequisites:** `excludes` (either side blocks), `req.some` + `req.n` ("2 of these 4"). Tier 2 (home, body, memory) needs a root; tier 3 needs any tier 2.
+- **Beyond the Gate** (`group: 'beyond'`, tier 6, cost 34, 2 per Path): need 2–3 of the deepest ideas; learned before the Awakening (which ends the stage at once). `inherit` mods apply in every stage after the Creature stage, labelled "Inheritance". `G.innovationCost` applies Old Paths (−15% per level).
+- **Awakenings** (`rule`, `G.MIND_RULES`, `G.mindRule`): outwit / charm_wit / swift_strike (`G.checkStat` lets one stat stand in for another in checks), reroll (once per stage, in `chooseOption`), hazard_sense (hazard events ×0.6), know_foe (−2 on checks against a species), no_rot (half meat rot), last_refuge (below 25% of comfortable size, `damage` halved), calm_presence (+1 opinion a turn to species below 0), insight_spark (+2 Insight per passed check).
+- **Leanings:** `lean` on ideas (`G.OLD_LEANS` for the old ones), `G.leaning(run)` counts them; shown as a bar in the Mind header. The Disposition (Update 20) will be built from these.
+- **The Book** (`bookTab`): pages Origin, Form, Mind, Lore, Law, Reason, Crown, Legacy; unreached and future ones are greyed. `run.book.origin` is written in `evolve` (cell parts, diet, epochs, body snapshot), `run.book.mind` (`G.freezeMind`: seen and known ideas, leaning, memories) in `becomeTribe`, `run.book.lore` (discoveries, rulers, legacies) in `becomeSociety`. Saves from before Update 17 show only the ideas they knew.
+- **Evolution Tree:** Deep Thought (+1 Insight per turn per level, 2 levels) and Old Paths (Beyond ideas −15% per level, 2 levels).
+
 ## Patch 16.4: Fair Fights
 
 - `G.wildEdge(run)` = round(`G.difficulty(run, 0)` + 6 − average foe stat (3.5 for cells, 5 after)). `G.foeStat(run, s, stat)` = `G.speciesStat` + edge: the species' evolved stat, shown on species cards.

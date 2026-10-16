@@ -82,7 +82,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.3 | Patch ✅ | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
 | 16.3.1 | Patch ✅ | **Tap to Explain:** every top-bar number opens a breakdown of where it comes from; max Population upgrades always count and show real numbers; sea eye styles; leader-choice label fix | Small |
 | 16.4 | Patch ✅ | **Fair Fights:** the species you meet evolve too; checks against a species use its real stats, so a weak foe is easy, a strong one is hard, and your stats mean what they say | Medium |
-| 17 | **The Book of the Lineage** | **The hook, part 1:** the book of trees (one page per stage), the **Mind tree** rebuilt three times bigger, and the first **leanings** toward Peaceful, Territorial or Warmongering | Large |
+| 17 | **The Book of the Lineage** ✅ | **The hook, part 1:** the book of trees (one page per stage), the **Mind tree** rebuilt three times bigger, and the first **leanings** toward Peaceful, Territorial or Warmongering | Large |
 | 18 | **The Lore Tree** | **The hook, part 2:** the Tribe stage's own tree, from discoveries, leaders and deeds; the **Memory of Kinds** (every species remembers what you did to it); a harder Tribe; Ancestral Wisdom doubled | Large |
 | 19 | **The Many** | **Multicellular becomes its own stage**, between the cell and the creature, with its own small tree, the **Form tree** (symmetry, body plan, first organs) | Medium |
 | 20 | **Faith and Neighbours** | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
@@ -473,10 +473,10 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Each lineage gets further:** every stage's between-lineage tree (Evolution Tree, Ancestral Wisdom, Heritage, Patronage, Dynasty) includes upgrades that let you reach deeper into that stage's page.
 - **The book is kept:** a page freezes when its stage ends and stays readable for the rest of the run, in the Fossil Record and in the history of past lineages.
 
-## Update 17: The Book of the Lineage (Mind tree)
+## Update 17: The Book of the Lineage (Mind tree) ✅
 
 - **The book:** a new screen with one tab per stage reached; finished pages are frozen, the current one is live. The **Origin** page tells the story of your cell.
-- **The Mind tree, rebuilt (about 150 nodes, 25–35 visible in a run):**
+- **The Mind tree, rebuilt (148 ideas, usually 25–40 visible in a run):**
   - *Roots* from your temperament, *trunk* from land or sea and your home (as now);
   - **Body branches** from what you are: venom, armour, eyes, wings, hands, glow, size, diet, frame, young and blood (about 30 nodes);
   - **Memories** grafted by event choices: survive a flood, spare a rival, follow the strangers (about 20 nodes);

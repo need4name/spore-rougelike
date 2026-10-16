@@ -641,3 +641,32 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .xrow.total span { color: var(--fg); font-weight: 700; }
 
 .opt-meta .vs { font-size: 0.75rem; color: var(--muted); }
+
+/* ---------- Update 17: the Mind tree grown from choices, and the Book ---------- */
+.mind-tree { height: auto; }
+.mind-tree .tier-label { writing-mode: horizontal-tb; transform: none; translate: none; left: 2px; font-size: 0.62rem; }
+.node.beyond { border-style: double; border-width: 4px; border-color: #b48cf2; }
+.node.beyond.done { border-color: var(--good); }
+.node .rule-dot { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; font-size: 0.62rem; color: var(--accent); }
+.node.lean-peace { box-shadow: inset 0 -3px 0 rgba(120, 200, 255, 0.55); }
+.node.lean-guard { box-shadow: inset 0 -3px 0 rgba(242, 181, 68, 0.55); }
+.node.lean-war { box-shadow: inset 0 -3px 0 rgba(239, 125, 107, 0.6); }
+.node.open.lean-peace, .node.open.lean-guard, .node.open.lean-war { box-shadow: 0 0 12px rgba(242, 181, 68, 0.35); }
+.inv-rule { font-size: 0.82rem; color: var(--accent); }
+.beyond-note { border-left: 3px solid #b48cf2; padding-left: 8px; }
+.lean-bar { display: inline-flex; min-width: 140px; height: 20px; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); font-size: 0.68rem; }
+.lean-bar.empty { padding: 0 8px; align-items: center; color: var(--muted); }
+.lean-bar .lean { display: grid; place-items: center; font-style: normal; color: #10181a; font-weight: 700; padding: 0 4px; white-space: nowrap; }
+.lean-bar .lean.peace { background: #8fc9f0; }
+.lean-bar .lean.guard { background: #f2c14e; }
+.lean-bar .lean.war { background: #ef7d6b; }
+.lean-top { font-size: 0.75rem; color: var(--muted); }
+.book-nav { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin: 6px 0; }
+.book-tab { flex: 0 0 auto; display: grid; padding: 6px 10px; border-radius: 10px 10px 4px 4px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; text-align: left; }
+.book-tab small { font-size: 0.65rem; color: var(--muted); }
+.book-tab.on { border-color: var(--accent); background: rgba(242, 181, 68, 0.12); }
+.book-tab.future { opacity: 0.4; cursor: default; }
+.book-page { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: rgba(255, 248, 230, 0.03); }
+.book-page h4 { margin: 10px 0 4px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.book-origin-row { display: flex; gap: 12px; align-items: center; }
+.book-origin { width: 110px; height: 80px; flex: 0 0 auto; border-radius: 10px; background: #132b30; }
