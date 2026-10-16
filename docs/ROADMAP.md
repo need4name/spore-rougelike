@@ -82,13 +82,14 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.3 | Patch ✅ | **Tribe rework:** Fire, Song and the other resources become what discoveries cost (by tier, with % modifiers), with soft and hard caps and real threats; deeper leader choice; a Tribe world screen with camps that grow and move, expeditions, and a map that opens out | Large |
 | 16.3.1 | Patch ✅ | **Tap to Explain:** every top-bar number opens a breakdown of where it comes from; max Population upgrades always count and show real numbers; sea eye styles; leader-choice label fix | Small |
 | 16.4 | Patch ✅ | **Fair Fights:** the species you meet evolve too; checks against a species use its real stats, so a weak foe is easy, a strong one is hard, and your stats mean what they say | Medium |
-| 17 | **Trees of Choice** | **The hook:** one lineage tree grown in layers from your decisions. The Mind tree triples in size (body branches, memories from events, forks, skills and awakenings, partial prerequisites) and runs on into the Tribe stage as the Lore tree, shaped by your leaders, discoveries and deeds. The node that ends a stage is not the last one: Beyond-the-Gate nodes carry great power into the next stage. A harder Tribe and an Ancestral Wisdom tree twice the size | Large |
-| 18 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings, and the Law layer of the lineage tree | Large |
-| 19 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, land and sea technology | Large |
-| 20 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+ | Large |
-| 21 | The Final Polish | Balance, art, sound, settings, offline app, challenges and achievements | Large |
+| 17 | **The Book of the Lineage** | **The hook, part 1:** every stage after the cell gets its own tree, built from that stage's decisions, and the trees are kept as pages of a book you can flick through. This update builds the book and its first tree page: the **Mind tree** (Creature stage), three times bigger, with body branches, memories from events, forks, skills and awakenings, partial prerequisites, and Beyond-the-Gate nodes that carry into the next stage | Large |
+| 18 | **The Lore Tree** | **The hook, part 2:** the Tribe stage's own tree, built from your discoveries, your leaders and your deeds; the Founding is its Gate. A harder Tribe, and an Ancestral Wisdom tree twice the size | Large |
+| 19 | Faith and Neighbours | Society stage, part 2: the other kinds, faiths, diplomacy, society endings, and the Society stage's own tree: the **Law tree**, built from your traditions, councils and faith | Large |
+| 20 | Crowns | **Empire stage**, part 1: the world as a realm, dynasty, technology, and the Empire stage's own tree: the **Crown tree**, built from your rulers and your wars | Large |
+| 21 | Empires | Empire stage, part 2: the other kinds, rival empires, wonders, grand endings, New Game+, and the book's last page, **the Legacy** | Large |
+| 22 | The Final Polish | Balance, art, sound, settings, offline app, challenges and achievements | Large |
 
-**The full plan for Updates 13–19 is in [LATER_STAGES.md](LATER_STAGES.md):** how your start, your Path of Mind and your ending flow into the Tribe, Society and Empire stages.
+**The plan for how each stage flows into the next is in [LATER_STAGES.md](LATER_STAGES.md):** how your start, your Path of Mind and your ending flow into the Tribe, Society and Empire stages.
 
 **Why this order.** The playtest after Update 6 showed that the foundations matter more than new content right now.
 
@@ -119,7 +120,7 @@ The "not a mammal" and "Paths of Mind" updates now come after these, still befor
 
 - **One theme per update.** Ideas that don't fit go on the "waiting" list at the bottom.
 - **Each update is playable on its own.** Nothing is left half-built between updates.
-- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 18. Between updates we only fix what blocks testing or is clearly broken.
+- **Polish comes last.** Balance tweaks, art and sound get a full pass in Update 22. Between updates we only fix what blocks testing or is clearly broken.
 - **Saves.** Unlocks and the Codex always carry over. A run in progress may restart when a new stage arrives; the game will say so.
 - **What's new.** From Update 6 on, the title screen shows a short "What's new" note.
 - **Every update is tested on land and in the sea**, and with at least one creature that isn't bilateral.
@@ -420,30 +421,57 @@ From play-testing feedback:
 - **Checks against a species use its stat:** fighting a Strength 9 species is easier than fighting a Strength 16 one, and the option shows both numbers. Checks with no species keep the world's difficulty.
 - Species cards show their real (evolved) stats next to yours.
 
-## Update 17: Trees of Choice (the hook)
+## The Book of the Lineage (the hook)
 
-What players love most is the Mind tree: you can never finish it in one life, it is built from your own history, and each lineage gets a little further. Update 17 makes that the heart of every stage after the cell.
+What players love most is the Mind tree: you can never finish it in one life, it is built from your own history, and each lineage gets a little further. From Update 17 on, **every stage after the cell has its own tree**, and the finished trees are kept as **pages of a book**. By the late Empire stage you can flick through five or six tabs that show your whole journey:
 
-- **One lineage tree, grown in layers.** Each layer is added by a decision, so no two trees look alike:
+| Page | Stage | Built from | Paid with | Its Gate (ends the stage) | Update |
+|---|---|---|---|---|---|
+| **Origin** | Cell | (not a tree) the story page: your first parts, how you became many, what you were | | | 17 |
+| **Mind** | Creature | temperament, land or sea, home, body, events, Path of Mind | Insight | your Path's awakening | 17 |
+| **Lore** | Tribe | your kind of people, discoveries, leaders, totem, tamed species, wars and peace | Ideas | the Founding | 18 |
+| **Law** | Society | traditions, councils, faith, settlements, neighbours | Influence | the Union | 19 |
+| **Crown** | Empire | rulers, heirs, wars, technology, wonders | (Empire currency) | the grand ending | 20–21 |
+| **Legacy** | the end | (not a tree) the epilogue: your ending, your fossils, how far each tree grew | | | 21 |
+
+**Rules every tree page shares:**
+
+- **Built from decisions.** A tree is grown in layers, and each layer is added by something you chose: a body part, an event choice, a leader, a discovery, a tradition. No two pages look alike.
+- **Never finished in one life.** There is always more tree than time. The node that ends the stage (its **Gate**) is not the last one: **Beyond-the-Gate** nodes are costly, need several of the deepest ideas, and become **Inheritances** that carry real power into the next stage. Only strong lineages reach them before stepping through.
+- **More than stats.** Many nodes are **skills and awakenings** that change rules, not just numbers.
+- **Partial prerequisites** ("needs 2 of these 4") and **forks** (taking one idea closes another).
+- **Each lineage gets further.** Every stage's between-lineage tree (Evolution Tree, Ancestral Wisdom, Heritage, Dynasty) includes upgrades that let you reach deeper into that stage's page: more of its currency, cheaper Beyond nodes, an extra branch.
+- **The book is kept.** A page freezes when its stage ends, and stays readable for the rest of the run, in the Fossil Record and in the history of past lineages.
+
+## Update 17: The Book of the Lineage (Mind tree)
+
+- **The book:** a new screen with one tab per stage you have reached. Pages you have finished are frozen; the current one is live. The **Origin** page tells the story of your cell.
+- **The Mind tree, rebuilt (about 150 nodes, 25–35 visible in a run):**
   - *Roots* from your temperament, *trunk* from land or sea and your home (as now);
-  - **Body branches** from what you are: venom, armour, eyes, wings, hands, glow, size, diet, frame, young and blood (about 30 new nodes; you see the ones your body earns);
+  - **Body branches** from what you are: venom, armour, eyes, wings, hands, glow, size, diet, frame, young and blood (about 30 nodes; you see the ones your body earns);
   - **Memories** grafted by event choices: survive a flood, spare a rival, follow the strangers (about 20 nodes);
-  - **Path** rows, doubled, with forks where taking one idea closes another;
-  - **The Gate**, your Path's awakening, ends the Creature stage, but it is not the last node:
-  - **Beyond the Gate**: costly nodes (needing two or three of the deepest ideas) that only strong lineages reach before they choose to step through. Each becomes an *Inheritance* that carries real power into the next stage.
-- **Skills and awakenings, not just stats:** many nodes change rules (hunt with Cunning instead of Strength, disasters warned in advance, calm a hostile species once, see the whole map, a second chance on a failed check).
-- **Partial prerequisites** ("needs 2 of these 4") and **blocking forks**.
-- **The Lore tree:** Insight keeps flowing in the Tribe stage and the tree grows a new layer: your kind of people, each leader who fulfils an ambition, your discoveries, your totem and tamed species, your wars and your peace. **The Founding becomes the Lore tree's Gate**, with its own Beyond nodes carried into the Society stage.
-- **Harder, and earned:** a fresh lineage should rarely finish the Tribe stage. The Ancestral Wisdom tree doubles (about 25 nodes), including upgrades that let each lineage reach further into its trees (more Insight, cheaper Beyond nodes, an extra branch).
+  - **Path rows**, doubled, with forks;
+  - **The Gate**, your Path's awakening, ends the Creature stage;
+  - **Beyond the Gate:** 2–3 per Path, each an Inheritance into the Tribe stage.
+- **Skills and awakenings:** hunt with Cunning instead of Strength, warning before disasters, calm a hostile species once, see the whole map, a second chance on a failed check, and more.
+- **Evolution Tree additions** that let each lineage reach further into the Mind tree.
 
-## Update 18: Faith and Neighbours (Society stage, part 2)
+## Update 18: The Lore Tree (Tribe stage)
+
+- **The Lore tree replaces the discovery draft.** Each time your people gather enough Ideas, a draft offers new branches to graft onto the tree, and discoveries are its nodes. Learning a node costs Ideas and your Fire, Song, Light, Brood or Growth (the Patch 16.3 costs carry over).
+- **Grown from your people's history:** your kind of people (the trunk), each **leader** (a leader's background adds a node while they lead; a fulfilled ambition grafts a whole branch for good), your totem and tamed species, wars won and peace kept, and your Mind tree's Inheritances.
+- **The Founding is the Lore tree's Gate**, with Beyond-the-Gate nodes carried into the Society stage.
+- **A harder Tribe:** a fresh lineage should rarely finish it. **Ancestral Wisdom** doubles to about 25 nodes, including ones that let each lineage reach deeper into the Lore tree.
+
+## Update 19: Faith and Neighbours (Society stage, part 2)
 
 - **The other kinds** of society.
 - **Faiths built from your own history:** your ancestor, your ending, your nemesis species.
 - **Society endings:** unite your region by Conquest, Trade, Faith or a Wonder. How you win decides your kind of empire.
+- **The Law tree:** the Society stage's page, built from your traditions (which become its nodes), your council, your faith and your neighbours. The Union is its Gate.
 - **Heritage:** the Society-stage tab of the Evolution screen.
 
-## Update 19: Crowns (Empire stage, part 1)
+## Update 20: Crowns (Empire stage, part 1)
 
 *The most Crusader Kings 3 part of the game.*
 
@@ -451,15 +479,16 @@ What players love most is the Mind tree: you can never finish it in one life, it
 - **A dynasty:** ruler, heirs, spouse, rivals, inheritance laws, vassals, and a council that schemes.
 - **Technology:** fire, then metal, then engines on land; vents, then electricity, then living light, then coral-shaping at sea. Your kind of people changes it again.
 - **The first two kinds** of empire.
+- **The Crown tree:** the Empire stage's page, built from your rulers, heirs, wars and technology.
 
-## Update 20: Empires (Empire stage, part 2)
+## Update 21: Empires (Empire stage, part 2)
 
 - **The other kinds** of empire, and **rival empires** descended from lineages in your Fossil Record.
 - **Wars, treaties, betrayals, faiths that spread and split, wonders and disasters.**
 - **Grand endings** for each kind, which unlock **New Game+**. There are also a few dead ends that still earn Genetic Memory.
-- **Legacy:** the Empire-stage tab of the Evolution screen.
+- **Legacy:** the Empire-stage tab of the Evolution screen, and **the Legacy page**, the last page of the book: your ending, and how far each of your trees grew.
 
-## Update 21: The Final Polish
+## Update 22: The Final Polish
 
 *Everything we've been saving for the end.*
 
