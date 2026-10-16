@@ -613,3 +613,11 @@ button.rival:hover { border-color: var(--accent); }
 .diet-badge.omni { color: #f2c35b; background: rgba(242, 195, 91, 0.14); }
 .tb-title .diet-badge { font-size: 0.66rem; }
 .res.pop.over b { color: #f2c35b; }
+
+/* Patch 16.3: discovery costs and leaders */
+.cost { display: inline-flex; gap: 3px; align-items: center; margin-left: 6px; padding: 0 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(242, 195, 91, 0.16); color: #f2c35b; }
+.cost.bad { background: rgba(239, 125, 107, 0.16); color: var(--bad); }
+.part-card.cant { opacity: 0.85; }
+details.rulers { margin: 4px 0 10px; font-size: 0.85rem; color: var(--muted); }
+details.rulers summary { cursor: pointer; color: var(--text, #e8efe4); }
+details.rulers ol { margin: 6px 0 0 18px; padding: 0; }

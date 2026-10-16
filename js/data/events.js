@@ -1957,10 +1957,10 @@ G.EVENTS.push(
     id: 'succession', stage: 'tribe', chained: true, prop: 'stars', title: 'A New Leader',
     text: 'Your {ruler} is gone, and your {band} gathers to choose another. They step forward.',
     options: [
-      { label: '{cand0}', result: { text: 'The {band} follows a new voice.', leaderPick: 0, anim: 'social' } },
-      { label: '{cand1}', result: { text: 'The {band} follows a new voice.', leaderPick: 1, anim: 'social' } },
-      { label: '{cand2}', result: { text: 'The {band} follows a new voice.', leaderPick: 2, anim: 'social' } },
-      { label: '{cand3}', req: { cand: 3 }, result: { text: 'The {band} follows a new voice.', leaderPick: 3, anim: 'social' } },
+      { label: '{cand0}', hint: '{cand0h}', result: { text: 'The {band} follows a new voice.', leaderPick: 0, anim: 'social' } },
+      { label: '{cand1}', hint: '{cand1h}', result: { text: 'The {band} follows a new voice.', leaderPick: 1, anim: 'social' } },
+      { label: '{cand2}', hint: '{cand2h}', result: { text: 'The {band} follows a new voice.', leaderPick: 2, anim: 'social' } },
+      { label: '{cand3}', hint: '{cand3h}', req: { cand: 3 }, result: { text: 'The {band} follows a new voice.', leaderPick: 3, anim: 'social' } },
     ],
   },
 
@@ -2697,10 +2697,10 @@ G.EVENTS.push(
     id: 'soc_succession', stage: 'society', chained: true, prop: 'stars', title: 'Who Rules Next',
     text: 'Your {ruler} is gone. The council meets in {capital} to choose who rules the {people} next. Any of the three could rule, and so could the heir.',
     options: [
-      { label: '{cand0}', hint: 'A new Steward takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 0, loyalty: 5, anim: 'social' } },
-      { label: '{cand1}', hint: 'A new Marshal takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 1, loyalty: 5, anim: 'social' } },
-      { label: '{cand2}', hint: 'A new Keeper takes their place', result: { text: 'The {people} follow a new ruler.', leaderPick: 2, loyalty: 5, anim: 'social' } },
-      { label: '{cand3}', hint: 'The council is passed over', req: { cand: 3 }, result: { text: 'The heir rules. The council grumbles.', leaderPick: 3, loyalty: -10, dna: 3, anim: 'social' } },
+      { label: '{cand0}', hint: 'A new Steward takes their place. {cand0h}', result: { text: 'The {people} follow a new ruler.', leaderPick: 0, loyalty: 5, anim: 'social' } },
+      { label: '{cand1}', hint: 'A new Marshal takes their place. {cand1h}', result: { text: 'The {people} follow a new ruler.', leaderPick: 1, loyalty: 5, anim: 'social' } },
+      { label: '{cand2}', hint: 'A new Keeper takes their place. {cand2h}', result: { text: 'The {people} follow a new ruler.', leaderPick: 2, loyalty: 5, anim: 'social' } },
+      { label: '{cand3}', hint: 'The council is passed over. {cand3h}', req: { cand: 3 }, result: { text: 'The heir rules. The council grumbles.', leaderPick: 3, loyalty: -10, dna: 3, anim: 'social' } },
     ],
   },
   {
@@ -3020,6 +3020,70 @@ G.EVENTS.push(
         fail: { text: 'The region is not ready to be one. Not yet.', pop: -3, loyalty: -5, setback: 0 } }; }) });
   }));
 }());
+
+// ---------- Patch 16.3: the resource is what knowledge costs ----------
+G.EVENTS.push(
+  {
+    id: 't_childs_question', stage: 'tribe', prop: 'stars', title: "A Child's Question", tags: ['explore'],
+    text: 'A child asks why the {resource} does what it does. Nobody has an answer, and suddenly everyone is thinking.',
+    options: [
+      { label: 'Let everyone puzzle over it', check: { stat: 'cun', diff: 4 }, success: { text: 'The answer opens a dozen doors at once.', costMod: { pct: -25, turns: 10, why: "A child's question" }, anim: 'mutate' }, fail: { text: 'They argue all night and agree on nothing.', dna: 1 } },
+      { label: 'Ask the elders', result: { text: 'The elders remember half an answer. It helps.', costMod: { pct: -10, turns: 15, why: "The elders' answer" }, anim: 'social' } },
+    ],
+  },
+  {
+    id: 't_last_who_knew', stage: 'tribe', prop: 'bones', title: 'The Last Who Knew', tags: ['danger'],
+    text: 'The oldest of your {band} is dying, and with them goes everything they never taught anyone.',
+    options: [
+      { label: 'Teach the young, quickly', check: { stat: 'cha', diff: 4 }, success: { text: 'They listen, and remember. Nothing is lost.', dna: 2, anim: 'social' }, fail: { text: 'Too little, too late.', costMod: { pct: 20, turns: 10, why: 'Lost knowledge' } } },
+      { label: 'Write it in the {resource}', hint: 'Needs 4 {resource}', req: { special: 4 }, result: { text: 'What they knew is kept, in a way only your people understand.', special: -4, anim: 'mutate' } },
+      { label: 'Let it go', result: { text: 'Some things your people will have to learn again.', costMod: { pct: 25, turns: 8, why: 'Lost knowledge' }, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_rains', stage: 'tribe', path: 'tool', habitat: 'land', prop: 'fire', title: 'The Rains', tags: ['danger'], hazard: 'storm',
+    text: 'Rain for days. The Fire hisses and shrinks. If it goes out, it may not come back easily.',
+    options: [
+      { label: 'Shelter it with your bodies', check: { stat: 'tou', diff: 4 }, success: { text: 'Soaked and shivering, but the Fire lives.', special: -1, anim: 'rest' }, fail: { text: 'It gutters to a few embers.', special: -8 } },
+      { label: 'Carry embers to a cave', check: { stat: 'spd', diff: 4 }, success: { text: 'The cave keeps it dry. Some of your people want to stay there.', special: -2, anim: 'grow' }, fail: { text: 'The embers die on the way.', special: -6 } },
+      { label: 'Let it die, and learn to make it again', result: { text: 'Cold days. But now your people know how fire is born.', special: -10, dna: 3, costMod: { pct: -10, turns: 12, why: 'Knowing how fire is born' }, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 't_song_frays', stage: 'tribe', path: 'song', prop: 'notes', title: 'The Song Frays', tags: ['danger'],
+    text: 'Verses are being sung wrong, and the wrong versions are spreading. Soon nobody will remember how it really goes.',
+    options: [
+      { label: 'Sing it right, every night', check: { stat: 'cha', diff: 4 }, success: { text: 'The true song wins out.', special: 2, anim: 'social' }, fail: { text: 'The wrong songs are catchier.', special: -6 } },
+      { label: 'Let the song change', result: { text: 'A new song. Not worse, just different.', special: -3, costMod: { pct: -10, turns: 10, why: 'A new song' }, anim: 'mutate' } },
+    ],
+  },
+  {
+    id: 't_too_much', stage: 'tribe', prop: 'sparks', title: 'Too Much to Keep', tags: ['social'],
+    when: (run) => (run.special || 0) > G.SPECIAL_SOFT,
+    text: 'Your people have more {resource} than they know what to do with, and it is hard to keep. Others have noticed.',
+    options: [
+      { label: 'Share it with the neighbours', req: { band: true }, result: { text: 'Generosity is remembered.', special: -8, bandOpinion: 20, anim: 'social' } },
+      { label: 'Spend it on learning', result: { text: 'For a while, ideas come cheap.', special: -6, costMod: { pct: -20, turns: 8, why: 'Plenty of {resource}' }, anim: 'mutate' } },
+      { label: 'Guard it', check: { stat: 'str', diff: 4 }, success: { text: 'Nobody takes anything.', dna: 2, anim: 'attack' }, fail: { text: 'Some of it walks off in the night.', special: -6 } },
+    ],
+  },
+  {
+    id: 't_thieves', stage: 'tribe', prop: 'shadow', title: 'Thieves', tags: ['danger'], species: 'band',
+    text: 'Some of the {species} crept into your {camp} in the night and made off with your {resource}.',
+    options: [
+      { label: 'Chase them down', check: { stat: 'spd', diff: 4 }, success: { text: 'You get it back, and some of theirs.', special: 3, bandOpinion: -10, anim: 'flee' }, fail: { text: 'They are faster.', special: -6 } },
+      { label: 'Let them keep it', result: { text: 'They are surprised. Maybe even grateful.', special: -5, bandOpinion: 10, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 't_swap_stories', stage: 'tribe', prop: 'hearts', title: 'Swapping Stories', tags: ['social'], species: 'band',
+    text: 'Around a shared meal, the {species} start telling how they do things. Your people listen closely.',
+    options: [
+      { label: 'Trade what you know for what they know', hint: '−3 {resource}', req: { special: 3 }, result: { text: 'Both peoples go home cleverer.', special: -3, bandOpinion: 8, costMod: { pct: -20, turns: 10, why: 'What the strangers taught' }, anim: 'social' } },
+      { label: 'Listen, but say nothing', check: { stat: 'cun', diff: 4 }, success: { text: 'You learn a great deal and give nothing away.', costMod: { pct: -10, turns: 10, why: 'Listening' }, anim: 'mutate' }, fail: { text: 'They notice, and stop talking.', bandOpinion: -10 } },
+    ],
+  },
+);
 
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });

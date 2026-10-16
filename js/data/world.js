@@ -18,6 +18,7 @@ G.MOD_LABELS = {
   dnaPerTurn: 'DNA per turn',
   insightPerTurn: 'Insight per turn',
   ideasPerTurn: 'Ideas per turn',
+  discoveryCost: 'discovery cost',
   influencePerTurn: 'Influence per turn',
   specialPerTurn: 'of your people\'s resource per turn',
   forageBonus: 'Food while Foraging',
@@ -856,18 +857,39 @@ G.CASTES = {
 G.LEADER_SYLLABLES = { a: ['A', 'Ka', 'Mo', 'Ri', 'Tu', 'Ne', 'Sha', 'Lo', 'Ve', 'Zu', 'Ori', 'Ema', 'Ush', 'Ilo', 'Bra'], b: ['sha', 'ro', 'na', 'ki', 'lu', 'ven', 'tor', 'ra', 'mi', 'dun', 'eth', 'ka', 'sel'] };
 G.LEADER_TRAITS = {
   brave: { name: 'Brave', mods: { str: 1 } },
-  wise: { name: 'Wise', mods: { ideasPerTurn: 1 } },
+  wise: { name: 'Wise', mods: { ideasPerTurn: 1, discoveryCost: -15 } },
   kind: { name: 'Kind', mods: { cha: 1 } },
   sturdy: { name: 'Sturdy', mods: { tou: 1 } },
   quick: { name: 'Quick', mods: { spd: 1 } },
-  clever: { name: 'Clever', mods: { cun: 1 } },
+  clever: { name: 'Clever', mods: { cun: 1, discoveryCost: -10 } },
   cruel: { name: 'Cruel', mods: { str: 2, cha: -1 } },
-  lazy: { name: 'Lazy', mods: { ideasPerTurn: -1, tou: 1 } },
-  curious: { name: 'Curious', mods: { cun: 1, exploreBonus: 1 } },
+  lazy: { name: 'Lazy', mods: { ideasPerTurn: -1, tou: 1, discoveryCost: 15 } },
+  curious: { name: 'Curious', mods: { cun: 1, exploreBonus: 1, discoveryCost: -5 } },
   fearful: { name: 'Fearful', mods: { spd: 1, str: -1 } },
   generous: { name: 'Generous', mods: { cha: 1, foodPerTurn: -1, maxPop: 1 } },
-  keen: { name: 'Keeper-born', mods: { specialPerTurn: 1 } },
+  keen: { name: 'Keeper-born', mods: { specialPerTurn: 1, discoveryCost: -10 } },
 };
+// Every leader wants something. Achieve it during their rule and they leave a legacy your people keep for good,
+// into the Society stage and beyond.
+G.AMBITIONS = {
+  conquer: { name: 'Conqueror', want: 'win a war or a raid against a rival people', legacy: { str: 1, tou: 1 } },
+  learn: { name: 'Sage', want: 'make 3 discoveries', legacy: { discoveryCost: -10, ideasPerTurn: 1 } },
+  grow: { name: 'Builder', want: 'grow your people by half', legacy: { maxPop: 3 } },
+  befriend: { name: 'Peacemaker', want: 'win the friendship of a rival people (opinion 50 or more)', legacy: { cha: 2 } },
+  keep: { name: 'Keeper', want: 'gather {resource} to 20', legacy: { specialPerTurn: 1 } },
+  tame: { name: 'Tamer', want: 'tame a wild species', legacy: { foodPerTurn: 1, cha: 1 } },
+};
+// Where each leader comes from, and what that gives while they rule.
+G.LEADER_BACKGROUNDS = [
+  { id: 'hunter', text: 'the best hunter of their generation', mods: { str: 1 } },
+  { id: 'keeper', text: 'raised beside the {resource}', mods: { specialPerTurn: 1 } },
+  { id: 'elder', text: 'the oldest still standing', mods: { cun: 1, discoveryCost: -10 }, life: -6 },
+  { id: 'child', text: "the last leader's child", mods: { cha: 1 } },
+  { id: 'stranger', text: 'a stranger who joined as a child', mods: { spd: 1, exploreBonus: 1 } },
+  { id: 'healer', text: 'a healer', mods: { popPerTurn: 1 } },
+  { id: 'young', text: 'young and untested', mods: { ideasPerTurn: 1 }, life: 8 },
+];
+G.LEADER_BACKGROUND = {}; G.LEADER_BACKGROUNDS.forEach((x) => { G.LEADER_BACKGROUND[x.id] = x; });
 
 // What each temperament (your starting archetype) adds in the Tribe stage.
 G.TRIBE_TEMPER = {

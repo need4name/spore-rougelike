@@ -615,12 +615,12 @@ window.G = window.G || {};
       const k = G.kind(run); const cap = (x) => x[0].toUpperCase() + x.slice(1);
       Object.assign(w, { herd: k.band, band: k.band, Band: cap(k.band), resource: k.resource, keeper: k.keeper, camp: k.camp,
         leader: run.leader ? run.leader.name : 'the eldest', ruler: k.leader ? k.leader.toLowerCase() : 'leader', Ruler: k.leader || 'Leader' });
-      (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = G.leaderTitle(c); });
+      (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = G.leaderTitle(c); w[`cand${i}h`] = G.leaderPitch(run, c); });
       w.Herd = w.Band;
       if (run.stage === 'society') {
         const sk = G.socKind(run);
         Object.assign(w, { ruler: 'ruler', Ruler: 'Ruler', people: sk.name, settlement: sk.settlement, settlements: `${sk.settlement}s`, capital: sk.capital, herd: 'people', Herd: 'People' });
-        (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = `${c.role ? `${G.COUNCIL_ROLES[c.role].name} ` : 'The heir, '}${G.leaderTitle(c)}`; });
+        (run.candidates || []).forEach((c, i) => { w[`cand${i}`] = `${c.role ? `${G.COUNCIL_ROLES[c.role].name} ` : 'The heir, '}${G.leaderTitle(c)}`; w[`cand${i}h`] = G.leaderPitch(run, c); });
         const pl = run.plot != null && run.council && run.council[run.plot];
         w.plotter = pl ? `${G.COUNCIL_ROLES[pl.role].name} ${pl.name}` : 'a councillor';
         w.myth = G.mythName(run);
@@ -1222,7 +1222,7 @@ window.G = window.G || {};
       const c = run.council[run.plot];
       if (eff.plotEnds === 'dismiss') { run.council[run.plot] = newCouncillor(run, c.role); lines.push({ t: `${c.name} is gone; ${run.council[run.plot].name} is the new ${G.COUNCIL_ROLES[c.role].name}`, good: true }); }
       if (eff.plotEnds === 'appease') { c.loyalty = 20; lines.push({ t: `${c.name} is satisfied, for now`, good: true }); }
-      if (eff.plotEnds === 'coup') { const lost = Math.round(run.pop * 0.1); run.pop -= lost; lines.push({ t: `${c.name} has seized power! −${lost} people in the fighting`, bad: true }); run.council.forEach((x) => { x.loyalty = clamp(x.loyalty - 10, -100, 100); }); log(run, `${c.name} overthrew ${G.leaderTitle(run.leader)}.`); run.leader = { name: c.name, traits: c.traits.concat(['cruel']).slice(0, 2), since: run.turn, life: 14 + Math.floor(rand() * 10) }; run.council[run.plot] = newCouncillor(run, c.role); }
+      if (eff.plotEnds === 'coup') { const lost = Math.round(run.pop * 0.1); run.pop -= lost; lines.push({ t: `${c.name} has seized power! −${lost} people in the fighting`, bad: true }); run.council.forEach((x) => { x.loyalty = clamp(x.loyalty - 10, -100, 100); }); log(run, `${c.name} overthrew ${G.leaderTitle(run.leader)}.`); endReign(run, run.leader, 'overthrown'); run.leader = { name: c.name, traits: c.traits.concat(['cruel']).slice(0, 2), bg: c.bg, amb: 'conquer', since: run.turn, life: 14 + Math.floor(rand() * 10) }; startReign(run, run.leader); run.council[run.plot] = newCouncillor(run, c.role); }
       run.plot = null;
     }
     if (eff.settlementLoss && run.settlements && run.settlements.length > 1) { const st = run.settlements.slice().sort((x, y) => x.size - y.size)[0]; if (st.size > 1) { st.size -= 1; lines.push({ t: `${st.name} shrinks`, bad: true }); } else { run.settlements = run.settlements.filter((x) => x !== st); lines.push({ t: `${st.name} is abandoned`, bad: true }); } run.pop = Math.min(run.pop, G.hardPop(run)); }
@@ -1232,14 +1232,16 @@ window.G = window.G || {};
     if (eff.tradition) { const opts = traditionOptions(run); if (opts.length) { const d = pick(opts); run.traditions.push(d); addUnique(G.meta.codex.traditions = G.meta.codex.traditions || [], d); lines.push({ t: `Tradition: ${G.TRADITION[d].name}`, good: true }); } }
     if (eff.mound) { const m0 = run.mound || 0; run.mound = clamp(m0 + eff.mound, 0, 6); if (run.mound !== m0) lines.push({ t: `Your ${G.kind(run).camp} grows to level ${run.mound}`, good: true }); }
     if (eff.gear) { const g0 = run.gear || 0; run.gear = clamp(g0 + eff.gear, 0, 5); if (run.gear !== g0) lines.push({ t: `Gear level ${run.gear}`, good: run.gear > g0, bad: run.gear < g0 }); }
-    if (eff.special) { const before = run.special || 0; run.special = clamp(before + eff.special, 0, G.SPECIAL_CAP); const d = run.special - before; if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} ${G.kind(run).resource}`, good: d > 0, bad: d < 0 }); }
+    if (eff.costMod) { run.costMods = (run.costMods || []).filter((x) => run.turn < x.until).concat([{ pct: eff.costMod.pct, until: run.turn + (eff.costMod.turns || 10), why: (eff.costMod.why || 'Recent events').replace(/\{resource\}/g, G.kind(run) ? G.kind(run).resource : 'resource') }]); lines.push({ t: `Discoveries cost ${Math.abs(eff.costMod.pct)}% ${eff.costMod.pct < 0 ? 'less' : 'more'} for ${eff.costMod.turns || 10} turns`, good: eff.costMod.pct < 0, bad: eff.costMod.pct > 0 }); }
+    if (eff.special) { const before = run.special || 0; run.special = clamp(before + eff.special, 0, G.SPECIAL_HARD); const d = run.special - before; if (d) lines.push({ t: `${d > 0 ? '+' : '−'}${Math.abs(d)} ${G.kind(run).resource}`, good: d > 0, bad: d < 0 }); }
     if (eff.specialOn && !run.specialOn) { run.specialOn = true; run.special = Math.max(run.special || 0, 2); lines.push({ t: `Your people now have ${G.kind(run).resource}`, good: true }); }
     if (eff.band2) { const b = makeBand(run, true); if (b) lines.push({ t: `Another band: the ${b.name}`, bad: b.opinion < 0 }); }
     if (eff.band) { const b = makeBand(run); if (b) lines.push({ t: `A rival ${G.kind(run).band}: the ${b.name}`, bad: b.opinion < 0 }); }
     if (eff.bandOpinion) { const b = run.species.filter((x) => x.band && !x.extinct).pop(); if (b) { b.opinion = clamp(b.opinion + eff.bandOpinion, -100, 100); lines.push({ t: `The ${b.name} ${eff.bandOpinion > 0 ? 'like' : 'dislike'} you ${eff.bandOpinion > 0 ? 'more' : 'more'}`, good: eff.bandOpinion > 0, bad: eff.bandOpinion < 0 }); } }
-    if (eff.leaderPick != null && run.candidates && run.candidates[eff.leaderPick]) { const cand = run.candidates[eff.leaderPick]; if (cand.role && run.council) { const i = run.council.findIndex((c) => c.name === cand.name); if (i >= 0) run.council[i] = newCouncillor(run, cand.role); } run.leader = { name: cand.name, traits: cand.traits.length > 1 ? cand.traits : cand.traits.concat([pick(Object.keys(G.LEADER_TRAITS).filter((x) => !cand.traits.includes(x)))]), since: run.turn, life: cand.life || 18 }; run.candidates = null; lines.push({ t: `New leader: ${G.leaderTitle(run.leader)}`, good: true }); log(run, `${G.leaderTitle(run.leader)} became leader.`); }
+    if (eff.leaderPick != null && run.candidates && run.candidates[eff.leaderPick]) { const cand = run.candidates[eff.leaderPick]; if (cand.role && run.council) { const i = run.council.findIndex((c) => c.name === cand.name); if (i >= 0) run.council[i] = newCouncillor(run, cand.role); } if (run.leader) endReign(run, run.leader, 'stepped down');
+      run.leader = { name: cand.name, traits: cand.traits.length > 1 ? cand.traits : cand.traits.concat([pick(Object.keys(G.LEADER_TRAITS).filter((x) => !cand.traits.includes(x)))]), bg: cand.bg, amb: cand.amb || pick(Object.keys(G.AMBITIONS)), queen: cand.queen, since: run.turn, life: cand.life || 18 }; startReign(run, run.leader); run.candidates = null; lines.push({ t: `New leader: ${G.leaderTitle(run.leader)}`, good: true }); log(run, `${G.leaderTitle(run.leader)} became leader.`); }
     if (eff.leaderTrait && run.leader && !run.leader.traits.includes(eff.leaderTrait)) { run.leader.traits.push(eff.leaderTrait); lines.push({ t: `${run.leader.name} is now ${G.LEADER_TRAITS[eff.leaderTrait].name}`, good: true }); }
-    if (eff.leaderDies && run.leader) { lines.push({ t: `${run.leader.name} has died`, bad: true }); log(run, `${G.leaderTitle(run.leader)} died.`); run.leader = null; run.needLeader = true; }
+    if (eff.leaderDies && run.leader) { endReign(run, run.leader, 'died'); lines.push({ t: `${run.leader.name} has died`, bad: true }); log(run, `${G.leaderTitle(run.leader)} died.`); run.leader = null; run.needLeader = true; }
     if (eff.discovery) { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries = G.meta.codex.discoveries || [], d); lines.push({ t: `Discovery: ${G.DISCOVERY[d].name}`, good: true }); } }
     if (eff.forget && run.discoveries && run.discoveries.length) { const d = pick(run.discoveries); run.discoveries = run.discoveries.filter((x) => x !== d); lines.push({ t: `Forgotten: ${G.DISCOVERY[d].name}`, bad: true }); }
     if (eff.path && !run.path) {
@@ -1839,6 +1841,7 @@ window.G = window.G || {};
         G.addFood(run, 6, 'meat'); gainDna(run, 5); addUnique(run.traits, 'feared'); run.warReadyAt = run.turn + 8;
         // Takers carry off what the beaten band knew.
         if (run.stage === 'society' && run.socType === 'conquer') { gainDna(run, 4); lines.push({ t: 'Warlike peoples gain from every victory: +4 Influence', good: true }); }
+        if (t.band) run.bandWins = (run.bandWins || 0) + 1;
         if (t.band && G.people(run) && G.temperament(run).id === 'taker') { const opts = discoveryOptions(run); if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push({ t: `You took their knowledge: ${G.DISCOVERY[d].name}`, good: true }); } }
         lines.push(finishActivity(run, `Victory! The ${t.name} are broken and their territory is yours: +6 Food, +5 ${G.dnaWord(run)}. They will not forget.`, true));
       } else if (act.score <= -100) {
@@ -2048,7 +2051,35 @@ window.G = window.G || {};
   };
 
   // ---------- The Tribe stage ----------
-  G.SPECIAL_CAP = 20;
+  // A people's resource (Fire, Song, Light, Brood, Growth) has a soft cap and a hard cap, like Population.
+  G.SPECIAL_SOFT = 20; G.SPECIAL_HARD = 30;
+  G.SPECIAL_CAP = G.SPECIAL_HARD;
+  G.specialUpkeep = (run) => Math.floor(G.heads(run) / 20);
+  function addSpecial(run, n) {
+    const cur = run.special || 0;
+    if (n >= 0) { const under = Math.min(n, Math.max(0, G.SPECIAL_SOFT - cur)); run.special = Math.min(G.SPECIAL_HARD, cur + under + Math.floor((n - under) / 2)); }
+    else run.special = Math.max(0, cur + n);
+    return run.special - cur;
+  }
+  G.addSpecial = addSpecial;
+  // What a discovery costs: more for advanced ones, then changed by a percentage (always rounded to whole numbers)
+  // from your Cunning, your leader, how many you are, your discoveries, and events.
+  G.DISCOVERY_BASE = { plain: 5, habitat: 6, talent: 6, path: 8, combined: 12 };
+  G.discoveryTier = (d) => (d.from ? 'combined' : d.path ? 'path' : d.talent ? 'talent' : d.habitat ? 'habitat' : 'plain');
+  G.discoveryCostParts = (run) => {
+    const parts = [];
+    const cun = G.stat(run, 'cun'); const c = clamp((10 - cun) * 2, -30, 20); if (c) parts.push([`Cunning ${cun}`, c]);
+    const big = -Math.min(20, Math.floor(Math.max(0, run.pop - 100) / 100) * 5); if (big) parts.push([`${run.pop} ${G.popWord(run)}`, big]);
+    const m = G.mod(run, 'discoveryCost'); if (m) parts.push(['Leader, legacies and discoveries', m]);
+    (run.costMods || []).forEach((x) => { if (run.turn < x.until) parts.push([x.why, x.pct]); });
+    return parts;
+  };
+  G.discoveryCostPct = (run) => clamp(G.discoveryCostParts(run).reduce((t, x) => t + x[1], 0), -60, 100);
+  G.discoveryCost = (run, id) => {
+    const d = G.DISCOVERY[id]; if (!d) return 0;
+    if (run.stage !== 'tribe') return 0;
+    return Math.max(1, Math.round(G.DISCOVERY_BASE[G.discoveryTier(d)] * (1 + G.discoveryCostPct(run) / 100)));
+  };
   G.kind = (run) => G.KINDS[run.path] && G.KINDS[run.path][run.habitat === 'sea' ? 'sea' : 'land'];
   // Fire (or vent-heat) is lit once your Toolmakers have at least 3: it warms you through the cold and keeps hunters away.
   G.firelit = (run) => G.people(run) && run.path === 'tool' && (run.special || 0) >= 3;
@@ -2081,13 +2112,50 @@ window.G = window.G || {};
     const traits = []; const keys = Object.keys(G.LEADER_TRAITS);
     while (traits.length < 2) { const t = pick(keys); if (!traits.includes(t)) traits.push(t); }
     const queen = run.path === 'swarm';
-    return { name: pick(A.a) + pick(A.b), traits, since: run.turn, life: 14 + Math.floor(rand() * 12) + (queen ? 8 : 0) + 5 * G.boonLevel('w_choosing'), queen };
+    const bg = pick(G.LEADER_BACKGROUNDS); const amb = pick(Object.keys(G.AMBITIONS));
+    return { name: pick(A.a) + pick(A.b), traits, bg: bg.id, amb, since: run.turn, life: Math.max(8, 14 + Math.floor(rand() * 12) + (queen ? 8 : 0) + 5 * G.boonLevel('w_choosing') + (bg.life || 0)), queen };
+  }
+  // What a candidate brings, in one line: where they come from, what they want, and what they'd change.
+  G.leaderPitch = (run, c) => {
+    if (!c) return '';
+    const bg = c.bg && G.LEADER_BACKGROUND[c.bg]; const amb = c.amb && G.AMBITIONS[c.amb];
+    const mods = {}; (c.traits || []).forEach((t) => Object.entries(G.LEADER_TRAITS[t].mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; }));
+    if (bg) Object.entries(bg.mods).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + v; });
+    const kind = G.kind(run);
+    const sub = (x) => x.replace(/\{resource\}/g, kind ? kind.resource : 'resource');
+    return `${bg ? `${sub(bg.text[0].toUpperCase() + bg.text.slice(1))}. ` : ''}${amb ? `Wants to ${sub(amb.want)} (legacy: ${G.describeMods(amb.legacy)}). ` : ''}${G.describeMods(mods)}`;
+  };
+  // A leader's ambition: the record of where things stood when they took power, and whether it is done.
+  function startReign(run, l) {
+    if (!l) return;
+    l.since = run.turn;
+    l.start = { disc: (run.discoveries || []).length, pop: run.pop, wins: run.bandWins || 0, tamed: run.species.filter((x) => x.tamed && !x.extinct).length };
+  }
+  G.ambitionProgress = (run, l) => {
+    if (!l || !l.amb || !l.start) return null;
+    const s = l.start;
+    switch (l.amb) {
+      case 'conquer': return { now: (run.bandWins || 0) - s.wins, goal: 1 };
+      case 'learn': return { now: (run.discoveries || []).length - s.disc, goal: 3 };
+      case 'grow': return { now: run.pop, goal: Math.round(s.pop * 1.5) };
+      case 'befriend': return { now: Math.max(0, ...run.species.filter((x) => x.band && !x.extinct).map((x) => x.opinion), 0), goal: 50 };
+      case 'keep': return { now: run.special || 0, goal: 20 };
+      case 'tame': return { now: run.species.filter((x) => x.tamed && !x.extinct).length - s.tamed, goal: 1 };
+      default: return null;
+    }
+  };
+  // A leader leaves the stage: into the line of leaders, with their legacy if they earned one.
+  function endReign(run, l, how) {
+    if (!l) return;
+    run.rulers = (run.rulers || []).concat([{ name: l.name, title: G.leaderTitle(l), years: Math.max(0, run.turn - (l.since || run.turn)), amb: l.amb, done: !!l.done, how }]).slice(-20);
   }
   // Everything the Tribe stage adds to your stats.
   function tribeMods(run) {
     const list = [];
     const tm = G.TRIBE_TEMPER[G.temperament(run).id]; if (tm) list.push(tm.mods);
-    if (run.leader) run.leader.traits.forEach((t) => list.push(G.LEADER_TRAITS[t].mods));
+    if (run.leader) { run.leader.traits.forEach((t) => list.push(G.LEADER_TRAITS[t].mods)); if (run.leader.bg && G.LEADER_BACKGROUND[run.leader.bg]) list.push(G.LEADER_BACKGROUND[run.leader.bg].mods); }
+    // Legacies of leaders who achieved what they set out to do.
+    (run.legacies || []).forEach((x) => { if (G.AMBITIONS[x.amb]) list.push(G.AMBITIONS[x.amb].legacy); });
     (run.discoveries || []).forEach((d) => list.push(G.DISCOVERY[d].mods));
     if (run.gear) list.push({ str: run.gear, tou: Math.floor(run.gear / 2) });
     const totem = run.totem && run.species.find((x) => x.name === run.totem && !x.extinct);
@@ -2105,11 +2173,28 @@ window.G = window.G || {};
   G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.floor(G.mod(run, 'exploreBonus') / 2) : 0));
   // One turn of tribe life: the special resource, and the leader growing old.
   function tribeTurn(run, lines) {
-    if (run.specialOn) {
-      const gain = Math.max(0, 1 + G.mod(run, 'specialPerTurn'));
+    if (run.specialOn && G.kind(run)) {
+      // Your people make their resource, and use it: the more of them, the more it takes to keep going.
+      const gain = Math.max(0, 2 + G.mod(run, 'specialPerTurn'));
+      const use = G.specialUpkeep(run);
       const before = run.special || 0;
-      run.special = Math.min(G.SPECIAL_CAP, before + gain);
-      if (run.special > before) lines.push({ t: `+${run.special - before} ${G.kind(run).resource}`, good: true });
+      addSpecial(run, gain - use);
+      // Past the soft cap it is hard to keep: a tenth of the excess is lost every turn.
+      const over = (run.special || 0) - G.SPECIAL_SOFT;
+      if (over > 0) run.special -= Math.max(1, Math.round(over * 0.1));
+      const d = (run.special || 0) - before;
+      lines.push({ t: `${d >= 0 ? '+' : '−'}${Math.abs(d)} ${G.kind(run).resource}${use ? ` (your people used ${use})` : ''}`, good: d > 0, bad: d < 0 });
+      if (before > 0 && run.special === 0) { lines.push({ t: `Your ${G.kind(run).resource} has run out!`, bad: true }); run.notices.push(`Your ${G.kind(run).resource} has run out. Without it, your people cannot learn anything new, and they are weaker.`); }
+    }
+    // A leader's ambition, achieved. (Leaders from older saves start keeping score now.)
+    if (run.leader && !run.leader.start) { if (!run.leader.amb) run.leader.amb = pick(Object.keys(G.AMBITIONS)); startReign(run, run.leader); }
+    const L0 = run.leader; const prog = G.ambitionProgress(run, L0);
+    if (L0 && prog && !L0.done && prog.now >= prog.goal) {
+      L0.done = true; run.legacies = (run.legacies || []).concat([{ name: L0.name, amb: L0.amb }]);
+      const A0 = G.AMBITIONS[L0.amb];
+      lines.push({ t: `${L0.name} the ${A0.name} achieved their ambition: ${G.describeMods(A0.legacy)} for good`, good: true });
+      run.notices.push(`${G.leaderTitle(L0)} achieved their ambition. Their legacy stays with your people: ${G.describeMods(A0.legacy)}.`);
+      log(run, `${G.leaderTitle(L0)} achieved their ambition (${A0.name}).`);
     }
     // The Swarm: brood hatches into new members.
     if (run.path === 'swarm' && (run.special || 0) >= 8 && run.pop < G.maxPop(run)) { run.special -= 6; const n = Math.min(G.hardPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
@@ -2124,6 +2209,7 @@ window.G = window.G || {};
     // Even allies need tending: friendship with another people never lasts on its own.
     run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (run.stage === 'society' ? (G.hasFlag(run, 'peaceful') || (run.path === 'song' && (run.special || 0) >= 6) ? 0 : 1) : run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.BAND_SOUR)); });
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
+      endReign(run, run.leader, 'died of old age');
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
       run.leader = null; run.needLeader = true;
@@ -2169,7 +2255,7 @@ window.G = window.G || {};
     const talents = G.talents(run); const hab = run.habitat === 'sea' ? 'sea' : 'land';
     const known = run.discoveries || [];
     const usedUp = new Set(known.concat(G.DISCOVERIES.filter((d) => d.from && known.includes(d.id)).flatMap((d) => d.from)));
-    let pool = G.DISCOVERIES.filter((d) => !d.from && !usedUp.has(d.id) && (!d.path || d.path === run.path) && (!d.habitat || d.habitat === hab) && (!d.talent || talents.has(d.talent)) && !G.useless(run, d));
+    let pool = G.DISCOVERIES.filter((d) => !d.from && !usedUp.has(d.id) && (!d.path || d.path === run.path) && (!d.habitat || d.habitat === hab) && (!d.talent || talents.has(d.talent)) && !G.useless(run, d) && !(run.held || []).includes(d.id));
     const n = G.meta.boons.choice ? 4 : 3; const out = [];
     while (out.length < n && pool.length) {
       const d = weightedPick(pool, (x) => (x.talent ? 1.6 : 1) * (x.path ? 1.4 : 1) * (known.some((k) => G.discoveryCombo(k, x.id)) ? 1.8 : 1));
@@ -2177,6 +2263,30 @@ window.G = window.G || {};
     }
     return out;
   }
+  // Keep a discovery you can't afford yet, to learn it later from the Discoveries tab (up to 3).
+  G.holdDiscovery = function (pid) {
+    const run = G.run;
+    if (!run || run.phase !== 'draft' || run.stage !== 'tribe' || !run.draft.options.includes(pid)) return;
+    run.held = (run.held || []).filter((x) => x !== pid);
+    if (run.held.length >= 3) run.held.shift();
+    run.held.push(pid);
+    if (!run.draft.source) run.draftsTaken += 1;
+    log(run, `Your people will remember ${G.DISCOVERY[pid].name}, to learn it when they can.`);
+    run.draft = null;
+    nextStep(run, false);
+    save();
+  };
+  G.learnHeld = function (pid, combineWith) {
+    const run = G.run;
+    if (!run || run.phase !== 'map' || !(run.held || []).includes(pid)) return;
+    const combo = combineWith && run.discoveries.includes(combineWith) && G.discoveryCombo(combineWith, pid);
+    const cost = G.discoveryCost(run, combo || pid);
+    if (cost > (run.special || 0)) return;
+    run.special -= cost;
+    run.held = run.held.filter((x) => x !== pid);
+    run.draft = { options: [pid], source: 'held' };
+    learnDiscovery(run, pid, combo ? combineWith : null);
+  };
   function learnDiscovery(run, id, combineWith) {
     const d = G.DISCOVERY[id];
     let text = `Your people discovered ${d.name}`;
@@ -2234,13 +2344,13 @@ window.G = window.G || {};
     }
     if (act.id === 'revere' && act.turns >= a.turns) { run.totem = t.name; t.opinion = clamp(t.opinion + 40, -100, 100); lines.push(finishActivity(run, `The ${t.name} are now your totem.`, true)); }
     if (act.id === 'ceremony') {
-      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2); gainDna(run, 1);
+      G.spendFood(run, 1); run.special = (addSpecial(run, 2), run.special); gainDna(run, 1);
       lines.push({ t: `Ceremony: +2 ${G.kind(run).resource}, +1 Idea, −1 Food`, good: true });
       if (act.turns >= a.turns) { run.ceremonyReadyAt = run.turn + 8; lines.push(finishActivity(run, 'The ceremony ends. Everyone feels closer.', true)); }
     }
     if (act.id === 'craft' && act.turns >= a.turns) { run.special -= 4; run.gear = (run.gear || 0) + 1; lines.push(finishActivity(run, `New gear for your people (level ${run.gear}).`, true)); }
     if (act.id === 'teach') {
-      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
+      G.spendFood(run, 1); run.special = (addSpecial(run, 2), run.special);
       lines.push({ t: `Teaching: +2 Song, −1 Food`, good: true });
       if (act.turns >= a.turns) { run.songSafe = true; lines.push(finishActivity(run, 'The songs are learned by heart. The next great loss will not cost a verse.', true)); }
     }
@@ -2250,12 +2360,12 @@ window.G = window.G || {};
         if (t.band) {
           const opts = discoveryOptions(run);
           if (opts.length) { const d = pick(opts); run.discoveries.push(d); addUnique(G.meta.codex.discoveries, d); lines.push(finishActivity(run, `By watching the ${t.name}, your people learned ${G.DISCOVERY[d].name}.`, true)); } else lines.push(finishActivity(run, `The ${t.name} know nothing you do not.`, false));
-        } else { gainDna(run, 2); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 3); lines.push(finishActivity(run, `Watching the ${t.name} taught your people something: +2 Ideas, +3 Light.`, true)); }
+        } else { gainDna(run, 2); run.special = (addSpecial(run, 3), run.special); lines.push(finishActivity(run, `Watching the ${t.name} taught your people something: +2 Ideas, +3 Light.`, true)); }
       }
     }
     if (act.id === 'raise' && act.turns >= a.turns) { run.special -= 5; run.mound = (run.mound || 0) + 1; lines.push(finishActivity(run, `Your ${G.kind(run).camp} grows (level ${run.mound}): more room for everyone.`, true)); }
     if (act.id === 'tend') {
-      G.spendFood(run, 1); run.special = Math.min(G.SPECIAL_CAP, (run.special || 0) + 2);
+      G.spendFood(run, 1); run.special = (addSpecial(run, 2), run.special);
       lines.push({ t: 'Tending the gardens: +2 Growth, −1 Food', good: true });
       if (act.turns >= a.turns) { run.blightSafeUntil = run.turn + 12; lines.push(finishActivity(run, 'The gardens are weeded and healthy. Blight cannot strike for 12 turns.', true)); }
     }
@@ -2289,7 +2399,7 @@ window.G = window.G || {};
     if (act.id === 'raid' && act.turns >= a.turns) {
       const win = G.stat(run, 'str') + rand() * 6 > G.speciesStat(t, 'str') + Math.floor(G.harsh(run) / 2) + rand() * 6;
       t.opinion = clamp(t.opinion - 25, -100, 100);
-      if (win) { G.addFood(run, 5, 'meat'); gainDna(run, run.socType === 'conquer' ? 5 : 2); t.pop = Math.max(0, t.pop - t.cap * 0.1); lines.push(finishActivity(run, `The raid on the ${t.name} brought back food and glory.`, true)); }
+      if (win) { run.bandWins = (run.bandWins || 0) + 1; G.addFood(run, 5, 'meat'); gainDna(run, run.socType === 'conquer' ? 5 : 2); t.pop = Math.max(0, t.pop - t.cap * 0.1); lines.push(finishActivity(run, `The raid on the ${t.name} brought back food and glory.`, true)); }
       else lines.push(finishActivity(run, `The raid on the ${t.name} failed: −${damage(run, 2)} people.`, false));
     }
   }
@@ -2315,7 +2425,7 @@ window.G = window.G || {};
     const hab = run.habitat === 'sea' ? 'sea' : 'land';
     run.stage = 'tribe'; run.stageTurn = 1; run.eraTurn = 1;
     tribeStart(run);
-    run.leader = newLeader(run); run.needLeader = false;
+    run.leader = newLeader(run); startReign(run, run.leader); run.needLeader = false;
     run.activity = null; run.chains = []; run.fascination = null; run.hunger = 0;
     run.pop = G.maxPop(run);
     run.evolved = { tribe: true, kind: G.kind(run).name, ending: G.endingName(run) };
@@ -2459,6 +2569,7 @@ window.G = window.G || {};
     run.stage = 'society'; run.stageTurn = 1; run.eraTurn = 1;
     societyStart(run);
     if (!run.leader) run.leader = newLeader(run);
+    startReign(run, run.leader);
     run.needLeader = false; run.activity = null; run.chains = [];
     run.pop = G.maxPop(run);
     // The whole people brings its stores into the new settlements.
@@ -2594,7 +2705,15 @@ window.G = window.G || {};
     const run = G.run;
     if (!run || run.phase !== 'draft' || !run.draft.options.includes(pid)) return;
     if (run.stage === 'society') { learnTradition(run, pid); return; }
-    if (run.stage === 'tribe') { learnDiscovery(run, pid, mode === 'combine' ? socket : null); return; }
+    if (run.stage === 'tribe') {
+      // Knowledge costs your people's resource: you can only learn what you can pay for.
+      const combo = mode === 'combine' && socket && G.discoveryCombo(socket, pid);
+      const cost = G.discoveryCost(run, combo || pid);
+      if (cost > (run.special || 0)) return;
+      run.special -= cost;
+      learnDiscovery(run, pid, mode === 'combine' ? socket : null);
+      return;
+    }
     const text = installPart(run, G.PART[pid], mode, socket);
     log(run, `Mutation: ${text}.`);
     if (!run.draft.source) run.draftsTaken += 1;
@@ -2794,6 +2913,7 @@ window.G = window.G || {};
     return Object.keys(mods || {}).filter((k) => mods[k]).map((k) => {
       const v = mods[k];
       if (k === 'damageReduce') return `−${v} damage taken`;
+      if (k === 'discoveryCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)}% discovery cost`;
       if (k === 'growthCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)} Food needed to grow`;
       return `${v > 0 ? '+' : '−'}${Math.abs(v)} ${G.MOD_LABELS[k] || k}`;
     }).join(', ');

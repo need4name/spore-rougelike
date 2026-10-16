@@ -294,7 +294,7 @@ window.G = window.G || {};
   function tribeChips(run) {
     if (!G.people(run)) return '';
     const k = G.kind(run);
-    const sp = run.specialOn ? `<span class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
+    const sp = run.specialOn ? `<span class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b><i class="${(run.special || 0) > G.SPECIAL_SOFT ? 'neg' : ''}">/${G.SPECIAL_SOFT}</i>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
     const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
     const ld = `<span class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
     if (run.stage !== 'society') return sp + ld;
@@ -482,25 +482,28 @@ window.G = window.G || {};
   }
   function discoveryCard(run) {
     const d = run.draft;
+    const res = G.kind(run).resource; const icon = G.kind(run).icon; const have = run.special || 0;
     const known = run.discoveries || [];
     const seen = G.meta.codex.discoveries || [];
     return `
       <article class="card draft">
         <p class="eyebrow">Discovery</p>
         <h2>What will your people learn?</h2>
-        <p class="note">Learn something new, or combine it with something you already know. The right pairs become a greater discovery (you keep only the result).</p>
+        <p class="note">Learn something new, or combine it with something you already know. The right pairs become a greater discovery (you keep only the result). Every discovery costs ${esc(res)}: you have <b>${have}</b>. Can't afford one yet? Remember it, and learn it later from the Discoveries tab.</p>
         <div class="draft-list">
           ${d.options.map((id) => {
             const x = G.DISCOVERY[id];
             const combos = known.map((k) => ({ k, c: G.discoveryCombo(k, id) })).filter((o) => o.c);
+            const cost = G.discoveryCost(run, id);
             return `
-            <div class="part-card">
-              <span class="opt-label">${esc(x.name)}${discoveryTags(x)}</span>
+            <div class="part-card ${cost > have ? 'cant' : ''}">
+              <span class="opt-label">${esc(x.name)}${discoveryTags(x)}<span class="cost ${cost > have ? 'bad' : ''}">${icon} ${cost}</span></span>
               <span class="opt-meta"><span>${esc(G.describeMods(x.mods))}</span></span>
               <span class="opt-desc">${esc(x.desc)}</span>
               <div class="row tight">
-                <button class="btn small primary" data-act="draft" data-arg="${id}" data-mode="learn">Learn it</button>
-                ${combos.map((o) => `<button class="btn small primary evo" data-act="draft" data-arg="${id}" data-mode="combine" data-socket="${o.k}">Combine with ${esc(G.DISCOVERY[o.k].name)} → ${seen.includes(o.c) ? esc(G.DISCOVERY[o.c].name) : '✨ something new?'}</button>`).join('')}
+                <button class="btn small primary" ${cost <= have ? `data-act="draft" data-arg="${id}" data-mode="learn"` : 'disabled'}>Learn it (${icon} ${cost})</button>
+                ${combos.map((o) => { const cc = G.discoveryCost(run, o.c); return `<button class="btn small primary evo" ${cc <= have ? `data-act="draft" data-arg="${id}" data-mode="combine" data-socket="${o.k}"` : 'disabled'}>Combine with ${esc(G.DISCOVERY[o.k].name)} → ${seen.includes(o.c) ? esc(G.DISCOVERY[o.c].name) : '✨ something new?'} (${icon} ${cc})</button>`; }).join('')}
+                <button class="btn small ghost" data-act="hold-discovery" data-arg="${id}">Remember for later</button>
               </div>
             </div>`;
           }).join('')}
@@ -520,9 +523,10 @@ window.G = window.G || {};
     return `
       <div class="callout"><strong>${k.icon} The ${esc(k.name)}</strong><span>${esc(G.sub(G.KINDS[run.path].desc, run))}</span></div>
       <h3>${esc(G.ruler(run))}</h3>
-      ${l ? `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} years; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span></div>` : '<p class="empty">No leader. One will be chosen soon.</p>'}
+      ${l ? leaderCard(run, l, 'years') : '<p class="empty">No leader. One will be chosen soon.</p>'}
+      ${lineOfLeaders(run)}
       <h3>${esc(k.resource)}</h3>
-      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : run.path === 'song' ? ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn, and at 6 or more bands sour on you half as fast.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}` : ''}</p>
+      <p class="note">${run.specialOn ? `${run.special || 0} (comfortable up to ${G.SPECIAL_SOFT}, never more than ${G.SPECIAL_HARD}). +${Math.max(0, 2 + G.mod(run, 'specialPerTurn'))} a turn, and your people use ${G.specialUpkeep(run)} (1 for every 200 of them). Discoveries, gear and other works all cost it. Past ${G.SPECIAL_SOFT}, gains are halved and a tenth of the excess is lost each turn.` : `Not yet. Your people will find it soon.`}${run.path === 'tool' ? ` ${G.firelit(run) ? 'Lit: it cancels cold seasons and keeps hunters away (−25% attacks).' : 'At 3 or more, it cancels cold seasons and keeps hunters away.'}${run.gear ? ` Gear level ${run.gear}.` : ''}` : run.path === 'song' ? ` Every 6 Song gives +1 Charm (up to 3), every 10 gives +1 Idea a turn, and at 6 or more bands sour on you half as fast.${run.songSafe ? ' The songs are learned by heart: the next great loss costs no verse.' : ''}` : ''}</p>
       ${kindPanel(run)}
       <h3>Your temperament: ${esc(tm.name)}</h3>
       <p class="note">${tt ? `${esc(tt.rule)} (${esc(G.describeMods(tt.mods))})` : ''}</p>
@@ -532,6 +536,19 @@ window.G = window.G || {};
       <h3>Wildlife</h3>
       <p class="note">${run.totem ? `Totem: the ${esc(run.totem)}. ` : 'No totem yet (Activities: Revere). '}${tamed.length ? `Tamed: ${esc(listJoin(tamed.map((s) => `the ${s.name}`)))}.` : 'Nothing tamed yet (Activities: Tame).'}</p>
       ${band ? `<h3>Strangers</h3><p class="note">The ${esc(band.name)}: opinion ${band.opinion}${band.nemesis ? ', and they remember the old feud' : ''}.</p>` : ''}`;
+  }
+  // A leader: background, traits, ambition and how close it is.
+  function leaderCard(run, l, unit) {
+    const bg = l.bg && G.LEADER_BACKGROUND[l.bg]; const amb = l.amb && G.AMBITIONS[l.amb]; const pr = G.ambitionProgress(run, l);
+    const kind = G.kind(run); const sub = (x) => x.replace(/\{resource\}/g, kind ? kind.resource : 'resource');
+    return `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${bg ? `${esc(sub(bg.text[0].toUpperCase() + bg.text.slice(1)))} (${esc(G.describeMods(bg.mods))}). ` : ''}${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} ${unit}; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span>
+      ${amb ? `<span><b>${esc(amb.name)}:</b> wants to ${esc(sub(amb.want))}. ${l.done ? '✅ Achieved: their legacy is yours for good.' : pr ? `Progress: ${Math.min(pr.now, pr.goal)} of ${pr.goal}.` : ''} Legacy: ${esc(G.describeMods(amb.legacy))}.</span>` : ''}</div>`;
+  }
+  function lineOfLeaders(run) {
+    const leg = run.legacies || []; const past = run.rulers || [];
+    if (!leg.length && !past.length) return '';
+    return `${leg.length ? `<p class="note"><b>Legacies:</b> ${esc(leg.map((x) => `${x.name} the ${G.AMBITIONS[x.amb].name} (${G.describeMods(G.AMBITIONS[x.amb].legacy)})`).join(' · '))}</p>` : ''}
+      ${past.length ? `<details class="rulers"><summary>The line of leaders (${past.length})</summary><ol>${past.slice().reverse().map((x) => `<li>${esc(x.title)}: ${x.years} ${run.stage === 'society' ? 'generations' : 'years'}, ${esc(x.how)}${x.done ? ` · ${esc(G.AMBITIONS[x.amb].name)} ✅` : ''}</li>`).join('')}</ol></details>` : ''}`;
   }
   // What only your kind has: castes and the great home, Blight, Light.
   function kindPanel(run) {
@@ -551,7 +568,11 @@ window.G = window.G || {};
   function discoveriesTab(run) {
     const known = run.discoveries || [];
     const seen = G.meta.codex.discoveries || [];
-    return `<p class="note">${known.length} discover${known.length === 1 ? 'y' : 'ies'}. New ones come as your people gather Ideas.</p>
+    const k = G.kind(run); const have = run.special || 0; const held = run.held || [];
+    const parts = G.discoveryCostParts(run); const pct = G.discoveryCostPct(run);
+    const heldHtml = held.length ? `<h3>Remembered</h3><p class="note">Discoveries your people know of but haven't learned yet. You have ${have} ${esc(k.resource)}.</p>${held.map((id) => { const x = G.DISCOVERY[id]; const cost = G.discoveryCost(run, id); const combos = known.map((kk) => ({ kk, c: G.discoveryCombo(kk, id) })).filter((o) => o.c); const live = run.phase === 'map'; return `<div class="callout"><strong>${esc(x.name)} ${discoveryTags(x)} <span class="cost ${cost > have ? 'bad' : ''}">${k.icon} ${cost}</span></strong><span>${esc(G.describeMods(x.mods))}. ${esc(x.desc)}</span><div class="row tight"><button class="btn small primary" ${cost <= have && live ? `data-act="learn-held" data-arg="${id}"` : 'disabled'}>Learn it</button>${combos.map((o) => { const cc = G.discoveryCost(run, o.c); return `<button class="btn small primary evo" ${cc <= have && live ? `data-act="learn-held" data-arg="${id}" data-socket="${o.kk}"` : 'disabled'}>Combine with ${esc(G.DISCOVERY[o.kk].name)} (${k.icon} ${cc})</button>`; }).join('')}</div></div>`; }).join('')}` : '';
+    return `<p class="note">${known.length} discover${known.length === 1 ? 'y' : 'ies'}. New ones come as your people gather Ideas, and each costs ${esc(k.resource)}: basic ones ${G.DISCOVERY_BASE.plain}, home and talent ones ${G.DISCOVERY_BASE.talent}, Path ones ${G.DISCOVERY_BASE.path}, combinations ${G.DISCOVERY_BASE.combined}, changed by ${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)}% right now${parts.length ? ` (${esc(parts.map(([w, v]) => `${w}: ${v > 0 ? '+' : '−'}${Math.abs(v)}%`).join(', '))})` : ''}.</p>
+      ${heldHtml}
       ${known.length ? known.map((id) => { const x = G.DISCOVERY[id]; return `<div class="callout"><strong>${esc(x.name)} ${discoveryTags(x)}</strong><span>${esc(G.describeMods(x.mods))}. ${esc(x.desc)}</span></div>`; }).join('') : '<p class="empty">Nothing yet.</p>'}
       <h3>Combinations found (all lineages)</h3>
       <p class="note">${esc(listJoin(G.DISCOVERIES.filter((x) => x.from && seen.includes(x.id)).map((x) => `${x.name} (${G.DISCOVERY[x.from[0]].name} + ${G.DISCOVERY[x.from[1]].name})`)) || 'None yet.')}</p>`;
@@ -594,7 +615,8 @@ window.G = window.G || {};
     return `
       <div class="callout"><strong>🏛️ The ${esc(sk.name)}: ${esc(st.name)}</strong><span>${esc(st.rule)} (${esc(G.describeMods(st.mods))})</span></div>
       <h3>${esc(G.ruler(run))}</h3>
-      ${l ? `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Ruling for ${run.turn - l.since} generations; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span></div>` : '<p class="empty">No ruler. The council will choose one soon.</p>'}
+      ${l ? leaderCard(run, l, 'generations') : '<p class="empty">No ruler. The council will choose one soon.</p>'}
+      ${lineOfLeaders(run)}
       <h3>${esc(sk.settlement[0].toUpperCase() + sk.settlement.slice(1))}s (${run.settlements.length} of 8)</h3>
       <p class="note">Each size lets your people grow bigger. Every 6 sizes in all earn +1 Influence a turn. Found new ones and build them up from Activities.</p>
       <div class="settlements">${run.settlements.map((x, i) => `<div class="settlement"><b>${i === 0 ? '⭐ ' : ''}${esc(x.name)}</b><span>${'■'.repeat(x.size)}${'□'.repeat(4 - x.size)}</span></div>`).join('')}</div>
@@ -1568,6 +1590,8 @@ window.G = window.G || {};
       case 'draft': G.pickDraft(arg, el.dataset.mode, el.dataset.socket); parts = ['top', 'hud', 'modal']; break;
       case 'reroll': G.rerollDraft(); parts = ['modal']; break;
       case 'skip-draft': G.skipDraft(); parts = ['top', 'hud', 'modal']; break;
+      case 'hold-discovery': G.holdDiscovery(arg); parts = ['top', 'hud', 'modal']; break;
+      case 'learn-held': G.ui.sheet = null; G.learnHeld(arg, el.dataset.socket); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
       case 'mind-sel': G.ui.mindSel = arg; G.ui.keepScroll = true; parts = run && run.phase === 'mind' && !G.ui.sheet ? ['modal'] : ['sheet']; break;
       case 'continue-evolved': G.continueEvolved(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
