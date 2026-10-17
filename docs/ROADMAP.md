@@ -84,7 +84,7 @@ At the Spark of Mind milestone you choose how your kind thinks, much like choosi
 | 16.4 | Patch ✅ | **Fair Fights:** the species you meet evolve too; checks against a species use its real stats, so a weak foe is easy, a strong one is hard, and your stats mean what they say | Medium |
 | 17 | **The Book of the Lineage** ✅ | **The hook, part 1:** the book of trees (one page per stage), the **Mind tree** rebuilt three times bigger, and the first **leanings** toward Peaceful, Territorial or Warmongering | Large |
 | 18 | **The Lore Tree** ✅ | **The hook, part 2:** the Tribe stage's own tree, from discoveries, leaders and deeds; the **Memory of Kinds** (every species remembers what you did to it); a harder Tribe; Ancestral Wisdom doubled | Large |
-| 19 | **Faith and Neighbours** | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
+| 19 | **Faith and Neighbours** ✅ | Society stage, part 2: **culture** (faiths, arts, myths), **traditions**, diplomacy foundations, and the **Law tree**. Your leaning becomes your **Disposition** | Large |
 | 20 | **Renaissance** | **A new stage:** neighbours become nations that remember your history; science, invention and art; schisms and alliances; the **Reason tree** | Large |
 | 21 | **Colonial Age** | **Empire, part 1:** the realm, dynasty, fleets and colonies across the World Map, and the **Crown tree** | Large |
 | 22 | **Empires** | Empire, part 2: rival empires descended from species you met, wonders, the grand endings (one per Disposition and kind of people), New Game+, and the book's last page, **the Legacy** | Large |
@@ -492,9 +492,10 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **The Memory of Kinds:** every species keeps a record of what your lineage did to it (from the Creature stage), shown on its card; rival bands are born from species that hold grudges.
 - **A harder Tribe;** **Ancestral Wisdom** doubles to about 25 nodes.
 
-## Update 19: Faith and Neighbours (Society stage, part 2)
+## Update 19: Faith and Neighbours (Society stage, part 2) ✅
 
-- **Culture:** faiths built from your own history (your ancestor, your ending, your nemesis species), arts and myths.
+- **The other kinds:** Many Minds, the Swarm and Gardeners reach the Society stage too, each with its own Union and endings.
+- **Culture:** faiths built from your own history (your totem, your nemesis species, or your ancestors), arts and myths.
 - **Traditions** deepen, and carry forward into the nations of the Renaissance.
 - **Diplomacy foundations:** treaties, marriages, tribute and betrayal, all remembered.
 - **The Law tree:** the Society stage's page, built from your traditions (its nodes), council, faith and neighbours. The Union is its Gate.

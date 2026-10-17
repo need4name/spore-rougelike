@@ -675,3 +675,9 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .node.cant { border-style: dashed; box-shadow: none; }
 .node.cant i { font-size: 0.6rem; }
 .kin-memory { border-left: 3px solid var(--accent); padding-left: 8px; }
+
+/* ---------- Update 19: the Law tree and Disposition ---------- */
+.edge.fork { stroke: var(--bad); stroke-dasharray: 3 3; opacity: 0.7; }
+.diet-badge.disp.peace { color: #8fc9f0; border-color: #8fc9f0; background: rgba(143, 201, 240, 0.12); }
+.diet-badge.disp.guard { color: #f2c14e; border-color: #f2c14e; background: rgba(242, 193, 78, 0.12); }
+.diet-badge.disp.war { color: #ef7d6b; border-color: #ef7d6b; background: rgba(239, 125, 107, 0.12); }

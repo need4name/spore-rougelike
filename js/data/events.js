@@ -3000,6 +3000,58 @@ G.EVENTS.push(
   },
 );
 
+// ---------- Update 19: Society events for Many Minds, the Swarm and Gardeners ----------
+G.EVENTS.push(
+  {
+    id: 'many_s_lights', stage: 'society', path: 'many', prop: 'night', title: 'Lights in the Dark', tags: ['explore'],
+    text: 'A distant {settlement} has started signalling in a colour-talk nobody else understands. Are they plotting, or just inventing?',
+    options: [
+      { label: 'Learn their new words', check: { stat: 'cun', diff: 6 }, success: { text: 'A richer language for everyone.', dna: 5, anim: 'mutate' }, fail: { text: 'They stop signalling when they notice you watching.', loyalty: -5 } },
+      { label: 'Order them to stop', check: { stat: 'str', diff: 6 }, success: { text: 'One language, one people.', loyalty: 5, anim: 'attack' }, fail: { text: 'They go dark, and stay dark.', settlementLoss: true } },
+    ],
+  },
+  {
+    id: 'many_s_mimic', stage: 'society', path: 'many', prop: 'shadow', title: 'The Mimic Envoy', tags: ['social'],
+    text: 'An envoy arrives from a neighbour people. Your watchers swear it is one of your own kind, wearing their colours.',
+    options: [
+      { label: 'Unmask it', check: { stat: 'cun', diff: 6 }, success: { text: 'A spy, caught. The neighbours apologise, very quickly.', neighbourOpinion: 10, dna: 3, anim: 'mutate' }, fail: { text: 'It slips away in a cloud of ink.', dna: -2 } },
+      { label: 'Play along', result: { text: 'You feed it lies for a year.', dna: 4, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'swarm_s_swarming', stage: 'society', path: 'swarm', prop: 'swarm', title: 'The Swarming', tags: ['danger'],
+    text: 'A new queen has hatched in a far {settlement}, and half the workers are following her out.',
+    options: [
+      { label: 'Let her found a new {settlement}', hint: 'A new {settlement}', result: { text: 'The realm grows by one more mound.', newSettlement: true, pop: -2, anim: 'grow' } },
+      { label: 'Call them back', check: { stat: 'cha', diff: 6 }, success: { text: 'The scent of the true Queen brings them home.', loyalty: 10, anim: 'social' }, fail: { text: 'They leave anyway, and take a {settlement} with them.', settlementLoss: true } },
+    ],
+  },
+  {
+    id: 'swarm_s_harvest', stage: 'society', path: 'swarm', prop: 'fruit', title: 'The Great Gathering', tags: ['food'],
+    text: 'Every forager in the realm sets out at once. By evening the stores are overflowing.',
+    options: [
+      { label: 'Feed the brood', hint: '+6 Brood', result: { text: 'The nurseries are full.', special: 6, anim: 'grow' } },
+      { label: 'Store it all', hint: '+8 Food', result: { text: 'Enough for the hard season.', food: 8, anim: 'eat' } },
+    ],
+  },
+  {
+    id: 'garden_s_blight', stage: 'society', path: 'garden', prop: 'sun', title: 'Blight in the Commons', tags: ['danger'],
+    text: 'Black spots are spreading from one {settlement}\'s fields to the next.',
+    options: [
+      { label: 'Burn the sick fields', check: { stat: 'tou', diff: 6 }, success: { text: 'Smoke for a week, and then clean green shoots.', anim: 'rest' }, fail: { text: 'It spreads anyway.', food: -6 } },
+      { label: 'Ask the neighbours for clean seed', check: { stat: 'cha', diff: 6 }, success: { text: 'They share, and remember that you asked.', neighbourOpinion: 10, food: 2, anim: 'social' }, fail: { text: 'They refuse.', food: -3 } },
+    ],
+  },
+  {
+    id: 'garden_s_wildwood', stage: 'society', path: 'garden', prop: 'tree', title: 'The Wildwood', tags: ['explore'],
+    text: 'Beyond the last {settlement} stands an old, wild wood that has never been tended.',
+    options: [
+      { label: 'Tend it', hint: 'A new {settlement}, −4 Food', req: { food: 4 }, result: { text: 'In a generation it is the richest grove of all.', newSettlement: true, food: -4, anim: 'grow' } },
+      { label: 'Leave it wild, and holy', result: { text: 'Some things should never be tended.', dna: 4, loyalty: 5, anim: 'social' } },
+    ],
+  },
+);
+
 // The Union: the Society stage's finale. Each option leads to one of three endings: Conquest, Trade or Faith.
 (function () {
   const F = {
@@ -3011,11 +3063,24 @@ G.EVENTS.push(
       land: { title: 'The Union of Circles', prop: 'notes', text: 'Every circle in the region knows the First Circle\'s songs. The council says the time has come to sing them all into one people.' },
       sea: { title: 'The Union of Pods', prop: 'notes', text: 'The songs of the Singing Deep carry across the whole ocean. The council says the time has come to sing every pod into one people.' },
     },
+    many: {
+      land: { title: 'The Union of Dens', prop: 'night', text: 'At night the whole region glows with your lanterns. The council says the time has come to make every den one people.' },
+      sea: { title: 'The Union of Grottoes', prop: 'night', text: 'The deep flickers with your colour-talk from shore to abyss. The council says the time has come to make every grotto one people.' },
+    },
+    swarm: {
+      land: { title: 'The Union of Mounds', prop: 'swarm', text: 'The scent of the Queen\'s Mound reaches every corner of the region. The council says the time has come for one hive.' },
+      sea: { title: 'The Union of Reefs', prop: 'coral', text: 'The Mother Reef has grown until its edges touch the others. The council says the time has come for one reef.' },
+    },
+    garden: {
+      land: { title: 'The Union of Groves', prop: 'tree', text: 'The Elder Grove\'s seeds grow in every garden in the region. The council says the time has come for one great garden.' },
+      sea: { title: 'The Union of Kelp Beds', prop: 'kelp', text: 'The Great Kelp shades half the sea. The council says the time has come for one great garden.' },
+    },
   };
-  const ROADS = [['conquest', 'str', 'By force'], ['trade', 'cha', 'By trade'], ['faith', 'cun', 'By faith']];
+  // Update 19: your Disposition decides which roads are open (like diet decides which parts you can use).
+  const ROADS = [['conquest', 'str', 'By force', ['guard', 'war']], ['trade', 'cha', 'By trade', ['peace', 'guard']], ['faith', 'cun', 'By faith', ['peace', 'guard', 'war']]];
   Object.entries(F).forEach(([path, byHab]) => Object.entries(byHab).forEach(([hab, f]) => {
     G.EVENTS.push({ id: `union_${path}_${hab}`, stage: 'society', finale: true, habitat: hab, path, prop: f.prop, title: f.title, text: f.text,
-      options: ROADS.map(([road, stat, verb]) => { const e = G.SOCIETY_ENDINGS[path][hab][road]; return { label: `${verb}: ${e.name}`, hint: e.desc, check: { stat, diff: 7 },
+      options: ROADS.map(([road, stat, verb, disp]) => { const e = G.SOCIETY_ENDINGS[path][hab][road]; return { label: `${verb}: ${e.name}`, hint: e.desc, req: { disposition: disp }, check: { stat, diff: 7 },
         success: { text: `${e.desc} The region is one people now.`, societyEnding: road, anim: stat === 'str' ? 'attack' : stat === 'cha' ? 'social' : 'mutate' },
         fail: { text: 'The region is not ready to be one. Not yet.', pop: -3, loyalty: -5, setback: 0 } }; }) });
   }));

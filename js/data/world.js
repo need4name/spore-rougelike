@@ -861,18 +861,18 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '18';
+G.VERSION = '19';
 G.WHATS_NEW = {
-  title: 'Update 18: The Lore Tree',
+  title: 'Update 19: Faith and Neighbours',
   items: [
-    'The Tribe stage has its own tree: the Lore tree (the Lore tab). Your kind of people gives it a trunk, and every time your Ideas fill up you choose a new branch to graft on. Learn ideas with your Fire, Song, Light, Brood or Growth, now or later.',
-    'Two branches that belong together open a combination, and you keep both halves.',
-    'Leaders shape the tree: each leader opens their own Way while they lead, and a leader who fulfils their ambition grafts a branch of Legacies for good.',
-    'Deeds shape it too: taming, choosing a totem, beating or befriending a rival band, surviving a raid, moving to a new land, a great ceremony, coming back from the brink.',
-    'The Founding is the Lore tree\'s Gate: it needs your Ideas and enough Lore. Ideas Beyond the Founding are costly, must be learned before it, and carry into the Society stage.',
-    'The Memory of Kinds: every species remembers what your lineage did to it (hunted, fought, befriended, tamed), shown on its card. Rival bands descended from it bring the grudge or the debt with them.',
-    'Ancestral Wisdom doubles to 24 upgrades, with ways to reach deeper into the Lore tree: cheaper Lore, more branches to choose from, an easier Founding, a deed remembered from the start.',
-    'The Book keeps your Lore tree as a page, frozen at the Founding. The roadmap no longer has a separate Multicellular stage: it stays part of the Cell stage.',
+    'Every kind of people can now become a Society: Lantern Dens and Shadow Reefs (Many Minds), the Mound Realm and Reef Dominion (the Swarm), the Grove Commons and Kelp Realms (Gardeners), each with its own Union and three endings.',
+    'The Society stage has its own tree: the Law tree (the Law tab). Traditions are its ideas. Your kind of society gives it a Founding, each Influence goal lets you choose a new branch of Law, and you adopt ideas with your people\'s resource. Every law you hold makes the next one harder to agree on.',
+    'Your council opens ideas while they are loyal. Your faith is built from your own history (your totem, the enemy your lineage never forgave, or what your kind once was) and opens its own branch. Great works, wars, trade, golden ages and crushed plots graft Culture ideas.',
+    'Neighbours: sign treaties (they will never raid you), arrange marriages, and remember that breaking a treaty is never forgotten. How you dealt with them grafts Neighbour ideas.',
+    'Your Disposition: Peaceful 🕊️, Territorial 🛡️ or Warmongering ⚔️, from the leaning of everything your lineage has learned, shown as a badge beside your diet. It decides how you can unite the region: a Peaceful people cannot conquer, a Warmongering one cannot trade its way to the Union, and a Territorial one keeps every road open. It is fixed at the Union.',
+    'The Union is the Law tree\'s Gate: it needs your Influence and 12 Law ideas. Each Disposition has one idea Beyond the Union.',
+    'Heritage, the Society stage\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches a Society. A Society is harder now, and Heritage is how you master it.',
+    'The Book keeps your Law tree as a page, frozen at the Union.',
   ],
 };
 
@@ -904,8 +904,8 @@ G.TUTORIALS = [
     text: 'Your people live in many settlements now. Influence replaces Ideas, and each goal brings a Tradition. Found and build settlements from Activities to grow bigger and earn more. The Society tab shows your settlements and neighbours; the Council tab shows who might turn against your ruler.' },
   { id: 'council', title: 'Your council', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society' && (run.council || []).some((c) => c.loyalty < 0),
     text: 'One of your councillors is losing faith in your ruler. Below −25 loyalty they may start plotting, and below −30 they stop helping. Feasts, honours and kind rulers keep them loyal; some traditions do too.' },
-  { id: 'traditions', title: 'Traditions', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'society',
-    text: 'Traditions are your people\'s laws and customs. Some come in opposed pairs: adopting one rules out the other for this run. Higher tiers open once you hold 2 and 4.' },
+  { id: 'traditions', title: 'The Law tree', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'society',
+    text: 'Your Society has its own tree: the Law tree. Each new branch of Law you choose is added to it; adopt it now with your people\'s resource, or later from the Law tab. Some laws come in opposed pairs. Your council, your faith, your deeds and your neighbours add ideas of their own, and the Union needs enough Influence and Law. Your Disposition badge shows how you can unite the region.' },
   { id: 'kind_many', title: 'Many Minds', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'many',
     text: 'Your den is small, but every member is clever. Keep 3 Light or more and you are hidden: hunters and raiders find you far less often. Watch and learn copies discoveries from rival bands.' },
   { id: 'kind_swarm', title: 'The Swarm', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'swarm',
@@ -1300,7 +1300,7 @@ G.STAGES.society = {
   milestones: [{ at: 0, event: 'society_founded' }, { at: 45, event: 'the_council' }, { at: 95, event: 'neighbours_gather' }],
   evolveAt: 190,
 };
-G.SOCIETY_PATHS = ['tool', 'song'];
+G.SOCIETY_PATHS = ['tool', 'song', 'many', 'swarm', 'garden'];
 // Your Founding decides what kind of society you become.
 G.SOCIETY_TYPES = {
   settle: { name: 'Settled', mods: { foodPerTurn: 1, tou: 1 }, start: 4, rule: 'Settled peoples start with four settlements and grow them faster (Build up takes a turn less).' },
@@ -1315,6 +1315,19 @@ G.SOCIETY_KINDS = {
   song: {
     land: { name: 'Song-circles', settlement: 'circle', capital: 'the First Circle' },
     sea: { name: 'Pod League', settlement: 'calving ground', capital: 'the Singing Deep' },
+  },
+  // Update 19: the other three kinds of people reach the Society stage.
+  many: {
+    land: { name: 'Lantern Dens', settlement: 'den', capital: 'the Lantern Hollow' },
+    sea: { name: 'Shadow Reefs', settlement: 'grotto', capital: 'the Glowing Deep' },
+  },
+  swarm: {
+    land: { name: 'Mound Realm', settlement: 'mound', capital: 'the Queen\'s Mound' },
+    sea: { name: 'Reef Dominion', settlement: 'reef', capital: 'the Mother Reef' },
+  },
+  garden: {
+    land: { name: 'Grove Commons', settlement: 'grove', capital: 'the Elder Grove' },
+    sea: { name: 'Kelp Realms', settlement: 'kelp bed', capital: 'the Great Kelp' },
   },
 };
 G.SETTLEMENT_SYLLABLES = { a: ['Ash', 'Brin', 'Cor', 'Del', 'Fen', 'Gar', 'Hal', 'Ir', 'Kel', 'Lor', 'Mar', 'Nor', 'Ost', 'Pel', 'Ros', 'Sar', 'Tor', 'Vel', 'Wen', 'Yar'], b: ['ford', 'hold', 'mere', 'stone', 'deep', 'fall', 'wick', 'reach', 'shore', 'hollow', 'ridge', 'well', 'brook', 'haven'] };
@@ -1356,7 +1369,109 @@ G.TRADITIONS = [
   { id: 'messenger_songs', name: 'Messenger Songs', tier: 2, path: 'song', mods: { cha: 2 }, flag: 'messengers', desc: 'Songs carried between peoples: courting and gifts work better.' },
   { id: 'memory_halls', name: 'Halls of Memory', tier: 2, path: 'song', mods: { specialPerTurn: 1, cun: 1 }, flag: 'songSafe', desc: 'Every verse sung in many places: no great loss costs a discovery.' },
   { id: 'echo_roads', name: 'Echo Roads', tier: 3, path: 'song', habitat: 'land', mods: { exploreBonus: 2, influencePerTurn: 1 }, desc: 'Songs that map the whole region.' },
+  // Many Minds, the Swarm and Gardeners (Update 19)
+  { id: 'lantern_law', name: 'Lantern Law', tier: 1, path: 'many', mods: { cun: 1, influencePerTurn: 1 }, desc: 'Laws written in light, read by anyone.' },
+  { id: 'hidden_ways', name: 'The Hidden Ways', tier: 2, path: 'many', mods: { cun: 1, damageReduce: 1 }, flag: 'closed', desc: 'Secret paths between every den: raids land less often.' },
+  { id: 'queens_word', name: "The Queen's Word", tier: 1, path: 'swarm', mods: { tou: 1, influencePerTurn: 1 }, flag: 'loyal', desc: 'Nobody argues with the Queen: the council stays loyal.' },
+  { id: 'brood_tithes', name: 'Brood Tithes', tier: 2, path: 'swarm', mods: { maxPop: 4, specialPerTurn: 1 }, desc: 'Every mound sends young to the capital.' },
+  { id: 'grove_law', name: 'Grove Law', tier: 1, path: 'garden', mods: { foodPerTurn: 1, cha: 1 }, desc: 'Nothing grows without everyone agreeing.' },
+  { id: 'seed_banks', name: 'Seed Banks', tier: 2, path: 'garden', mods: { foodCap: 8, foodPerTurn: 1 }, desc: 'Every kind of seed, kept safe for the bad years.' },
   { id: 'migration_songs', name: 'Migration Songs', tier: 3, path: 'song', habitat: 'sea', mods: { exploreBonus: 2, influencePerTurn: 1 }, desc: 'Every route around the ocean, sung.' },
+];
+// ======================= UPDATE 19: THE LAW TREE =======================
+// The Society stage's own tree. Traditions are its ideas, paid for with your people's resource.
+// Bands: Founding (your kind of society, always there), Laws (grafted: each Influence goal lets you choose
+// one of three), Council (open while that councillor is loyal; kept once learned), Faith (from your
+// faith, which is built from your history), Culture and Neighbours (grafted by deeds), the Union (the
+// Gate: ends the Society stage) and Beyond the Union (one per Disposition).
+//   law  founding | law | council | faith | culture | neighbours | gate | beyond (old traditions: law)
+G.FAITH_KINDS = {
+  totem: { name: (n) => `The Way of the ${n}`, desc: 'Your faith grew from the totem your people revered.' },
+  nemesis: { name: (n) => `The Vigil Against the ${n}`, desc: 'Your faith grew from the enemy your lineage never forgave.' },
+  ancestor: { name: (n) => `The Memory of ${n}`, desc: 'Your faith grew from the memory of what your kind once was.' },
+};
+G.SOC_DEEDS = {
+  sd_great_works: 'A settlement grew as big as it can.',
+  sd_new_settlement: 'Your people founded a new settlement.',
+  sd_war_epic: 'Your people won a raid or a war.',
+  sd_market: 'Your people traded with a neighbour.',
+  sd_plot_crushed: 'A plot in the council was ended.',
+  sd_golden_age: 'The whole council was loyal at once.',
+  sd_treaty: 'You signed a treaty with a neighbour.',
+  sd_marriage: 'A marriage bound you to a neighbour.',
+  sd_ally: 'A neighbour became your ally.',
+  sd_betrayal: 'You broke a treaty.',
+};
+G.UNION_NEED = 12; // Law ideas your people must know before the Union
+G.TRADITIONS.push(
+  // ----- Founding: your kind of society -----
+  { id: 'lf_settle_fields', law: 'founding', society: 'settle', name: 'Fields and Walls', tier: 1, mods: { foodPerTurn: 1, tou: 1 }, lean: 'guard', desc: 'Settled peoples farm, and fence what they farm.' },
+  { id: 'lf_settle_markets', law: 'founding', society: 'settle', name: 'Market Days', tier: 1, mods: { influencePerTurn: 1, cha: 1 }, lean: 'peace', desc: 'Once a season, everyone comes to trade.' },
+  { id: 'lf_roam_roads', law: 'founding', society: 'roam', name: 'The Long Roads', tier: 1, mods: { spd: 1, exploreBonus: 2 }, lean: 'peace', desc: 'Every settlement a camp, every camp a road.' },
+  { id: 'lf_roam_herds', law: 'founding', society: 'roam', name: 'Moving Herds', tier: 1, mods: { foodPerTurn: 2 }, lean: 'guard', desc: 'Your food walks with you.' },
+  { id: 'lf_conquer_levies', law: 'founding', society: 'conquer', name: 'Levies', tier: 1, mods: { str: 2 }, lean: 'war', desc: 'Every settlement sends its share of warriors.' },
+  { id: 'lf_conquer_tribute', law: 'founding', society: 'conquer', name: 'Tribute Rolls', tier: 1, mods: { influencePerTurn: 1, foodPerTurn: 1 }, lean: 'war', desc: 'The beaten pay, and the payments are written down.' },
+  { id: 'lf_myth', law: 'founding', name: 'The Founding Myth', tier: 1, mods: { cha: 1, influencePerTurn: 1 }, desc: 'The story of how your people began, told at every hearth.' },
+  // ----- Council: open while that councillor is loyal -----
+  { id: 'lc_steward', law: 'council', role: 'steward', name: "The Steward's Ledger", tier: 1, mods: { foodCap: 6, foodPerTurn: 1 }, lean: 'guard', desc: 'Every store counted, every debt remembered.' },
+  { id: 'lc_marshal', law: 'council', role: 'marshal', name: "The Marshal's Drill", tier: 1, mods: { str: 1, tou: 1 }, lean: 'war', desc: 'Every settlement ready to fight by morning.' },
+  { id: 'lc_keeper', law: 'council', role: 'keeper', name: "The Keeper's Archive", tier: 1, mods: { specialPerTurn: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'Everything your people know, kept in one place.' },
+  // ----- Faith: built from your history -----
+  { id: 'fa_totem_rites', law: 'faith', faith: 'totem', name: 'Totem Rites', tier: 1, mods: { cha: 1, tou: 1 }, lean: 'peace', desc: 'Dances in the shape of the totem, every season.' },
+  { id: 'fa_totem_kin', law: 'faith', faith: 'totem', name: 'Kin of the Wild', tier: 2, mods: { foodPerTurn: 1, cha: 1 }, rule: 'calm_presence', lean: 'peace', desc: 'Every living thing is a cousin, and is treated like one.' },
+  { id: 'fa_nemesis_vigil', law: 'faith', faith: 'nemesis', name: 'The Vigil', tier: 1, mods: { tou: 2 }, lean: 'guard', desc: 'Someone always watches for the old enemy.' },
+  { id: 'fa_nemesis_crusade', law: 'faith', faith: 'nemesis', name: 'Holy War', tier: 2, mods: { str: 2 }, rule: 'know_foe', lean: 'war', desc: 'The old enemy will pay, and the faithful will make them.' },
+  { id: 'fa_ancestor_shrines', law: 'faith', faith: 'ancestor', name: 'Ancestor Shrines', tier: 1, mods: { influencePerTurn: 1, cun: 1 }, lean: 'guard', desc: 'The first of your kind, remembered in every home.' },
+  { id: 'fa_ancestor_return', law: 'faith', faith: 'ancestor', name: 'The Return', tier: 2, mods: { cun: 1, cha: 1 }, rule: 'reroll', lean: 'peace', desc: 'The ancestors are waiting to be born again, and they help.' },
+  { id: 'fa_temples', law: 'faith', name: 'Temples', tier: 2, mods: { influencePerTurn: 1, cha: 1 }, desc: 'A house for the faith in every settlement.' },
+  { id: 'fa_pilgrims', law: 'faith', name: 'Pilgrimage', tier: 2, mods: { exploreBonus: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'Once in a life, everyone walks to the holy place.' },
+  // ----- Culture: grafted by deeds -----
+  { id: 'cu_great_works', law: 'culture', when: { deed: 'sd_great_works' }, name: 'Great Works', tier: 2, mods: { maxPop: 3, influencePerTurn: 1 }, lean: 'guard', desc: 'Buildings meant to outlast everyone who built them.' },
+  { id: 'cu_founders', law: 'culture', when: { deed: 'sd_new_settlement' }, name: "Founders' Songs", tier: 2, mods: { cha: 1, popPerTurn: 1 }, lean: 'peace', desc: 'Every new settlement gets its own song.' },
+  { id: 'cu_war_epics', law: 'culture', when: { deed: 'sd_war_epic' }, name: 'War Epics', tier: 2, mods: { str: 2 }, lean: 'war', desc: 'Long poems about the fight, sung to the young.' },
+  { id: 'cu_markets', law: 'culture', when: { deed: 'sd_market' }, name: 'Coin and Count', tier: 2, mods: { foodPerTurn: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'Trade so common it needs its own tokens.' },
+  { id: 'cu_iron_law', law: 'culture', when: { deed: 'sd_plot_crushed' }, name: 'Iron Law', tier: 2, mods: { tou: 1 }, flag: 'loyal', lean: 'guard', desc: 'Plotters are remembered, and so is what happened to them.' },
+  { id: 'cu_golden_age', law: 'culture', when: { deed: 'sd_golden_age' }, name: 'A Golden Age', tier: 2, mods: { cha: 1, cun: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'Everyone agrees, and everything flourishes.' },
+  // ----- Neighbours: grafted by how you dealt with other peoples -----
+  { id: 'ne_treaty_stones', law: 'neighbours', when: { deed: 'sd_treaty' }, name: 'Treaty Stones', tier: 2, mods: { cha: 2 }, flag: 'peaceful', lean: 'peace', desc: 'Promises carved where everyone can see them.' },
+  { id: 'ne_marriage', law: 'neighbours', when: { deed: 'sd_marriage' }, name: 'Marriage of Peoples', tier: 2, mods: { cha: 1, popPerTurn: 1 }, flag: 'guests', lean: 'peace', desc: 'Your ruling family and theirs are one family now.' },
+  { id: 'ne_alliance', law: 'neighbours', when: { deed: 'sd_ally' }, name: 'Old Alliances', tier: 2, mods: { tou: 1, foodPerTurn: 1 }, lean: 'guard', desc: 'Friends who come when called.' },
+  { id: 'ne_oathbreakers', law: 'neighbours', when: { deed: 'sd_betrayal' }, name: 'Oathbreakers', tier: 2, mods: { str: 2, cha: -1 }, rule: 'know_foe', lean: 'war', desc: 'Promises are tools. Everyone knows it now.' },
+  // ----- The Union: the Gate of the Law tree -----
+  { id: 'union_gate', law: 'gate', name: 'The Union', tier: 3, mods: { cha: 1 }, desc: 'Bring the whole region together: by force, by trade or by faith, as your Disposition allows. This ends the Society stage.' },
+  // ----- Beyond the Union: one for each Disposition; they carry into the Renaissance -----
+  { id: 'lb_peace_league', law: 'beyond', disposition: 'peace', name: 'The League of Peoples', tier: 3, mods: { cha: 2, influencePerTurn: 1 }, inherit: { cha: 2 }, req: { known: 11 }, lean: 'peace', desc: 'Every people in the region at one table, for good.' },
+  { id: 'lb_guard_marches', law: 'beyond', disposition: 'guard', name: 'The Marches', tier: 3, mods: { tou: 2, influencePerTurn: 1 }, inherit: { tou: 2 }, req: { known: 11 }, lean: 'guard', desc: 'Borders so strong that no one tests them.' },
+  { id: 'lb_war_host', law: 'beyond', disposition: 'war', name: 'The Great Host', tier: 3, mods: { str: 2, influencePerTurn: 1 }, inherit: { str: 2 }, req: { known: 11 }, lean: 'war', desc: 'An army that never goes home.' },
+);
+// Traditions from before Update 19 are the Laws band, with a leaning from what they do.
+G.TRADITIONS.forEach((t) => {
+  if (!t.law) t.law = 'law';
+  if (!t.lean && t.law === 'law') {
+    const m = t.mods || {};
+    const war = (m.str || 0); const peace = (m.cha || 0) + (m.foodPerTurn || 0) + (m.popPerTurn || 0); const guard = (m.tou || 0) + (m.maxPop || 0) / 2 + (m.foodCap || 0) / 5 + (m.damageReduce || 0);
+    const best = Math.max(war, peace, guard);
+    if (t.id === 'war_bands') t.lean = 'war'; else if (t.id === 'peace_vows') t.lean = 'peace'; else if (best > 0) t.lean = best === war ? 'war' : best === peace ? 'peace' : 'guard';
+  }
+});
+G.ACTIVITIES.push(
+  { id: 'treaty', name: 'Sign a treaty', target: 'species', stage: 'society', turns: 2, desc: 'A neighbour people that likes you (opinion 40 or more) swears never to raid you, and you never to raid them. Breaking it will not be forgotten.' },
+  { id: 'marry', name: 'Arrange a marriage', target: 'species', stage: 'society', turns: 2, desc: 'Marry into a neighbour people that does not hate you (opinion 25 or more): +25 opinion, and their friends become yours.' },
+);
+// Heritage: the Society stage's own tree on the Evolution screen. Opens once you have reached a Society.
+G.HERITAGE = [
+  { id: 'h_records', name: 'Old Records', col: 0, tier: 1, costs: [20, 45], desc: 'Every Society begins with +8 Influence per level.' },
+  { id: 'h_cities', name: 'Old Cities', col: 1, tier: 1, costs: [25, 55], desc: 'Every Society begins with one more settlement per level.' },
+  { id: 'h_law', name: 'Lawgivers', col: 2, tier: 1, costs: [25, 55, 90], desc: 'Law ideas cost 10% less per level.' },
+  { id: 'h_council', name: 'Faithful Councils', col: 3, tier: 1, costs: [20, 45], desc: 'Councillors start 15 more loyal per level.' },
+  { id: 'h_envoys', name: 'Envoys', col: 4, tier: 1, costs: [20, 45], desc: 'Neighbour peoples start 15 friendlier per level.' },
+  { id: 'h_walls', name: 'City Walls', col: 5, tier: 1, costs: [25, 55], mods: { damageReduce: 1 }, desc: 'Raids kill one fewer per level in the Society stage.' },
+  { id: 'h_charm', name: 'Diplomats', col: 0, tier: 2, req: ['h_records'], costs: [40, 80], mods: { cha: 1 }, desc: '+1 Charm per level in the Society stage.' },
+  { id: 'h_str', name: 'Standing Armies', col: 1, tier: 2, req: ['h_cities'], costs: [40, 80], mods: { str: 1 }, desc: '+1 Strength per level in the Society stage.' },
+  { id: 'h_branches', name: 'Many Laws', col: 2, tier: 2, req: ['h_law'], costs: [60], desc: 'Every new branch of Law offers one more choice.' },
+  { id: 'h_union', name: 'Union Stones', col: 3, tier: 2, req: ['h_council'], costs: [55, 110], desc: 'The Union needs two fewer Law ideas per level, and its checks are 1 easier per level.' },
+  { id: 'h_faith', name: 'Deep Faith', col: 4, tier: 2, req: ['h_envoys'], costs: [50], desc: 'Every Society begins with its two first faith ideas already open, and its first one known.' },
+  { id: 'h_beyond', name: 'Old Empires', col: 5, tier: 2, req: ['h_walls'], costs: [70, 140], desc: 'Ideas Beyond the Union cost 15% less per level.' },
 ];
 G.TRADITION = {}; G.TRADITIONS.forEach((t) => { G.TRADITION[t.id] = t; });
 // How a Society stage ends (Update 16: three of the four; the Wonder comes in Update 17).
@@ -1368,6 +1483,18 @@ G.SOCIETY_ENDINGS = {
   song: {
     land: { conquest: { name: 'The Howling Realm', desc: 'One song drowns out every other in the region.' }, trade: { name: 'The Song-Roads', desc: 'A league of circles, trading along the old songs.' }, faith: { name: 'The First Hymn', desc: 'A song so old and true that every people sings it.' } },
     sea: { conquest: { name: 'The Thunder League', desc: 'The ocean goes quiet when the League sings.' }, trade: { name: 'The Great Circuit', desc: 'Pods meet and trade at every calving ground.' }, faith: { name: 'The Deep Hymn', desc: 'The whole sea sings one song of the deep.' } },
+  },
+  many: {
+    land: { conquest: { name: 'The Unseen Throne', desc: 'Every den in the region answers to a ruler no one has ever seen.' }, trade: { name: 'The Lantern Market', desc: 'Lights blink across the region at night: every one a deal being made.' }, faith: { name: 'The Order of Light', desc: 'One light, many dens, and a wisdom everyone follows.' } },
+    sea: { conquest: { name: 'The Ink Dominion', desc: 'Every grotto in the deep obeys, though none could say why.' }, trade: { name: 'The Glow Exchange', desc: 'Colour-talk binds the deep in a web of bargains.' }, faith: { name: 'The Deep Light', desc: 'The glowing ones are listened to from shore to abyss.' } },
+  },
+  swarm: {
+    land: { conquest: { name: 'The Devouring Realm', desc: 'One hive rules the land, and eats what it rules.' }, trade: { name: 'The Honey Roads', desc: 'Mounds trade along scent-roads across the region.' }, faith: { name: 'The One Queen', desc: 'Every mound in the region feels the same Queen\'s will.' } },
+    sea: { conquest: { name: 'The Coral Empire', desc: 'The reefs grow together under one colony\'s will.' }, trade: { name: 'The Brood Tide', desc: 'Larvae drift on the currents, binding reefs in kinship and trade.' }, faith: { name: 'The Mother Reef', desc: 'All reefs are one reef, and every polyp knows it.' } },
+  },
+  garden: {
+    land: { conquest: { name: 'The Thorn Throne', desc: 'Groves and wildwood alike bow to one green crown.' }, trade: { name: 'The Seed Exchange', desc: 'Every grove trades seeds, and every grove grows richer.' }, faith: { name: 'The Green Covenant', desc: 'A promise between every grove and every living thing.' } },
+    sea: { conquest: { name: 'The Kelp Crown', desc: 'The kelp forests are one realm, ruled from the Great Kelp.' }, trade: { name: 'The Drift Markets', desc: 'Harvests carried on the currents from bed to bed.' }, faith: { name: 'The Tide Covenant', desc: 'The sea is a garden, and everyone tends it.' } },
   },
 };
 G.ACTIVITIES.push(
