@@ -1625,3 +1625,5 @@ G.ACTIVITIES.push(
   { id: 'trade', name: 'Trade', target: 'species', stage: 'society', desc: 'Trade with a friendly neighbour people (opinion 10 or more): +1 Food and +1 Influence a turn, and they warm to you. Ends if they turn against you.' },
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
+// Build stamp: index.html checks that every file comes from the same release.
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.1';

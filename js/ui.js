@@ -260,6 +260,7 @@ window.G = window.G || {};
     const pct = goal ? Math.min(100, (run.dna / goal.at) * 100) : 100;
     const era = (run.stage === 'renaissance' ? ` · ${G.nationName(run)}` : run.stage === 'society' ? ` · ${G.socKind(run).name}` : run.stage === 'tribe' ? ` · ${G.kind(run).name}` : run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
     const fasc = run.fascination && G.INNOVATION[run.fascination];
+    const gt = G.gateFor(run); const gateNow = gt && !goal && gt.reached && !gt.known ? gt : null;
     return `
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
@@ -274,8 +275,8 @@ window.G = window.G || {};
             ${run.activity ? `<span ${tappable('activity')} class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
             ${G.season(run) ? `<span ${tappable('season')} class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
-          <div class="evo" ${tappable('progress')} title="${G.dnaWord(run)}">
-            <span class="evo-label">${run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
+          <div class="evo" ${gateNow ? `data-act="sheet" data-arg="${gateNow.tab}" role="button" tabindex="0"` : tappable('progress')} title="${G.dnaWord(run)}">
+            <span class="evo-label">${run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : gateNow ? ` · <span class="gate-cta">${esc(gateNow.verb)} ${esc(gateNow.name)} ›</span>` : ''}</span>
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
@@ -2195,3 +2196,5 @@ window.G = window.G || {};
 
   render();
 }());
+// Build stamp: index.html checks that every file comes from the same release.
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '20.1';

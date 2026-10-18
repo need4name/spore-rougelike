@@ -79,6 +79,11 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Patch 20.1: Matching files and Gate prompts
+
+- **Every release must bump the build stamp** in all seven places: the `?v=` on each `<link>`/`<script>` in index.html, `want` in index.html's inline check, and the `PRIMORDIA_FILES` line at the end of each JS file. The query strings make phones fetch new files together; the inline check reloads once if the files still disagree, then shows a tap-to-reload banner. (A phone running new rules with an old ui.js had no Law tab and could never adopt the Union.)
+- **Gate prompts:** `G.gateFor(run)` (Tribe: Founding in Lore, Society: Union in Law, Renaissance: Age of Sail in Reason). Once the stage's goal is met and the Gate isn't known, the top bar's progress line says "Adopt the Union ›" and opens that tab, and a one-time notice says what is still needed (`run.gateNoticed`).
+
 ## Update 20: The Renaissance
 
 - **A new stage** (`G.STAGES.renaissance`, evolveAt 250, ten invention goals, milestones `renaissance_dawn`, `the_schism`, `the_great_fair`). A won Union calls `becomeRenaissance` (a Genetic Memory checkpoint, then `renaissanceStart`). `G.civ(run)` is true for Society and Renaissance (settlements, council, neighbours, Society events and activities carry over); `G.people` covers Tribe, Society and Renaissance. Learning is `run.dna`; its per-turn mod is still `influencePerTurn`. Your nation's name: `G.NATION_NAMES`, `G.nationName`.

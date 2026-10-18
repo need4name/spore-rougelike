@@ -2305,8 +2305,25 @@ window.G = window.G || {};
     return list;
   }
   G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.floor(G.mod(run, 'exploreBonus') / 2) : 0));
+  // Each people stage ends with a Gate idea in its own tree. Once its Learning/Ideas/Influence goal is met,
+  // the player has to take the Gate up from that tab.
+  const GATES = {
+    tribe: { id: 'founding_gate', tab: 'found', tabName: 'Lore', verb: 'Learn', name: 'the Founding', list: (run) => run.discoveries, avail: (run) => G.loreAvailable(run, G.DISCOVERY.founding_gate) },
+    society: { id: 'union_gate', tab: 'laws', tabName: 'Law', verb: 'Adopt', name: 'the Union', list: (run) => run.traditions, avail: (run) => G.lawAvailable(run, G.TRADITION.union_gate) },
+    renaissance: { id: 'sail_gate', tab: 'reason', tabName: 'Reason', verb: 'Take up', name: 'the Age of Sail', list: (run) => run.reason, avail: (run) => G.reasonAvailable(run, G.REASON_ID.sail_gate) },
+  };
+  G.gateFor = (run) => {
+    const g = run && GATES[run.stage]; if (!g) return null;
+    const goal = G.goals(run).evolveAt;
+    return { ...g, known: (g.list(run) || []).includes(g.id), reached: !!goal && run.dna >= goal, avail: g.avail(run) };
+  };
   // One turn of tribe life: the special resource, and the leader growing old.
   function tribeTurn(run, lines) {
+    const gate = G.gateFor(run);
+    if (gate && gate.reached && !gate.known && run.gateNoticed !== run.stage) {
+      run.gateNoticed = run.stage;
+      run.notices.push(`Your people are ready for ${gate.name}. ${gate.verb} it in the ${gate.tabName} tab${gate.avail.ok ? '' : ` once you can (${gate.avail.reason.replace(/^Needs/, 'it needs')})`}.`);
+    }
     if (run.stage === 'tribe') {
       if (run.species.some((x) => x.band && !x.extinct && x.opinion >= 50)) G.addDeed(run, 'deed_peace');
       if (run.pop < G.maxPop(run) * 0.2) G.addDeed(run, 'deed_near_end');
@@ -3435,3 +3452,5 @@ window.G = window.G || {};
     }).join(', ');
   };
 }());
+// Build stamp: index.html checks that every file comes from the same release.
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '20.1';

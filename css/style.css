@@ -681,3 +681,5 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .diet-badge.disp.peace { color: #8fc9f0; border-color: #8fc9f0; background: rgba(143, 201, 240, 0.12); }
 .diet-badge.disp.guard { color: #f2c14e; border-color: #f2c14e; background: rgba(242, 193, 78, 0.12); }
 .diet-badge.disp.war { color: #ef7d6b; border-color: #ef7d6b; background: rgba(239, 125, 107, 0.12); }
+
+.gate-cta { color: var(--accent, #f2b544); font-weight: 700; }
