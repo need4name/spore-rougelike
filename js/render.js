@@ -1992,7 +1992,7 @@ window.G = window.G || {};
     } else {
       // A Tribe stays close to its camp.
       if (run.stage === 'tribe') { tx = h.hx + (Math.random() - 0.5) * 0.12; ty = h.hy + (Math.random() - 0.5) * 0.1; }
-      if (run.stage === 'society') { tx = h.hx + (Math.random() - (h.hx < 0.35 ? 0.7 : 0.3)) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
+      if (G.civ(run)) { tx = h.hx + (Math.random() - (h.hx < 0.35 ? 0.7 : 0.3)) * 0.24; ty = h.hy + (Math.random() - 0.5) * 0.2; }
       // Your own herd follows your Activity.
       const act = run.activity;
       const th = act && act.target && herds.get(act.target);
@@ -2388,7 +2388,7 @@ window.G = window.G || {};
       // A Tribe's camp: its fire, its warm vent or its singing stones, where your people always come back to.
       const youHd = herds.get('you');
       // A Society's settlements: the capital by your people, the rest spread across the region.
-      if (run.stage === 'society' && youHd) (run.settlements || []).forEach((st, i) => {
+      if (G.civ(run) && youHd) (run.settlements || []).forEach((st, i) => {
         if (i === 0) return;
         let hsh = 0; for (const c of st.name) hsh = (hsh * 31 + c.charCodeAt(0)) % 9973;
         const sx = 0.1 + ((hsh * 0.618) % 1) * 0.8; const sy = 0.12 + (((hsh * 0.377) + i * 0.29) % 1) * 0.8;
@@ -2396,7 +2396,7 @@ window.G = window.G || {};
           drawCamp(run, X, Y, k, t);
           ctx.save(); ctx.font = '600 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillText(st.name, X, Y + k * 0.9 + 10); ctx.restore(); } });
       });
-      if (run.stage === 'society' && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx + (youHd.hx < 0.35 ? 0.13 : -0.13)) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
+      if (G.civ(run) && youHd) drawables.push({ y: youHd.hy - 0.04, draw: () => drawCamp(run, (youHd.hx + (youHd.hx < 0.35 ? 0.13 : -0.13)) * w, top + (youHd.hy - 0.04) * (bottom - top), base * depthOf(youHd.hy) * 0.8, t) });
       if (camp) {
         drawables.push({ y: camp.y + 0.04, draw: () => drawTribeCamp(run, camp.x * w, top + camp.y * (bottom - top), base * depthOf(camp.y) * 1.35, t, campLevel(run), camp.moving) });
         // Parties head out and come back: to the species you are dealing with, or out to the far edge to explore.

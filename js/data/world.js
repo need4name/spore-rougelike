@@ -19,11 +19,11 @@ G.MOD_LABELS = {
   insightPerTurn: 'Insight per turn',
   ideasPerTurn: 'Ideas per turn',
   discoveryCost: 'discovery cost',
-  influencePerTurn: 'Influence per turn',
+  influencePerTurn: 'Influence (Learning) per turn',
   specialPerTurn: 'of your people\'s resource per turn',
   forageBonus: 'Food while Foraging',
   huntBonus: 'Food while Hunting',
-  exploreBonus: 'DNA (Ideas, Influence) while Exploring',
+  exploreBonus: 'DNA (Ideas, Influence, Learning) while Exploring',
   upkeep: 'Food eaten per turn',
   damageReduce: 'damage taken',
   foodCap: 'Food storage',
@@ -861,20 +861,135 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '19';
+G.VERSION = '20';
 G.WHATS_NEW = {
-  title: 'Update 19: Faith and Neighbours',
+  title: 'Update 20: The Renaissance',
   items: [
-    'Every kind of people can now become a Society: Lantern Dens and Shadow Reefs (Many Minds), the Mound Realm and Reef Dominion (the Swarm), the Grove Commons and Kelp Realms (Gardeners), each with its own Union and three endings.',
-    'The Society stage has its own tree: the Law tree (the Law tab). Traditions are its ideas. Your kind of society gives it a Founding, each Influence goal lets you choose a new branch of Law, and you adopt ideas with your people\'s resource. Every law you hold makes the next one harder to agree on.',
-    'Your council opens ideas while they are loyal. Your faith is built from your own history (your totem, the enemy your lineage never forgave, or what your kind once was) and opens its own branch. Great works, wars, trade, golden ages and crushed plots graft Culture ideas.',
-    'Neighbours: sign treaties (they will never raid you), arrange marriages, and remember that breaking a treaty is never forgotten. How you dealt with them grafts Neighbour ideas.',
-    'Your Disposition: Peaceful 🕊️, Territorial 🛡️ or Warmongering ⚔️, from the leaning of everything your lineage has learned, shown as a badge beside your diet. It decides how you can unite the region: a Peaceful people cannot conquer, a Warmongering one cannot trade its way to the Union, and a Territorial one keeps every road open. It is fixed at the Union.',
-    'The Union is the Law tree\'s Gate: it needs your Influence and 12 Law ideas. Each Disposition has one idea Beyond the Union.',
-    'Heritage, the Society stage\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches a Society. A Society is harder now, and Heritage is how you master it.',
-    'The Book keeps your Law tree as a page, frozen at the Union.',
+    'A new stage after the Society: the Renaissance. Win the Union and your people become a nation, and your old neighbours become nations too. Each one decides from what it remembers of your lineage whether it is peaceful 🕊️, territorial 🛡️ or warlike ⚔️, and that can change as you deal with them.',
+    'The Renaissance has its own tree: the Reason tree (the Reason tab). How you united the region gives it an Inheritance, your kind of people has its own inventions, every Learning goal lets you choose a new invention, and you take ideas up with your people\'s resource. Movements come in opposed pairs (Humanism or Dogma, Patrons or Guilds, Open Seas or Closed Ports).',
+    'The Schism: halfway through, your faith splits. Reform it, hold to the old ways, or try to let both be, and that choice adds its own idea to your tree. Patrons, voyages, leagues, wars, plagues and great works add Deed ideas.',
+    'War between nations: a warlike nation that dislikes you can invade. Your Strength and Toughness decide whether your armies hold, and league allies help. Lose and they take a city; lose your last city and your nation falls. Gifts, treaties and leagues keep the peace.',
+    'New Activities: back a patron, send a voyage beyond the known coasts, and form a league with an allied nation.',
+    'Your Disposition can shift again in the new age, until the Age of Sail fixes it. The Age of Sail is the Reason tree\'s Gate (Learning and 13 Reason ideas): explore, trade or conquer, depending on your Disposition. Each Disposition has one idea Beyond it, carried into the next stage.',
+    'Patronage, the Renaissance\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches the Renaissance. Heritage now only works in the Society stage, as it says.',
+    'The Book gains its Reason page, Stage Select can start from the dawn of a Renaissance, and the Codex lists Renaissance endings.',
   ],
 };
+
+// ======================= UPDATE 20: THE RENAISSANCE =======================
+// After the Union, your people become a nation among nations. Learning replaces Influence; each goal
+// brings a new branch of the Reason tree, paid for with your people's resource like the Lore and the Law.
+G.STAGES.renaissance = {
+  name: 'Renaissance', turnName: 'Generation',
+  drafts: [8, 20, 34, 50, 68, 90, 115, 142, 170, 200],
+  milestones: [{ at: 0, event: 'renaissance_dawn' }, { at: 60, event: 'the_schism' }, { at: 125, event: 'the_great_fair' }],
+  evolveAt: 250,
+};
+// Your nation's name, from your kind of society.
+G.NATION_NAMES = {
+  tool: { land: 'the Hearth Republics', sea: 'the Forge Leagues' },
+  song: { land: 'the Choir Nations', sea: 'the Singing Commonwealth' },
+  many: { land: 'the Lantern Principalities', sea: 'the Abyssal Courts' },
+  swarm: { land: 'the Hive Dominions', sea: 'the Coral Crowns' },
+  garden: { land: 'the Green Confederacy', sea: 'the Kelp Commonwealth' },
+};
+// The Age of Sail: how your nation sets out to meet the wider world (Update 21 carries it on).
+G.RENAISSANCE_ENDINGS = {
+  explore: { name: 'The Age of Discovery', desc: 'Your ships go further than anyone has ever gone, to see what is there.' },
+  trade: { name: 'The Merchant Seas', desc: 'Your ships carry goods to every shore, and bring back fortunes.' },
+  conquer: { name: 'The Iron Fleets', desc: 'Your ships carry armies, and every new shore is a prize.' },
+};
+G.REN_DEEDS = {
+  rd_patron: 'You backed a patron of the arts and sciences.',
+  rd_voyage: 'Your people sailed beyond the known coasts.',
+  rd_league: 'You formed a league with a friendly nation.',
+  rd_war: 'Your nation won a war.',
+  rd_masterpiece: 'A city of yours became a wonder of the age.',
+  rd_plague: 'Your nation lived through a great plague.',
+};
+G.SAIL_NEED = 13; // Reason ideas your nation must know before the Age of Sail
+// The Reason tree. Bands: Inheritance (from how you united the region), Your people (your kind's own
+// inventions), Inventions (grafted: each Learning goal lets you choose one of three; some need a
+// Disposition), Movements (forks: arts and ideas that rule each other out), Faith (the Schism), Deeds,
+// the Age of Sail (the Gate) and Beyond (one per Disposition).
+G.REASON = [
+  // ----- Inheritance: how you united the region -----
+  { id: 'ri_conquest', band: 'inherit', road: 'conquest', name: 'The Conqueror\'s Peace', tier: 1, mods: { str: 2, influencePerTurn: 1 }, lean: 'war', desc: 'Everyone remembers how the region was won.' },
+  { id: 'ri_trade', band: 'inherit', road: 'trade', name: 'The Old Markets', tier: 1, mods: { foodPerTurn: 2, influencePerTurn: 1 }, lean: 'peace', desc: 'The roads of the Union are roads of trade.' },
+  { id: 'ri_faith', band: 'inherit', road: 'faith', name: 'The Faithful Union', tier: 1, mods: { cha: 2, influencePerTurn: 1 }, lean: 'guard', desc: 'One faith holds the nation together.' },
+  // ----- Your people: each kind's own inventions -----
+  { id: 'rp_tool_press', band: 'people', path: 'tool', name: { land: 'The Printing Press', sea: 'The Shell Press' }, tier: 1, mods: { influencePerTurn: 1, cun: 1 }, desc: 'A hundred copies of anything, in a day.' },
+  { id: 'rp_tool_clock', band: 'people', path: 'tool', name: 'Clockwork', tier: 2, mods: { cun: 2 }, desc: 'Gears that keep time better than the sun.' },
+  { id: 'rp_song_notation', band: 'people', path: 'song', name: 'Notation', tier: 1, mods: { influencePerTurn: 1, cha: 1 }, desc: 'Songs written down, so they are never lost.' },
+  { id: 'rp_song_opera', band: 'people', path: 'song', name: 'Opera', tier: 2, mods: { cha: 2 }, desc: 'A story told entirely in song, for a whole city at once.' },
+  { id: 'rp_many_optics', band: 'people', path: 'many', name: 'Optics', tier: 1, mods: { influencePerTurn: 1, cun: 1 }, desc: 'Lenses that bend the light your kind has always spoken in.' },
+  { id: 'rp_many_cipher', band: 'people', path: 'many', name: 'Ciphers', tier: 2, mods: { cun: 2 }, desc: 'Colour-talk that only your own can read.' },
+  { id: 'rp_swarm_vaults', band: 'people', path: 'swarm', name: 'Grand Vaults', tier: 1, mods: { maxPop: 3, influencePerTurn: 1 }, desc: 'Chambers so vast that a city lives inside one mound.' },
+  { id: 'rp_swarm_order', band: 'people', path: 'swarm', name: 'The Perfect Order', tier: 2, mods: { tou: 2 }, desc: 'Every member, the right task, at the right time.' },
+  { id: 'rp_garden_botany', band: 'people', path: 'garden', name: 'Botany', tier: 1, mods: { foodPerTurn: 1, influencePerTurn: 1 }, desc: 'Every plant named, drawn and understood.' },
+  { id: 'rp_garden_graft', band: 'people', path: 'garden', name: 'Grafting', tier: 2, mods: { foodPerTurn: 2 }, desc: 'Two plants, one tree, the best of both.' },
+  // ----- Inventions: grafted by Learning -----
+  { id: 'rv_universities', band: 'invention', name: 'Universities', tier: 1, mods: { influencePerTurn: 1, cun: 1 }, desc: 'Places where learning is the only work.' },
+  { id: 'rv_medicine', band: 'invention', name: 'Medicine', tier: 1, mods: { popPerTurn: 1, tou: 1 }, lean: 'peace', desc: 'Fevers broken, wounds closed, lives saved.' },
+  { id: 'rv_cartography', band: 'invention', name: 'Cartography', tier: 1, mods: { exploreBonus: 2, spd: 1 }, desc: 'The whole region on one sheet.' },
+  { id: 'rv_banking', band: 'invention', name: 'Banking', tier: 1, mods: { foodPerTurn: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'Promises that can be traded like goods.' },
+  { id: 'rv_steel', band: 'invention', name: 'Steel', tier: 1, mods: { str: 2 }, lean: 'war', desc: 'Harder, sharper, and it does not break.' },
+  { id: 'rv_engineering', band: 'invention', name: 'Engineering', tier: 1, mods: { maxPop: 3, tou: 1 }, lean: 'guard', desc: 'Bridges, aqueducts, and walls that stand.' },
+  { id: 'rv_astronomy', band: 'invention', name: 'Astronomy', tier: 2, mods: { cun: 2 }, desc: 'The sky, measured.' },
+  { id: 'rv_anatomy', band: 'invention', name: 'Anatomy', tier: 2, mods: { popPerTurn: 1, cun: 1 }, desc: 'Look inside, and understand.' },
+  { id: 'rv_perspective', band: 'invention', name: 'Perspective', tier: 2, mods: { cha: 2 }, lean: 'peace', desc: 'Paintings so real you could walk into them.' },
+  { id: 'rv_shipwrights', band: 'invention', name: 'Shipwrights', tier: 2, mods: { exploreBonus: 2, foodPerTurn: 1 }, desc: 'Hulls that cross open water.' },
+  { id: 'rv_fortresses', band: 'invention', name: 'Star Forts', tier: 2, mods: { tou: 2, damageReduce: 1 }, lean: 'guard', disposition: ['guard', 'war'], desc: 'Walls shaped so no wall can be climbed.' },
+  { id: 'rv_firepowder', band: 'invention', name: { tool: 'Black Powder', song: 'Thunder Drums', many: 'Flash Ink', swarm: 'Acid Swarms', garden: 'Spore Clouds' }, tier: 3, mods: { str: 3 }, lean: 'war', disposition: ['war'], desc: 'A new and terrible way to fight.' },
+  { id: 'rv_navigation', band: 'invention', name: 'Navigation', tier: 3, mods: { exploreBonus: 2, cun: 1 }, desc: 'Find your way anywhere, by the stars.' },
+  { id: 'rv_exchange', band: 'invention', name: 'The Exchange', tier: 3, mods: { foodPerTurn: 2, influencePerTurn: 1 }, lean: 'peace', disposition: ['peace', 'guard'], desc: 'A hall where the whole world\'s goods are bought and sold.' },
+  { id: 'rv_academies', band: 'invention', name: 'Academies', tier: 3, mods: { influencePerTurn: 2 }, desc: 'Learning that pays for itself.' },
+  // ----- Movements: arts and ideas that rule each other out -----
+  { id: 'rm_humanism', band: 'movement', name: 'Humanism', tier: 1, excl: 'rm_dogma', mods: { cun: 1, cha: 1 }, lean: 'peace', desc: 'Your people, not the gods, at the centre of everything.' },
+  { id: 'rm_dogma', band: 'movement', name: 'Dogma', tier: 1, excl: 'rm_humanism', mods: { tou: 1, influencePerTurn: 1 }, lean: 'guard', desc: 'The old answers are the right ones.' },
+  { id: 'rm_patronage', band: 'movement', name: 'Great Patrons', tier: 2, excl: 'rm_guilds', mods: { cha: 2 }, desc: 'The rich pay for genius, and show it off.' },
+  { id: 'rm_guilds', band: 'movement', name: 'The Guilds', tier: 2, excl: 'rm_patronage', mods: { tou: 1, foodPerTurn: 1 }, lean: 'guard', desc: 'Every craft has its masters, and its rules.' },
+  { id: 'rm_open_seas', band: 'movement', name: 'Open Seas', tier: 2, excl: 'rm_closed_ports', mods: { exploreBonus: 2, cha: 1 }, lean: 'peace', desc: 'Every ship welcome in every port.' },
+  { id: 'rm_closed_ports', band: 'movement', name: 'Closed Ports', tier: 2, excl: 'rm_open_seas', mods: { tou: 1, str: 1 }, lean: 'war', desc: 'Our harbours, our rules, our guns.' },
+  // ----- Faith: the Schism -----
+  { id: 'rf_reformed', band: 'faith', schism: 'reform', name: 'The Reformed Faith', tier: 2, excl: 'rf_orthodox', mods: { cun: 1, influencePerTurn: 1 }, lean: 'peace', desc: 'The faith, made new for a new age.' },
+  { id: 'rf_orthodox', band: 'faith', schism: 'hold', name: 'The True Faith', tier: 2, excl: 'rf_reformed', mods: { tou: 1, cha: 1 }, lean: 'guard', desc: 'Nothing changes. That is the point.' },
+  { id: 'rf_tolerance', band: 'faith', schism: 'tolerate', name: 'Tolerance', tier: 2, mods: { cha: 2 }, rule: 'calm_presence', lean: 'peace', desc: 'Believe what you like, as long as you let others do the same.' },
+  // ----- Deeds -----
+  { id: 'rd_salons', band: 'deed', when: { deed: 'rd_patron' }, name: 'The Salons', tier: 2, mods: { influencePerTurn: 1, cha: 1 }, lean: 'peace', desc: 'Where artists, thinkers and the rich meet.' },
+  { id: 'rd_new_worlds', band: 'deed', when: { deed: 'rd_voyage' }, name: 'Tales of New Shores', tier: 2, mods: { exploreBonus: 2, cun: 1 }, desc: 'Sailors\' stories of lands beyond the sea.' },
+  { id: 'rd_the_league', band: 'deed', when: { deed: 'rd_league' }, name: 'The League', tier: 2, mods: { cha: 1, tou: 1 }, rule: 'calm_presence', lean: 'peace', desc: 'Nations that stand together.' },
+  { id: 'rd_war_college', band: 'deed', when: { deed: 'rd_war' }, name: 'The War College', tier: 2, mods: { str: 2 }, rule: 'know_foe', lean: 'war', desc: 'Every war studied, so the next is won faster.' },
+  { id: 'rd_wonder', band: 'deed', when: { deed: 'rd_masterpiece' }, name: 'A Wonder of the Age', tier: 2, mods: { influencePerTurn: 2 }, lean: 'guard', desc: 'People cross the world to see it.' },
+  { id: 'rd_quarantine', band: 'deed', when: { deed: 'rd_plague' }, name: 'Quarantine', tier: 2, mods: { tou: 2 }, rule: 'last_refuge', lean: 'guard', desc: 'Never again will one sick city kill a nation.' },
+  // ----- The Age of Sail: the Gate -----
+  { id: 'sail_gate', band: 'gate', name: 'The Age of Sail', tier: 3, mods: { exploreBonus: 1 }, desc: 'Ships that can cross any sea. How you use them depends on your Disposition. This ends the Renaissance.' },
+  // ----- Beyond: one per Disposition; they carry into the Colonial Age -----
+  { id: 'rb_peace', band: 'beyond', disposition: 'peace', name: 'The Republic of Letters', tier: 3, mods: { cha: 2, influencePerTurn: 1 }, inherit: { cha: 2, cun: 1 }, req: { known: 12 }, lean: 'peace', desc: 'Thinkers of every nation, writing to each other.' },
+  { id: 'rb_guard', band: 'beyond', disposition: 'guard', name: 'The Balance of Power', tier: 3, mods: { tou: 2, influencePerTurn: 1 }, inherit: { tou: 2, cun: 1 }, req: { known: 12 }, lean: 'guard', desc: 'No nation may rise too high: you see to it.' },
+  { id: 'rb_war', band: 'beyond', disposition: 'war', name: 'The Standing Army', tier: 3, mods: { str: 2, influencePerTurn: 1 }, inherit: { str: 2, tou: 1 }, req: { known: 12 }, lean: 'war', desc: 'Soldiers who never go home, because there is always a war.' },
+];
+G.REASON_ID = {}; G.REASON.forEach((x) => { G.REASON_ID[x.id] = x; });
+G.ACTIVITIES.push(
+  { id: 'patronize', name: 'Back a patron', stage: 'renaissance', turns: 3, desc: 'Spend 5 of your people\'s resource on artists and thinkers: +2 Learning a turn while it lasts.' },
+  { id: 'voyage', name: 'Send a voyage', stage: 'renaissance', turns: 3, desc: 'Ships sail beyond the known coasts (−4 Food): they come back with stories and +6 Learning.' },
+  { id: 'league', name: 'Form a league', target: 'species', stage: 'renaissance', turns: 2, desc: 'A nation that is your ally (opinion 60 or more) joins you in a league: neither of you stands alone.' },
+);
+// Patronage: the Renaissance's own tree on the Evolution screen. Opens once you reach a Renaissance.
+G.PATRONAGE = [
+  { id: 'p_libraries', name: 'Old Libraries', col: 0, tier: 1, costs: [25, 55], desc: 'Every Renaissance begins with +10 Learning per level.' },
+  { id: 'p_reason', name: 'Natural Philosophers', col: 1, tier: 1, costs: [30, 60, 100], desc: 'Reason ideas cost 10% less per level.' },
+  { id: 'p_wealth', name: 'Old Fortunes', col: 2, tier: 1, costs: [25, 55], desc: 'Start every Renaissance with +6 of your people\'s resource per level.' },
+  { id: 'p_envoys', name: 'Ambassadors', col: 3, tier: 1, costs: [25, 55], desc: 'Nations start 15 friendlier per level.' },
+  { id: 'p_walls', name: 'Bastions', col: 4, tier: 1, costs: [30, 60], mods: { damageReduce: 1 }, desc: 'Raids kill one fewer per level in the Renaissance.' },
+  { id: 'p_cun', name: 'Scholars', col: 5, tier: 1, costs: [30, 60], mods: { cun: 1 }, desc: '+1 Cunning per level in the Renaissance.' },
+  { id: 'p_branches', name: 'Many Inventions', col: 0, tier: 2, req: ['p_libraries'], costs: [60], desc: 'Every new branch of Reason offers one more choice.' },
+  { id: 'p_sail', name: 'Charts of the Ancients', col: 1, tier: 2, req: ['p_reason'], costs: [60, 120], desc: 'The Age of Sail needs two fewer Reason ideas per level, and its checks are 1 easier per level.' },
+  { id: 'p_cha', name: 'Courtiers', col: 2, tier: 2, req: ['p_wealth'], costs: [45, 90], mods: { cha: 1 }, desc: '+1 Charm per level in the Renaissance.' },
+  { id: 'p_str', name: 'Condottieri', col: 3, tier: 2, req: ['p_envoys'], costs: [45, 90], mods: { str: 1 }, desc: '+1 Strength per level in the Renaissance.' },
+  { id: 'p_masters', name: 'Old Masters', col: 4, tier: 2, req: ['p_walls'], costs: [70], desc: 'Every Renaissance begins with one invention already known.' },
+  { id: 'p_beyond', name: 'Visionaries', col: 5, tier: 2, req: ['p_cun'], costs: [70, 140], desc: 'Ideas Beyond the Age of Sail cost 15% less per level.' },
+];
 
 // First-time tips. Each shows once, the first time its feature appears, whatever run that is.
 // Checked in order; the first unseen one whose condition holds is shown.
@@ -902,10 +1017,16 @@ G.TUTORIALS = [
     text: 'Every biome has its own rules: how often hunters find you, which disasters come, and what it gives and takes. Tap a biome on the World Map tab to see them before you migrate.' },
   { id: 'society', title: 'The Society stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society',
     text: 'Your people live in many settlements now. Influence replaces Ideas, and each goal brings a Tradition. Found and build settlements from Activities to grow bigger and earn more. The Society tab shows your settlements and neighbours; the Council tab shows who might turn against your ruler.' },
-  { id: 'council', title: 'Your council', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'society' && (run.council || []).some((c) => c.loyalty < 0),
+  { id: 'council', title: 'Your council', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && G.civ(run) && (run.council || []).some((c) => c.loyalty < 0),
     text: 'One of your councillors is losing faith in your ruler. Below −25 loyalty they may start plotting, and below −30 they stop helping. Feasts, honours and kind rulers keep them loyal; some traditions do too.' },
   { id: 'traditions', title: 'The Law tree', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'society',
     text: 'Your Society has its own tree: the Law tree. Each new branch of Law you choose is added to it; adopt it now with your people\'s resource, or later from the Law tab. Some laws come in opposed pairs. Your council, your faith, your deeds and your neighbours add ideas of their own, and the Union needs enough Influence and Law. Your Disposition badge shows how you can unite the region.' },
+  { id: 'renaissance', title: 'The Renaissance', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'renaissance',
+    text: 'Your people are one nation now, among other nations. Learning replaces Influence, and each goal brings an invention for your Reason tree. The Nation tab shows how each neighbour nation feels about you: peaceful 🕊️, territorial 🛡️ or warlike ⚔️. Back patrons, send voyages and form leagues from Activities.' },
+  { id: 'reason', title: 'The Reason tree', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'renaissance',
+    text: 'The Renaissance has its own tree: the Reason tree. Choose an invention to add; take it up now with your people\'s resource, or later from the Reason tab. Movements come in opposed pairs, the Schism adds a faith idea, and your deeds add more. The Age of Sail needs enough Learning and Reason. Your Disposition can still shift until then, and it decides what your ships will do.' },
+  { id: 'nation_war', title: 'War', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'renaissance' && run.species.some((x) => x.nation && !x.extinct && x.nationDisp === 'war' && x.opinion < 0 && !x.treaty),
+    text: 'A warlike nation that dislikes you can invade. Your Strength and Toughness decide whether your armies hold; a league ally helps. Lose a battle and they take a city, and if they take your last one, your nation falls. Gifts, treaties and leagues keep them away; found new cities from Activities.' },
   { id: 'kind_many', title: 'Many Minds', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'many',
     text: 'Your den is small, but every member is clever. Keep 3 Light or more and you are hidden: hunters and raiders find you far less often. Watch and learn copies discoveries from rival bands.' },
   { id: 'kind_swarm', title: 'The Swarm', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'swarm',

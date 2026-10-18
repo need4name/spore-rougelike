@@ -209,11 +209,11 @@ window.G = window.G || {};
     return `
       <section class="setup-group">
         <h2>Stage Select</h2>
-        <p class="note">Start in the Tribe or Society stage, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
+        <p class="note">Start in the Tribe, Society or Renaissance stage, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
         <div class="choices">${list.map((x) => { const p = G.PATH[x.key.split('|')[0]]; return `
           <button class="choice" data-act="stage-start" data-arg="${esc(x.key)}">
             <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong></span>
-            <span class="choice-desc">${x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
+            <span class="choice-desc">${x.stage === 'renaissance' ? '📚 Renaissance · ' : x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
           </button>`; }).join('')}</div>
       </section>`;
   }
@@ -258,13 +258,13 @@ window.G = window.G || {};
     const net = inc.total - up;
     const goal = nextGoal(run);
     const pct = goal ? Math.min(100, (run.dna / goal.at) * 100) : 100;
-    const era = (run.stage === 'society' ? ` · ${G.socKind(run).name}` : run.stage === 'tribe' ? ` · ${G.kind(run).name}` : run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
+    const era = (run.stage === 'renaissance' ? ` · ${G.nationName(run)}` : run.stage === 'society' ? ` · ${G.socKind(run).name}` : run.stage === 'tribe' ? ` · ${G.kind(run).name}` : run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
     const fasc = run.fascination && G.INNOVATION[run.fascination];
     return `
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
         <div class="tb-main">
-          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}${run.stage === 'society' ? dispBadge(run) : ''}<span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
+          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}${G.civ(run) ? dispBadge(run) : ''}<span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
           <div class="res-row">
             <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
             <span ${tappable('food')} class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
@@ -275,7 +275,7 @@ window.G = window.G || {};
             ${G.season(run) ? `<span ${tappable('season')} class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
           <div class="evo" ${tappable('progress')} title="${G.dnaWord(run)}">
-            <span class="evo-label">${run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
+            <span class="evo-label">${run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : ''}</span>
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
@@ -305,7 +305,7 @@ window.G = window.G || {};
       body = `<p>You are <b>${run.pop}</b>. Your comfortable size is <b>${max}</b> and you can never go above <b>${hard}</b>.</p>
         ${over ? `<p class="bad-note"><b>Crowded</b> by ${over}. Past your comfortable size, crowded members eat twice, young cost more, gains are halved, and crowding sickness takes a tenth of the excess every turn (about ${Math.ceil(over / 10)} now).</p>` : `<p>Spare Food raises young: a brood of about ${G.POP_SCALE} costs ${G.growthCost(run) + (G.people(run) ? G.TRIBE_CHILD_COST : 0)} Food.</p>`}
         <h4>Comfortable size</h4>
-        ${run.stage === 'society' ? xrow(`Your ${G.socKind(run).settlement}s`, Math.round((4 + (run.settlements || []).reduce((t, x) => t + x.size * 5, 0)) * per)) : xrow('Your kind', Math.round((run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 + 2 * G.boonLevel('w_blood') : 0) + (run.era - 1) * 3) * per))}
+        ${G.civ(run) ? xrow(`Your ${G.socKind(run).settlement}s`, Math.round((4 + (run.settlements || []).reduce((t, x) => t + x.size * 5, 0)) * per)) : xrow('Your kind', Math.round((run.baseMaxPop + (run.multicellular ? 2 : 0) + (run.stage !== 'cell' ? 3 : 0) + (run.stage === 'tribe' ? 2 + 2 * G.boonLevel('w_blood') : 0) + (run.era - 1) * 3) * per))}
         ${xsrc(run, 'maxPop', per)}
         ${xtotal('Comfortable size', String(max))}
         <p class="note">Each +1 in a description is about ${Math.round(per)} ${word} for you: ${esc(size.name.toLowerCase())} creatures${many < 1 ? ', Many Minds (half)' : ''}${graze > 1 ? ', a Herd (60% more)' : ''}.</p>`;
@@ -330,8 +330,8 @@ window.G = window.G || {};
       const w = G.dnaWord(run); const goal = nextGoal(run);
       title = w;
       const per = G.dnaPerTurn(run);
-      const srcKey = run.stage === 'society' ? 'influencePerTurn' : run.stage === 'tribe' ? 'ideasPerTurn' : 'dnaPerTurn';
-      body = `<p>${run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
+      const srcKey = G.civ(run) ? 'influencePerTurn' : run.stage === 'tribe' ? 'ideasPerTurn' : 'dnaPerTurn';
+      body = `<p>${run.stage === 'renaissance' ? 'Learning comes from your cities, your scholars and your patrons, and brings new inventions for your Reason tree.' : run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
         <h4>Each turn</h4>
         ${run.stage === 'tribe' ? xrow('Base', 1) + (Math.floor(G.stat(run, 'cun') / 10) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 10)) : '') + (run.instinct === 'explore' ? xrow('Exploring', 1 + Math.floor(G.mod(run, 'exploreBonus') / 2)) : '') : ''}
         ${xsrc(run, srcKey)}
@@ -343,9 +343,9 @@ window.G = window.G || {};
       body = `<p>${esc(G.sub(G.KINDS[run.path].desc, run))}</p>
         <p>You have <b>${run.special || 0}</b>. Discoveries cost ${esc(k.resource)}. Comfortable up to ${G.SPECIAL_SOFT} (gains past it are halved, and a tenth of the excess spoils each turn); never more than ${G.SPECIAL_HARD}.</p>
         <h4>Each turn</h4>
-        ${xrow('Your people make', 2)}${run.stage === 'society' && Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) ? xrow('Your settlements', Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6)) : ''}
+        ${xrow('Your people make', 2)}${G.civ(run) && Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) ? xrow('Your settlements', Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6)) : ''}${G.scholarGain(run) ? xrow('Your scholars (surplus Learning)', G.scholarGain(run)) : ''}
         ${xsrc(run, 'specialPerTurn')}
-        ${use ? xrow(run.stage === 'society' ? 'Your settlements use' : `${run.pop} members use`, -use) : ''}
+        ${use ? xrow(G.civ(run) ? 'Your settlements use' : `${run.pop} members use`, -use) : ''}
         ${over ? xrow('Spoils (over the comfortable amount)', -Math.max(1, Math.round(over * 0.1))) : ''}
         ${xtotal('Each turn', gain - use - (over ? Math.max(1, Math.round(over * 0.1)) : 0))}
         <p class="note">Right now discoveries cost ${sgn(G.discoveryCostPct(run))}% of their base price.</p>`;
@@ -373,8 +373,9 @@ window.G = window.G || {};
       const d = G.disposition(run); const l = G.leaning(run); title = `${G.LEAN_NAMES[d]}`;
       body = `<p>Your Disposition is the late-game twin of your diet: at the start your mouth decided what you could eat; now the leaning of everything your lineage has learned decides which futures are open.</p>
         <h4>Your leaning</h4>${['peace', 'guard', 'war'].map((k2) => xrow(`${G.LEAN_ICONS[k2]} ${G.LEAN_NAMES[k2]}`, String(l[k2]))).join('')}
-        <h4>The Union</h4>${xrow('By force', d === 'peace' ? 'closed' : 'open')}${xrow('By trade', d === 'war' ? 'closed' : 'open')}${xrow('By faith', 'open')}
-        <p class="note">${run.disposition ? 'Fixed at the Union.' : 'Territorial peoples keep every road open, like an omnivore. Your Disposition can still change as you adopt new ideas; it is fixed at the Union.'}</p>`;
+        ${run.stage === 'society' ? `<h4>The Union</h4>${xrow('By force', d === 'peace' ? 'closed' : 'open')}${xrow('By trade', d === 'war' ? 'closed' : 'open')}${xrow('By faith', 'open')}` : ''}
+        ${run.stage === 'renaissance' ? `<h4>The Age of Sail</h4>${xrow('Discovery', 'always open')}${xrow('Trade', d === 'war' ? 'closed' : 'open')}${xrow('Conquest', d === 'peace' ? 'closed' : 'open')}` : ''}
+        <p class="note">${run.disposition ? (run.stage === 'renaissance' ? 'Fixed when your ships sailed.' : 'Fixed at the Union.') : run.stage === 'renaissance' ? `It was ${G.LEAN_NAMES[run.unionDisposition || d]} at the Union. In the new age it can shift again as you take up Reason ideas, until the Age of Sail fixes it.` : 'Territorial peoples keep every road open, like an omnivore. Your Disposition can still change as you adopt new ideas; it is fixed at the Union.'}</p>`;
     } else if (key === 'diet') {
       const d = G.diet(run); title = G.DIET_NAMES[d];
       const g = G.gimmick(run);
@@ -417,7 +418,7 @@ window.G = window.G || {};
     const sp = run.specialOn ? `<span ${tappable('special')} class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b><i class="${(run.special || 0) > G.SPECIAL_SOFT ? 'neg' : ''}">/${G.SPECIAL_SOFT}</i>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
     const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
     const ld = `<span ${tappable('leader')} class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
-    if (run.stage !== 'society') return sp + ld;
+    if (!G.civ(run)) return sp + ld;
     const sk = G.socKind(run);
     const restless = (run.council || []).filter((c) => c.loyalty < -10).length;
     const st = `<span ${tappable('settlements')} class="res gimmick" title="${esc(`Your ${sk.settlement}s and their sizes. Each one holds more people and earns Influence.`)}">🏘️ ${run.settlements.length}<i>/8</i></span>`;
@@ -450,10 +451,10 @@ window.G = window.G || {};
   function nextGoal(run) {
     const st = G.goals(run);
     const goals = [];
-    const tribe = run.stage === 'tribe'; const soc = run.stage === 'society';
-    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: soc ? 'tradition' : tribe ? 'discovery' : 'mutation' }));
+    const tribe = run.stage === 'tribe'; const soc = run.stage === 'society'; const ren = run.stage === 'renaissance';
+    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: ren ? 'invention' : soc ? 'tradition' : tribe ? 'discovery' : 'mutation' }));
     st.milestones.map((m) => ({ at: m.at, id: m.event.replace('{path}', run.path) })).filter((m) => !run.milestonesDone.includes(m.id) && G.EVENT[m.id]).forEach((m) => goals.push({ at: m.at, label: G.EVENT[m.id].title }));
-    if (st.evolveAt) goals.push({ at: st.evolveAt, label: soc ? 'the Union' : tribe ? 'the Founding' : 'the shore' });
+    if (st.evolveAt) goals.push({ at: st.evolveAt, label: ren ? 'the Age of Sail' : soc ? 'the Union' : tribe ? 'the Founding' : 'the shore' });
     goals.sort((a, b) => a.at - b.at);
     return goals.find((g) => g.at > run.dna) || null;
   }
@@ -540,9 +541,10 @@ window.G = window.G || {};
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
       <article class="card outcome">
-        <p class="eyebrow">${run.scene.tradition ? 'Tradition' : run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
+        <p class="eyebrow">${run.scene.reason ? 'Reason' : run.scene.tradition ? 'Tradition' : run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
         ${run.scene.tradition ? `<div class="callout"><strong>${esc(G.TRADITION[run.scene.tradition].name)}</strong><span>${esc(G.describeMods(G.TRADITION[run.scene.tradition].mods))}. ${esc(G.TRADITION[run.scene.tradition].desc)}</span></div>` : ''}
         <h2>${esc(run.scene.label)}</h2>
+        ${run.scene.reason ? `<div class="callout"><strong>${esc(G.loreName(G.REASON_ID[run.scene.reason], run))}</strong><span>${esc(G.describeMods(G.REASON_ID[run.scene.reason].mods))}. ${esc(G.REASON_ID[run.scene.reason].desc)}</span></div>` : ''}
         ${run.scene.discovery ? `<div class="callout"><strong>${esc(G.DISCOVERY[run.scene.discovery].name)}</strong><span>${esc(G.describeMods(G.DISCOVERY[run.scene.discovery].mods))}. ${esc(G.DISCOVERY[run.scene.discovery].desc)}</span></div>` : ''}
         ${run.scene.evolved ? `<div class="callout"><strong>${picon(run.scene.evolved)}${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
         <button class="btn primary wide" data-act="continue-mutation">Continue</button>
@@ -668,7 +670,7 @@ window.G = window.G || {};
     const leg = run.legacies || []; const past = run.rulers || [];
     if (!leg.length && !past.length) return '';
     return `${leg.length ? `<p class="note"><b>Legacies:</b> ${esc(leg.map((x) => `${x.name} the ${G.AMBITIONS[x.amb].name} (${G.describeMods(G.AMBITIONS[x.amb].legacy)})`).join(' · '))}</p>` : ''}
-      ${past.length ? `<details class="rulers"><summary>The line of leaders (${past.length})</summary><ol>${past.slice().reverse().map((x) => `<li>${esc(x.title)}: ${x.years} ${run.stage === 'society' ? 'generations' : 'years'}, ${esc(x.how)}${x.done ? ` · ${esc(G.AMBITIONS[x.amb].name)} ✅` : ''}</li>`).join('')}</ol></details>` : ''}`;
+      ${past.length ? `<details class="rulers"><summary>The line of leaders (${past.length})</summary><ol>${past.slice().reverse().map((x) => `<li>${esc(x.title)}: ${x.years} ${G.civ(run) ? 'generations' : 'years'}, ${esc(x.how)}${x.done ? ` · ${esc(G.AMBITIONS[x.amb].name)} ✅` : ''}</li>`).join('')}</ol></details>` : ''}`;
   }
   // What only your kind has: castes and the great home, Blight, Light.
   function kindPanel(run) {
@@ -693,12 +695,12 @@ window.G = window.G || {};
     { id: 'mind', name: 'Mind', stage: 'Creature' },
     { id: 'lore', name: 'Lore', stage: 'Tribe' },
     { id: 'law', name: 'Law', stage: 'Society' },
-    { id: 'reason', name: 'Reason', stage: 'Renaissance', later: 'Update 20' },
+    { id: 'reason', name: 'Reason', stage: 'Renaissance' },
     { id: 'crown', name: 'Crown', stage: 'Colonial Age', later: 'Update 21' },
     { id: 'legacy', name: 'Legacy', stage: 'the end', later: 'Update 22' },
   ];
-  const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society'];
-  const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society' };
+  const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society', 'renaissance'];
+  const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society', reason: 'renaissance' };
   function bookTab(run) {
     const at = STAGE_ORDER.indexOf(run.stage);
     const reached = (pg) => PAGE_STAGE[pg.id] && STAGE_ORDER.indexOf(PAGE_STAGE[pg.id]) <= at;
@@ -737,6 +739,10 @@ window.G = window.G || {};
     if (id === 'law') {
       const done = (run.traditions || []).includes('union_gate');
       return `<h3>Law ${done ? '' : '(growing)'}</h3><p class="note">${done ? 'Frozen as it stood at your Union.' : 'Adopt it from the Law tab.'}${run.faith ? ` Faith: ${esc(run.faith.name)}.` : ''} Disposition: ${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}.</p>${lawTree(run, done && b.law ? b.law : null)}`;
+    }
+    if (id === 'reason') {
+      const done = (run.reason || []).includes('sail_gate');
+      return `<h3>Reason ${done ? '' : '(growing)'}</h3><p class="note">${done ? 'Frozen as it stood when your ships sailed.' : 'Take it up from the Reason tab.'}${run.schism ? ` The Schism: ${esc(SCHISM_NAMES[run.schism])}.` : ''} Disposition: ${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}.</p>${reasonTree(run, done && b.reason ? b.reason : null)}`;
     }
     return '';
   }
@@ -876,11 +882,12 @@ window.G = window.G || {};
       <h3>📜 ${esc(G.mythName(run))}</h3>
       <p class="note">The story your people tell about where they came from: +1 Charm.</p>
       ${run.faith ? `<h3>🕯️ ${esc(run.faith.name)}</h3><p class="note">${esc(G.FAITH_KINDS[run.faith.kind].desc)} Its ideas are in the Faith band of your Law tree.</p>` : ''}
-      <h3>${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}</h3><p class="note">${run.disposition ? 'Your Disposition is fixed.' : 'Your Disposition, from the leaning of every idea your lineage has learned. It decides how you can unite the region, and it can still change.'}</p>
+      ${run.stage === 'renaissance' && run.schism ? `<h3>⛪ The Schism</h3><p class="note">${esc(SCHISM_NAMES[run.schism][0].toUpperCase() + SCHISM_NAMES[run.schism].slice(1))}. Its idea is in the Schism band of your Reason tree.</p>` : ''}
+      <h3>${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}</h3><p class="note">${run.disposition ? 'Your Disposition is fixed.' : `Your Disposition, from the leaning of every idea your lineage has learned. It decides ${run.stage === 'renaissance' ? 'what your ships can do in the Age of Sail' : 'how you can unite the region'}, and it can still change.`}</p>
       <h3>${esc(k.resource)}</h3>
       <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn. Building up a ${esc(sk.settlement)} uses 4 of it (or 6 Food).` : 'None.'}</p>
       <h3>Neighbours</h3>
-      ${nb.length ? nb.map((b) => `<div class="callout"><strong>The ${esc(b.name)}${b.treaty ? ' · 📜 treaty' : ''}${b.married ? ' · 💍 marriage' : ''}</strong><span>Opinion ${b.opinion} · ${b.opinion >= 60 ? 'allies: they share food with you' : b.opinion >= 10 ? 'friendly: you can trade' : b.opinion < G.SOC_RAID_BELOW ? 'hostile: they may raid you' : 'wary'}${b.nemesis ? ' · they remember the old feud' : ''}</span></div>`).join('') : '<p class="empty">No neighbours.</p>'}`;
+      ${nb.length ? nb.map((b) => `<div class="callout"><strong>${b.nation && b.nationDisp ? `${G.LEAN_ICONS[b.nationDisp]} ` : ''}The ${esc(b.name)}${b.league ? ' · 🤝 league' : ''}${b.treaty ? ' · 📜 treaty' : ''}${b.married ? ' · 💍 marriage' : ''}</strong><span>Opinion ${b.opinion} · ${b.opinion >= 60 ? 'allies: they share food with you' : b.opinion >= 10 ? 'friendly: you can trade' : !b.treaty && b.opinion < (b.nation ? { war: 20, peace: -30 }[b.nationDisp] ?? G.SOC_RAID_BELOW : G.SOC_RAID_BELOW) ? 'hostile: they may raid you' : 'wary'}${b.nemesis ? ' · they remember the old feud' : ''}</span>${b.nation && b.nationDisp ? `<span>${esc(G.LEAN_NAMES[b.nationDisp])} nation, ${esc(NATION_DISP[b.nationDisp].split(': ')[1])}${b.nationDisp === 'war' && b.opinion < 0 && !b.treaty && !b.league ? '. They may invade.' : '.'}</span>` : ''}</div>`).join('') : '<p class="empty">No neighbours.</p>'}`;
   }
   function councilTab(run) {
     return `<p class="note">Your council governs with your ruler. Loyal councillors add their role and their trait; one whose loyalty falls below −30 gives nothing, and below −25 they may start plotting. Councillors grow more ambitious every generation.</p>
@@ -944,6 +951,122 @@ window.G = window.G || {};
       <p class="note"><b>The Union</b> needs ${G.goals(run).evolveAt} Influence (you have ${run.dna}) and ${G.unionNeed()} Law ideas (you have ${G.lawKnown(run)}). Your Disposition, <b>${G.LEAN_ICONS[d]} ${esc(G.LEAN_NAMES[d])}</b>, decides how the region can be united.</p>`}
       ${lawTree(run, done && run.book && run.book.law ? run.book.law : null)}`;
   }
+  // ---------- The Reason tree (Update 20) ----------
+  const REASON_BANDS = [['inherit', 'Inheritance'], ['people', 'Your people'], ['invention', 'Inventions'], ['movement', 'Movements'], ['faith', 'The Schism'], ['deed', 'Deeds'], ['gate', 'Age of Sail'], ['beyond', 'Beyond']];
+  const reasonName = (run, x) => G.loreName(x, run);
+  function reasonTree(run, page) {
+    const known = (id) => (page ? page.known : run.reason || []).includes(id);
+    const visible = page ? page.seen.map((id) => G.REASON_ID[id]).filter(Boolean) : G.REASON.filter((x) => G.reasonVisible(run, x));
+    const have = run.special || 0; const k = G.kind(run) || { icon: '' };
+    const live = !page && run.stage === 'renaissance' && !(run.reason || []).includes('sail_gate');
+    const state = (x) => {
+      if (known(x.id)) return 'done';
+      if (!live) return 'locked';
+      const av = G.reasonAvailable(run, x);
+      return av.ok ? (G.reasonCost(run, x.id) <= have ? 'open' : 'cant') : av.blocked ? 'blocked' : 'locked';
+    };
+    const sel = (G.ui.reasonSel && visible.find((x) => x.id === G.ui.reasonSel)) || (live && visible.find((x) => state(x) === 'open')) || visible.find((x) => x.band === 'gate') || visible[0];
+    const { pos, labels, H } = treeLayout(visible, REASON_BANDS, (x) => x.band);
+    const icon = { done: '✓', open: '', cant: k.icon, locked: '🔒', blocked: '✕' };
+    const lean = page ? page.leaning : G.leaning(run);
+    const edges = [];
+    visible.forEach((x) => { if (x.excl && pos[x.id] && pos[x.excl] && x.id < x.excl) { const a = pos[x.id]; const b = pos[x.excl]; edges.push(`<path class="edge fork" d="M${a.x} ${a.y / H * 100} L ${b.x} ${b.y / H * 100}" vector-effect="non-scaling-stroke"/>`); } });
+    return `
+      <div class="mind-head">${leaningBar(lean)}</div>
+      <div class="skill-tree mind-tree law-tree" style="height:${H}px">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
+        ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
+        ${visible.map((x) => { const st = state(x); const nm = reasonName(run, x); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === x.id ? 'sel' : ''} ${x.band === 'gate' ? 'apex' : ''} ${x.band === 'beyond' ? 'beyond' : ''} ${x.lean ? `lean-${x.lean}` : ''}" style="left:${pos[x.id].x}%;top:${pos[x.id].y}px" data-act="reason-sel" data-arg="${x.id}" aria-pressed="${sel && sel.id === x.id}" aria-label="${esc(nm)}"><span>${esc(nm)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${x.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
+      </div>
+      ${sel ? reasonDetail(run, sel, state(sel), live) : ''}`;
+  }
+  const SCHISM_NAMES = { reform: 'you reformed the faith', hold: 'you held to the old faith', tolerate: 'you tolerated every faith' };
+  function reasonDetail(run, x, st, live) {
+    const k = G.kind(run) || { icon: '', resource: '' }; const cost = G.reasonCost(run, x.id);
+    const av = live ? G.reasonAvailable(run, x) : { ok: false };
+    const where = {
+      inherit: `Inheritance: ${G.societyEndingName(run) || 'how you united the region'}`,
+      people: `Your people's own invention (tier ${'I'.repeat(x.tier || 1)})`,
+      invention: `An invention your scholars found (tier ${'I'.repeat(x.tier || 1)})${x.disposition ? `; only for ${x.disposition.map((d) => G.LEAN_NAMES[d]).join(' or ')} nations` : ''}`,
+      movement: 'A movement of art and thought',
+      faith: `The Schism: ${SCHISM_NAMES[x.schism] || ''}`,
+      deed: `Deed: ${x.when ? G.REN_DEEDS[x.when.deed] : ''}`,
+      gate: `The Age of Sail: ends the Renaissance. Needs ${G.goals(run).evolveAt} Learning and ${G.sailNeed()} Reason ideas`,
+      beyond: `Beyond the Age of Sail (${G.LEAN_NAMES[x.disposition]} nations only): learn it before you sail; an Inheritance in the next stage`,
+    }[x.band];
+    let action = '';
+    if (st === 'done') action = '<span class="note good-text">Known</span>';
+    else if (live && av.ok) action = `<button class="btn primary small" ${cost <= (run.special || 0) ? `data-act="learn-reason" data-arg="${x.id}"` : 'disabled'}>Take it up (${k.icon} ${cost})</button>${cost > (run.special || 0) ? `<span class="reason">Needs ${cost} ${esc(k.resource)} (you have ${run.special || 0})</span>` : ''}`;
+    return `
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(reasonName(run, x))}</strong><span>${k.icon} ${cost}</span></div>
+        <span class="inv-where">${esc(where)}${x.lean ? ` · ${G.LEAN_ICONS[x.lean]} ${esc(G.LEAN_NAMES[x.lean])}` : ''}</span>
+        <span class="inv-mods">${esc(G.describeMods(x.mods))}</span>
+        ${x.rule ? `<span class="inv-rule">★ ${esc(G.MIND_RULES[x.rule])}</span>` : ''}
+        ${x.inherit ? `<span class="inv-rule">Inheritance in the next stage: ${esc(G.describeMods(x.inherit))}</span>` : ''}
+        <span class="inv-desc">${esc(x.desc)}</span>
+        ${x.excl ? `<span class="inv-excl">Fork: rules out ${esc(reasonName(run, G.REASON_ID[x.excl]))}</span>` : ''}
+        ${live && !av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
+        <div class="row tight">${action}</div>
+      </div>`;
+  }
+  function reasonTab(run) {
+    const k = G.kind(run); const d = G.disposition(run);
+    const done = (run.reason || []).includes('sail_gate');
+    return `${done ? '' : `<p class="note">Your Reason tree: ${G.reasonKnown(run)} ideas known. It grows from how you united the region, your people's own inventions, the inventions your Learning finds, the movements you back, the Schism and your deeds. Taking up an idea costs ${esc(k.resource)} (you have <b>${run.special || 0}</b>).</p>
+      <p class="note"><b>The Age of Sail</b> needs ${G.goals(run).evolveAt} Learning (you have ${run.dna}) and ${G.sailNeed()} Reason ideas (you have ${G.reasonKnown(run)}). Your Disposition, <b>${G.LEAN_ICONS[d]} ${esc(G.LEAN_NAMES[d])}</b>, can still shift until then, and decides what your ships will do.</p>`}
+      ${reasonTree(run, done && run.book && run.book.reason ? run.book.reason : null)}`;
+  }
+  function reasonCard(run) {
+    const d = run.draft; const k = G.kind(run); const have = run.special || 0;
+    return `
+      <article class="card draft">
+        <p class="eyebrow">The Reason tree</p>
+        <h2>A new invention</h2>
+        <p class="note">Your scholars' Learning opens a new branch of Reason. Choose one to add to your tree: take it up now for ${esc(k.resource)} (you have <b>${have}</b>), or keep it in the tree and take it up later from the Reason tab.</p>
+        <div class="draft-list">
+          ${d.options.map((id) => { const x = G.REASON_ID[id]; const cost = G.reasonCost(run, id); return `
+            <div class="part-card ${cost > have ? 'cant' : ''}">
+              <span class="opt-label">${esc(reasonName(run, x))}<span class="kw">${'I'.repeat(x.tier)}</span>${x.lean ? `<span class="kw">${G.LEAN_ICONS[x.lean]}</span>` : ''}<span class="cost ${cost > have ? 'bad' : ''}">${k.icon} ${cost}</span></span>
+              <span class="opt-meta"><span>${esc(G.describeMods(x.mods))}</span></span>
+              <span class="opt-desc">${esc(x.desc)}${x.disposition ? ` <i>Only for ${esc(x.disposition.map((v) => G.LEAN_NAMES[v]).join(' or '))} nations.</i>` : ''}</span>
+              <div class="row tight">
+                <button class="btn small primary" ${cost <= have ? `data-act="draft" data-arg="${id}" data-mode="learn"` : 'disabled'}>Add and take it up (${k.icon} ${cost})</button>
+                <button class="btn small" data-act="hold-discovery" data-arg="${id}">Add to the tree</button>
+              </div>
+            </div>`; }).join('')}
+        </div>
+        <div class="row">
+          ${d.rerolls > 0 ? `<button class="btn" data-act="reroll">Reroll (${d.rerolls})</button>` : ''}
+          <button class="btn ghost" data-act="skip-draft">Skip for +3 Food</button>
+        </div>
+      </article>`;
+  }
+  const NATION_DISP = { peace: 'peaceful: they want trade and treaties', guard: 'territorial: they guard what is theirs', war: 'warlike: they mean to take what is yours' };
+  function renaissanceEndCard(run, r) {
+    const b = r.breakdown; const e = run.renaissanceEnding && G.RENAISSANCE_ENDINGS[run.renaissanceEnding];
+    return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card end ${r.victory ? 'finale' : ''}">
+        <p class="eyebrow">${r.victory ? 'Renaissance complete' : 'Your nation is gone'}</p>
+        <h2>${r.victory && e ? esc(e.name) : `${esc(G.nationName(run))} has fallen`}</h2>
+        <p class="event-text">${r.victory && e ? `${esc(e.desc)} ${esc(G.nationName(run))} sets sail under ${esc(run.leader ? G.leaderTitle(run.leader) : 'its council')}, after ${run.stageTurn} generation${run.stageTurn === 1 ? '' : 's'} and ${(run.reason || []).length} Reason ideas. The Colonial Age arrives in a later update.` : `${esc(r.cause)} Your nation lasted ${run.stageTurn} generations.`}${run.checkpointGenes ? ` (Earlier endings already earned +${run.checkpointGenes} Genetic Memory.)` : ''}</p>
+        <div class="callout gene">
+          <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
+          <span>${b.base} from Learning${b.progress ? ` · +${b.progress} for your ideas and deeds` : ''}${b.winBonus ? ` · +${b.winBonus} for the Age of Sail` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new Renaissance ending` : ''}${b.mult > 1 ? ` · ×${b.mult}` : ''}</span>
+        </div>
+        <p class="note">You can start a new run from the dawn of ${esc(G.nationName(run))} with Stage Select, on the new lineage screen.</p>
+        <div class="row">
+          <button class="btn primary" data-act="setup">New lineage</button>
+          <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree</button>
+          <button class="btn" data-act="go" data-arg="fossils">Fossil Record</button>
+        </div>
+      </article>`;
+  }
+  function patronageSection() {
+    if (!G.patronageOpen()) return '<p class="note">Opens once one of your lineages reaches the Renaissance. Its upgrades only work in the Renaissance.</p>';
+    return `<p class="note">Upgrades for the Renaissance: reach deeper into the Reason tree and set sail sooner.</p>${skillTree(G.PATRONAGE, G.ui.patSel, 'pat-sel', '')}`;
+  }
   function societyEndCard(run, r) {
     const b = r.breakdown; const sk = G.socKind(run);
     const e = run.societyEnding && G.SOCIETY_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.societyEnding];
@@ -967,6 +1090,7 @@ window.G = window.G || {};
   }
 
   function draftCard(run) {
+    if (run.stage === 'renaissance') return reasonCard(run);
     if (run.stage === 'society') return traditionCard(run);
     if (run.stage === 'tribe') return discoveryCard(run);
     const d = run.draft;
@@ -1047,7 +1171,9 @@ window.G = window.G || {};
   function leaningBar(lean) {
     const tot = lean.peace + lean.guard + lean.war;
     if (!tot) return '<span class="lean-bar empty">No leaning yet</span>';
-    const top = Object.entries(lean).sort((a, b) => b[1] - a[1])[0][0];
+    // Ties go the way your Disposition does: Territorial first, then Warmongering.
+    const best = Math.max(lean.peace, lean.guard, lean.war);
+    const top = lean.guard === best ? 'guard' : lean.war === best ? 'war' : 'peace';
     return `<span class="lean-bar" title="Your leaning: ${esc(Object.entries(lean).map(([k, v]) => `${G.LEAN_NAMES[k]} ${v}`).join(', '))}">${['peace', 'guard', 'war'].map((k) => lean[k] ? `<i class="lean ${k}" style="flex:${lean[k]}">${G.LEAN_ICONS[k]} ${lean[k]}</i>` : '').join('')}</span><span class="lean-top">Leaning ${esc(G.LEAN_NAMES[top])}</span>`;
   }
   function mindHeader(run, page) {
@@ -1145,6 +1271,19 @@ window.G = window.G || {};
 
   function evolvedCard(run) {
     const e = run.evolved;
+    if (e && e.renaissance) {
+      const nb = run.species.filter((x) => x.nation && !x.extinct);
+      return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card finale">
+        <p class="eyebrow">The Renaissance · ${esc(G.PATH[run.path].name)}</p>
+        <h2>${esc(e.ending)}: ${esc(e.kind)}</h2>
+        <p class="event-text">The region is one nation now, ruled by <b>${esc(run.leader ? G.leaderTitle(run.leader) : 'its council')}</b>. Beyond its borders the old neighbours have become nations too, and they remember everything your lineage did to them.${run.checkpointGenes ? ` Your endings so far earned <b>+${run.checkpointGenes} Genetic Memory</b>, kept whatever happens next.` : ''}</p>
+        ${nb.map((b) => `<div class="callout"><strong>${G.LEAN_ICONS[b.nationDisp]} The ${esc(b.name)}</strong><span>${esc(NATION_DISP[b.nationDisp])} (opinion ${b.opinion}${G.grudge(b) ? `, memory ${G.grudge(b) > 0 ? '+' : ''}${G.grudge(b)}` : ''}).</span></div>`).join('')}
+        <p class="note">Learning replaces Influence. Each goal brings an invention for your new <b>Reason</b> tree; back patrons, send voyages, form leagues, and survive the Schism. Your Disposition can shift again until you reach ${G.goals(run).evolveAt} Learning and ${G.sailNeed()} Reason ideas for the Age of Sail: explore, trade or conquer.</p>
+        <button class="btn primary wide" data-act="continue-evolved">Begin the new age</button>
+      </article>`;
+    }
     if (e && e.society) {
       const sk = G.socKind(run); const st = G.SOCIETY_TYPES[run.socType];
       return `
@@ -1190,6 +1329,7 @@ window.G = window.G || {};
 
   function endCard(run) {
     const r = run.result;
+    if (run.stage === 'renaissance') return renaissanceEndCard(run, r);
     if (run.stage === 'society') return societyEndCard(run, r);
     if (run.stage === 'tribe') return tribeEndCard(run, r);
     const leg = run.legacy && G.LEGACIES[run.legacy];
@@ -1594,12 +1734,14 @@ window.G = window.G || {};
     const tab = G.ui.sheet;
     if (!tab) return '';
     const tribe = G.people(run);
-    const tabs = run.stage === 'society'
+    const tabs = run.stage === 'renaissance'
+      ? [['society', 'Nation'], ['council', 'Council'], ['reason', 'Reason'], ['book', 'Book'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      : run.stage === 'society'
       ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Law'], ['book', 'Book'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : tribe
       ? [['people', 'People'], ['found', 'Lore'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
-    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, book: bookTab };
+    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, reason: reasonTab, book: bookTab };
     const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
@@ -1608,7 +1750,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
@@ -1738,6 +1880,7 @@ window.G = window.G || {};
         <section><h2>Evolution Tree</h2>${evolutionTree()}</section>
         <section><h2>Ancestral Wisdom</h2>${wisdomSection()}</section>
         <section><h2>Heritage</h2>${heritageSection()}</section>
+        <section><h2>Patronage</h2>${patronageSection()}</section>
         <section><h2>Gene Affinities</h2>${affinitySection()}</section>
         <section><h2>Archetypes</h2><ul class="shop-list">${G.ARCHETYPES.filter((a) => a.cost).map((a) => item('archetypes', a)).join('')}</ul></section>
         <section><h2>Home worlds</h2><ul class="shop-list">${G.ORIGINS.filter((o) => o.cost).map((o) => item('origins', o)).join('')}</ul></section>
@@ -1878,10 +2021,15 @@ window.G = window.G || {};
           <ul class="codex-grid">${Object.entries(G.TRIBE_ENDINGS).flatMap(([path, byHab]) => Object.entries(byHab).flatMap(([hab, ends]) => Object.entries(ends).map(([road, e]) => { const got = (c.tribeEndings || []).includes(`${path}|${hab}|${road}`); const k = G.KINDS[path][hab];
             return got ? `<li><strong>${esc(e.name)}</strong><span>${k.icon} ${esc(k.name)} · ${esc(road[0].toUpperCase() + road.slice(1))}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${k.icon} ${esc(k.name)} · ${esc(road[0].toUpperCase() + road.slice(1))}</span></li>`; }))).join('')}</ul>
         </section>
-        <section><h2>Society endings <span class="count">${(c.societyEndings || []).length} / 12</span></h2>
+        <section><h2>Society endings <span class="count">${(c.societyEndings || []).length} / ${Object.values(G.SOCIETY_ENDINGS).reduce((t, byHab) => t + Object.values(byHab).reduce((u, ends) => u + Object.keys(ends).length, 0), 0)}</span></h2>
           <p class="note">How each society can unite its region: by force, by trade or by faith. A new one is worth +10 Genetic Memory.</p>
           <ul class="codex-grid">${Object.entries(G.SOCIETY_ENDINGS).flatMap(([path, byHab]) => Object.entries(byHab).flatMap(([hab, ends]) => Object.entries(ends).map(([road, e]) => { const got = (c.societyEndings || []).includes(`${path}|${hab}|${road}`); const sk = G.SOCIETY_KINDS[path][hab]; const rn = { conquest: 'Conquest', trade: 'Trade', faith: 'Faith' }[road];
             return got ? `<li><strong>${esc(e.name)}</strong><span>${esc(sk.name)} · ${rn}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${esc(sk.name)} · ${rn}</span></li>`; }))).join('')}</ul>
+        </section>
+        <section><h2>Renaissance endings <span class="count">${(c.renaissanceEndings || []).length} / ${Object.keys(G.PATH).length * 3}</span></h2>
+          <p class="note">How each kind of nation can use the Age of Sail: to explore, to trade or to conquer. A new one is worth +10 Genetic Memory.</p>
+          <ul class="codex-grid">${Object.keys(G.PATH).flatMap((path) => Object.entries(G.RENAISSANCE_ENDINGS).map(([road, e]) => { const got = (c.renaissanceEndings || []).includes(`${path}|${road}`); const p = G.PATH[path];
+            return got ? `<li><strong>${esc(e.name)}</strong><span>${p.icon} ${esc(p.name)}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${p.icon} ${esc(p.name)} · ${esc(road[0].toUpperCase() + road.slice(1))}</span></li>`; })).join('')}</ul>
         </section>
         <section><h2>Traditions <span class="count">${G.TRADITIONS.filter((t) => (c.traditions || []).includes(t.id)).length} / ${G.TRADITIONS.length}</span></h2>
           <ul class="codex-grid">${G.TRADITIONS.map((t) => ((c.traditions || []).includes(t.id) ? `<li><strong>${esc(t.name)}</strong>${traditionTags(t)}<span>${esc(G.describeMods(t.mods))}</span></li>` : '<li class="unknown"><strong>???</strong></li>')).join('')}</ul>
@@ -1938,6 +2086,8 @@ window.G = window.G || {};
       case 'learn-lore': G.ui.sheet = null; G.learnLore(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'lore-sel': G.ui.loreSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'law-sel': G.ui.lawSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'reason-sel': G.ui.reasonSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'learn-reason': G.ui.sheet = null; G.learnReason(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'learn-law': G.ui.sheet = null; G.learnLaw(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
       case 'book-page': G.ui.bookPage = arg; G.ui.mindSel = null; G.ui.keepScroll = true; parts = ['sheet']; break;
@@ -1976,6 +2126,7 @@ window.G = window.G || {};
       case 'tree-sel': G.ui.treeSel = arg; break;
       case 'wis-sel': G.ui.wisSel = arg; break;
       case 'her-sel': G.ui.herSel = arg; break;
+      case 'pat-sel': G.ui.patSel = arg; break;
       case 'caste': G.setCaste(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'amber-on': G.setAmber(arg, true); break;
       case 'amber-off': G.setAmber(arg, false); break;

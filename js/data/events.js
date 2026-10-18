@@ -3086,6 +3086,111 @@ G.EVENTS.push(
   }));
 }());
 
+// ---------- Update 20: the Renaissance ----------
+G.EVENTS.push(
+  {
+    id: 'renaissance_dawn', stage: 'renaissance', milestone: true, prop: 'stars', title: 'A New Age',
+    text: 'The region is one nation now: {nation}. In the cities, people are asking questions nobody asked before. Your ruler must decide what this age will be about.',
+    options: [
+      { label: 'Learning above all', hint: '+8 Learning', result: { text: 'Schools open in every city.', dna: 8, anim: 'mutate' } },
+      { label: 'Wealth above all', hint: '+8 of your people\'s resource, +4 Food', result: { text: 'Markets fill, and so do the stores.', special: 8, food: 4, anim: 'grow' } },
+      { label: 'Glory above all', check: { stat: 'cha', diff: 6 }, success: { text: 'Your rulers become patrons of everything beautiful.', dna: 6, loyalty: 10, anim: 'social' }, fail: { text: 'Expensive monuments, and grumbling.', loyalty: -5 } },
+    ],
+  },
+  {
+    id: 'the_schism', stage: 'renaissance', milestone: true, prop: 'shadow', title: 'The Schism',
+    text: 'A scholar says {faith} has been taught wrongly for generations. Half the cities agree with her. The other half want her silenced.',
+    options: [
+      { label: 'Reform the faith', hint: 'The Reformed Faith joins your Reason tree', result: { text: 'Old books are rewritten. Some never forgive it.', schism: 'reform', loyalty: -5, dna: 4, anim: 'mutate' } },
+      { label: 'Hold to the old faith', hint: 'The True Faith joins your Reason tree', result: { text: 'The scholar is silenced. The faith stays as it was.', schism: 'hold', loyalty: 5, anim: 'attack' } },
+      { label: 'Let both be', check: { stat: 'cha', diff: 7 }, success: { text: 'Two churches, one nation. It works, mostly.', schism: 'tolerate', anim: 'social' }, fail: { text: 'Both sides feel betrayed.', schism: 'tolerate', loyalty: -10 } },
+    ],
+  },
+  {
+    id: 'the_great_fair', stage: 'renaissance', milestone: true, prop: 'hearts', title: 'The Great Fair',
+    text: 'Every nation in the region sends its best to one great fair in {capital}: inventions, paintings, songs, and spies.',
+    options: [
+      { label: 'Show off your inventions', check: { stat: 'cun', diff: 7 }, success: { text: 'Everyone wants what you have made.', dna: 10, neighbourOpinion: 10, anim: 'mutate' }, fail: { text: 'Your best machine breaks in front of everyone.', dna: 2 } },
+      { label: 'Win friends', check: { stat: 'cha', diff: 7 }, success: { text: 'Treaties are signed over dinner.', neighbourOpinion: 20, anim: 'social' }, fail: { text: 'Your envoys offend nearly everyone.', neighbourOpinion: -10 } },
+      { label: 'Steal their secrets', check: { stat: 'cun', diff: 8 }, success: { text: 'You go home with three inventions that were not yours.', dna: 12, anim: 'mutate' }, fail: { text: 'Caught. Nobody trusts you now.', neighbourOpinion: -25 } },
+    ],
+  },
+  {
+    id: 'ren_plague', stage: 'renaissance', prop: 'sickness', title: 'The Great Plague', tags: ['danger'], hazard: 'sickness',
+    text: 'A sickness comes off the ships and spreads from city to city faster than anyone can run.',
+    options: [
+      { label: 'Close the cities', check: { stat: 'tou', diff: 7 }, success: { text: 'Hard months, but most cities are spared.', renDeed: 'rd_plague', anim: 'rest' }, fail: { text: 'It gets out anyway.', popPct: -0.2, renDeed: 'rd_plague' } },
+      { label: 'Trust the physicians', check: { stat: 'cun', diff: 7 }, success: { text: 'They learn more in a year than in a century.', dna: 6, renDeed: 'rd_plague', anim: 'mutate' }, fail: { text: 'Their cures do nothing.', popPct: -0.25, renDeed: 'rd_plague' } },
+    ],
+  },
+  {
+    id: 'ren_genius', stage: 'renaissance', prop: 'stars', title: 'A Genius', tags: ['social'],
+    text: 'A young painter in a small city can also design bridges, flying machines and weapons. Everyone wants them.',
+    options: [
+      { label: 'Bring them to court', hint: '+8 Learning', result: { text: 'Notebooks full of wonders.', dna: 8, anim: 'mutate' } },
+      { label: 'Set them to building weapons', check: { stat: 'str', diff: 6 }, success: { text: 'Machines no one has ever seen on a battlefield.', mods: { str: 1 }, anim: 'attack' }, fail: { text: 'They leave for a rival nation.', neighbourOpinion: -5 } },
+    ],
+  },
+  {
+    id: 'ren_heretic', stage: 'renaissance', prop: 'night', title: 'The Heretic Astronomer', tags: ['social'],
+    text: 'An astronomer says the world goes round the sun, not the other way. The faithful are furious.',
+    options: [
+      { label: 'Protect them', check: { stat: 'cha', diff: 7 }, success: { text: 'The truth wins, slowly.', dna: 8, loyalty: -5, anim: 'mutate' }, fail: { text: 'Riots in two cities.', loyalty: -10 } },
+      { label: 'Silence them', result: { text: 'The heavens stay where they were, for now.', loyalty: 5, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 'ren_banker', stage: 'renaissance', prop: 'hearts', title: 'The Banking House', tags: ['food'],
+    text: 'A family of bankers offers your ruler a fortune, at a price: a seat on the council.',
+    options: [
+      { label: 'Take the money', hint: '+10 of your people\'s resource, the council grumbles', result: { text: 'Gold, and new friends who expect things.', special: 10, loyalty: -10, anim: 'grow' } },
+      { label: 'Refuse', result: { text: 'They take their money to a rival nation.', neighbourOpinion: -5, loyalty: 5, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'ren_war_of_nations', stage: 'renaissance', prop: 'sparks', title: 'War of Nations', tags: ['danger'],
+    text: 'Two neighbour nations go to war, and both demand that you choose a side.',
+    options: [
+      { label: 'Fight with the stronger', check: { stat: 'str', diff: 8 }, success: { text: 'You share the victory, and the spoils.', dna: 6, food: 4, renDeed: 'rd_war', anim: 'attack' }, fail: { text: 'You lose, and pay for it.', popPct: -0.1, neighbourOpinion: -10 } },
+      { label: 'Broker a peace', check: { stat: 'cha', diff: 8 }, success: { text: 'Both sides thank you, grudgingly.', neighbourOpinion: 15, anim: 'social' }, fail: { text: 'Both sides blame you.', neighbourOpinion: -15 } },
+      { label: 'Stay out of it', result: { text: 'They fight on without you.', anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'ren_masterpiece', stage: 'renaissance', prop: 'sun', title: 'The Masterpiece', tags: ['social'],
+    text: 'A dome over the great hall of {capital}, bigger than anything ever built. It will take a generation, and a fortune.',
+    options: [
+      { label: 'Build it', hint: '−12 of your people\'s resource', req: { special: 12 }, result: { text: 'When it is finished, people weep to see it.', special: -12, renDeed: 'rd_masterpiece', dna: 6, anim: 'grow' } },
+      { label: 'Something smaller', result: { text: 'A fine building. Nobody will cross the world to see it.', dna: 2, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'ren_mapmaker', stage: 'renaissance', prop: 'stars', title: 'The Mapmaker', tags: ['explore'],
+    text: 'A mapmaker brings a chart of coasts no one in your nation has ever seen. She wants ships.',
+    options: [
+      { label: 'Give her ships', hint: '−4 Food', req: { food: 4 }, result: { text: 'She comes back a year later, with new maps and new tales.', food: -4, dna: 6, renDeed: 'rd_voyage', anim: 'mutate' } },
+      { label: 'Buy the map', result: { text: 'It hangs in the palace. Someone will use it one day.', dna: 3, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'ren_spies', stage: 'renaissance', prop: 'shadow', title: 'Spies at Court', tags: ['danger'],
+    text: 'Letters intercepted at the border: a neighbour nation has spies on your council.',
+    options: [
+      { label: 'Root them out', check: { stat: 'cun', diff: 7 }, success: { text: 'Three spies caught, and a lot learned from them.', dna: 4, loyalty: 5, anim: 'mutate' }, fail: { text: 'You catch the wrong people.', loyalty: -10 } },
+      { label: 'Feed them lies', check: { stat: 'cun', diff: 8 }, success: { text: 'The enemy believes everything.', dna: 6, anim: 'mutate' }, fail: { text: 'They see through it.', neighbourOpinion: -10 } },
+    ],
+  },
+);
+// The Age of Sail: the Renaissance's finale. Your Disposition decides which roads are open.
+(function () {
+  const ROADS = [['explore', 'cun', 'Explore', ['peace', 'guard', 'war']], ['trade', 'cha', 'Trade', ['peace', 'guard']], ['conquer', 'str', 'Conquer', ['guard', 'war']]];
+  G.EVENTS.push({ id: 'sail_finale', stage: 'renaissance', finale: true, prop: 'stars', title: 'The Age of Sail',
+    text: 'The shipyards of {nation} have built ships that can cross any sea. Beyond the horizon are lands no one here has ever seen, and peoples who have never heard of you. How will {nation} meet the world?',
+    options: ROADS.map(([road, stat, verb, disp]) => { const e = G.RENAISSANCE_ENDINGS[road]; return { label: `${verb}: ${e.name}`, hint: e.desc, req: { disposition: disp }, check: { stat, diff: 8 },
+      success: { text: `${e.desc} The Renaissance is over; the age of empires begins.`, renaissanceEnding: road, anim: stat === 'str' ? 'attack' : stat === 'cha' ? 'social' : 'mutate' },
+      fail: { text: 'The first ships do not come back. Not yet.', popPct: -0.12, loyalty: -5, setback: 0 } }; }) });
+}());
+
 // ---------- Patch 16.3: the resource is what knowledge costs ----------
 G.EVENTS.push(
   {

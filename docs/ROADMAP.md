@@ -502,7 +502,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Disposition:** your leaning settles into **Peaceful, Territorial or Warmongering**, shown as a badge, and decides which Union endings are open.
 - **Heritage:** the Society stage's between-lineage tree.
 
-## Update 20: Renaissance (a new stage)
+## Update 20: Renaissance (a new stage) ✅
 
 - **Neighbours become nations,** each remembering its history with you.
 - **Science and art:** inventions, patrons, movements; your kind of people shapes what you discover (a Swarm's Renaissance is not a Choir's).
