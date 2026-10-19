@@ -612,6 +612,7 @@ window.G = window.G || {};
   G.TRIBE_CHILD_COST = 2;
   G.TRIBE_HIT_CAP = 0.7; // the most often a hunter or band can strike in a year
   G.TRIBE_BLOW = 2; // extra members lost to every strike
+  G.TRIBE_HIT_SHARE = 0.2; // the most one blow can take in the Tribe stage, before +2% per point of the blow
   G.TRIBE_GRACE = 5; // years before the wild keeps pace and strikes harder // bands raid you while their opinion is below this
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
@@ -1130,6 +1131,9 @@ window.G = window.G || {};
     const scale = Math.max(1, Math.min(G.maxPop(run), run.pop) / G.POP_SCALE / 10);
     const heads = Math.ceil(n2 * scale * G.SIZES[G.sizeOf(run)].damageMult * (G.gimmick(run) === 'grazer' ? 1.5 : 1));
     let dmg = Math.max(1, Math.round(heads * G.POP_SCALE * (0.85 + rand() * 0.3) * (1 - spare)));
+    // A Tribe is worn down, not wiped out by one bad roll: no single blow takes more than a modest share
+    // of your people (more when you are badly outmatched).
+    if (run.stage === 'tribe') dmg = Math.min(dmg, Math.max(G.POP_SCALE, Math.round(run.pop * (G.TRIBE_HIT_SHARE + 0.02 * n2))));
     // Last refuge: down to a quarter of your comfortable size, every loss is halved.
     if (G.mindRule(run, 'last_refuge') && run.pop < G.maxPop(run) * 0.25) dmg = Math.max(1, Math.round(dmg / 2));
     run.pop -= dmg;
@@ -3485,6 +3489,8 @@ window.G = window.G || {};
       const p = weightedPick(pool, (x) => (x.evolved ? (x.limbEvo ? 2 : x.evolved === 2 ? 0.4 : 1) : (x.rarity || 2))
         * (boost && (x.keywords || []).includes(boost) ? 3 : 1)
         * (empty.includes(x.slot) ? 2 : 1)
+        // Parts whose bonus your diet can't use (hunting for a plant-eater) turn up far less often; mouths still do, since they change your diet.
+        * (x.slot !== 'mouth' && G.useless(run, x) ? 0.2 : 1)
         * (x.biome ? 3 : 1)
         * G.affinityWeight(x));
       out.push(p.id);
@@ -3758,4 +3764,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.0';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.1';

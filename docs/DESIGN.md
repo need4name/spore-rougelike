@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.1: Early-game polish
+
+- **Tribe blows are capped.** Sims of 170 Tribe runs per setting showed raids and hunts on the map caused almost every Tribe loss: about one hit a turn, often a quarter to half of the people at once. In the Tribe stage one blow now takes at most `G.TRIBE_HIT_SHARE` (20%) of your members, plus 2% per point of the blow, never less than one Population head. Founding now succeeds 95–100% on every Path with an empty Evolution Tree (it was 25% for Song, 100% for Many). Ancestral Wisdom still makes it faster.
+- **The Spreading Fever** takes a share of your members (8% if you scatter, 5% if you drive the sick away) instead of a flat 40 or 15, which could empty a small Tribe.
+- **Offers your diet can't use are rarer.** In drafts, a part that `G.useless` flags gets 0.2× weight. Mouths are exempt, since a mouth changes your diet.
+- **Honest descriptions.** Texts that named a fixed head count (Armor tier 3, Strong Blood, Frozen Sea, Toxic, the egg-laying and mid-sized hints) now describe the effect, because the real amount scales with body size.
+
 ## Patch 20.3: Things do what they say
 
 - **Learning from tabs any time:** `G.learnLore`/`learnLaw`/`learnReason` work in any phase but `end`; `holdScreen`/`resumeScreen` keep a waiting draft, event or scene and add a "Learned:" notice. Modal and sheet re-renders keep their scroll when `G.ui.keepScroll`.

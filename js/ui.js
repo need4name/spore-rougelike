@@ -2412,4 +2412,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.0';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.1';

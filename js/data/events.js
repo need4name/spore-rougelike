@@ -984,7 +984,7 @@ G.EVENTS = [
     text: 'How will your kind bring new life into the world?',
     options: [
       { label: 'Give birth to live young', hint: 'Live Young: +1 TOU, +1 CHA, but at most 1 birth a turn', result: { text: 'Few babies, but well protected.', trait: 'young_live', anim: 'social' } },
-      { label: 'Lay eggs', hint: 'Eggs: twice the births, +10 max Population, but eggs can be stolen', result: { text: 'Clutches of eggs, laid in hidden places.', trait: 'young_eggs', anim: 'grow' } },
+      { label: 'Lay eggs', hint: 'Eggs: twice the births and a bigger herd, but eggs can be stolen', result: { text: 'Clutches of eggs, laid in hidden places.', trait: 'young_eggs', anim: 'grow' } },
       { label: 'Bud new members off your body', hint: 'Budding: +1 Population a turn, −1 CHA. Radial or no-symmetry bodies only', req: { budding: true }, result: { text: 'Little copies of you grow and break away.', trait: 'young_budding', anim: 'grow' } },
     ],
   },
@@ -1001,7 +1001,7 @@ G.EVENTS = [
     text: 'The world has filled with life, and some of it has grown enormous. Every lineage faces the same question: grow huge, or stay small and many?',
     options: [
       { label: 'Grow into giants', hint: 'Giant: +3 STR, +3 TOU, −1 damage taken, −1 SPD; about two-thirds as many of you, and each eats more', result: { text: 'Generation by generation, your kind grows. Everything makes way for you.', trait: 'giant', anim: 'grow' } },
-      { label: 'Stay mid-sized', hint: 'Mid-sized: +1 STR, +1 TOU, +20 max Population', result: { text: 'Big enough to fight, small enough to hide.', trait: 'mid_sized', anim: 'grow' } },
+      { label: 'Stay mid-sized', hint: 'Mid-sized: +1 STR, +1 TOU, a bigger herd', result: { text: 'Big enough to fight, small enough to hide.', trait: 'mid_sized', anim: 'grow' } },
       { label: 'Stay small and many', hint: 'Small: +2 SPD, +1 CUN, grow faster; half as many again of you, and each eats less', result: { text: 'Your kind becomes quick, clever and everywhere.', trait: 'small_many', anim: 'flee' } },
     ],
   },
@@ -2620,9 +2620,9 @@ G.EVENTS.push(
     id: 'pct_sickness', stage: ['creature', 'tribe'], prop: 'sickness', title: 'The Spreading Fever', tags: ['danger'],
     text: 'A fever is spreading. The closer together your {herd} lives, the faster it moves.',
     options: [
-      { label: 'Scatter, and wait it out', hint: '−3 Food, −40 of your number', result: { text: 'Spread out, fewer catch it. But some still do.', popFlat: -40, food: -3, anim: 'rest' } },
+      { label: 'Scatter, and wait it out', hint: '−3 Food, −8% of your number', result: { text: 'Spread out, fewer catch it. But some still do.', popPct: -0.08, food: -3, anim: 'rest' } },
       { label: 'Stay together and nurse the sick', hint: '−15% of your number', result: { text: 'The sick are cared for. A big {herd} loses more.', popPct: -0.15, anim: 'social' } },
-      { label: 'Drive the sick away', check: { stat: 'tou', diff: 4 }, success: { text: 'Harsh, but it stops the fever cold.', popFlat: -15, anim: 'rest' }, fail: { text: 'Too late. It was already everywhere.', popPct: -0.25 } },
+      { label: 'Drive the sick away', check: { stat: 'tou', diff: 4 }, success: { text: 'Harsh, but it stops the fever cold.', popPct: -0.05, anim: 'rest' }, fail: { text: 'Too late. It was already everywhere.', popPct: -0.25 } },
     ],
   },
   {
@@ -3362,4 +3362,4 @@ G.EVENTS.push(
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.0';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.1';

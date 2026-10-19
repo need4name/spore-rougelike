@@ -33,7 +33,7 @@ G.MOD_LABELS = {
 // Synergies. Having 2 or 3 parts with the same keyword unlocks a bonus. Tier 3 adds to tier 2.
 G.KEYWORDS = {
   venom: { name: 'Venom', color: '#b98cf2', tiers: { 2: { mods: { str: 2 }, desc: '+2 Strength' }, 3: { mods: { huntBonus: 2, damageReduce: 1 }, desc: 'Hunting gives +2 Food, and predators think twice (−1 damage taken)' } } },
-  armor: { name: 'Armor', color: '#a9b6bd', tiers: { 2: { mods: { tou: 2 }, desc: '+2 Toughness' }, 3: { mods: { damageReduce: 1, maxPop: 2 }, desc: '−1 damage taken and +20 max Population' } } },
+  armor: { name: 'Armor', color: '#a9b6bd', tiers: { 2: { mods: { tou: 2 }, desc: '+2 Toughness' }, 3: { mods: { damageReduce: 1, maxPop: 2 }, desc: '−1 damage taken and more max Population' } } },
   swift: { name: 'Swift', color: '#f2c14e', tiers: { 2: { mods: { spd: 2 }, desc: '+2 Speed' }, 3: { mods: { exploreBonus: 2, dnaPerTurn: 1 }, desc: '+1 DNA every turn, +2 more while Exploring' } } },
   glow: { name: 'Glow', color: '#6fe0d4', tiers: { 2: { mods: { cha: 2 }, desc: '+2 Charm' }, 3: { mods: { dnaPerTurn: 1, cun: 1 }, desc: '+1 DNA every turn and +1 Cunning' } } },
   symbiont: { name: 'Symbiont', color: '#8fd16a', tiers: { 2: { mods: { foodPerTurn: 1 }, desc: '+1 Food every turn' }, 3: { mods: { popPerTurn: 1 }, desc: 'Regrow 1 Population every turn' } } },
@@ -527,8 +527,8 @@ G.ARCHETYPES = [
 G.ORIGINS = [
   { id: 'tidal', name: 'Tidal Pools', cost: 0, hue: 185, desc: 'Warm, shallow and forgiving. No modifiers.', mods: {}, dnaMult: 1 },
   { id: 'vents', name: 'Volcanic Vents', cost: 40, hue: 18, desc: 'Mutations come fast here: +25% DNA. Food is scarce: eat 1 more per turn.', mods: { upkeep: 1 }, dnaMult: 1.25 },
-  { id: 'frozen', name: 'Frozen Sea', cost: 40, hue: 210, desc: 'Cold makes life tough and slow: +30 max Population, −1 Speed.', mods: { maxPop: 3, spd: -1 }, dnaMult: 1 },
-  { id: 'toxic', name: 'Toxic Bloom', cost: 60, needsEvo: 4, hue: 290, desc: 'Poisoned water: −20 max Population, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
+  { id: 'frozen', name: 'Frozen Sea', cost: 40, hue: 210, desc: 'Cold makes life tough and slow: bigger herds, −1 Speed.', mods: { maxPop: 3, spd: -1 }, dnaMult: 1 },
+  { id: 'toxic', name: 'Toxic Bloom', cost: 60, needsEvo: 4, hue: 290, desc: 'Poisoned water: smaller herds, but Venom parts show up three times as often and +15% DNA.', mods: { maxPop: -2 }, dnaMult: 1.15, boostKeyword: 'venom' },
 ];
 
 // Mutation packs add parts to the draft pool.
@@ -861,10 +861,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21';
+G.VERSION = '21.1';
 G.WHATS_NEW = {
-  title: 'Update 21: The Colonial Age',
+  title: 'Patch 21.1, and Update 21: The Colonial Age',
   items: [
+    'Patch 21.1: a gentler Tribe. Raids and hunts now wear a Tribe down instead of wiping it out in one bad roll: a single blow takes at most about a quarter of your members (more only when you are badly outmatched). The Spreading Fever now costs a share of your members, not a flat 40.',
+    'Patch 21.1: offers your diet can\'t use (hunting parts for a plant-eater, foraging parts for a Predator) turn up far less often. Mouths still appear, since they change what you eat.',
+    'Patch 21.1: descriptions no longer promise fixed numbers that change with your size (Armor, Strong Blood, Frozen Sea, Toxic, egg-laying and mid-sized choices).',
     'A new stage after the Renaissance: win the Age of Sail and your nation becomes a crown with lands across the sea. Prestige replaces Learning.',
     'Colonies: found them from Activities, build trading posts with friendly peoples overseas, or conquer them if your Disposition allows. Colonies bring Food and Prestige as they grow, but they grow restless: at 100 unrest a colony rebels, breaks away and may come for you. Royal tours, Colonial Councils and Garrisons keep them calm.',
     'A dynasty: your ruler has an heir waiting in the Realm tab. When the ruler dies the heir takes the throne, and without a clear law a rival claimant can start a war of succession. Primogeniture makes it certain; an Elective Crown picks the best of the family.',
@@ -1500,7 +1503,7 @@ G.TRIBE_ENDINGS = {
 // Stored with the Evolution Tree's levels (meta.boons), but kept out of its hidden power.
 G.WISDOM = [
   { id: 'w_stories', name: 'Old Stories', col: 0, tier: 1, costs: [15, 35], desc: 'Every Tribe begins with +6 Ideas per level.' },
-  { id: 'w_blood', name: 'Strong Blood', col: 1, tier: 1, costs: [15, 35, 60], desc: '+20 max members per level in the Tribe stage.' },
+  { id: 'w_blood', name: 'Strong Blood', col: 1, tier: 1, costs: [15, 35, 60], desc: 'More members per level in the Tribe stage (+20 for a mid-sized people).' },
   { id: 'w_keepers', name: 'Born Keepers', col: 2, tier: 1, costs: [20, 45], desc: 'Start with +3 of your Fire, Song, Light, Brood or Growth per level.' },
   { id: 'w_elders', name: 'Elders\' Counsel', col: 3, tier: 1, costs: [25, 50, 80], desc: 'Every Tribe-stage check is 1 easier per level.' },
   { id: 'w_peace', name: 'Peacemakers', col: 4, tier: 1, costs: [20, 45], desc: 'Rival bands start 20 friendlier per level.' },
@@ -1750,4 +1753,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.0';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.1';
