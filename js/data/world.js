@@ -543,9 +543,9 @@ G.PACKS = [
 //   costs  one price per level      req   nodes that must be bought first
 //   mods   stat changes per level   twin  slot that gains a second socket
 G.BOONS = [
-  { id: 'hardy', name: 'Hardy Ancestors', col: 0, tier: 1, costs: [8, 18, 35], desc: '+10 max Population per level.' },
+  { id: 'hardy', name: 'Hardy Ancestors', col: 0, tier: 1, costs: [8, 18, 35], desc: '+10 max Population per level (more for small bodies, fewer for giants). Works at once, even mid-run.' },
   { id: 'pantry', name: 'Ancestral Pantry', col: 1, tier: 1, costs: [6, 15], desc: '+3 starting Food and +2 Food storage per level.' },
-  { id: 'memory', name: 'Deep Memory', col: 2, tier: 1, costs: [8, 20], desc: 'Start each stage with +3 DNA per level.' },
+  { id: 'memory', name: 'Deep Memory', col: 2, tier: 1, costs: [8, 20], desc: 'Start the Cell and Creature stages with +3 DNA per level.' },
   { id: 'rich_genes', name: 'Rich Genes', col: 3, tier: 1, costs: [12, 28, 50], desc: '+10% DNA from everything, per level.' },
   { id: 'reroll', name: 'Second Look', col: 4, tier: 1, costs: [15], desc: 'Reroll each mutation draft once.' },
   { id: 'amber', name: 'Amber', col: 5, tier: 1, costs: [10, 25], desc: 'Keep one more fossil in amber per level (you start with room for one).' },
@@ -861,18 +861,17 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '20';
+G.VERSION = '20.2';
 G.WHATS_NEW = {
-  title: 'Update 20: The Renaissance',
+  title: 'Patch 20.2: A calmer screen',
   items: [
-    'A new stage after the Society: the Renaissance. Win the Union and your people become a nation, and your old neighbours become nations too. Each one decides from what it remembers of your lineage whether it is peaceful 🕊️, territorial 🛡️ or warlike ⚔️, and that can change as you deal with them.',
-    'The Renaissance has its own tree: the Reason tree (the Reason tab). How you united the region gives it an Inheritance, your kind of people has its own inventions, every Learning goal lets you choose a new invention, and you take ideas up with your people\'s resource. Movements come in opposed pairs (Humanism or Dogma, Patrons or Guilds, Open Seas or Closed Ports).',
-    'The Schism: halfway through, your faith splits. Reform it, hold to the old ways, or try to let both be, and that choice adds its own idea to your tree. Patrons, voyages, leagues, wars, plagues and great works add Deed ideas.',
-    'War between nations: a warlike nation that dislikes you can invade. Your Strength and Toughness decide whether your armies hold, and league allies help. Lose and they take a city; lose your last city and your nation falls. Gifts, treaties and leagues keep the peace.',
-    'New Activities: back a patron, send a voyage beyond the known coasts, and form a league with an allied nation.',
-    'Your Disposition can shift again in the new age, until the Age of Sail fixes it. The Age of Sail is the Reason tree\'s Gate (Learning and 13 Reason ideas): explore, trade or conquer, depending on your Disposition. Each Disposition has one idea Beyond it, carried into the next stage.',
-    'Patronage, the Renaissance\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches the Renaissance. Heritage now only works in the Society stage, as it says.',
-    'The Book gains its Reason page, Stage Select can start from the dawn of a Renaissance, and the Codex lists Renaissance endings.',
+    'A smaller top bar and more room for the map. The leader, season and settlement chips only appear when they need your attention, and the box listing everything that happened each turn is gone (the Chronicle still keeps the story).',
+    'Odds are words now: "Likely", "Unlikely", "Very likely". When every choice is certain, nothing is labelled.',
+    'Options on the title screen: turn on Detailed numbers for exact odds, your stat against theirs, and what a mutation would change in each slot. Choose a colour theme (Tide, Ember, Kelp or Dusk), and turn tips on or off.',
+    'Trees are tidier: lines run behind the nodes, long names shrink to fit, ideas that open from "any of these" draw one line instead of a web, and the description stays pinned at the bottom of the screen while you tap around the tree. Ideas you could never reach in this lineage are hidden.',
+    'A shorter New lineage screen: only what you own is listed, the chosen archetype shows its rule, Stage Select folds away, and the Begin button stays put.',
+    'Upgrades fixed: Hardy Ancestors and Ancestral Pantry work at once when bought mid-run (and Hardy now counts in a civilisation), Rich Genes is never rounded away, 10% discounts always show, armour keeps helping past the minimum, and several caps no longer swallow upgrades. Founding Stones and Deep Memory now say what they really do. Upgrades that set up the start of a stage say so if that stage has already begun.',
+    'An easier start: until a lineage of yours has reached the Creature stage, the Cell stage is gentler (a little gentler again until the third time).',
   ],
 };
 
@@ -1391,7 +1390,7 @@ G.WISDOM = [
   { id: 'w_lore', name: 'Lorekeepers', col: 0, tier: 3, req: ['w_choosing'], costs: [45, 90, 140], desc: 'Lore ideas cost 10% less per level.' },
   { id: 'w_strength', name: 'Strong Arms', col: 1, tier: 3, req: ['w_hardy'], costs: [40, 80], mods: { str: 1 }, desc: '+1 Strength per level in the Tribe stage.' },
   { id: 'w_graft', name: 'Many Branches', col: 2, tier: 3, req: ['w_ways'], costs: [60], desc: 'Every new branch of Lore offers one more choice.' },
-  { id: 'w_stone', name: 'Founding Stones', col: 3, tier: 3, req: ['w_founding'], costs: [55, 110], desc: 'The Founding needs one fewer Lore idea per level.' },
+  { id: 'w_stone', name: 'Founding Stones', col: 3, tier: 3, req: ['w_founding'], costs: [55, 110], desc: 'The Founding needs two fewer Lore ideas per level.' },
   { id: 'w_friends', name: 'Old Friends', col: 4, tier: 3, req: ['w_kin'], costs: [50], mods: { foodPerTurn: 1 }, desc: '+1 Food a turn in the Tribe stage, from the kinds that trust you.' },
   { id: 'w_walls', name: 'Palisades', col: 5, tier: 3, req: ['w_stand'], costs: [45, 90], mods: { damageReduce: 1 }, desc: 'Every raid or hunt kills one fewer per level in the Tribe stage.' },
   { id: 'w_ancestors', name: 'Voices of the Ancestors', col: 0, tier: 4, req: ['w_lore'], costs: [70, 140], desc: 'Ideas Beyond the Founding cost 15% less per level.' },
@@ -1626,4 +1625,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.1';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.2';

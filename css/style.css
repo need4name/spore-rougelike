@@ -124,7 +124,7 @@ button { font: inherit; color: inherit; }
   position: sticky; top: var(--safe-top); z-index: 5;
   margin-inline: -16px; padding: 8px 12px;
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
-  background: rgba(12, 26, 29, 0.95);
+  background: color-mix(in srgb, var(--bg) 95%, transparent);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
@@ -350,13 +350,13 @@ button.rival:hover { border-color: var(--accent); }
 .map-hud { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 10px 12px calc(10px + var(--safe-bottom)); }
 .map-hud > * { pointer-events: auto; }
 .toasts { display: grid; gap: 6px; max-width: 520px; align-content: start; }
-.toast { text-align: left; font: inherit; font-size: 0.85rem; padding: 8px 12px; border-radius: 10px; border: 0; border-left: 3px solid var(--accent); background: rgba(12, 26, 29, 0.88); color: var(--fg); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+.toast { text-align: left; font: inherit; font-size: 0.85rem; padding: 8px 12px; border-radius: 10px; border: 0; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--bg) 88%, transparent); color: var(--fg); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
 .hud-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.ledger { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; max-width: 60%; padding: 6px 10px; border-radius: 10px; background: rgba(12, 26, 29, 0.78); color: var(--muted); }
+.ledger { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; max-width: 60%; padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, var(--bg) 78%, transparent); color: var(--muted); }
 .ledger .good { color: var(--good); }
 .ledger .bad { color: var(--bad); }
 .ledger.hint { color: var(--muted); font-style: italic; }
-.speeds { display: flex; gap: 2px; padding: 3px; border-radius: 14px; background: rgba(12, 26, 29, 0.9); border: 1px solid var(--line); margin-left: auto; }
+.speeds { display: flex; gap: 2px; padding: 3px; border-radius: 14px; background: color-mix(in srgb, var(--bg) 90%, transparent); border: 1px solid var(--line); margin-left: auto; }
 .speed { min-width: 44px; min-height: 44px; border: 0; border-radius: 11px; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0; padding: 0 8px; }
 .speed .ico { width: 0.8em; height: 0.8em; margin: 0 -1px; }
 .speed.on { background: var(--accent); color: var(--accent-ink); }
@@ -380,7 +380,7 @@ button.rival:hover { border-color: var(--accent); }
 /* ======================= Full-screen viewer ======================= */
 .viewer { position: fixed; inset: 0; z-index: 30; background: var(--bg); }
 .viewer-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.viewer-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px calc(12px + var(--safe-bottom)); background: linear-gradient(transparent, rgba(12, 26, 29, 0.9)); }
+.viewer-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px calc(12px + var(--safe-bottom)); background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 90%, transparent)); }
 .viewer-bar strong { font-family: var(--font-display); font-size: 1.2rem; }
 .portrait-zoom { position: relative; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
 .portrait-zoom i { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-style: normal; }
@@ -683,3 +683,66 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .diet-badge.disp.war { color: #ef7d6b; border-color: #ef7d6b; background: rgba(239, 125, 107, 0.12); }
 
 .gate-cta { color: var(--accent, #f2b544); font-weight: 700; }
+
+/* Patch 20.2: a smaller top bar, so the map has more room. */
+#app[data-screen="game"] .topbar { padding: calc(4px + var(--safe-top)) 10px 6px; gap: 4px 8px; }
+#app[data-screen="game"] .portrait-btn { width: 46px; height: 46px; box-shadow: none; }
+#app[data-screen="game"] .tb-main { gap: 2px; }
+#app[data-screen="game"] .tb-title { gap: 6px; align-items: center; }
+#app[data-screen="game"] .tb-title strong { font-size: 0.95rem; }
+#app[data-screen="game"] .tb-title .diet-badge { font-size: 0.6rem; padding: 1px 6px; }
+#app[data-screen="game"] .res-row { gap: 2px 10px; font-size: 0.8rem; }
+#app[data-screen="game"] .res b { font-size: 0.92rem; }
+#app[data-screen="game"] .res.gimmick { padding: 1px 7px; }
+#app[data-screen="game"] .instinct-btn { min-height: 38px; padding: 3px 8px; }
+#app[data-screen="game"] .instinct-btn span { font-size: 0.58rem; }
+#app[data-screen="game"] .topbar .speed { min-height: 30px; }
+#app[data-screen="game"] .tb-row2 { margin-top: 0; }
+
+/* Options */
+.opt-toggle .choice-head { justify-content: space-between; width: 100%; }
+.switch { width: 44px; height: 26px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background 0.2s; }
+.switch i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--fg); transition: transform 0.2s; }
+.opt-toggle.on .switch { background: var(--accent); }
+.opt-toggle.on .switch i { transform: translateX(18px); background: var(--accent-ink); }
+.theme-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.theme-swatch { display: grid; gap: 6px; justify-items: center; padding: 10px 4px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.theme-swatch span { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--sw-accent); background: var(--sw-bg); }
+.theme-swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+[data-theme-swatch="tide"] { --sw-bg: #0c1a1d; --sw-accent: #f2b544; }
+[data-theme-swatch="ember"] { --sw-bg: #1c1212; --sw-accent: #f2845a; }
+[data-theme-swatch="kelp"] { --sw-bg: #0e1a10; --sw-accent: #b6e05a; }
+[data-theme-swatch="dusk"] { --sw-bg: #15122a; --sw-accent: #c59cf5; }
+/* Colour themes: the panels and the highlight colour change; the game's own colours (food, danger) stay. */
+:root[data-theme="ember"] { --bg: #1c1212; --panel: #281a19; --card: #30201f; --line: #4d3330; --accent: #f2845a; --accent-ink: #2a0e00; --dna: #f2b86a; }
+:root[data-theme="kelp"] { --bg: #0e1a10; --panel: #152618; --card: #1b301e; --line: #2f4a32; --accent: #b6e05a; --accent-ink: #1a2600; --dna: #7fdca0; }
+:root[data-theme="dusk"] { --bg: #15122a; --panel: #1d1937; --card: #252042; --line: #3c3563; --accent: #c59cf5; --accent-ink: #1e0a36; --dna: #8fc2f5; }
+
+/* Patch 20.2: tidy trees. Nodes are solid, so lines run behind them, never across them;
+   long names shrink to fit; the description stays pinned in view while you tap around. */
+.skill-tree .node { z-index: 1; }
+.node.done { background: linear-gradient(rgba(143, 209, 106, 0.15), rgba(143, 209, 106, 0.15)) var(--panel); }
+.node.current { background: linear-gradient(rgba(242, 181, 68, 0.18), rgba(242, 181, 68, 0.18)) var(--panel); }
+.node.locked { opacity: 1; color: var(--muted); border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+.node.locked > span { opacity: 0.7; }
+.node.blocked { opacity: 1; color: var(--muted); }
+.node.blocked > span { opacity: 0.45; }
+.node .n-s { font-size: 0.86em; letter-spacing: -0.01em; }
+.node .n-xs { font-size: 0.76em; letter-spacing: -0.02em; }
+.node span { overflow-wrap: anywhere; hyphens: auto; }
+.sheet-body > .inv-detail, .evo-tree + .inv-detail, .skill-tree + .inv-detail {
+  position: sticky; bottom: 0; z-index: 3; max-height: 42vh; overflow-y: auto;
+  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Patch 20.2: a shorter new-lineage screen, and a Begin button fixed to the bottom of the screen
+   (a sticky one could be left floating mid-list on phones). */
+.choice.compact { padding: 10px 12px; gap: 2px; }
+.choice.compact .choice-desc { font-size: 0.85rem; }
+.choice.compact .choice-diff { margin-left: auto; }
+.setup { padding-bottom: calc(96px + var(--safe-bottom)); }
+.setup .sticky-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; padding: 12px 16px calc(12px + var(--safe-bottom)); background: linear-gradient(transparent, var(--bg) 35%); }
+.setup .sticky-cta .btn { max-width: 728px; margin: 0 auto; display: block; }
+.stage-select summary { cursor: pointer; list-style: none; } .stage-select summary h2 { display: inline; } .stage-select summary::after { content: ' ▾'; color: var(--muted); } .stage-select[open] summary::after { content: ' ▴'; }
+.options-screen section { margin-bottom: 22px; }
+.options-screen .choices { margin-bottom: 8px; }

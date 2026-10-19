@@ -59,6 +59,7 @@ window.G = window.G || {};
     else if (s === 'unlocks') html = unlocksScreen();
     else if (s === 'codex') html = codexScreen();
     else if (s === 'fossils') html = fossilScreen();
+    else if (s === 'options') html = optionsScreen();
     else if (s === 'game') html = run ? gameScreen(run) : titleScreen();
     if (G.stopScene) G.stopScene();
     app.innerHTML = html;
@@ -170,6 +171,7 @@ window.G = window.G || {};
           <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree and unlocks <span class="gene-count">${ICON.gene} ${m.genes}</span></button>
           <button class="btn" data-act="go" data-arg="fossils">Fossil Record${m.fossils.some((f) => f.amber) ? ` <small>${m.fossils.filter((f) => f.amber).length} in amber</small>` : ''}</button>
           <button class="btn" data-act="go" data-arg="codex">Codex of Life</button>
+          <button class="btn ghost" data-act="go" data-arg="options">Options</button>
         </div>
         <dl class="record">
           <div><dt>Lineages</dt><dd>${m.stats.runs}</dd></div>
@@ -207,26 +209,26 @@ window.G = window.G || {};
     const list = G.stageStarts();
     if (!list.length) return '';
     return `
-      <section class="setup-group">
-        <h2>Stage Select</h2>
+      <details class="setup-group stage-select">
+        <summary><h2>Stage Select <span class="count">${list.length}</span></h2></summary>
         <p class="note">Start in the Tribe, Society or Renaissance stage, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
         <div class="choices">${list.map((x) => { const p = G.PATH[x.key.split('|')[0]]; return `
           <button class="choice" data-act="stage-start" data-arg="${esc(x.key)}">
             <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong></span>
             <span class="choice-desc">${x.stage === 'renaissance' ? '📚 Renaissance · ' : x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
           </button>`; }).join('')}</div>
-      </section>`;
+      </details>`;
   }
 
   function setupScreen() {
     const m = G.meta;
     const st = G.ui.setup;
-    const card = (kind, item, selected, unlocked) => `
-      <button class="choice ${selected ? 'selected' : ''}" ${unlocked ? `data-act="pick-${kind}" data-arg="${item.id}"` : 'disabled'} aria-pressed="${selected}">
-        <span class="choice-head"><span class="swatch" style="--h:${item.color != null ? item.color : item.hue}"></span><strong>${esc(item.name)}</strong>${unlocked ? '' : `<span class="lock">${ICON.gene} ${item.cost} in Unlocks</span>`}</span>
+    // Compact cards: only what you own is listed (the rest waits in Unlocks); the chosen one shows its rule.
+    const card = (kind, item, selected) => `
+      <button class="choice compact ${selected ? 'selected' : ''}" data-act="pick-${kind}" data-arg="${item.id}" aria-pressed="${selected}">
+        <span class="choice-head"><span class="swatch" style="--h:${item.color != null ? item.color : item.hue}"></span><strong>${esc(item.name)}</strong>${item.difficulty ? `<span class="choice-diff d${item.difficulty}">${'★'.repeat(item.difficulty)}${'☆'.repeat(3 - item.difficulty)}</span>` : ''}</span>
         <span class="choice-desc">${esc(item.desc)}</span>
-        ${item.rule ? `<span class="choice-rule"><b>${esc(item.rule)}.</b> ${esc(item.ruleDesc)}</span>` : ''}
-        ${item.difficulty ? `<span class="choice-diff d${item.difficulty}">${'★'.repeat(item.difficulty)}${'☆'.repeat(3 - item.difficulty)} ${G.DIFFICULTY_NAMES[item.difficulty]}</span>` : ''}
+        ${selected && item.rule ? `<span class="choice-rule"><b>${esc(item.rule)}.</b> ${esc(item.ruleDesc)}</span>` : ''}
       </button>`;
     const hostility = m.maxHostility > 0 ? `
       <section class="setup-group">
@@ -238,8 +240,8 @@ window.G = window.G || {};
       <main class="setup">
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>New lineage</h1></header>
         ${stageSelect()}
-        <section class="setup-group"><h2>Archetype</h2><div class="choices">${G.ARCHETYPES.map((a) => card('archetype', a, st.archetype === a.id, m.unlocked.archetypes.includes(a.id))).join('')}</div></section>
-        <section class="setup-group"><h2>Home world</h2><div class="choices">${G.ORIGINS.map((o) => card('origin', o, st.origin === o.id, m.unlocked.origins.includes(o.id))).join('')}</div></section>
+        <section class="setup-group"><h2>Archetype</h2><div class="choices">${G.ARCHETYPES.filter((a) => m.unlocked.archetypes.includes(a.id)).map((a) => card('archetype', a, st.archetype === a.id)).join('')}</div></section>
+        ${m.unlocked.origins.length > 1 ? `<section class="setup-group"><h2>Home world</h2><div class="choices">${G.ORIGINS.filter((o) => m.unlocked.origins.includes(o.id)).map((o) => card('origin', o, st.origin === o.id)).join('')}</div></section>` : ''}
         ${hostility}
         <div class="sticky-cta"><button class="btn primary wide" data-act="begin">Begin in the ${esc(G.ORIGIN[st.origin].name)}</button></div>
       </main>`;
@@ -258,14 +260,13 @@ window.G = window.G || {};
     const net = inc.total - up;
     const goal = nextGoal(run);
     const pct = goal ? Math.min(100, (run.dna / goal.at) * 100) : 100;
-    const era = (run.stage === 'renaissance' ? ` · ${G.nationName(run)}` : run.stage === 'society' ? ` · ${G.socKind(run).name}` : run.stage === 'tribe' ? ` · ${G.kind(run).name}` : run.stage === 'creature' ? ` · ${G.ERAS[run.era]}` : run.multicellular ? ' · Multicellular' : '') + (G.biomeMatters(run) ? ` · ${G.biome(run).name}` : '');
     const fasc = run.fascination && G.INNOVATION[run.fascination];
     const gt = G.gateFor(run); const gateNow = gt && !goal && gt.reached && !gt.known ? gt : null;
     return `
       <header class="topbar">
         <button class="portrait-btn" data-act="sheet" data-arg="body" aria-label="Open your lineage"><canvas class="portrait"></canvas></button>
         <div class="tb-main">
-          <div class="tb-title"><strong>${esc(st.name)}</strong>${dietBadge(run)}${G.civ(run) ? dispBadge(run) : ''}<span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${esc(era)}</span><span class="tick-bar" aria-hidden="true"><span class="tick-fill"></span></span></div>
+          <div class="tb-title"><strong>${esc(st.name.replace(/ Stage$/, ''))}</strong><span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${G.biomeMatters(run) ? ` · ${esc(G.biome(run).name)}` : ''}</span>${dietBadge(run)}${G.civ(run) ? dispBadge(run, true) : ''}</div>
           <div class="res-row">
             <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
             <span ${tappable('food')} class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
@@ -273,7 +274,6 @@ window.G = window.G || {};
             ${run.mind && run.stage === 'creature' ? `<span ${tappable('insight')} class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${G.innovationCost(run, fasc)}` : ''}</span>` : ''}
             ${gimmickChip(run)}
             ${run.activity ? `<span ${tappable('activity')} class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
-            ${G.season(run) ? `<span ${tappable('season')} class="res gimmick" title="${esc(G.season(run).desc)}">${esc(G.season(run).name)}</span>` : ''}
           </div>
           <div class="evo" ${gateNow ? `data-act="sheet" data-arg="${gateNow.tab}" role="button" tabindex="0"` : tappable('progress')} title="${G.dnaWord(run)}">
             <span class="evo-label">${run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : gateNow ? ` · <span class="gate-cta">${esc(gateNow.verb)} ${esc(gateNow.name)} ›</span>` : ''}</span>
@@ -401,9 +401,9 @@ window.G = window.G || {};
   }
 
   // Your Disposition (Update 19): the late-game parallel to your diet.
-  function dispBadge(run) {
+  function dispBadge(run, short) {
     const d = G.disposition(run);
-    return `<b ${tappable('disposition')} class="diet-badge disp ${d}">${G.LEAN_ICONS[d]} ${esc(G.LEAN_NAMES[d])}</b>`;
+    return `<b ${tappable('disposition')} class="diet-badge disp ${d}" title="${esc(G.LEAN_NAMES[d])}" aria-label="${esc(G.LEAN_NAMES[d])}">${G.LEAN_ICONS[d]}${short ? '' : ` ${esc(G.LEAN_NAMES[d])}`}</b>`;
   }
   // What your kind eats, impossible to miss.
   function dietBadge(run) {
@@ -419,12 +419,12 @@ window.G = window.G || {};
     const sp = run.specialOn ? `<span ${tappable('special')} class="res gimmick ${(run.path === 'tool' || run.path === 'many') && (run.special || 0) < 3 ? 'warn' : run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) ? 'warn' : ''}" title="${esc(G.sub(G.KINDS[run.path].desc, run))}">${k.icon} ${esc(k.resource)} <b>${run.special || 0}</b><i class="${(run.special || 0) > G.SPECIAL_SOFT ? 'neg' : ''}">/${G.SPECIAL_SOFT}</i>${run.gear ? ` · Gear ${run.gear}` : ''}${run.mound ? ` · ${esc(k.camp[0].toUpperCase() + k.camp.slice(1))} ${run.mound}` : ''}</span>` : '';
     const age = run.leader ? Math.max(0, run.leader.life - (run.turn - run.leader.since)) : 0;
     const ld = `<span ${tappable('leader')} class="res gimmick ${run.leader && age <= 3 ? 'warn' : ''}" title="${run.leader ? esc(`Your leader. ${run.leader.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join('. ')}.`) : 'No leader'}">👑 ${run.leader ? esc(run.leader.name) : 'None'}</span>`;
-    if (!G.civ(run)) return sp + ld;
+    const ldShow = !run.leader || age <= 3 ? ld : '';
+    if (!G.civ(run)) return sp + ldShow;
     const sk = G.socKind(run);
     const restless = (run.council || []).filter((c) => c.loyalty < -10).length;
-    const st = `<span ${tappable('settlements')} class="res gimmick" title="${esc(`Your ${sk.settlement}s and their sizes. Each one holds more people and earns Influence.`)}">🏘️ ${run.settlements.length}<i>/8</i></span>`;
     const co = `<span ${tappable('council')} class="res gimmick ${run.plot != null || restless ? 'warn' : ''}" title="${esc(run.plot != null ? 'Someone on your council is plotting.' : restless ? 'Some of your council are restless.' : 'Your council is loyal.')}">⚖️ ${run.plot != null ? 'Plot!' : restless ? `${restless} restless` : 'Loyal'}</span>`;
-    return sp + ld + st + co;
+    return sp + ldShow + (run.plot != null || restless ? co : '');
   }
 
   // The archetype's gimmick, at a glance.
@@ -468,6 +468,7 @@ window.G = window.G || {};
 
   function chanceTag(stat, chance, foe) {
     const cls = chance >= 70 ? 'good' : chance <= 35 ? 'bad' : '';
+    if (!G.showNumbers()) return `<span class="chance ${cls}">${statName(stat)} · ${G.oddsWord(chance)}</span>`;
     return `<span class="chance ${cls}">${statName(stat)} · ${chance}%</span>${foe ? `<span class="vs">your ${foe.you} vs their ${foe.them}</span>` : ''}`;
   }
 
@@ -508,12 +509,14 @@ window.G = window.G || {};
         <h2>${esc(G.sub(ev.title, run, sp))}</h2>
         <p class="event-text">${esc(G.sub(ev.text, run, sp))}</p>
         <div class="options">
-          ${(() => { const shown = ev.options.map((o, i) => [o, i]).filter(([o]) => !G.optionState(run, o).hidden); return (shown.length ? shown : ev.options.map((o, i) => [o, i])); })().map(([o, i]) => {
+          ${(() => { const shown = ev.options.map((o, i) => [o, i]).filter(([o]) => !G.optionState(run, o).hidden); return (shown.length ? shown : ev.options.map((o, i) => [o, i])); })().map(([o, i], _, all) => {
             const st = G.optionState(run, o);
+            // "Certain" only matters next to a risky choice.
+            const anyRisk = all.some(([x]) => x.check);
             return `
             <button class="option ${st.ok ? '' : 'locked'}" ${st.ok ? `data-act="option" data-arg="${i}"` : 'disabled'}>
               <span class="opt-label">${reqTag(o)}${esc(G.sub(o.label, run, sp))}</span>
-              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance, st.foe) : '<span class="chance sure">Certain</span>'}${o.hint ? `<span>${esc(G.sub(o.hint, run, sp))}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
+              <span class="opt-meta">${st.ok ? `${o.check ? chanceTag(o.check.stat, st.chance, st.foe) : anyRisk ? '<span class="chance sure">Certain</span>' : ''}${o.hint ? `<span>${esc(G.sub(o.hint, run, sp))}</span>` : ''}` : `<span class="reason">${esc(st.reason)}</span>`}</span>
             </button>`;
           }).join('')}
         </div>
@@ -532,7 +535,7 @@ window.G = window.G || {};
         <p class="eyebrow">${esc(sc.title)}</p>
         <h2>${esc(sc.label)} ${tag}</h2>
         ${sc.text ? `<p class="event-text">${esc(sc.text)}</p>` : ''}
-        ${sc.stat ? `<p class="note reveal-late">${statName(sc.stat)} check at ${sc.chance}%.</p>` : ''}
+        ${sc.stat ? `<p class="note reveal-late">${statName(sc.stat)} check: ${G.showNumbers() ? `${sc.chance}%` : G.oddsWord(sc.chance).toLowerCase()}.</p>` : ''}
         ${lines(sc.lines)}
         <button class="btn primary wide" data-act="continue-scene">${cta}</button>
       </article>`;
@@ -797,7 +800,7 @@ window.G = window.G || {};
         ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
         ${visible.map((d) => {
           const st = state(d); const name = G.loreName(d, run);
-          return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === d.id ? 'sel' : ''} ${d.lore === 'gate' ? 'apex' : ''} ${d.lore === 'beyond' ? 'beyond' : ''} ${d.lean ? `lean-${d.lean}` : ''}" style="left:${pos[d.id].x}%;top:${pos[d.id].y}px" data-act="lore-sel" data-arg="${d.id}" aria-pressed="${sel && sel.id === d.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${d.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
+          return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === d.id ? 'sel' : ''} ${d.lore === 'gate' ? 'apex' : ''} ${d.lore === 'beyond' ? 'beyond' : ''} ${d.lean ? `lean-${d.lean}` : ''}" style="left:${pos[d.id].x}%;top:${pos[d.id].y}px" data-act="lore-sel" data-arg="${d.id}" aria-pressed="${sel && sel.id === d.id}" aria-label="${esc(name)}">${nodeName(name)}${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${d.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
         }).join('')}
       </div>
       ${sel ? loreDetail(run, sel, state(sel), live) : ''}`;
@@ -920,7 +923,7 @@ window.G = window.G || {};
       <div class="skill-tree mind-tree law-tree" style="height:${H}px">
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
         ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
-        ${visible.map((t) => { const st = state(t); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === t.id ? 'sel' : ''} ${t.law === 'gate' ? 'apex' : ''} ${t.law === 'beyond' ? 'beyond' : ''} ${t.lean ? `lean-${t.lean}` : ''}" style="left:${pos[t.id].x}%;top:${pos[t.id].y}px" data-act="law-sel" data-arg="${t.id}" aria-pressed="${sel && sel.id === t.id}" aria-label="${esc(t.name)}"><span>${esc(t.name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${t.rule || t.flag ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
+        ${visible.map((t) => { const st = state(t); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === t.id ? 'sel' : ''} ${t.law === 'gate' ? 'apex' : ''} ${t.law === 'beyond' ? 'beyond' : ''} ${t.lean ? `lean-${t.lean}` : ''}" style="left:${pos[t.id].x}%;top:${pos[t.id].y}px" data-act="law-sel" data-arg="${t.id}" aria-pressed="${sel && sel.id === t.id}" aria-label="${esc(t.name)}">${nodeName(t.name)}${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${t.rule || t.flag ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
       </div>
       ${sel ? lawDetail(run, sel, state(sel), live) : ''}`;
   }
@@ -977,7 +980,7 @@ window.G = window.G || {};
       <div class="skill-tree mind-tree law-tree" style="height:${H}px">
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
         ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
-        ${visible.map((x) => { const st = state(x); const nm = reasonName(run, x); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === x.id ? 'sel' : ''} ${x.band === 'gate' ? 'apex' : ''} ${x.band === 'beyond' ? 'beyond' : ''} ${x.lean ? `lean-${x.lean}` : ''}" style="left:${pos[x.id].x}%;top:${pos[x.id].y}px" data-act="reason-sel" data-arg="${x.id}" aria-pressed="${sel && sel.id === x.id}" aria-label="${esc(nm)}"><span>${esc(nm)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${x.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
+        ${visible.map((x) => { const st = state(x); const nm = reasonName(run, x); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === x.id ? 'sel' : ''} ${x.band === 'gate' ? 'apex' : ''} ${x.band === 'beyond' ? 'beyond' : ''} ${x.lean ? `lean-${x.lean}` : ''}" style="left:${pos[x.id].x}%;top:${pos[x.id].y}px" data-act="reason-sel" data-arg="${x.id}" aria-pressed="${sel && sel.id === x.id}" aria-label="${esc(nm)}">${nodeName(nm)}${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${x.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
       </div>
       ${sel ? reasonDetail(run, sel, state(sel), live) : ''}`;
   }
@@ -1141,7 +1144,7 @@ window.G = window.G || {};
               <span class="opt-meta"><span>${esc(G.describeMods(p.mods))}${p.diet ? ` · ${G.DIET_NAMES[p.diet]}` : ''}${(p.tags || []).includes('grasp') ? ' · Can grasp' : ''}</span></span>
               <span class="opt-desc">${esc(p.desc)}</span>
               ${syn}
-              ${compareBox(run, pid, socks)}
+              ${G.showNumbers() ? compareBox(run, pid, socks) : ''}
               <div class="row tight">${buttons}</div>
             </div>`;
           }).join('')}
@@ -1188,6 +1191,12 @@ window.G = window.G || {};
       </div>`;
   }
   // page: a frozen page of the Book ({ seen, known }); without it, the live tree.
+  // A node's name, shrunk to fit its box when it has a long word in it.
+  function nodeName(name) {
+    const long = Math.max(...String(name).split(/\s+/).map((w) => w.length));
+    const words = String(name).split(/\s+/).length;
+    return `<span class="${long >= 12 ? 'n-xs' : long >= 10 || words >= 4 ? 'n-s' : ''}">${esc(name)}</span>`;
+  }
   function mindTree(run, page) {
     const known = (id) => (page ? page.known : run.innovations).includes(id);
     const visible = page ? page.seen.map((id) => G.INNOVATION[id]).filter(Boolean) : G.INNOVATIONS.filter((inv) => G.innovationVisible(run, inv));
@@ -1227,7 +1236,10 @@ window.G = window.G || {};
       const explicit = (r.innovation || []).concat(r.some || []).map((id) => G.INNOVATION[id]).filter((p) => p && pos[p.id]);
       // Path ideas open from any home, body or memory idea; home from any root: lines from the ones you know.
       const implicit = inv.tier === 3 ? visible.filter((p) => p.tier === 2 && known(p.id)) : inv.group === 'trunk' || inv.group === 'home' ? visible.filter((p) => p.tier === 1 && known(p.id)) : [];
-      (explicit.length ? explicit : implicit).forEach((par) => edge(par, inv));
+      const near = (list) => list.slice().sort((p, q) => Math.abs(pos[p.id].x - pos[inv.id].x) - Math.abs(pos[q.id].x - pos[inv.id].x)).slice(0, 1);
+      // "Any of these" ideas: lines from the ones you know, or just the nearest one, not a web from all of them.
+      const lit = explicit.filter((p) => known(p.id));
+      (lit.length ? lit : explicit.length ? near(explicit) : near(implicit)).forEach((par) => edge(par, inv));
     });
     const icon = { done: '✓', current: '◔', open: '', blocked: '✕', locked: '🔒' };
     const capKnown = visible.some((inv) => inv.group === 'cap' && known(inv.id));
@@ -1240,7 +1252,7 @@ window.G = window.G || {};
         ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
         ${visible.map((inv) => {
           const st = state(inv); const name = G.innovationName(inv, run);
-          return `<button class="node ${st} ${sel && sel.id === inv.id ? 'sel' : ''} ${inv.group === 'cap' ? 'apex' : ''} ${inv.group === 'beyond' ? 'beyond' : ''} ${inv.lean ? `lean-${inv.lean}` : ''}" style="left:${pos[inv.id].x}%;top:${pos[inv.id].y}px" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel && sel.id === inv.id}" aria-label="${esc(name)}"><span>${esc(name)}</span>${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${inv.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
+          return `<button class="node ${st} ${sel && sel.id === inv.id ? 'sel' : ''} ${inv.group === 'cap' ? 'apex' : ''} ${inv.group === 'beyond' ? 'beyond' : ''} ${inv.lean ? `lean-${inv.lean}` : ''}" style="left:${pos[inv.id].x}%;top:${pos[inv.id].y}px" data-act="mind-sel" data-arg="${inv.id}" aria-pressed="${sel && sel.id === inv.id}" aria-label="${esc(name)}">${nodeName(name)}${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${inv.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`;
         }).join('')}
       </div>
       ${sel ? mindDetail(run, sel, state(sel), page) : ''}`;
@@ -1384,11 +1396,10 @@ window.G = window.G || {};
 
   // Over the world map: notices, what happened last turn, and the time controls.
   function mapHud(run) {
-    const last = run.lastTurn ? run.lastTurn.lines.map((l) => `<span class="${l.bad ? 'bad' : l.good ? 'good' : ''}">${esc(l.t)}</span>`).join('') : '';
     return `
-      <div class="toasts">${(run.notices || []).slice(-3).map((n, i) => `<button class="toast" data-act="dismiss" data-arg="${i}">${esc(n)}</button>`).join('')}</div>
+      <div class="toasts">${(run.notices || []).length ? `<button class="toast" data-act="dismiss" data-arg="${run.notices.length - 1}">${esc(run.notices[run.notices.length - 1])}${run.notices.length > 1 ? ` <small>(+${run.notices.length - 1} more)</small>` : ''}</button>` : ''}</div>
       <div class="hud-bottom">
-        ${last ? `<div class="ledger">${last}</div>` : '<div class="ledger hint">Tap any herd to look closer.</div>'}
+        ${run.turn <= 2 ? '<div class="ledger hint">Tap any herd to look closer.</div>' : ''}
       </div>`;
   }
 
@@ -1915,6 +1926,14 @@ window.G = window.G || {};
     if (!G.wisdomOpen()) return '<p class="note">Opens once one of your lineages becomes a people (reaches the Tribe stage). Its upgrades only work in the Tribe stage.</p>';
     return `<p class="note">Upgrades for the Tribe stage. A people's first Tribe is hard; these make every later one easier.</p>${skillTree(G.WISDOM, G.ui.wisSel, 'wis-sel', '')}`;
   }
+  // Upgrades that give a stage its starting bonus can't reach back into a stage that has already begun.
+  const START_BONUS = { tribe: ['w_stories', 'w_keepers', 'w_ways', 'w_deeds', 'w_choosing', 'w_long'], society: ['h_records', 'h_cities', 'h_faith', 'h_council', 'h_envoys'], renaissance: ['p_libraries', 'p_wealth', 'p_masters', 'p_envoys'] };
+  function startNote(b) {
+    const run = G.run; if (!run || run.phase === 'end') return '';
+    const stage = Object.keys(START_BONUS).find((k) => START_BONUS[k].includes(b.id));
+    if (!stage || run.stage !== stage) return '';
+    return `<span class="note">Your current ${esc(G.STAGES[stage].name.replace(/ Stage$/, ''))} has already begun: this works from the next one.</span>`;
+  }
   function skillTree(LIST, selId, act, extra) {
     const m = G.meta;
     const sel = G.BOON[selId] && LIST.includes(G.BOON[selId]) ? G.BOON[selId] : (LIST.find((b) => G.boonOpen(b) && G.boonCost(b) != null) || LIST[0]);
@@ -1943,17 +1962,36 @@ window.G = window.G || {};
         <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
         ${LIST.map((b) => {
           const s2 = state(b); const l2 = G.boonLevel(b.id);
-          return `<button class="node ${s2} ${sel.id === b.id ? 'sel' : ''} ${b.twin ? 'twin' : ''}" style="left:${X(b)}%;top:${Y(b)}%" data-act="${act}" data-arg="${b.id}" aria-pressed="${sel.id === b.id}" aria-label="${esc(b.name)}"><span>${esc(b.name)}</span>${b.costs.length > 1 && l2 ? `<i aria-hidden="true">${l2}/${b.costs.length}</i>` : icon[s2] ? `<i aria-hidden="true">${icon[s2]}</i>` : ''}</button>`;
+          return `<button class="node ${s2} ${sel.id === b.id ? 'sel' : ''} ${b.twin ? 'twin' : ''}" style="left:${X(b)}%;top:${Y(b)}%" data-act="${act}" data-arg="${b.id}" aria-pressed="${sel.id === b.id}" aria-label="${esc(b.name)}">${nodeName(b.name)}${b.costs.length > 1 && l2 ? `<i aria-hidden="true">${l2}/${b.costs.length}</i>` : icon[s2] ? `<i aria-hidden="true">${icon[s2]}</i>` : ''}</button>`;
         }).join('')}
       </div>
       <div class="inv-detail">
         <div class="inv-head"><strong>${esc(sel.name)}${sel.costs.length > 1 ? ` · level ${lvl}/${sel.costs.length}` : ''}</strong>${cost != null ? `<span>${ICON.gene} ${cost}</span>` : ''}</div>
         <span class="inv-desc">${esc(sel.desc)}</span>
+        ${startNote(sel)}
         ${sel.twin ? '<span class="inv-mods">Twin socket: this slot can hold a second part, which merges and evolves on its own.</span>' : ''}
         ${st === 'locked' ? `<span class="reason">Needs ${esc((sel.req || []).map((id) => G.BOON[id].name).join(' and '))} first</span>` : ''}
         ${st === 'done' ? '<span class="note good-text">Fully evolved</span>' : `<button class="btn primary small" ${afford ? `data-act="buy" data-kind="boon" data-arg="${sel.id}"` : 'disabled'}>${lvl ? 'Upgrade' : 'Evolve'} (${ICON.gene} ${cost})</button>`}
       </div>`;
   }
+
+  // ---------- Options (Patch 20.2) ----------
+  function optionsScreen() {
+    const o = G.meta.options;
+    const toggle = (key, on, title, desc) => `<button class="choice opt-toggle ${on ? 'on' : ''}" data-act="opt" data-arg="${key}" aria-pressed="${on}"><span class="choice-head"><strong>${esc(title)}</strong><span class="switch" aria-hidden="true"><i></i></span></span><span class="choice-desc">${esc(desc)}</span></button>`;
+    return `
+      <main class="screen options-screen">
+        <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Options</h1></header>
+        <section><h2>Information</h2><div class="choices">
+          ${toggle('numbers', o.numbers, 'Detailed numbers', 'Show exact odds as percentages, your stat against theirs, and what each mutation would change in every slot. Off: odds are shown in words, like "Likely".')}
+          ${toggle('tips', !G.meta.tipsOff, 'Tips', 'Short tips the first time you meet something new.')}
+        </div>${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}</section>
+        <section><h2>Colours</h2><div class="theme-row">${Object.entries(G.THEMES).map(([id, name]) => `<button class="theme-swatch ${o.theme === id ? 'on' : ''}" data-theme-swatch="${id}" data-act="opt-theme" data-arg="${id}" aria-pressed="${o.theme === id}"><span></span>${esc(name)}</button>`).join('')}</div></section>
+        <p class="note">More ways to make a run harder are coming in a later update.</p>
+      </main>`;
+  }
+  G.applyTheme = () => { document.documentElement.dataset.theme = (G.meta && G.meta.options && G.meta.options.theme) || 'tide'; };
+  G.applyTheme();
 
   // ---------- Fossil Record ----------
   function fossilScreen() {
@@ -2061,6 +2099,8 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
+      case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
+      case 'opt-theme': G.meta.options.theme = arg; G.saveMeta(); G.applyTheme(); break;
       case 'affinity': G.buyAffinity(arg); break;
       case 'tips-reset': G.meta.tips = []; G.meta.tipsOff = false; G.saveMeta(); break;
       case 'continue': if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); } G.ui.sheet = null; G.ui.viewer = null; if (G.resetMap) G.resetMap(); go('game'); return;
@@ -2119,7 +2159,7 @@ window.G = window.G || {};
       case 'close-view': G.ui.viewer = null; parts = ['viewer']; break;
       case 'speed': G.ui.speed = Number(arg); parts = ['top']; break;
       case 'explain': G.ui.explain = arg && G.ui.explain !== arg ? arg : null; parts = ['top']; break;
-      case 'dismiss': if (run) run.notices.splice(Math.max(0, run.notices.length - 3) + Number(arg), 1); parts = ['hud']; break;
+      case 'dismiss': if (run) run.notices.splice(Number(arg), 1); parts = ['hud']; break;
       case 'abandon': G.ui.confirmAbandon = true; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'abandon-no': G.ui.confirmAbandon = false; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'abandon-yes': G.endRunEarly(); G.ui.confirmAbandon = false; G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
@@ -2197,4 +2237,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '20.1';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '20.2';
