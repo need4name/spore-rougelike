@@ -1167,7 +1167,7 @@ G.LEADER_BACKGROUND = {}; G.LEADER_BACKGROUNDS.forEach((x) => { G.LEADER_BACKGRO
 
 // What each temperament (your starting archetype) adds in the Tribe stage.
 G.TRIBE_TEMPER = {
-  hunter: { mods: { str: 1, huntBonus: 2 }, rule: 'Hunts bring back half as much food again, and rival bands fear you.' },
+  hunter: { mods: { str: 1, huntBonus: 2 }, rule: 'Hunts bring back 2 more Food, and rival bands fear you.' },
   herd: { mods: { maxPop: 3, tou: 1 }, rule: 'Bigger and harder to wipe out.' },
   bond: { mods: { cha: 2 }, rule: 'Taming other species is much easier.' },
   taker: { mods: { cun: 1, foodPerTurn: 1 }, rule: 'Beat a rival band and you steal one of their discoveries.' },

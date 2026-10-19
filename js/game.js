@@ -484,7 +484,7 @@ window.G = window.G || {};
     // Warm blood shrugs off the food cost of cold seasons.
     const warm = run.traits.includes('blood_warm') || G.firelit(run);
     if (season) list.push(tag(warm && (season.mods.foodPerTurn || 0) < 0 ? { ...season.mods, foodPerTurn: 0 } : season.mods, `Season: ${season.name}`));
-    if (G.biomeMatters(run)) { list.push(tag(G.biome(run).mods, `Biome: ${G.biome(run).name}`)); if (G.biome(run).cold && run.traits.includes('blood_cold')) list.push(tag({ spd: -2, foodPerTurn: -1 }, 'Cold blood in a cold land')); }
+    if (G.biomeMatters(run)) { list.push(tag(G.biome(run).mods, `Biome: ${G.biome(run).name}`)); if (G.biome(run).cold && run.traits.includes('blood_cold') && !['tundra', 'polar'].includes(G.biome(run).id)) list.push(tag({ spd: -2, foodPerTurn: -1 }, 'Cold blood in a cold land')); }
     if (run.traits.includes('blood_cold')) {
       const cold = (season && ['winter', 'cold'].includes(season.id)) || ['tundra', 'polar'].includes(G.biome(run).id);
       const hot = (season && ['summer', 'bloom'].includes(season.id)) || ['desert', 'vents'].includes(G.biome(run).id);
@@ -562,8 +562,10 @@ window.G = window.G || {};
     // A society's settlements farm, fish and herd.
     if (G.civ(run)) parts.push({ label: `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`, v: (run.settlements || []).length, kind: pref });
     const fpt = G.mod(run, 'foodPerTurn');
+    const gathered = Math.max(0, parts.reduce((s, p) => s + p.v, 0));
     if (fpt) parts.push({ label: 'Helpers and allies', v: fpt, kind: pref });
-    const total = Math.max(0, parts.reduce((s, p) => s + p.v, 0));
+    // Bad seasons and instincts can stop your gathering, but they never cancel food your helpers bring.
+    const total = Math.max(0, gathered + fpt);
     const meat = Math.max(0, parts.filter((p) => p.kind === 'meat').reduce((s, p) => s + p.v, 0));
     return { total, parts, meat: Math.min(meat, total), plants: Math.max(0, total - Math.min(meat, total)) };
   };
@@ -2069,7 +2071,7 @@ window.G = window.G || {};
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.civ(run) ? G.socKind(run).settlement : G.kind(run).camp}: −${damage(run, n)} ${G.popWord(run)}` : `The ${s.name} hunted you: −${damage(run, n)} ${G.popWord(run)}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
-    if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} Population from symbionts`, good: true }); }
+    if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} ${G.popWord(run)} regrown`, good: true }); }
     const cap = G.foodCap(run);
     // Meat rots; and there is only so much room to store food.
     G.syncFood(run);
@@ -2336,7 +2338,7 @@ window.G = window.G || {};
     const hardy = run.stage === 'tribe' ? G.boonLevel('w_hardy') : 0; if (hardy) list.push(tag({ tou: hardy }, 'Ancestral Wisdom: Hardy Folk'));
     return list;
   }
-  G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.floor(G.mod(run, 'exploreBonus') / 2) : 0));
+  G.ideasPerTurn = (run) => Math.max(1, 1 + G.mod(run, 'ideasPerTurn') + G.mod(run, 'dnaPerTurn') + Math.floor(G.stat(run, 'cun') / 10) + (run.instinct === 'explore' ? 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2) : 0));
   // Each people stage ends with a Gate idea in its own tree. Once its Learning/Ideas/Influence goal is met,
   // the player has to take the Gate up from that tab.
   const GATES = {
@@ -2801,7 +2803,7 @@ window.G = window.G || {};
     if (allies) list.push(tag({ foodPerTurn: Math.min(2, allies) }, 'Allied peoples'));
     return list;
   }
-  G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + Math.floor(G.mod(run, 'ideasPerTurn') / 3) + (run.instinct === 'explore' ? 1 : 0));
+  G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + G.mod(run, 'dnaPerTurn') + Math.trunc(G.mod(run, 'ideasPerTurn') / 2) + (run.instinct === 'explore' ? 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2) : 0));
   // One generation of society: the council's loyalty shifts, and grudges may become plots.
   function societyTurn(run, lines) {
     if ((run.council || []).length && run.council.every((c) => c.loyalty >= 40)) G.addSocDeed(run, 'sd_golden_age');
@@ -3497,7 +3499,10 @@ window.G = window.G || {};
       if (k === 'discoveryCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)}% discovery cost`;
       if (k === 'growthCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)} Food needed to grow`;
       // Max Population is stored in 'heads' but shown as individuals, scaled for your size (and halved for Many Minds).
-      if (k === 'maxPop') { const r = G.run; const mult = r ? G.SIZES[G.sizeOf(r)].popMult * (G.people(r) && r.path === 'many' ? 0.5 : 1) : 1; const n = Math.max(1, Math.round(Math.abs(v) * mult * G.POP_SCALE)); return `${v > 0 ? '+' : '−'}${n} ${G.MOD_LABELS[k]}`; }
+      if (k === 'popPerTurn') { const r = G.run; const n = r ? Math.ceil(Math.abs(v) * G.popScale(r)) : Math.abs(v) * G.POP_SCALE; return `${v > 0 ? '+' : '−'}${n} ${G.popWord(r || {})} regrown per turn`; }
+      if (k === 'foodCap' && G.run && G.gimmick(G.run) === 'predator') return `${v > 0 ? '+' : '−'}${Math.max(1, Math.floor(Math.abs(v) / 2))} ${G.MOD_LABELS[k]} (halved for a Predator)`;
+      if (k === 'maxPop' && G.run && G.gimmick(G.run) === 'parasite') return `${v > 0 ? '+' : '−'}${Math.abs(v) * G.POP_SCALE} ${G.MOD_LABELS[k]} (never more than your host allows)`;
+      if (k === 'maxPop') { const r = G.run; const mult = r ? G.SIZES[G.sizeOf(r)].popMult * (G.people(r) && r.path === 'many' ? 0.5 : 1) * (G.gimmick(r) === 'grazer' ? 1.6 : 1) : 1; const n = Math.max(1, Math.round(Math.abs(v) * mult * G.POP_SCALE)); return `${v > 0 ? '+' : '−'}${n} ${G.MOD_LABELS[k]}`; }
       return `${v > 0 ? '+' : '−'}${Math.abs(v)} ${G.MOD_LABELS[k] || k}`;
     }).join(', ');
   };

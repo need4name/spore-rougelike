@@ -1996,7 +1996,7 @@ G.EVENTS.push(
     id: 't_twins', stage: 'tribe', prop: 'nest', title: 'A Season of Births', tags: ['food'],
     text: 'More young are born this season than ever before. The {camp} is loud with them.',
     options: [
-      { label: 'Raise them all', hint: '+2 members, −3 Food', result: { text: 'Every one of them is fed, somehow.', pop: 2, food: -3, anim: 'grow' } },
+      { label: 'Raise them all', hint: 'Many more members, −3 Food', result: { text: 'Every one of them is fed, somehow.', pop: 2, food: -3, anim: 'grow' } },
       { label: 'Raise them to be thinkers', hint: '+3 Ideas, −2 Food', result: { text: 'They grow up asking why.', dna: 3, food: -2, anim: 'mutate' } },
     ],
   },
@@ -2038,7 +2038,7 @@ G.EVENTS.push(
     id: 't_fool', stage: 'tribe', prop: 'hearts', title: 'The Fool', tags: ['social'],
     text: 'One of your people does everything wrong, loudly, and everyone laughs. They have started doing it on purpose.',
     options: [
-      { label: 'Laugh along', hint: '+1 Charm for a while', result: { text: 'A people that can laugh at itself can survive anything.', trait: 'cooperative', anim: 'social' } },
+      { label: 'Laugh along', hint: 'Gain the Cooperative Mind trait (+1 Charm, grow on less Food)', result: { text: 'A people that can laugh at itself can survive anything.', trait: 'cooperative', anim: 'social' } },
       { label: 'Ask them what they think', check: { stat: 'cun', diff: 3 }, success: { text: 'Under the jokes, a sharp mind. They have ideas nobody else dared to say.', dna: 3, anim: 'mutate' }, fail: { text: 'More jokes. Good ones, though.', dna: 1 } },
     ],
   },
@@ -2247,7 +2247,7 @@ G.EVENTS.push(
     id: 't_tool_cooking', stage: 'tribe', path: 'tool', prop: 'fire', title: 'Cooked', tags: ['food'],
     text: 'A piece of meat fell into the {resource}. Someone ate it anyway. Now everyone wants theirs that way.',
     options: [
-      { label: 'Cook everything', hint: '−1 {resource}, +1 member', result: { text: 'Food goes further, and fewer people get sick.', special: -1, food: 2, pop: 1, anim: 'grow' } },
+      { label: 'Cook everything', hint: '−1 {resource}, +2 Food, more members', result: { text: 'Food goes further, and fewer people get sick.', special: -1, food: 2, pop: 1, anim: 'grow' } },
       { label: 'Only for feasts', result: { text: 'Something to look forward to.', dna: 1, food: 1, anim: 'rest' } },
     ],
   },
@@ -2314,7 +2314,7 @@ G.EVENTS.push(
     id: 't_song_lullaby', stage: 'tribe', path: 'song', prop: 'night', title: 'The Lullaby', tags: ['social'],
     text: 'A mother sings a song so gentle that the whole {camp} falls asleep, even the guards.',
     options: [
-      { label: 'Teach it to everyone', hint: '+1 member', result: { text: 'Children sleep, parents rest, and more of them grow up strong.', pop: 1, special: 1, anim: 'rest' } },
+      { label: 'Teach it to everyone', hint: 'More members, +1 {resource}', result: { text: 'Children sleep, parents rest, and more of them grow up strong.', pop: 1, special: 1, anim: 'rest' } },
       { label: 'Sing it to the beasts', check: { stat: 'cha', diff: 5 }, success: { text: 'Even the wild ones lie down to listen.', dna: 2, anim: 'social' }, fail: { text: 'The beasts are not impressed.', anim: 'rest' } },
     ],
   },
@@ -2466,7 +2466,7 @@ G.EVENTS.push(
     when: (run) => !!run.leader,
     text: 'A second queen has hatched. Half the {band} is gathering around her instead of {leader}.',
     options: [
-      { label: 'Let her found a new {camp}', hint: '−3 members, +4 Ideas', result: { text: 'She leaves with her followers. The swarm spreads.', pop: -3, dna: 4, anim: 'rest' } },
+      { label: 'Let her found a new {camp}', hint: 'Some members leave, +4 Ideas', result: { text: 'She leaves with her followers. The swarm spreads.', pop: -3, dna: 4, anim: 'rest' } },
       { label: '{leader} fights her', check: { stat: 'str', diff: 5 }, success: { text: 'There is only one queen.', leaderTrait: 'cruel', anim: 'attack' }, fail: { text: 'There is a new queen.', leaderDies: true } },
     ],
   },

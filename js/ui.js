@@ -336,7 +336,7 @@ window.G = window.G || {};
       const srcKey = G.civ(run) ? 'influencePerTurn' : run.stage === 'tribe' ? 'ideasPerTurn' : 'dnaPerTurn';
       body = `<p>${run.stage === 'renaissance' ? 'Learning comes from your cities, your scholars and your patrons, and brings new inventions for your Reason tree.' : run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
         <h4>Each turn</h4>
-        ${run.stage === 'tribe' ? xrow('Base', 1) + (Math.floor(G.stat(run, 'cun') / 10) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 10)) : '') + (run.instinct === 'explore' ? xrow('Exploring', 1 + Math.floor(G.mod(run, 'exploreBonus') / 2)) : '') : ''}
+        ${run.stage === 'tribe' ? xrow('Base', 1) + (Math.floor(G.stat(run, 'cun') / 10) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 10)) : '') + (run.instinct === 'explore' ? xrow('Exploring', 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2)) : '') : G.civ(run) && run.instinct === 'explore' ? xrow('Exploring', 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2)) : ''}
         ${xsrc(run, srcKey)}
         ${xtotal('Each turn', per)}
         <p class="note">Events give and take ${esc(w)} too.</p>`;
@@ -895,7 +895,7 @@ window.G = window.G || {};
       ${run.stage === 'renaissance' && run.schism ? `<h3>⛪ The Schism</h3><p class="note">${esc(SCHISM_NAMES[run.schism][0].toUpperCase() + SCHISM_NAMES[run.schism].slice(1))}. Its idea is in the Schism band of your Reason tree.</p>` : ''}
       <h3>${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}</h3><p class="note">${run.disposition ? 'Your Disposition is fixed.' : `Your Disposition, from the leaning of every idea your lineage has learned. It decides ${run.stage === 'renaissance' ? 'what your ships can do in the Age of Sail' : 'how you can unite the region'}, and it can still change.`}</p>
       <h3>${esc(k.resource)}</h3>
-      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, 1 + G.mod(run, 'specialPerTurn'))} a turn. Building up a ${esc(sk.settlement)} uses 4 of it (or 6 Food).` : 'None.'}</p>
+      <p class="note">${run.specialOn ? `${run.special || 0} of ${G.SPECIAL_CAP}, +${Math.max(0, G.specialGain(run) + G.scholarGain(run) - G.specialUpkeep(run))} a turn. Building up a ${esc(sk.settlement)} uses 4 of it (or 6 Food).` : 'None.'}</p>
       <h3>Neighbours</h3>
       ${nb.length ? nb.map((b) => `<div class="callout"><strong>${b.nation && b.nationDisp ? `${G.LEAN_ICONS[b.nationDisp]} ` : ''}The ${esc(b.name)}${b.league ? ' · 🤝 league' : ''}${b.treaty ? ' · 📜 treaty' : ''}${b.married ? ' · 💍 marriage' : ''}</strong><span>Opinion ${b.opinion} · ${b.opinion >= 60 ? 'allies: they share food with you' : b.opinion >= 10 ? 'friendly: you can trade' : !b.treaty && b.opinion < (b.nation ? { war: 20, peace: -30 }[b.nationDisp] ?? G.SOC_RAID_BELOW : G.SOC_RAID_BELOW) ? 'hostile: they may raid you' : 'wary'}${b.nemesis ? ' · they remember the old feud' : ''}</span>${b.nation && b.nationDisp ? `<span>${esc(G.LEAN_NAMES[b.nationDisp])} nation, ${esc(NATION_DISP[b.nationDisp].split(': ')[1])}${b.nationDisp === 'war' && b.opinion < 0 && !b.treaty && !b.league ? '. They may invade.' : '.'}</span>` : ''}</div>`).join('') : '<p class="empty">No neighbours.</p>'}`;
   }
