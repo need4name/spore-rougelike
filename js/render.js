@@ -920,28 +920,32 @@ window.G = window.G || {};
     const hue = b.hue; const body = hsl(hue, 45, 52); const dark = hsl(hue, 40, 30); const light = hsl(hue, 55, 68);
     const n = b.segments || 3;
     const ground = cy + S * 0.3;
-    const R = S * 0.17 * Math.sqrt((L.bodyLen || 1) * (L.bodyHeight || 1));
-    const by = ground - R * 0.85;
-    ctx.beginPath(); ctx.ellipse(cx, ground, R * 1.8, R * 0.3, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    // Width and Height stretch the colony each their own way (they used to scale it evenly).
+    const sx = L.bodyLen || 1; const sy = L.bodyHeight || 1;
+    const R = S * 0.17;
+    const by = ground - R * 0.85 * sy;
+    ctx.beginPath(); ctx.ellipse(cx, ground, R * 1.8 * sx, R * 0.3, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     // Pseudopods reach out all round the colony: each one you add shows.
     for (let i = 0; i < n; i++) {
       const a = Math.PI * (0.05 + 0.9 * (i + 0.5) / n); const reach = (1 + Math.sin(t * 2.5 + i * 1.3) * 0.12) * (L.legLen || 1);
-      const ex = cx - Math.cos(a) * R * (1.7 + 0.5 * reach); const ey = ground - R * 0.08 - Math.sin(a) * R * 0.15;
-      ctx.beginPath(); ctx.moveTo(cx - Math.cos(a) * R * 0.5, by + R * 0.2); ctx.quadraticCurveTo(cx - Math.cos(a) * R * 1.3, ey - R * 0.35, ex, ey);
+      const ex = cx - Math.cos(a) * R * (sx * 1.2 + 0.5 + 0.5 * reach); const ey = ground - R * 0.08 - Math.sin(a) * R * 0.15;
+      ctx.beginPath(); ctx.moveTo(cx - Math.cos(a) * R * 0.5 * sx, by + R * 0.2 * sy); ctx.quadraticCurveTo(cx - Math.cos(a) * R * 1.3 * sx, ey - R * 0.35, ex, ey);
       ctx.strokeStyle = dark; ctx.lineWidth = R * 0.34 * (L.legLen || 1); ctx.lineCap = 'round'; ctx.stroke();
       dot(ex, ey, R * 0.22 * (L.legLen || 1), dark);
     }
     const lumps = [[0, 0, 1], [-0.65, 0.15, 0.6], [0.6, 0.2, 0.62], [-0.25, -0.55, 0.55], [0.35, -0.45, 0.5], [0.85, -0.2, 0.38], [-0.85, -0.25, 0.4]];
+    ctx.save(); ctx.translate(cx, by); ctx.scale(sx, sy); ctx.translate(-cx, -by);
     lumps.forEach(([dx, dy, r], i) => { const wob = 1 + Math.sin(t * 2 + i * 1.7) * 0.05; dot(cx + dx * R, by + dy * R, r * R * wob, i % 2 ? body : light); });
-    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.2, R * 0.9, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, by); pattern(L, R * 1.2, R * 0.9, S, hue, t); ctx.restore();
-    if (H.has('moss_garden') || H.has('lichen_hide') || H.has('kelp_garden')) for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.7 + (i % 2) * 6, S * 0.02, PLANT);
-    if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let i = 0; i < 6; i++) { const x = cx - R * 0.8 + i * R * 0.32; tri(x - 4, by - R * 0.6, x, by - R * 1.05, x + 4, by - R * 0.6, H.has('venom_quills') ? VENOM : (accent || BONE)); }
-    if (E.skin || accent) glow(accent || GLOW, 10, () => { for (let i = 0; i < 8; i++) dot(cx - R + (i * 37 % 20) / 10 * R, by - R * 0.4 + ((i * 53) % 10) / 10 * R * 0.8, S * 0.008, accent || GLOW); });
+    ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.2 * sx, R * 0.9 * sy, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, by); pattern(L, R * 1.2 * sx, R * 0.9 * sy, S, hue, t); ctx.restore();
+    if (H.has('moss_garden') || H.has('lichen_hide') || H.has('kelp_garden')) for (let i = 0; i < 6; i++) dot(cx - R * sx + i * R * 0.4 * sx, by - R * 0.7 * sy + (i % 2) * 6, S * 0.02, PLANT);
+    if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let i = 0; i < 6; i++) { const x = cx - R * 0.8 * sx + i * R * 0.32 * sx; tri(x - 4, by - R * 0.6 * sy, x, by - R * 0.6 * sy - R * 0.45, x + 4, by - R * 0.6 * sy, H.has('venom_quills') ? VENOM : (accent || BONE)); }
+    if (E.skin || accent) glow(accent || GLOW, 10, () => { for (let i = 0; i < 8; i++) dot(cx + (-R + (i * 37 % 20) / 10 * R) * sx, by + (-R * 0.4 + ((i * 53) % 10) / 10 * R * 0.8) * sy, S * 0.008, accent || GLOW); });
     const eyes = G.eyesFrom([...H]) ? G.eyesFrom([...H]) + 1 + (E.senses ? 2 : 0) : 0;
     const spots = [[0.3, -0.35], [-0.35, -0.2], [0.65, 0], [-0.7, 0.05], [0.05, -0.65], [0.45, 0.3]];
-    for (let i = 0; i < Math.min(eyes, spots.length); i++) { const [dx, dy] = spots[i]; const er = R * 0.11 * (L.eyes === 'huge' ? 1.5 : 1); dot(cx + dx * R, by + dy * R, er, '#fff'); dot(cx + dx * R + 1, by + dy * R, er * 0.55, '#1c1414'); eyeStyle(L, cx + dx * R, by + dy * R, er, body, dark); }
-    if (p.mouth) { ctx.beginPath(); ctx.ellipse(cx + R * 0.35, by + R * 0.25, R * 0.2, R * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); }
-    FACE = { x: cx + R * 0.3, y: by - R * 0.35, r: R * 0.11, mx: cx + R * 0.35, my: by + R * 0.25, top: by - R, skin: body, s: S * 0.5, noEyes: !eyes };
+    for (let i = 0; i < Math.min(eyes, spots.length); i++) { const [dx, dy] = spots[i]; const er = R * 0.11 * (L.eyes === 'huge' ? 1.5 : 1); dot(cx + dx * R * sx, by + dy * R * sy, er, '#fff'); dot(cx + dx * R * sx + 1, by + dy * R * sy, er * 0.55, '#1c1414'); eyeStyle(L, cx + dx * R * sx, by + dy * R * sy, er, body, dark); }
+    if (p.mouth) { ctx.beginPath(); ctx.ellipse(cx + R * 0.35 * sx, by + R * 0.25 * sy, R * 0.2, R * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = hsl(hue, 30, 18); ctx.fill(); }
+    FACE = { x: cx + R * 0.3 * sx, y: by - R * 0.35 * sy, r: R * 0.11, mx: cx + R * 0.35 * sx, my: by + R * 0.25 * sy, top: by - R * sy, skin: body, s: S * 0.5, noEyes: !eyes };
   }
 
   // No legs: a snake on land, an eel at sea.
@@ -2332,12 +2336,32 @@ window.G = window.G || {};
       if (reach > 0.3) { ctx.save(); ctx.globalAlpha = Math.min(1, (reach - 0.3) * 2); ctx.font = "700 11px 'Atkinson Hyperlegible', sans-serif"; ctx.textAlign = left ? 'left' : 'right'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(left ? `← ${b.name}` : `${b.name} →`, left ? 8 : w - 8, top + 14); ctx.restore(); }
     });
   }
+  // Seeing further: in the Creature stage, ideas that "see more of the world map" pull the view back,
+  // so the neighbouring biomes show at the edges (Tribes have their own widening world).
+  G.mapZoom = (run) => (run.stage === 'creature' ? [1, 0.86, 0.74][G.vision(run)] || 1 : 1);
+  let mapView = { z: 1, ox: 0, oy: 0 };
+  function drawNeighbourStrips(run, w, h, t, z) {
+    const here = G.biome(run); const list = G.biomeList(run);
+    const next = here.next.map((id) => list.find((b) => b.id === id)).filter(Boolean);
+    const sides = [next[0], next[1] || next[0]];
+    sides.forEach((b, i) => {
+      if (!b) return;
+      ctx.save(); ctx.beginPath(); ctx.rect(i ? w / 2 : 0, 0, w / 2, h); ctx.clip();
+      drawMapBackground(Object.assign(Object.create(Object.getPrototypeOf(run)), run, { biome: b.id }), w, h, t);
+      ctx.fillStyle = 'rgba(8, 16, 18, 0.35)'; ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+      const edge = (w * (1 - z)) / 2;
+      ctx.save(); ctx.font = "700 11px 'Atkinson Hyperlegible', sans-serif"; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.translate(i ? w - edge / 2 : edge / 2, h * 0.55); ctx.rotate(i ? Math.PI / 2 : -Math.PI / 2); ctx.fillText(b.name, 0, 4); ctx.restore();
+    });
+  }
   G.startMap = function (canvas, onTap) {
     if (mapFrame) cancelAnimationFrame(mapFrame);
     let last = performance.now();
     canvas.onclick = (e) => {
       const r = canvas.getBoundingClientRect();
-      const x = e.clientX - r.left; const y = e.clientY - r.top;
+      // Taps land in the zoomed-out view: map them back into the world.
+      const x = mapView.ox + (e.clientX - r.left - mapView.ox) / mapView.z; const y = mapView.oy + (e.clientY - r.top - mapView.oy) / mapView.z;
       let best = null; let bd = 1e9;
       mapHits.forEach((hit) => { const d = Math.hypot(hit.x - x, hit.y - y); if (d < hit.r && d < bd) { bd = d; best = hit; } });
       if (best && onTap) onTap(best.key);
@@ -2349,6 +2373,12 @@ window.G = window.G || {};
       const { w, h } = fit(canvas);
       const t = reduceMotion ? 0 : now / 1000;
       ctx.clearRect(0, 0, w, h);
+      const z = G.mapZoom(run); mapView = { z, ox: w / 2, oy: h * 0.55 };
+      if (z < 1) {
+        drawNeighbourStrips(run, w, h, t, z);
+        ctx.save(); ctx.translate(mapView.ox, mapView.oy); ctx.scale(z, z); ctx.translate(-mapView.ox, -mapView.oy);
+        ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+      }
       drawMapBackground(run, w, h, t);
       const wet = run.stage === 'cell' || run.habitat === 'sea';
       const land = !wet;
@@ -2448,17 +2478,20 @@ window.G = window.G || {};
           const font = ctx.font;
           // Labels go on top of everything, after all herds are drawn.
           labelDraws.push(() => {
+            ctx.save(); ctx.translate(mapView.ox + (lx - mapView.ox) * mapView.z - lx, mapView.oy + (ly - mapView.oy) * mapView.z - ly);
             ctx.font = font;
             ctx.fillStyle = l.key === 'you' ? 'rgba(242, 181, 68, 0.95)' : st === 'hostile' ? 'rgba(239, 125, 107, 0.9)' : st === 'allied' ? 'rgba(143, 209, 106, 0.9)' : 'rgba(12, 26, 29, 0.78)';
             ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(lx - tw / 2, ly - 9, tw, 18, 9); else ctx.rect(lx - tw / 2, ly - 9, tw, 18); ctx.fill();
             ctx.fillStyle = l.key === 'you' || st === 'hostile' || st === 'allied' ? '#1c1414' : '#e8efe4';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx, ly + 1);
+            ctx.restore();
           });
           mapHits.push({ key: l.key, x: hx, y: hy, r: Math.max(44, spread + size * 0.4) });
         } });
       });
       drawables.sort((p1, p2) => p1.y - p2.y).forEach((d2) => d2.draw());
       drawWeather(run, w, h, t, top, land, seaMap);
+      if (z < 1) { ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 2 / z; ctx.strokeRect(0, 0, w, h); ctx.restore(); }
       labelDraws.forEach((d2) => d2());
       mapFrame = requestAnimationFrame(frame);
     }

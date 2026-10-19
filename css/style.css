@@ -746,3 +746,14 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .stage-select summary { cursor: pointer; list-style: none; } .stage-select summary h2 { display: inline; } .stage-select summary::after { content: ' ▾'; color: var(--muted); } .stage-select[open] summary::after { content: ' ▴'; }
 .options-screen section { margin-bottom: 22px; }
 .options-screen .choices { margin-bottom: 8px; }
+
+/* Patch 20.3: time controls folded into two small buttons beside Instinct. */
+#app[data-screen="game"] .topbar .tb-right { display: grid; gap: 4px; justify-items: stretch; }
+.speeds.compact { display: flex; gap: 2px; padding: 2px; border-radius: 12px; margin: 0; }
+#app[data-screen="game"] .topbar .speeds.compact .speed { min-width: 0; flex: 1; min-height: 32px; padding: 0 8px; font-weight: 700; font-size: 0.85rem; }
+.speeds.compact .speed.pace { color: var(--fg); }
+
+/* Available but not affordable yet: a quiet dashed outline, no glow. */
+.node.open.cant, .node.current.cant { box-shadow: none !important; border-color: rgba(242, 181, 68, 0.45); }
+.node .n-xs { font-size: 0.74em; }
+.node span { overflow-wrap: break-word; }

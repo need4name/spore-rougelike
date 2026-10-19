@@ -80,10 +80,13 @@ window.G = window.G || {};
     if (parts.includes('hud')) put('#hud', mapHud(run));
     if (parts.includes('modal')) {
       if (G.stopScene) G.stopScene();
+      const oldM = app.querySelector('#modal .modal'); const mScroll = oldM ? oldM.scrollTop : 0;
       const el = put('#modal', modal(run));
       paintPortraits(el, run);
       paintScene(el, run);
-      if (el && el.firstElementChild) { const m = el.querySelector('.modal'); if (m) m.scrollTop = 0; }
+      // Tapping inside a modal (a tree node) keeps your place; a new card starts at the top.
+      if (el && el.firstElementChild) { const m = el.querySelector('.modal'); if (m) m.scrollTop = G.ui.keepScroll ? mScroll : 0; }
+      if (!parts.includes('sheet')) G.ui.keepScroll = false;
     }
     if (parts.includes('sheet')) {
       const old = app.querySelector('.sheet-body');
@@ -268,7 +271,7 @@ window.G = window.G || {};
         <div class="tb-main">
           <div class="tb-title"><strong>${esc(st.name.replace(/ Stage$/, ''))}</strong><span ${G.biomeMatters(run) ? tappable('biome') : ''}>${esc(st.turnName)} ${run.stageTurn}${G.biomeMatters(run) ? ` · ${esc(G.biome(run).name)}` : ''}</span>${dietBadge(run)}${G.civ(run) ? dispBadge(run, true) : ''}</div>
           <div class="res-row">
-            <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>/${max}${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
+            <span ${tappable('pop')} class="res pop ${run.pop <= 2 * G.POP_SCALE ? 'warn' : run.pop > max ? 'over' : ''}" title="${esc(`${G.people(run) ? 'Your people. At 0 they are gone.' : 'Population. At 0 your lineage is extinct.'} Comfortable size ${max}: past it, crowded members eat twice, young cost more and crowding sickness sets in. Absolute limit ${G.hardPop(run)}.`)}">${ICON.pop}<b>${run.pop}</b>${run.pop > max ? '<i class="neg">crowded</i>' : ''}</span>
             <span ${tappable('food')} class="res food ${net < 0 && run.food < -net * 2 ? 'warn' : ''}" title="${esc(`Food: ${G.DIET_NAMES[G.diet(run)]}s eat ${G.edible(run).join(' and ')}. Meat feeds 1.5 each but a fifth of it rots every turn; plants keep. Gathered ${inc.meat ? `${inc.meat} meat` : ''}${inc.meat && inc.plants ? ' and ' : ''}${inc.plants ? `${inc.plants} plants` : ''}, eaten ${up} per turn.`)}">${G.edible(run).map((k) => `<span class="fk">${k === 'meat' ? '🥩' : '🌿'}<b>${Math.max(0, run[k] == null ? run.food : run[k])}</b></span>`).join('')}<i class="${net < 0 ? 'neg' : ''}">${net >= 0 ? '+' : '−'}${Math.abs(net)}</i></span>
             ${tribeChips(run)}
             ${run.mind && run.stage === 'creature' ? `<span ${tappable('insight')} class="res insight" title="Insight toward ${fasc ? esc(G.innovationName(fasc, run)) : 'nothing yet'}">${ICON.insight}<b>${run.insight}</b>${fasc ? `/${G.innovationCost(run, fasc)}` : ''}</span>` : ''}
@@ -280,8 +283,7 @@ window.G = window.G || {};
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
-        <button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>
-        <div class="tb-row2">${speedControls(run)}</div>
+        <div class="tb-right"><button class="instinct-btn" data-act="sheet" data-arg="instinct"><span>Instinct</span><b>${esc(G.INSTINCT[run.instinct].name)}</b></button>${speedControls(run)}</div>
         ${explainPanel(run)}
       </header>`;
   }
@@ -442,10 +444,14 @@ window.G = window.G || {};
   }
 
   // Time controls live in the top bar, well away from event buttons.
+  // Time: one play/pause button and one speed button (1×, 2×, 3×) that cycles.
   function speedControls(run) {
-    const speeds = [['0', ICON.pause, 'Pause'], ['1', `${ICON.play}`, 'Normal speed'], ['2', `${ICON.play}${ICON.play}`, 'Fast'], ['3', `${ICON.play}${ICON.play}${ICON.play}`, 'Fastest']];
     const live = run.phase === 'map';
-    return `<div class="speeds ${live ? '' : 'held'}" role="group" aria-label="Game speed">${speeds.map(([v, ic, label]) => `<button class="speed ${String(G.ui.speed) === v ? 'on' : ''}" data-act="speed" data-arg="${v}" aria-label="${label}" aria-pressed="${String(G.ui.speed) === v}">${ic}</button>`).join('')}</div>`;
+    const sp = G.ui.speed; const pace = sp || G.ui.lastSpeed || 1;
+    return `<div class="speeds compact ${live ? '' : 'held'}" role="group" aria-label="Game speed">
+      <button class="speed play ${sp ? '' : 'on'}" data-act="speed-toggle" aria-label="${sp ? 'Pause' : 'Play'}">${sp ? ICON.pause : ICON.play}</button>
+      <button class="speed pace" data-act="speed-cycle" aria-label="Speed ${pace}×, tap to change">${pace}×</button>
+    </div>`;
   }
 
   // The next thing DNA is working toward, for the progress bar.
@@ -1195,7 +1201,7 @@ window.G = window.G || {};
   function nodeName(name) {
     const long = Math.max(...String(name).split(/\s+/).map((w) => w.length));
     const words = String(name).split(/\s+/).length;
-    return `<span class="${long >= 12 ? 'n-xs' : long >= 10 || words >= 4 ? 'n-s' : ''}">${esc(name)}</span>`;
+    return `<span class="${long >= 10 ? 'n-xs' : long >= 8 || words >= 4 ? 'n-s' : ''}">${esc(name)}</span>`;
   }
   function mindTree(run, page) {
     const known = (id) => (page ? page.known : run.innovations).includes(id);
@@ -1206,7 +1212,8 @@ window.G = window.G || {};
       if (page) return 'locked';
       if (run.fascination === inv.id) return 'current';
       const av = G.innovationAvailable(run, inv);
-      return av.ok ? 'open' : av.blocked ? 'blocked' : 'locked';
+      // Only what your Insight already covers glows; the rest of what's open waits quietly.
+      return av.ok ? (G.innovationCost(run, inv) <= (run.insight || 0) ? 'open' : 'open cant') : av.blocked ? 'blocked' : 'locked';
     };
     // Lay out each band in lines of at most 4 nodes.
     const PER = 4; const LINE = 74; const GAP = 16;
@@ -1263,7 +1270,7 @@ window.G = window.G || {};
     const excl = (sel.excludes || []).map((id) => G.innovationName(G.INNOVATION[id], run)).concat(G.INNOVATIONS.filter((x) => (x.excludes || []).includes(sel.id)).map((x) => G.innovationName(x, run)));
     const cost = G.innovationCost(run, sel);
     let action = '';
-    if (st === 'open') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${cost} Insight)</button>`;
+    if (st === 'open' || st === 'open cant') action = `<button class="btn primary small" data-act="fascinate" data-arg="${sel.id}">Research (${cost} Insight)</button>${st === 'open cant' ? `<span class="note">You have ${run.insight || 0} Insight; it builds up each turn while you research.</span>` : ''}`;
     if (st === 'current') action = `<span class="note">Researching: ${run.insight} / ${cost} Insight</span>`;
     if (st === 'done') action = '<span class="note good-text">Known</span>';
     const memo = sel.group === 'memory' ? G.MEMORIES[sel.when.memory] : '';
@@ -1942,7 +1949,7 @@ window.G = window.G || {};
       const lvl = G.boonLevel(b.id);
       if (G.boonCost(b) == null) return 'done';
       if (!G.boonOpen(b)) return 'locked';
-      return lvl ? 'current' : 'open';
+      return (lvl ? 'current' : 'open') + (G.boonCost(b) > m.genes ? ' cant' : '');
     };
     const X = (b) => 9 + b.col * 16.4;
     const Y = (b) => (tiers > 2 ? 11 + (b.tier - 1) * 26 : 22 + (b.tier - 1) * 56);
@@ -2157,7 +2164,9 @@ window.G = window.G || {};
       case 'close-sheet': G.ui.sheet = null; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'view': G.ui.viewer = arg; parts = ['viewer']; break;
       case 'close-view': G.ui.viewer = null; parts = ['viewer']; break;
-      case 'speed': G.ui.speed = Number(arg); parts = ['top']; break;
+      case 'speed': G.ui.speed = Number(arg); if (G.ui.speed) G.ui.lastSpeed = G.ui.speed; parts = ['top']; break;
+      case 'speed-toggle': G.ui.speed = G.ui.speed ? 0 : (G.ui.lastSpeed || 1); parts = ['top']; break;
+      case 'speed-cycle': G.ui.lastSpeed = G.ui.speed ? (G.ui.speed % 3) + 1 : (G.ui.lastSpeed || 1); G.ui.speed = G.ui.lastSpeed; parts = ['top']; break;
       case 'explain': G.ui.explain = arg && G.ui.explain !== arg ? arg : null; parts = ['top']; break;
       case 'dismiss': if (run) run.notices.splice(Number(arg), 1); parts = ['hud']; break;
       case 'abandon': G.ui.confirmAbandon = true; G.ui.keepScroll = true; parts = ['sheet']; break;
@@ -2187,7 +2196,10 @@ window.G = window.G || {};
   // The editor opens by itself (for free) after becoming a creature and after the big milestones.
   function autoEditor(parts) {
     const run = G.run;
-    if (run && run.freeEdit && run.stage === 'creature' && run.phase === 'map' && G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); }
+    if (!run || !run.freeEdit || run.stage !== 'creature' || run.phase !== 'map') return;
+    // The editor opens by itself once ever, to show it exists; after that it waits in the Look tab.
+    if (G.meta.editorShown) { run.freeEdit = false; return; }
+    if (G.startEditing()) { G.meta.editorShown = true; G.saveMeta(); G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); run.notices.push('You can change how your creature looks at any time from the Look tab. It never changes your stats.'); }
   }
 
   app.addEventListener('input', (e) => {

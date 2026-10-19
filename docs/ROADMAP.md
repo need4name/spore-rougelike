@@ -544,6 +544,17 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 ---
 
+## Expansion: The Creature Wardrobe (after Update 23)
+
+*More ways to make your creature your own, unlocked by playing.*
+
+- **More body looks for every body plan:** new shapes, heads, eyes, mouths, limbs and tails for land, sea, serpent, radial and colony bodies, so no plan feels like the poor relation.
+- **Unlockable looks:** earned from milestones, endings, Codex discoveries and hard runs (Hostility), shown in the editor with how to earn each one.
+- **Patterns, markings and colour sets,** and colour-themed sets tied to biomes.
+- **Saved looks:** keep favourite designs and reuse them on later lineages.
+
+---
+
 ## Scrapped
 
 - **The Space stage** (was Updates 18–19). The game now ends with the Empire stage. Its best ideas moved: the true ending and New Game+ go to Update 19, and past lineages returning as rivals go to Updates 10 and 19.

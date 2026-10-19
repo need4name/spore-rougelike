@@ -50,6 +50,8 @@ window.G = window.G || {};
     m.affinity = saved.affinity || {};
     m.tips = saved.tips || ((saved.stats && saved.stats.runs >= 3) ? ['welcome', 'event', 'draft', 'instinct', 'arch_drifter', 'arch_grazer'] : []);
     m.tipsOff = !!saved.tipsOff;
+    // Players who have already reached the Creature stage have seen the editor.
+    m.editorShown = saved.editorShown != null ? !!saved.editorShown : !!(saved.history || []).some((h) => h.reached && !/^(Single cell|Multicellular)/.test(h.reached));
     m.options = Object.assign(m.options, saved.options || {});
     m.maxHostility = saved.maxHostility || 0;
     ['archetypes', 'origins', 'packs'].forEach((k) => {
@@ -2481,14 +2483,20 @@ window.G = window.G || {};
     return { ok: true };
   };
   // Learn a Lore idea now, paying its cost.
+  // Learning from a tree tab while something else waits on screen (a draft, an event, a scene):
+  // the idea is learned quietly and whatever was waiting stays where it was.
+  function holdScreen(run) { return run.phase === 'map' ? null : { phase: run.phase, draft: run.draft, scene: run.scene }; }
+  function resumeScreen(run, held, name) { if (!held) return; Object.assign(run, held); run.notices.push(`Learned: ${name}.`); save(); }
   G.learnLore = function (id) {
     const run = G.run; const d = G.DISCOVERY[id];
-    if (!run || run.stage !== 'tribe' || run.phase !== 'map' || !d || !G.loreAvailable(run, d).ok) return;
+    if (!run || run.stage !== 'tribe' || run.phase === 'end' || !d || !G.loreAvailable(run, d).ok) return;
     const cost = G.discoveryCost(run, id);
     if (cost > (run.special || 0)) return;
+    const held = holdScreen(run);
     run.special -= cost;
     run.draft = { options: [id], source: 'lore' };
     learnDiscovery(run, id, null);
+    resumeScreen(run, held, G.loreName(d, run));
   };
   // Deeds: what your people did grafts new ideas onto the Lore tree.
   G.addDeed = (run, id) => {
@@ -2864,12 +2872,14 @@ window.G = window.G || {};
   };
   G.learnLaw = function (id) {
     const run = G.run; const t = G.TRADITION[id];
-    if (!run || run.stage !== 'society' || run.phase !== 'map' || !t || !G.lawAvailable(run, t).ok) return;
+    if (!run || run.stage !== 'society' || run.phase === 'end' || !t || !G.lawAvailable(run, t).ok) return;
     const cost = G.lawCost(run, id);
     if (cost > (run.special || 0)) return;
+    const held = holdScreen(run);
     run.special -= cost;
     run.draft = { options: [id], source: 'law' };
     learnTradition(run, id);
+    resumeScreen(run, held, t.name);
   };
   // Deeds of a Society: they graft Culture and Neighbours ideas onto the Law tree.
   G.addSocDeed = (run, id) => {
@@ -2951,12 +2961,14 @@ window.G = window.G || {};
   }
   G.learnReason = function (id) {
     const run = G.run; const x = G.REASON_ID[id];
-    if (!run || run.stage !== 'renaissance' || run.phase !== 'map' || !x || !G.reasonAvailable(run, x).ok) return;
+    if (!run || run.stage !== 'renaissance' || run.phase === 'end' || !x || !G.reasonAvailable(run, x).ok) return;
     const cost = G.reasonCost(run, id);
     if (cost > (run.special || 0)) return;
+    const held = holdScreen(run);
     run.special -= cost;
     run.draft = { options: [id], source: 'reason' };
     learnReason(run, id);
+    resumeScreen(run, held, G.loreName(x, run));
   };
   function reasonOptions(run) {
     const known = run.reason || []; const n = known.length;
