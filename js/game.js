@@ -550,9 +550,9 @@ window.G = window.G || {};
     const pref = G.prefFood(run);
     const parts = [{ label: 'Scraps', v: 1, kind: pref }];
     // More members means more mouths, but also more gatherers.
-    const crew = Math.floor(G.heads(run) / 4);
+    const crew = Math.floor(G.heads(run) / (g === 'grazer' ? 3 : 4));
     // Foraging brings plants and hunting brings meat; a carnivore forages carrion and a herbivore's raids bring plants.
-    if (run.instinct === 'forage') parts.push({ label: diet === 'carn' ? 'Scavenging' : 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : 0), kind: diet === 'carn' ? 'meat' : 'plants' });
+    if (run.instinct === 'forage') parts.push({ label: diet === 'carn' ? 'Scavenging' : 'Foraging', v: 2 + crew + G.mod(run, 'forageBonus') + (diet === 'herb' ? 1 : diet === 'carn' ? -1 : diet === 'omni' ? 1 : 0), kind: diet === 'carn' ? 'meat' : 'plants' });
     if (run.instinct === 'hunt') parts.push({ label: g === 'predator' ? 'Hunting (on a kill)' : 'Hunting', v: 2 + crew + G.mod(run, 'huntBonus') + (diet === 'carn' ? 1 : diet === 'herb' ? -1 : 0) + (g === 'predator' ? 1 : 0), hunt: true, kind: diet === 'herb' ? 'plants' : 'meat' });
     if (run.bonusFood && run.turn < run.bonusFood.until) parts.push({ label: 'Hidden feeding ground', v: run.bonusFood.v, kind: pref });
     if (G.hostOf(run)) parts.push({ label: 'Feeding on your host', v: run.stage !== 'cell' ? 3 : 2, kind: pref });
@@ -560,7 +560,7 @@ window.G = window.G || {};
     if (g === 'symbiote' && run.partner && (!partner || partner.pop < partner.cap * 0.3)) parts.push({ label: 'Your partner is struggling', v: -2, kind: pref });
     if (run.instinct === 'explore' || run.instinct === 'hide') parts.push({ label: G.INSTINCT[run.instinct].name, v: -1, kind: pref });
     // A society's settlements farm, fish and herd.
-    if (G.civ(run)) parts.push({ label: `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`, v: (run.settlements || []).length, kind: pref });
+    if (G.civ(run)) parts.push({ label: `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`, v: (run.settlements || []).reduce((t, x) => t + x.size, 0), kind: pref });
     const fpt = G.mod(run, 'foodPerTurn');
     const gathered = Math.max(0, parts.reduce((s, p) => s + p.v, 0));
     if (fpt) parts.push({ label: 'Helpers and allies', v: fpt, kind: pref });
@@ -2008,7 +2008,7 @@ window.G = window.G || {};
     // Gathered food goes into its own store; then everyone eats, meat first.
     const meatIn = Math.min(gathered, inc.meat); const plantsIn = gathered - meatIn;
     G.addFood(run, meatIn, 'meat'); G.addFood(run, plantsIn, 'plants');
-    const hungry = eatFood(run, up);
+    const hungry = eatFood(run, up); run.lastHungry = hungry;
     lines.push({ t: `Food +${gathered} gathered (${meatIn ? `${meatIn} meat` : ''}${meatIn && plantsIn ? ', ' : ''}${plantsIn ? `${plantsIn} plants` : ''}${!gathered ? 'nothing' : ''}), ${up} eaten` });
     gimmickTurn(run, lines);
     activityTurn(run, lines);
@@ -2029,7 +2029,7 @@ window.G = window.G || {};
       let born = 0;
       // Each brood costs spare Food and adds about ten young (a few more or fewer).
       // A society raises young in every settlement.
-      const birthCap = G.civ(run) ? run.settlements.length : tribe || run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run) / G.POP_SCALE) * (run.traits.includes('young_eggs') ? 2 : 1);
+      const birthCap = run.pop > G.maxPop(run) ? 1 : G.civ(run) ? run.settlements.length : tribe || run.traits.includes('young_live') ? 1 : Math.ceil(G.popScale(run) / G.POP_SCALE) * (run.traits.includes('young_eggs') ? 2 : 1);
       let broods = 0;
       // Past your soft cap, every brood costs more Food: up to twice as much at the hard cap.
       const broodCost = () => Math.ceil(cost * (1 + 2 * G.crowding(run)));
@@ -2038,7 +2038,7 @@ window.G = window.G || {};
       if (born) lines.push({ t: `+${born} ${tribe ? G.popWord(run) : 'Population'} (used ${spent} spare Food)`, good: true });
       // Crowding sickness: a tenth of everyone past the soft cap, every turn.
       const over = run.pop - G.maxPop(run);
-      if (over > 0) { const sick = Math.max(1, Math.round(over * 0.1)); run.pop -= sick; lines.push({ t: `Overcrowding: −${sick} ${tribe ? G.popWord(run) : 'Population'} (you are past your comfortable size of ${G.maxPop(run)})`, bad: true }); }
+      if (over > 0) { const sick = Math.max(1, Math.round(over * 0.2)); run.pop -= sick; lines.push({ t: `Overcrowding: −${sick} ${tribe ? G.popWord(run) : 'Population'} (you are past your comfortable size of ${G.maxPop(run)})`, bad: true }); }
     }
     // Predators and hostile species pick off your weakest. Toughness and Speed keep them at bay,
     // and the longer you linger in a stage, the hungrier the world gets.
@@ -2071,7 +2071,7 @@ window.G = window.G || {};
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.civ(run) ? G.socKind(run).settlement : G.kind(run).camp}: −${damage(run, n)} ${G.popWord(run)}` : `The ${s.name} hunted you: −${damage(run, n)} ${G.popWord(run)}`, bad: true });
     });
     const regrow = G.mod(run, 'popPerTurn');
-    if (regrow > 0 && run.pop > 0) { const g = grow(run, regrow); if (g) lines.push({ t: `+${g} ${G.popWord(run)} regrown`, good: true }); }
+    if (regrow > 0 && run.pop > 0 && run.pop < G.maxPop(run) && !(run.lastHungry > 0)) { const g = grow(run, regrow / 2); if (g) lines.push({ t: `+${g} ${G.popWord(run)} regrown`, good: true }); }
     const cap = G.foodCap(run);
     // Meat rots; and there is only so much room to store food.
     G.syncFood(run);
@@ -2212,7 +2212,7 @@ window.G = window.G || {};
   G.SPECIAL_SOFT = 20; G.SPECIAL_HARD = 30;
   G.SPECIAL_CAP = G.SPECIAL_HARD;
   // A Society's resource comes from its settlements and is used up by their number, not by every member (Update 19).
-  G.specialUpkeep = (run) => (G.civ(run) ? Math.floor((run.settlements || []).length / 4) : Math.floor(G.heads(run) / 20));
+  G.specialUpkeep = (run) => (G.civ(run) ? Math.floor((run.settlements || []).length / 4) : Math.floor(Math.max(0, G.heads(run) - 30) / 20));
   // In the Renaissance, Learning past what the Age of Sail needs pays for scholars: +1 resource per 25 surplus, at most 4.
   G.scholarGain = (run) => (run.stage === 'renaissance' && G.goals(run).evolveAt ? clamp(Math.floor((run.dna - G.goals(run).evolveAt) / 25), 0, 4) : 0);
   G.specialGain = (run) => Math.max(0, 2 + G.mod(run, 'specialPerTurn') + (G.civ(run) ? Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) : 0));
@@ -2388,7 +2388,7 @@ window.G = window.G || {};
     // The Swarm: brood hatches into new members.
     // (Update 18: it waits until there is plenty, and the colony saves its brood while the Founding is within reach.)
     const saving = run.stage === 'tribe' && G.DISCOVERY.founding_gate && G.loreAvailable(run, G.DISCOVERY.founding_gate).ok;
-    if (run.path === 'swarm' && !saving && (run.special || 0) >= 14 && run.pop < G.maxPop(run)) { run.special -= 6; const n = Math.min(G.hardPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
+    if (run.path === 'swarm' && !saving && (run.special || 0) >= G.SPECIAL_SOFT && run.pop < G.maxPop(run) * 0.8) { run.special -= 5; const n = Math.min(G.hardPop(run) - run.pop, G.POP_SCALE); run.pop += n; lines.push({ t: `Brood hatched: +${n} members`, good: true }); }
     // Gardeners: the bigger the garden, the likelier Blight.
     if (run.path === 'garden' && (run.special || 0) >= 8 && run.turn >= (run.blightSafeUntil || 0) && rand() < 0.03 + 0.01 * (run.special - 8)) {
       const lost = Math.ceil(run.special / 2); run.special -= lost; G.spendFood(run, 3);
@@ -3499,7 +3499,7 @@ window.G = window.G || {};
       if (k === 'discoveryCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)}% discovery cost`;
       if (k === 'growthCost') return `${v < 0 ? '−' : '+'}${Math.abs(v)} Food needed to grow`;
       // Max Population is stored in 'heads' but shown as individuals, scaled for your size (and halved for Many Minds).
-      if (k === 'popPerTurn') { const r = G.run; const n = r ? Math.ceil(Math.abs(v) * G.popScale(r)) : Math.abs(v) * G.POP_SCALE; return `${v > 0 ? '+' : '−'}${n} ${G.popWord(r || {})} regrown per turn`; }
+      if (k === 'popPerTurn') { const r = G.run; const n = r ? Math.ceil(Math.abs(v) / 2 * G.popScale(r)) : Math.abs(v) * G.POP_SCALE / 2; return `${v > 0 ? '+' : '−'}${n} ${G.popWord(r || {})} regrown per turn (while below your comfortable size)`; }
       if (k === 'foodCap' && G.run && G.gimmick(G.run) === 'predator') return `${v > 0 ? '+' : '−'}${Math.max(1, Math.floor(Math.abs(v) / 2))} ${G.MOD_LABELS[k]} (halved for a Predator)`;
       if (k === 'maxPop' && G.run && G.gimmick(G.run) === 'parasite') return `${v > 0 ? '+' : '−'}${Math.abs(v) * G.POP_SCALE} ${G.MOD_LABELS[k]} (never more than your host allows)`;
       if (k === 'maxPop') { const r = G.run; const mult = r ? G.SIZES[G.sizeOf(r)].popMult * (G.people(r) && r.path === 'many' ? 0.5 : 1) * (G.gimmick(r) === 'grazer' ? 1.6 : 1) : 1; const n = Math.max(1, Math.round(Math.abs(v) * mult * G.POP_SCALE)); return `${v > 0 ? '+' : '−'}${n} ${G.MOD_LABELS[k]}`; }
@@ -3508,4 +3508,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '20.2';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '20.3';

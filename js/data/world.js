@@ -107,9 +107,9 @@ G.TRAITS = {
 // Body size. It scales max Population, how many members share one Food,
 // and how many members a blow kills.
 G.SIZES = {
-  small: { name: 'Small', popMult: 1.5, eatDiv: 3, damageMult: 1.5 },
+  small: { name: 'Small', popMult: 1.5, eatDiv: 3, damageMult: 1.3 },
   mid: { name: 'Mid-sized', popMult: 1, eatDiv: 2, damageMult: 1 },
-  giant: { name: 'Giant', popMult: 0.65, eatDiv: 1.5, damageMult: 1 },
+  giant: { name: 'Giant', popMult: 0.65, eatDiv: 1.75, damageMult: 1 },
 };
 
 // ======================= THE MIND =======================
@@ -861,17 +861,18 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '20.2';
+G.VERSION = '20.3';
 G.WHATS_NEW = {
-  title: 'Patch 20.2: A calmer screen',
+  title: 'Patch 20.3: Things do what they say',
   items: [
-    'A smaller top bar and more room for the map. The leader, season and settlement chips only appear when they need your attention, and the box listing everything that happened each turn is gone (the Chronicle still keeps the story).',
-    'Odds are words now: "Likely", "Unlikely", "Very likely". When every choice is certain, nothing is labelled.',
-    'Options on the title screen: turn on Detailed numbers for exact odds, your stat against theirs, and what a mutation would change in each slot. Choose a colour theme (Tide, Ember, Kelp or Dusk), and turn tips on or off.',
-    'Trees are tidier: lines run behind the nodes, long names shrink to fit, ideas that open from "any of these" draw one line instead of a web, and the description stays pinned at the bottom of the screen while you tap around the tree. Ideas you could never reach in this lineage are hidden.',
-    'A shorter New lineage screen: only what you own is listed, the chosen archetype shows its rule, Stage Select folds away, and the Begin button stays put.',
-    'Upgrades fixed: Hardy Ancestors and Ancestral Pantry work at once when bought mid-run (and Hardy now counts in a civilisation), Rich Genes is never rounded away, 10% discounts always show, armour keeps helping past the minimum, and several caps no longer swallow upgrades. Founding Stones and Deep Memory now say what they really do. Upgrades that set up the start of a stage say so if that stage has already begun.',
-    'An easier start: until a lineage of yours has reached the Creature stage, the Cell stage is gentler (a little gentler again until the third time).',
+    'Fixed a softlock: learning a Lore, Law or Reason idea from its tab now works even while a draft, event or scene is waiting.',
+    'Every option was checked against what it does. Bonuses "while Exploring" now count in every stage, Food from helpers is never cancelled by a bad season, and max-population and regrowth numbers now show what you really get for your body.',
+    'Tribes have more to learn with: their resource only starts being used up past 30 heads, and Swarm Brood only hatches from a full store, so it never competes with Lore.',
+    'Population and food rebalanced from a study of 1,728 simulated runs: Grazers, Omnivores and Giants no longer starve over time, small bodies lose fewer to each blow, free regrowth stops at your comfortable size, and crowding bites harder.',
+    'The Creature Editor opens by itself only the first time; after that it waits in the Look tab. The colony body\'s Width and Height now stretch it separately.',
+    'Ideas that see more of the world now pull the map back in the Creature stage, so neighbouring biomes show at the edges.',
+    'A smaller top bar: one play/pause button and one speed button, and no "/max" beside your population (tap it for the details).',
+    'Tree nodes only glow when you can afford them, and tapping a node keeps your place in the list.',
   ],
 };
 
@@ -1625,4 +1626,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.2';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.3';

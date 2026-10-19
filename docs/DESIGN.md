@@ -79,6 +79,16 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Difficulty.** Society events are a little harder than Tribe ones (+2 base), plus `G.SOC_HARSH` (3). Test bots with fully upgraded lineages win about 65–80% of Societies; weak, unupgraded ones mostly fall to raids and hunters early. There is no Society upgrade tree yet (Heritage comes in Update 17).
 - **Society words** for events: {people}, {settlement}, {settlements}, {capital}, {ruler}, {myth}, {plotter}, and {cand0}–{cand3}.
 
+## Patch 20.3: Things do what they say
+
+- **Learning from tabs any time:** `G.learnLore`/`learnLaw`/`learnReason` work in any phase but `end`; `holdScreen`/`resumeScreen` keep a waiting draft, event or scene and add a "Learned:" notice. Modal and sheet re-renders keep their scroll when `G.ui.keepScroll`.
+- **Editor:** opens by itself once ever (`meta.editorShown`, derived from history for old saves). Colony Width (`bodyLen`) and Height (`bodyHeight`) scale separately (`sx`, `sy` in `drawColonial`).
+- **Map zoom:** `G.mapZoom(run)` = 1 / 0.86 / 0.74 by `G.vision` in the Creature stage; `drawNeighbourStrips` paints the two neighbouring biomes; the world is drawn scaled about (w/2, 0.55h); taps and labels map through `mapView`.
+- **Top bar:** population without "/max"; `speedControls` = play/pause (`speed-toggle`) + pace (`speed-cycle`, `G.ui.lastSpeed`) beside Instinct.
+- **Nodes:** Mind ideas glow only when `innovationCost ≤ insight`; shop nodes only when affordable (`cant` otherwise).
+- **Effects audit:** exploreBonus counts in Influence/Learning and Ideas (`ceil(bonus/2)`); dnaPerTurn feeds Ideas and Influence; ideasPerTurn carries into Influence at `trunc(/2)`; `G.income` floors gathering at 0 before adding foodPerTurn; cold blood in Tundra/Polar counted once; describeMods shows regrowth in individuals, Grazer ×1.6 and Parasite/Predator caps; hint texts fixed.
+- **Population and food** (from a 1,728-run study, report in the user's docs): tribe resource upkeep `floor(max(0, heads − 30) / 20)`; Swarm hatching at `SPECIAL_SOFT` and below 80% of cap, cost 5; free regrowth at half strength, only below the cap and not after a hungry turn (`run.lastHungry`); crowding sickness 20% and one brood a turn while crowded; Grazer crew heads/3; Omnivore forage +1; Giant eatDiv 1.75; Small damageMult 1.3; settlements give Food equal to their size. Results: beginners reach the Creature stage 70/74/94% on runs 1–3, Society 57/68 without Heritage, Renaissance 32/34 without Patronage.
+
 ## Patch 20.2: A calmer screen
 
 - **Top bar:** shorter title (stage name, turn, biome), diet badge, icon-only Disposition; leader chip only when there is no leader or they have 3 or fewer years left; council chip only when restless or plotting; no season or settlement chips; smaller portrait and buttons (`#app[data-screen="game"]` overrides at the end of style.css). The per-turn ledger over the map is gone; one notice shows at a time.
