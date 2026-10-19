@@ -214,11 +214,11 @@ window.G = window.G || {};
     return `
       <details class="setup-group stage-select">
         <summary><h2>Stage Select <span class="count">${list.length}</span></h2></summary>
-        <p class="note">Start in the Tribe, Society or Renaissance stage, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
+        <p class="note">Start in the Tribe, Society, Renaissance or Colonial Age, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
         <div class="choices">${list.map((x) => { const p = G.PATH[x.key.split('|')[0]]; return `
           <button class="choice" data-act="stage-start" data-arg="${esc(x.key)}">
             <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong></span>
-            <span class="choice-desc">${x.stage === 'renaissance' ? '📚 Renaissance · ' : x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
+            <span class="choice-desc">${x.stage === 'colonial' ? '👑 Colonial Age · ' : x.stage === 'renaissance' ? '📚 Renaissance · ' : x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
           </button>`; }).join('')}</div>
       </details>`;
   }
@@ -279,7 +279,7 @@ window.G = window.G || {};
             ${run.activity ? `<span ${tappable('activity')} class="res gimmick" title="Your current Activity">${esc(G.ACTIVITY[run.activity.id].name)}${run.activity.target ? `: ${esc(run.activity.target)}` : ''}${run.activity.id === 'war' ? ` ${run.activity.score > 0 ? '+' : ''}${run.activity.score}` : ''}</span>` : ''}
           </div>
           <div class="evo" ${gateNow ? `data-act="sheet" data-arg="${gateNow.tab}" role="button" tabindex="0"` : tappable('progress')} title="${G.dnaWord(run)}">
-            <span class="evo-label">${run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : gateNow ? ` · <span class="gate-cta">${esc(gateNow.verb)} ${esc(gateNow.name)} ›</span>` : ''}</span>
+            <span class="evo-label">${run.stage === 'colonial' ? '👑' : run.stage === 'renaissance' ? '📚' : run.stage === 'society' ? '🏛️' : run.stage === 'tribe' ? '💡' : ICON.dna}<b>${run.dna}</b>${goal ? ` / ${goal.at} · ${esc(goal.label)}` : gateNow ? ` · <span class="gate-cta">${esc(gateNow.verb)} ${esc(gateNow.name)} ›</span>` : ''}</span>
             <span class="evo-bar"><span class="fill" style="width:${pct}%"></span></span>
           </div>
         </div>
@@ -334,7 +334,7 @@ window.G = window.G || {};
       title = w;
       const per = G.dnaPerTurn(run);
       const srcKey = G.civ(run) ? 'influencePerTurn' : run.stage === 'tribe' ? 'ideasPerTurn' : 'dnaPerTurn';
-      body = `<p>${run.stage === 'renaissance' ? 'Learning comes from your cities, your scholars and your patrons, and brings new inventions for your Reason tree.' : run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
+      body = `<p>${run.stage === 'colonial' ? 'Prestige comes from your cities, your colonies and your Crown, and brings new technologies for your Crown tree.' : run.stage === 'renaissance' ? 'Learning comes from your cities, your scholars and your patrons, and brings new inventions for your Reason tree.' : run.stage === 'society' ? 'Influence comes from your settlements and brings new Traditions.' : run.stage === 'tribe' ? 'Ideas come from your people and bring new Discoveries.' : 'DNA comes with time and from events, and brings new mutations.'} You have <b>${run.dna}</b>${goal ? `; the next ${esc(goal.label)} comes at <b>${goal.at}</b>` : ''}.</p>
         <h4>Each turn</h4>
         ${run.stage === 'tribe' ? xrow('Base', 1) + (Math.floor(G.stat(run, 'cun') / 10) ? xrow('Cunning', Math.floor(G.stat(run, 'cun') / 10)) : '') + (run.instinct === 'explore' ? xrow('Exploring', 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2)) : '') : G.civ(run) && run.instinct === 'explore' ? xrow('Exploring', 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2)) : ''}
         ${xsrc(run, srcKey)}
@@ -377,8 +377,9 @@ window.G = window.G || {};
       body = `<p>Your Disposition is the late-game twin of your diet: at the start your mouth decided what you could eat; now the leaning of everything your lineage has learned decides which futures are open.</p>
         <h4>Your leaning</h4>${['peace', 'guard', 'war'].map((k2) => xrow(`${G.LEAN_ICONS[k2]} ${G.LEAN_NAMES[k2]}`, String(l[k2]))).join('')}
         ${run.stage === 'society' ? `<h4>The Union</h4>${xrow('By force', d === 'peace' ? 'closed' : 'open')}${xrow('By trade', d === 'war' ? 'closed' : 'open')}${xrow('By faith', 'open')}` : ''}
+        ${run.stage === 'colonial' ? `<h4>The Imperial Crown</h4>${xrow('One Crown', 'always open')}${xrow('A Commonwealth', d === 'war' ? 'closed' : 'open')}${xrow('An Empire of Iron', d === 'peace' ? 'closed' : 'open')}` : ''}
         ${run.stage === 'renaissance' ? `<h4>The Age of Sail</h4>${xrow('Discovery', 'always open')}${xrow('Trade', d === 'war' ? 'closed' : 'open')}${xrow('Conquest', d === 'peace' ? 'closed' : 'open')}` : ''}
-        <p class="note">${run.disposition ? (run.stage === 'renaissance' ? 'Fixed when your ships sailed.' : 'Fixed at the Union.') : run.stage === 'renaissance' ? `It was ${G.LEAN_NAMES[run.unionDisposition || d]} at the Union. In the new age it can shift again as you take up Reason ideas, until the Age of Sail fixes it.` : 'Territorial peoples keep every road open, like an omnivore. Your Disposition can still change as you adopt new ideas; it is fixed at the Union.'}</p>`;
+        <p class="note">${run.disposition ? (run.stage === 'colonial' ? 'Fixed when the Imperial Crown was claimed.' : run.stage === 'renaissance' ? 'Fixed when your ships sailed.' : 'Fixed at the Union.') : run.stage === 'renaissance' ? `It was ${G.LEAN_NAMES[run.unionDisposition || d]} at the Union. In the new age it can shift again as you take up Reason ideas, until the Age of Sail fixes it.` : 'Territorial peoples keep every road open, like an omnivore. Your Disposition can still change as you adopt new ideas; it is fixed at the Union.'}</p>`;
     } else if (key === 'diet') {
       const d = G.diet(run); title = G.DIET_NAMES[d];
       const g = G.gimmick(run);
@@ -426,7 +427,10 @@ window.G = window.G || {};
     const sk = G.socKind(run);
     const restless = (run.council || []).filter((c) => c.loyalty < -10).length;
     const co = `<span ${tappable('council')} class="res gimmick ${run.plot != null || restless ? 'warn' : ''}" title="${esc(run.plot != null ? 'Someone on your council is plotting.' : restless ? 'Some of your council are restless.' : 'Your council is loyal.')}">⚖️ ${run.plot != null ? 'Plot!' : restless ? `${restless} restless` : 'Loyal'}</span>`;
-    return sp + ldShow + (run.plot != null || restless ? co : '');
+    const cols = run.stage === 'colonial' ? run.colonies || [] : [];
+    const hot = cols.some((c) => c.unrest >= 70);
+    const colChip = cols.length ? `<span data-act="sheet" data-arg="society" role="button" tabindex="0" class="res gimmick ${hot ? 'warn' : ''}" title="${esc(hot ? 'A colony is close to rebellion.' : 'Your colonies across the sea.')}">⛵ ${cols.length}${hot ? ' restless' : ''}</span>` : '';
+    return sp + ldShow + (run.plot != null || restless ? co : '') + colChip;
   }
 
   // The archetype's gimmick, at a glance.
@@ -458,10 +462,10 @@ window.G = window.G || {};
   function nextGoal(run) {
     const st = G.goals(run);
     const goals = [];
-    const tribe = run.stage === 'tribe'; const soc = run.stage === 'society'; const ren = run.stage === 'renaissance';
-    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: ren ? 'invention' : soc ? 'tradition' : tribe ? 'discovery' : 'mutation' }));
+    const tribe = run.stage === 'tribe'; const soc = run.stage === 'society'; const ren = run.stage === 'renaissance'; const col = run.stage === 'colonial';
+    st.drafts.slice(run.draftsTaken).forEach((d) => goals.push({ at: d, label: col ? 'technology' : ren ? 'invention' : soc ? 'tradition' : tribe ? 'discovery' : 'mutation' }));
     st.milestones.map((m) => ({ at: m.at, id: m.event.replace('{path}', run.path) })).filter((m) => !run.milestonesDone.includes(m.id) && G.EVENT[m.id]).forEach((m) => goals.push({ at: m.at, label: G.EVENT[m.id].title }));
-    if (st.evolveAt) goals.push({ at: st.evolveAt, label: ren ? 'the Age of Sail' : soc ? 'the Union' : tribe ? 'the Founding' : 'the shore' });
+    if (st.evolveAt) goals.push({ at: st.evolveAt, label: col ? 'the Imperial Crown' : ren ? 'the Age of Sail' : soc ? 'the Union' : tribe ? 'the Founding' : 'the shore' });
     goals.sort((a, b) => a.at - b.at);
     return goals.find((g) => g.at > run.dna) || null;
   }
@@ -551,9 +555,10 @@ window.G = window.G || {};
     return `
       <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
       <article class="card outcome">
-        <p class="eyebrow">${run.scene.reason ? 'Reason' : run.scene.tradition ? 'Tradition' : run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
+        <p class="eyebrow">${run.scene.crown ? 'The Crown' : run.scene.reason ? 'Reason' : run.scene.tradition ? 'Tradition' : run.scene.discovery ? 'Discovery' : run.scene.evolved ? 'Evolution' : 'Mutation'}</p>
         ${run.scene.tradition ? `<div class="callout"><strong>${esc(G.TRADITION[run.scene.tradition].name)}</strong><span>${esc(G.describeMods(G.TRADITION[run.scene.tradition].mods))}. ${esc(G.TRADITION[run.scene.tradition].desc)}</span></div>` : ''}
         <h2>${esc(run.scene.label)}</h2>
+        ${run.scene.crown ? `<div class="callout"><strong>${esc(G.loreName(G.CROWN_ID[run.scene.crown], run))}</strong><span>${esc(G.describeMods(G.CROWN_ID[run.scene.crown].mods))}. ${esc(G.CROWN_ID[run.scene.crown].desc)}</span></div>` : ''}
         ${run.scene.reason ? `<div class="callout"><strong>${esc(G.loreName(G.REASON_ID[run.scene.reason], run))}</strong><span>${esc(G.describeMods(G.REASON_ID[run.scene.reason].mods))}. ${esc(G.REASON_ID[run.scene.reason].desc)}</span></div>` : ''}
         ${run.scene.discovery ? `<div class="callout"><strong>${esc(G.DISCOVERY[run.scene.discovery].name)}</strong><span>${esc(G.describeMods(G.DISCOVERY[run.scene.discovery].mods))}. ${esc(G.DISCOVERY[run.scene.discovery].desc)}</span></div>` : ''}
         ${run.scene.evolved ? `<div class="callout"><strong>${picon(run.scene.evolved)}${esc(G.PART[run.scene.evolved].name)}</strong><span>${esc(G.describeMods(G.PART[run.scene.evolved].mods))}. ${esc(G.PART[run.scene.evolved].desc)}</span></div>` : ''}
@@ -673,7 +678,7 @@ window.G = window.G || {};
   function leaderCard(run, l, unit) {
     const bg = l.bg && G.LEADER_BACKGROUND[l.bg]; const amb = l.amb && G.AMBITIONS[l.amb]; const pr = G.ambitionProgress(run, l);
     const kind = G.kind(run); const sub = (x) => x.replace(/\{resource\}/g, kind ? kind.resource : 'resource');
-    return `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${bg ? `${esc(sub(bg.text[0].toUpperCase() + bg.text.slice(1)))} (${esc(G.describeMods(bg.mods))}). ` : ''}${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. Leading for ${run.turn - l.since} ${unit}; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.</span>
+    return `<div class="callout"><strong>👑 ${esc(G.leaderTitle(l))}</strong><span>${bg ? `${esc(sub(bg.text[0].toUpperCase() + bg.text.slice(1)))} (${esc(G.describeMods(bg.mods))}). ` : ''}${esc(l.traits.map((t) => `${G.LEADER_TRAITS[t].name}: ${G.describeMods(G.LEADER_TRAITS[t].mods)}`).join(' · '))}. ${l.heir ? 'Next in line for the throne.' : `Leading for ${run.turn - l.since} ${unit}; old age comes in about ${Math.max(0, l.life - (run.turn - l.since))}.`}</span>
       ${amb ? `<span><b>${esc(amb.name)}:</b> wants to ${esc(sub(amb.want))}. ${l.done ? '✅ Achieved: their legacy is yours for good.' : pr ? `Progress: ${Math.min(pr.now, pr.goal)} of ${pr.goal}.` : ''} Legacy: ${esc(G.describeMods(amb.legacy))}.</span>` : ''}</div>`;
   }
   function lineOfLeaders(run) {
@@ -706,11 +711,11 @@ window.G = window.G || {};
     { id: 'lore', name: 'Lore', stage: 'Tribe' },
     { id: 'law', name: 'Law', stage: 'Society' },
     { id: 'reason', name: 'Reason', stage: 'Renaissance' },
-    { id: 'crown', name: 'Crown', stage: 'Colonial Age', later: 'Update 21' },
+    { id: 'crown', name: 'Crown', stage: 'Colonial Age' },
     { id: 'legacy', name: 'Legacy', stage: 'the end', later: 'Update 22' },
   ];
-  const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society', 'renaissance'];
-  const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society', reason: 'renaissance' };
+  const STAGE_ORDER = ['cell', 'creature', 'tribe', 'society', 'renaissance', 'colonial'];
+  const PAGE_STAGE = { origin: 'cell', mind: 'creature', lore: 'tribe', law: 'society', reason: 'renaissance', crown: 'colonial' };
   function bookTab(run) {
     const at = STAGE_ORDER.indexOf(run.stage);
     const reached = (pg) => PAGE_STAGE[pg.id] && STAGE_ORDER.indexOf(PAGE_STAGE[pg.id]) <= at;
@@ -749,6 +754,12 @@ window.G = window.G || {};
     if (id === 'law') {
       const done = (run.traditions || []).includes('union_gate');
       return `<h3>Law ${done ? '' : '(growing)'}</h3><p class="note">${done ? 'Frozen as it stood at your Union.' : 'Adopt it from the Law tab.'}${run.faith ? ` Faith: ${esc(run.faith.name)}.` : ''} Disposition: ${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}.</p>${lawTree(run, done && b.law ? b.law : null)}`;
+    }
+    if (id === 'crown') {
+      const done = (run.crown || []).includes('crown_gate');
+      const rulers = (b.crown && b.crown.rulers) || (run.rulers || []).slice(-8);
+      return `<h3>Crown ${done ? '' : '(growing)'}</h3><p class="note">${done ? 'Frozen as it stood when the Imperial Crown was claimed.' : 'Take it up from the Crown tab.'} Disposition: ${G.LEAN_ICONS[G.disposition(run)]} ${esc(G.LEAN_NAMES[G.disposition(run)])}.</p>${crownTree(run, done && b.crown ? b.crown : null)}
+        ${rulers.length ? `<h4>The dynasty</h4><p>${esc(rulers.map((x) => x.title || x.name).join(' → '))}</p>` : ''}`;
     }
     if (id === 'reason') {
       const done = (run.reason || []).includes('sail_gate');
@@ -886,6 +897,7 @@ window.G = window.G || {};
       <h3>${esc(G.ruler(run))}</h3>
       ${l ? leaderCard(run, l, 'generations') : '<p class="empty">No ruler. The council will choose one soon.</p>'}
       ${lineOfLeaders(run)}
+      ${colonialSection(run)}
       <h3>${esc(sk.settlement[0].toUpperCase() + sk.settlement.slice(1))}s (${run.settlements.length} of 8)</h3>
       <p class="note">Each size lets your people grow bigger. Every 6 sizes in all earn +1 Influence a turn. Found new ones and build them up from Activities.</p>
       <div class="settlements">${run.settlements.map((x, i) => `<div class="settlement"><b>${i === 0 ? '⭐ ' : ''}${esc(x.name)}</b><span>${'■'.repeat(x.size)}${'□'.repeat(4 - x.size)}</span></div>`).join('')}</div>
@@ -1077,6 +1089,131 @@ window.G = window.G || {};
     if (!G.patronageOpen()) return '<p class="note">Opens once one of your lineages reaches the Renaissance. Its upgrades only work in the Renaissance.</p>';
     return `<p class="note">Upgrades for the Renaissance: reach deeper into the Reason tree and set sail sooner.</p>${skillTree(G.PATRONAGE, G.ui.patSel, 'pat-sel', '')}`;
   }
+  // ---------- The Crown tree (Update 21) ----------
+  const CROWN_BANDS = [['inherit', 'Inheritance'], ['people', 'Your people'], ['tech', 'Technology'], ['law', 'Crown laws'], ['dynasty', 'Dynasty'], ['gate', 'The Crown'], ['beyond', 'Beyond']];
+  function crownTree(run, page) {
+    const known = (id) => (page ? page.known : run.crown || []).includes(id);
+    const visible = page ? page.seen.map((id) => G.CROWN_ID[id]).filter(Boolean) : G.CROWN.filter((x) => G.crownVisible(run, x));
+    const have = run.special || 0; const k = G.kind(run) || { icon: '' };
+    const live = !page && run.stage === 'colonial' && !(run.crown || []).includes('crown_gate');
+    const state = (x) => {
+      if (known(x.id)) return 'done';
+      if (!live) return 'locked';
+      const av = G.crownAvailable(run, x);
+      return av.ok ? (G.crownCost(run, x.id) <= have ? 'open' : 'cant') : av.blocked ? 'blocked' : 'locked';
+    };
+    const sel = (G.ui.crownSel && visible.find((x) => x.id === G.ui.crownSel)) || (live && visible.find((x) => state(x) === 'open')) || visible.find((x) => x.band === 'gate') || visible[0];
+    const { pos, labels, H } = treeLayout(visible, CROWN_BANDS, (x) => x.band);
+    const icon = { done: '✓', open: '', cant: k.icon, locked: '🔒', blocked: '✕' };
+    const lean = page ? page.leaning : G.leaning(run);
+    const edges = [];
+    visible.forEach((x) => { if (x.excl && pos[x.id] && pos[x.excl] && x.id < x.excl) { const a = pos[x.id]; const b = pos[x.excl]; edges.push(`<path class="edge fork" d="M${a.x} ${a.y / H * 100} L ${b.x} ${b.y / H * 100}" vector-effect="non-scaling-stroke"/>`); } });
+    return `
+      <div class="mind-head">${leaningBar(lean)}</div>
+      <div class="skill-tree mind-tree law-tree" style="height:${H}px">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>
+        ${labels.map((l) => `<span class="tier-label" style="top:${l.y - 30}px">${l.label}</span>`).join('')}
+        ${visible.map((x) => { const st = state(x); const nm = G.loreName(x, run); return `<button class="node ${st === 'cant' ? 'open cant' : st} ${sel && sel.id === x.id ? 'sel' : ''} ${x.band === 'gate' ? 'apex' : ''} ${x.band === 'beyond' ? 'beyond' : ''} ${x.lean ? `lean-${x.lean}` : ''}" style="left:${pos[x.id].x}%;top:${pos[x.id].y}px" data-act="crown-sel" data-arg="${x.id}" aria-pressed="${sel && sel.id === x.id}" aria-label="${esc(nm)}">${nodeName(nm)}${icon[st] ? `<i aria-hidden="true">${icon[st]}</i>` : ''}${x.rule ? '<b class="rule-dot" aria-hidden="true">★</b>' : ''}</button>`; }).join('')}
+      </div>
+      ${sel ? crownDetail(run, sel, state(sel), live) : ''}`;
+  }
+  function crownDetail(run, x, st, live) {
+    const k = G.kind(run) || { icon: '', resource: '' }; const cost = G.crownCost(run, x.id);
+    const av = live ? G.crownAvailable(run, x) : { ok: false };
+    const where = {
+      inherit: `Inheritance: ${G.renaissanceEndingName(run) || 'the Age of Sail'}`,
+      people: `Your people's own technology (tier ${'I'.repeat(x.tier || 1)})`,
+      tech: `A technology your Prestige opened (tier ${'I'.repeat(x.tier || 1)})${x.disposition ? `; only for ${x.disposition.map((d) => G.LEAN_NAMES[d]).join(' or ')} crowns` : ''}`,
+      law: 'A Crown law',
+      dynasty: `Deed: ${x.when ? G.CROWN_DEEDS[x.when.deed] : ''}`,
+      gate: `The Imperial Crown: ends the Colonial Age. Needs ${G.goals(run).evolveAt} Prestige and ${G.crownNeed()} Crown ideas`,
+      beyond: `Beyond the Imperial Crown (${G.LEAN_NAMES[x.disposition]} crowns only): take it up before you claim the Crown; an Inheritance in the next stage`,
+    }[x.band];
+    let action = '';
+    if (st === 'done') action = '<span class="note good-text">Known</span>';
+    else if (live && av.ok) action = `<button class="btn primary small" ${cost <= (run.special || 0) ? `data-act="learn-crown" data-arg="${x.id}"` : 'disabled'}>Take it up (${k.icon} ${cost})</button>${cost > (run.special || 0) ? `<span class="reason">Needs ${cost} ${esc(k.resource)} (you have ${run.special || 0})</span>` : ''}`;
+    return `
+      <div class="inv-detail">
+        <div class="inv-head"><strong>${esc(G.loreName(x, run))}</strong><span>${k.icon} ${cost}</span></div>
+        <span class="inv-where">${esc(where)}${x.lean ? ` · ${G.LEAN_ICONS[x.lean]} ${esc(G.LEAN_NAMES[x.lean])}` : ''}</span>
+        <span class="inv-mods">${esc(G.describeMods(x.mods))}</span>
+        ${x.rule ? `<span class="inv-rule">★ ${esc(G.MIND_RULES[x.rule])}</span>` : ''}
+        ${x.inherit ? `<span class="inv-rule">Inheritance in the next stage: ${esc(G.describeMods(x.inherit))}</span>` : ''}
+        <span class="inv-desc">${esc(x.desc)}</span>
+        ${x.excl ? `<span class="inv-excl">Fork: rules out ${esc(G.loreName(G.CROWN_ID[x.excl], run))}</span>` : ''}
+        ${live && !av.ok && st !== 'done' ? `<span class="reason">${esc(av.reason)}</span>` : ''}
+        <div class="row tight">${action}</div>
+      </div>`;
+  }
+  function crownTab(run) {
+    const k = G.kind(run); const d = G.disposition(run);
+    const done = (run.crown || []).includes('crown_gate');
+    return `${done ? '' : `<p class="note">Your Crown tree: ${G.crownKnown(run)} ideas known. It grows from how your ships met the world, your people's own technology, the technologies your Prestige opens, the Crown laws you choose and the deeds of your dynasty. Taking up an idea costs ${esc(k.resource)} (you have <b>${run.special || 0}</b>).</p>
+      <p class="note"><b>The Imperial Crown</b> needs ${G.goals(run).evolveAt} Prestige (you have ${run.dna}) and ${G.crownNeed()} Crown ideas (you have ${G.crownKnown(run)}). Your Disposition, <b>${G.LEAN_ICONS[d]} ${esc(G.LEAN_NAMES[d])}</b>, can still shift until then, and decides what kind of crown it will be.</p>`}
+      ${crownTree(run, done && run.book && run.book.crown ? run.book.crown : null)}`;
+  }
+  function crownCard(run) {
+    const d = run.draft; const k = G.kind(run); const have = run.special || 0;
+    return `
+      <article class="card draft">
+        <p class="eyebrow">The Crown tree</p>
+        <h2>A new technology</h2>
+        <p class="note">Your realm's Prestige opens a new branch of the Crown. Choose one to add to your tree: take it up now for ${esc(k.resource)} (you have <b>${have}</b>), or keep it in the tree for later.</p>
+        <div class="draft-list">
+          ${d.options.map((id) => { const x = G.CROWN_ID[id]; const cost = G.crownCost(run, id); return `
+            <div class="part-card ${cost > have ? 'cant' : ''}">
+              <span class="opt-label">${esc(G.loreName(x, run))}<span class="kw">${'I'.repeat(x.tier)}</span>${x.lean ? `<span class="kw">${G.LEAN_ICONS[x.lean]}</span>` : ''}<span class="cost ${cost > have ? 'bad' : ''}">${k.icon} ${cost}</span></span>
+              <span class="opt-meta"><span>${esc(G.describeMods(x.mods))}</span></span>
+              <span class="opt-desc">${esc(x.desc)}${x.disposition ? ` <i>Only for ${esc(x.disposition.map((v) => G.LEAN_NAMES[v]).join(' or '))} crowns.</i>` : ''}</span>
+              <div class="row tight">
+                <button class="btn small primary" ${cost <= have ? `data-act="draft" data-arg="${id}" data-mode="learn"` : 'disabled'}>Add and take it up (${k.icon} ${cost})</button>
+                <button class="btn small" data-act="hold-discovery" data-arg="${id}">Add to the tree</button>
+              </div>
+            </div>`; }).join('')}
+        </div>
+        <div class="row">
+          ${d.rerolls > 0 ? `<button class="btn" data-act="reroll">Reroll (${d.rerolls})</button>` : ''}
+          <button class="btn ghost" data-act="skip-draft">Skip for +3 Food</button>
+        </div>
+      </article>`;
+  }
+  // Colonies and the heir, shown in the Realm tab.
+  function colonialSection(run) {
+    if (run.stage !== 'colonial') return '';
+    const cols = run.colonies || [];
+    const how = { settle: 'settled', trade: 'a trading colony', conquer: 'conquered' };
+    return `
+      <h3>👑 The heir</h3>
+      ${run.heir ? leaderCard(run, run.heir, 'generations') : '<p class="empty">No heir yet.</p>'}
+      <p class="note">${G.mindRule(run, 'heir_sure') ? 'Primogeniture: your heir inherits without a crisis.' : G.mindRule(run, 'heir_chosen') ? 'Elective Crown: the council chooses the best of the family, who takes the throne with an extra good trait.' : 'When your ruler dies, the heir takes the throne, and the council grumbles. A Crown law can settle this.'}</p>
+      <h3>⛵ Colonies (${cols.length} of 6)</h3>
+      <p class="note">Each colony adds Food and Prestige as it grows. Restless colonies rebel at 100 unrest and break away: royal tours, Colonial Councils and Garrisons keep them calm.</p>
+      ${cols.length ? cols.map((c) => `<div class="callout ${c.unrest >= 70 ? 'warn' : ''}"><strong>${esc(c.name)} · ${'■'.repeat(c.size)}${'□'.repeat(4 - c.size)}</strong><span>${esc(how[c.how] || 'settled')}${c.from ? ` (once the ${esc(c.from)})` : ''} · unrest ${Math.round(c.unrest)}${c.unrest >= 70 ? ': close to rebellion' : ''}</span>${loyaltyBar(100 - 2 * Math.round(c.unrest))}</div>`).join('') : '<p class="empty">No colonies yet. Found one from Activities.</p>'}`;
+  }
+  function colonialEndCard(run, r) {
+    const b = r.breakdown; const e = run.colonialEnding && G.COLONIAL_ENDINGS[run.colonialEnding];
+    return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card end ${r.victory ? 'finale' : ''}">
+        <p class="eyebrow">${r.victory ? 'Colonial Age complete' : 'Your realm is gone'}</p>
+        <h2>${r.victory && e ? esc(e.name) : `${esc(G.realmName(run))} has fallen`}</h2>
+        <p class="event-text">${r.victory && e ? `${esc(e.desc)} ${esc(G.realmName(run))} is crowned under ${esc(run.leader ? G.leaderTitle(run.leader) : 'its council')}, after ${run.stageTurn} generation${run.stageTurn === 1 ? '' : 's'}, with ${(run.colonies || []).length} colonies. The age of Empires arrives in a later update.` : `${esc(r.cause)} Your realm lasted ${run.stageTurn} generations.`}${run.checkpointGenes ? ` (Earlier endings already earned +${run.checkpointGenes} Genetic Memory.)` : ''}</p>
+        <div class="callout gene">
+          <strong>${ICON.gene} +${r.genes} Genetic Memory</strong>
+          <span>${b.base} from Prestige${b.progress ? ` · +${b.progress} for your ideas and colonies` : ''}${b.winBonus ? ` · +${b.winBonus} for the Imperial Crown` : ''}${b.firstEnding ? ` · +${b.firstEnding} for a new Colonial ending` : ''}${b.mult > 1 ? ` · ×${b.mult}` : ''}</span>
+        </div>
+        <p class="note">You can start a new run from the coronation of ${esc(G.realmName(run))} with Stage Select, on the new lineage screen.</p>
+        <div class="row">
+          <button class="btn primary" data-act="setup">New lineage</button>
+          <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree</button>
+          <button class="btn" data-act="go" data-arg="fossils">Fossil Record</button>
+        </div>
+      </article>`;
+  }
+  function chartersSection() {
+    if (!G.chartersOpen()) return '<p class="note">Opens once one of your lineages reaches the Colonial Age. Its upgrades only work in the Colonial Age.</p>';
+    return `<p class="note">Upgrades for the Colonial Age: a richer Crown tree, calmer colonies and an easier road to the Imperial Crown.</p>${skillTree(G.CHARTERS, G.ui.chSel, 'ch-sel', '')}`;
+  }
   function societyEndCard(run, r) {
     const b = r.breakdown; const sk = G.socKind(run);
     const e = run.societyEnding && G.SOCIETY_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.societyEnding];
@@ -1100,6 +1237,7 @@ window.G = window.G || {};
   }
 
   function draftCard(run) {
+    if (run.stage === 'colonial') return crownCard(run);
     if (run.stage === 'renaissance') return reasonCard(run);
     if (run.stage === 'society') return traditionCard(run);
     if (run.stage === 'tribe') return discoveryCard(run);
@@ -1291,6 +1429,19 @@ window.G = window.G || {};
 
   function evolvedCard(run) {
     const e = run.evolved;
+    if (e && e.colonial) {
+      const far = run.species.filter((x) => x.overseas && !x.extinct);
+      return `
+      <div class="scene-wrap"><canvas class="scene" aria-hidden="true"></canvas></div>
+      <article class="card finale">
+        <p class="eyebrow">The Colonial Age · ${esc(G.PATH[run.path].name)}</p>
+        <h2>${esc(e.ending)}: ${esc(e.kind)}</h2>
+        <p class="event-text">Your nation is a crown now, ruled by <b>${esc(run.leader ? G.leaderTitle(run.leader) : 'its council')}</b>, with <b>${esc(run.heir ? run.heir.name : 'no one')}</b> as heir. Across the sea, new peoples have seen your ships, and they will remember how you came.${run.checkpointGenes ? ` Your endings so far earned <b>+${run.checkpointGenes} Genetic Memory</b>, kept whatever happens next.` : ''}</p>
+        ${far.map((b) => `<div class="callout"><strong>${G.LEAN_ICONS[b.nationDisp]} The ${esc(b.name)}</strong><span>Across the sea · ${esc(NATION_DISP[b.nationDisp])} (opinion ${b.opinion}).</span></div>`).join('')}
+        <p class="note">Prestige replaces Learning. Each goal brings a technology for your new <b>Crown</b> tree; choose Crown laws, found colonies and keep them calm, trade or conquer across the sea, and keep your dynasty going. Reach ${G.goals(run).evolveAt} Prestige and ${G.crownNeed()} Crown ideas for the Imperial Crown.</p>
+        <button class="btn primary wide" data-act="continue-evolved">Take the crown</button>
+      </article>`;
+    }
     if (e && e.renaissance) {
       const nb = run.species.filter((x) => x.nation && !x.extinct);
       return `
@@ -1349,6 +1500,7 @@ window.G = window.G || {};
 
   function endCard(run) {
     const r = run.result;
+    if (run.stage === 'colonial') return colonialEndCard(run, r);
     if (run.stage === 'renaissance') return renaissanceEndCard(run, r);
     if (run.stage === 'society') return societyEndCard(run, r);
     if (run.stage === 'tribe') return tribeEndCard(run, r);
@@ -1753,14 +1905,16 @@ window.G = window.G || {};
     const tab = G.ui.sheet;
     if (!tab) return '';
     const tribe = G.people(run);
-    const tabs = run.stage === 'renaissance'
+    const tabs = run.stage === 'colonial'
+      ? [['society', 'Realm'], ['council', 'Council'], ['crown', 'Crown'], ['book', 'Book'], ['reason', 'Reason'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      : run.stage === 'renaissance'
       ? [['society', 'Nation'], ['council', 'Council'], ['reason', 'Reason'], ['book', 'Book'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : run.stage === 'society'
       ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Law'], ['book', 'Book'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : tribe
       ? [['people', 'People'], ['found', 'Lore'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
-    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, reason: reasonTab, book: bookTab };
+    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, reason: reasonTab, crown: crownTab, book: bookTab };
     const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
@@ -1769,7 +1923,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
@@ -1900,6 +2054,7 @@ window.G = window.G || {};
         <section><h2>Ancestral Wisdom</h2>${wisdomSection()}</section>
         <section><h2>Heritage</h2>${heritageSection()}</section>
         <section><h2>Patronage</h2>${patronageSection()}</section>
+        <section><h2>Charters</h2>${chartersSection()}</section>
         <section><h2>Gene Affinities</h2>${affinitySection()}</section>
         <section><h2>Archetypes</h2><ul class="shop-list">${G.ARCHETYPES.filter((a) => a.cost).map((a) => item('archetypes', a)).join('')}</ul></section>
         <section><h2>Home worlds</h2><ul class="shop-list">${G.ORIGINS.filter((o) => o.cost).map((o) => item('origins', o)).join('')}</ul></section>
@@ -2072,6 +2227,11 @@ window.G = window.G || {};
           <ul class="codex-grid">${Object.entries(G.SOCIETY_ENDINGS).flatMap(([path, byHab]) => Object.entries(byHab).flatMap(([hab, ends]) => Object.entries(ends).map(([road, e]) => { const got = (c.societyEndings || []).includes(`${path}|${hab}|${road}`); const sk = G.SOCIETY_KINDS[path][hab]; const rn = { conquest: 'Conquest', trade: 'Trade', faith: 'Faith' }[road];
             return got ? `<li><strong>${esc(e.name)}</strong><span>${esc(sk.name)} · ${rn}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${esc(sk.name)} · ${rn}</span></li>`; }))).join('')}</ul>
         </section>
+        <section><h2>Colonial endings <span class="count">${(c.colonialEndings || []).length} / ${Object.keys(G.PATH).length * 3}</span></h2>
+          <p class="note">How each kind of realm can wear the Imperial Crown: as a commonwealth, as one crown, or as an empire of iron. A new one is worth +10 Genetic Memory.</p>
+          <ul class="codex-grid">${Object.keys(G.PATH).flatMap((path) => Object.entries(G.COLONIAL_ENDINGS).map(([road, e]) => { const got = (c.colonialEndings || []).includes(`${path}|${road}`); const p = G.PATH[path];
+            return got ? `<li><strong>${esc(e.name)}</strong><span>${p.icon} ${esc(p.name)}</span><span>${esc(e.desc)}</span></li>` : `<li class="unknown"><strong>???</strong><span>${p.icon} ${esc(p.name)}</span></li>`; })).join('')}</ul>
+        </section>
         <section><h2>Renaissance endings <span class="count">${(c.renaissanceEndings || []).length} / ${Object.keys(G.PATH).length * 3}</span></h2>
           <p class="note">How each kind of nation can use the Age of Sail: to explore, to trade or to conquer. A new one is worth +10 Genetic Memory.</p>
           <ul class="codex-grid">${Object.keys(G.PATH).flatMap((path) => Object.entries(G.RENAISSANCE_ENDINGS).map(([road, e]) => { const got = (c.renaissanceEndings || []).includes(`${path}|${road}`); const p = G.PATH[path];
@@ -2135,6 +2295,8 @@ window.G = window.G || {};
       case 'lore-sel': G.ui.loreSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'law-sel': G.ui.lawSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'reason-sel': G.ui.reasonSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'crown-sel': G.ui.crownSel = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'learn-crown': G.ui.sheet = null; G.learnCrown(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'learn-reason': G.ui.sheet = null; G.learnReason(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'learn-law': G.ui.sheet = null; G.learnLaw(arg); parts = ['top', 'hud', 'modal', 'sheet']; break;
       case 'fascinate': G.setFascination(arg); G.ui.mindSel = null; parts = ['top', 'modal', 'sheet']; break;
@@ -2177,6 +2339,7 @@ window.G = window.G || {};
       case 'wis-sel': G.ui.wisSel = arg; break;
       case 'her-sel': G.ui.herSel = arg; break;
       case 'pat-sel': G.ui.patSel = arg; break;
+      case 'ch-sel': G.ui.chSel = arg; break;
       case 'caste': G.setCaste(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'amber-on': G.setAmber(arg, true); break;
       case 'amber-off': G.setAmber(arg, false); break;
@@ -2249,4 +2412,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '20.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.0';

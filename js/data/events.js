@@ -3191,6 +3191,110 @@ G.EVENTS.push(
       fail: { text: 'The first ships do not come back. Not yet.', popPct: -0.12, loyalty: -5, setback: 0 } }; }) });
 }());
 
+// ---------- Update 21: the Colonial Age ----------
+G.EVENTS.push(
+  {
+    id: 'colonial_dawn', stage: 'colonial', milestone: true, prop: 'sun', title: 'A Crown Across the Sea',
+    text: '{realm} is crowned. Across the sea lie new shores and peoples who have never seen your ships. Your ruler must say what kind of crown this is.',
+    options: [
+      { label: 'A crown of ships', hint: '+6 Food, a colony begins at once', result: { text: 'The first settlers sail within the year.', food: 6, colony: 'settle', anim: 'grow' } },
+      { label: 'A crown of law', hint: '+8 Prestige, the council is pleased', result: { text: 'Courts, roads and records, everywhere the crown reaches.', dna: 8, loyalty: 10, anim: 'social' } },
+      { label: 'A crown of glory', check: { stat: 'cha', diff: 7 }, success: { text: 'The coronation is spoken of for a hundred years.', dna: 12, anim: 'social' }, fail: { text: 'Too much gold, and too little bread.', loyalty: -10 } },
+    ],
+  },
+  {
+    id: 'the_succession', stage: 'colonial', milestone: true, prop: 'shadow', title: 'The Succession',
+    text: 'Your ruler is old, and the court is already choosing sides between the heir and a popular younger cousin.',
+    options: [
+      { label: 'Stand by the heir', hint: 'The law is the law', result: { text: 'The heir is named again, before the whole court.', crownDeed: 'cd_heir', loyalty: 5, anim: 'social' } },
+      { label: 'Let the council choose', check: { stat: 'cha', diff: 7 }, success: { text: 'They choose wisely, and everyone accepts it.', crownDeed: 'cd_heir', heirTrait: true, anim: 'social' }, fail: { text: 'The vote splits the court in two.', loyalty: -15 } },
+      { label: 'Marry the cousin abroad', hint: 'A royal marriage', result: { text: 'The cousin becomes a queen across the sea, and an ally.', crownDeed: 'cd_marriage', neighbourOpinion: 10, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'the_great_rebellion', stage: 'colonial', milestone: true, prop: 'sparks', title: 'The Great Rebellion',
+    text: 'In your oldest colony, people born there have never seen the capital. They want their own crown, or none at all.',
+    options: [
+      { label: 'Send the fleet', check: { stat: 'str', diff: 8 }, success: { text: 'The rebellion is broken, and the colony stays.', crownDeed: 'cd_rebellion', unrest: -30, anim: 'attack' }, fail: { text: 'The fleet is beaten in sight of the harbour.', unrest: 30, popPct: -0.08 } },
+      { label: 'Give them a voice', check: { stat: 'cha', diff: 7 }, success: { text: 'A colonial assembly, under your crown.', unrest: -40, anim: 'social' }, fail: { text: 'They take the voice, and want more.', unrest: 15 } },
+      { label: 'Let them go', hint: 'Lose your oldest colony, +8 Prestige', result: { text: 'A new nation, born friendly.', loseColony: true, dna: 8, anim: 'rest' } },
+    ],
+  },
+  {
+    id: 'col_gold', stage: 'colonial', prop: 'sun', title: 'Gold Across the Sea', tags: ['food'],
+    text: 'Settlers in a colony have found gold in a river. Ships are already turning around to go and get some.',
+    options: [
+      { label: 'Let them dig', hint: '+10 of your people\'s resource, the colony grows restless', result: { text: 'Gold, and greed.', special: 10, unrest: 15, anim: 'grow' } },
+      { label: 'Take it for the crown', check: { stat: 'str', diff: 7 }, success: { text: 'The crown\'s share fills the treasury.', special: 8, dna: 4, anim: 'attack' }, fail: { text: 'The settlers hide it all.', unrest: 10 } },
+    ],
+  },
+  {
+    id: 'col_scurvy', stage: 'colonial', prop: 'sickness', title: 'The Long Voyage', tags: ['danger'], hazard: 'sickness',
+    text: 'A fleet arrives months late, its crews dying of a sickness that comes from too long at sea.',
+    options: [
+      { label: 'Fresh fruit for every ship', hint: '−5 Food', req: { food: 5 }, result: { text: 'Nobody dies of it again.', food: -5, mods: { tou: 1 }, anim: 'rest' } },
+      { label: 'Trust the ship\'s doctors', check: { stat: 'cun', diff: 7 }, success: { text: 'They find the cure.', dna: 6, anim: 'mutate' }, fail: { text: 'They find nothing.', popPct: -0.06 } },
+    ],
+  },
+  {
+    id: 'col_envoys', stage: 'colonial', prop: 'hearts', title: 'Envoys from the Far Shore', tags: ['social'],
+    text: 'A people from across the sea sends envoys in strange clothes, with gifts and questions.',
+    options: [
+      { label: 'Welcome them as equals', check: { stat: 'cha', diff: 6 }, success: { text: 'Friends on the far shore.', overseasOpinion: 20, anim: 'social' }, fail: { text: 'Your court laughs at their clothes.', overseasOpinion: -10 } },
+      { label: 'Impress them with your fleet', hint: 'They will fear you', result: { text: 'They go home and tell everyone.', overseasOpinion: -10, dna: 4, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 'col_wedding', stage: 'colonial', prop: 'hearts', title: 'A Royal Wedding', tags: ['social'],
+    text: 'A neighbour crown offers its heir in marriage to yours.',
+    options: [
+      { label: 'Accept', hint: 'A royal marriage', result: { text: 'Two crowns, one family.', crownDeed: 'cd_marriage', neighbourOpinion: 10, anim: 'social' } },
+      { label: 'Hold out for a better match', check: { stat: 'cun', diff: 7 }, success: { text: 'A richer crown offers instead.', crownDeed: 'cd_marriage', special: 6, anim: 'social' }, fail: { text: 'Both crowns are offended.', neighbourOpinion: -10 } },
+    ],
+  },
+  {
+    id: 'col_pirates', stage: 'colonial', prop: 'sparks', title: 'Pirates', tags: ['danger'],
+    text: 'Pirates are taking ships between the capital and the colonies, and selling the cargo back to you.',
+    options: [
+      { label: 'Hunt them down', check: { stat: 'str', diff: 7 }, success: { text: 'The sea is yours again.', crownDeed: 'cd_war', dna: 4, anim: 'attack' }, fail: { text: 'They sink two of your ships.', food: -4 } },
+      { label: 'Hire them', hint: '−4 of your people\'s resource', req: { special: 4 }, result: { text: 'Privateers now, sailing under your flag.', special: -4, mods: { str: 1 }, anim: 'social' } },
+    ],
+  },
+  {
+    id: 'col_mutiny', stage: 'colonial', prop: 'shadow', title: 'Mutiny', tags: ['danger'],
+    text: 'Colonial soldiers, unpaid for a year, have locked their officers in the fort.',
+    options: [
+      { label: 'Pay them', hint: '−6 of your people\'s resource', req: { special: 6 }, result: { text: 'Paid, and loyal again.', special: -6, unrest: -10, anim: 'rest' } },
+      { label: 'Make an example', check: { stat: 'str', diff: 7 }, success: { text: 'Order returns, grimly.', unrest: -5, anim: 'attack' }, fail: { text: 'The colony takes their side.', unrest: 25 } },
+    ],
+  },
+  {
+    id: 'col_heir_scandal', stage: 'colonial', prop: 'night', title: 'The Heir\'s Scandal', tags: ['social'],
+    text: 'Your heir has been gambling away the crown jewels in the taverns of the capital.',
+    options: [
+      { label: 'Send them to the colonies', hint: 'The colonies get a governor; the court laughs', result: { text: 'A royal governor, of sorts.', unrest: -10, loyalty: -5, anim: 'rest' } },
+      { label: 'Disinherit them', hint: 'A new heir, the court is shocked', result: { text: 'A cousin is named heir.', newHeir: true, loyalty: -10, anim: 'attack' } },
+    ],
+  },
+  {
+    id: 'col_inventor', stage: 'colonial', prop: 'stars', title: 'The Inventor', tags: ['explore'],
+    text: 'An inventor with no money has built a machine that nobody understands, and everybody wants.',
+    options: [
+      { label: 'Back them', hint: '−5 of your people\'s resource, +10 Prestige', req: { special: 5 }, result: { text: 'The machine changes everything.', special: -5, dna: 10, anim: 'mutate' } },
+      { label: 'Buy the machine', result: { text: 'It sits in a museum, slightly ahead of its time.', dna: 3, anim: 'rest' } },
+    ],
+  },
+);
+// The Imperial Crown: the Colonial Age's finale. Your Disposition decides which roads are open.
+(function () {
+  const ROADS = [['federation', 'cha', 'A Commonwealth', ['peace', 'guard']], ['dominion', 'cun', 'One Crown', ['peace', 'guard', 'war']], ['conquest', 'str', 'An Empire of Iron', ['guard', 'war']]];
+  G.EVENTS.push({ id: 'crown_finale', stage: 'colonial', finale: true, prop: 'sun', title: 'The Imperial Crown',
+    text: '{realm} rules lands on both sides of the sea. Now its crown must become something greater, and every colony, council and fleet is waiting to see what kind.',
+    options: ROADS.map(([road, stat, verb, disp]) => { const e = G.COLONIAL_ENDINGS[road]; return { label: `${verb}: ${e.name}`, hint: e.desc, req: { disposition: disp }, check: { stat, diff: 8 },
+      success: { text: `${e.desc} The Colonial Age is over.`, colonialEnding: road, anim: stat === 'str' ? 'attack' : 'social' },
+      fail: { text: 'The crown is not ready. Not yet.', popPct: -0.1, loyalty: -5, unrest: 10, setback: 0 } }; }) });
+}());
+
 // ---------- Patch 16.3: the resource is what knowledge costs ----------
 G.EVENTS.push(
   {
@@ -3258,4 +3362,4 @@ G.EVENTS.push(
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '20.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.0';

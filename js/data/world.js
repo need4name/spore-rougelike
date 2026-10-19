@@ -861,18 +861,17 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '20.3';
+G.VERSION = '21';
 G.WHATS_NEW = {
-  title: 'Patch 20.3: Things do what they say',
+  title: 'Update 21: The Colonial Age',
   items: [
-    'Fixed a softlock: learning a Lore, Law or Reason idea from its tab now works even while a draft, event or scene is waiting.',
-    'Every option was checked against what it does. Bonuses "while Exploring" now count in every stage, Food from helpers is never cancelled by a bad season, and max-population and regrowth numbers now show what you really get for your body.',
-    'Tribes have more to learn with: their resource only starts being used up past 30 heads, and Swarm Brood only hatches from a full store, so it never competes with Lore.',
-    'Population and food rebalanced from a study of 1,728 simulated runs: Grazers, Omnivores and Giants no longer starve over time, small bodies lose fewer to each blow, free regrowth stops at your comfortable size, and crowding bites harder.',
-    'The Creature Editor opens by itself only the first time; after that it waits in the Look tab. The colony body\'s Width and Height now stretch it separately.',
-    'Ideas that see more of the world now pull the map back in the Creature stage, so neighbouring biomes show at the edges.',
-    'A smaller top bar: one play/pause button and one speed button, and no "/max" beside your population (tap it for the details).',
-    'Tree nodes only glow when you can afford them, and tapping a node keeps your place in the list.',
+    'A new stage after the Renaissance: win the Age of Sail and your nation becomes a crown with lands across the sea. Prestige replaces Learning.',
+    'Colonies: found them from Activities, build trading posts with friendly peoples overseas, or conquer them if your Disposition allows. Colonies bring Food and Prestige as they grow, but they grow restless: at 100 unrest a colony rebels, breaks away and may come for you. Royal tours, Colonial Councils and Garrisons keep them calm.',
+    'A dynasty: your ruler has an heir waiting in the Realm tab. When the ruler dies the heir takes the throne, and without a clear law a rival claimant can start a war of succession. Primogeniture makes it certain; an Elective Crown picks the best of the family.',
+    'New peoples across the sea meet you as you met them in the Age of Sail: explorers find them wary, traders find them friendly, conquerors find them hostile.',
+    'The Crown tree (the Crown tab): an Inheritance from the Age of Sail, your kind of people\'s own technology (Steam Engines, Song-Wires, Living Light, Living Factories, Grown Ships...), new technologies from each Prestige goal, Crown laws that rule each other out, and ideas grown from your dynasty\'s deeds. The Imperial Crown is its Gate, with three endings by Disposition.',
+    'Charters, the Colonial Age\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches the Colonial Age.',
+    'The Book gains its Crown page with your dynasty, Stage Select can start at a coronation, and the Codex lists Colonial endings.',
   ],
 };
 
@@ -991,6 +990,125 @@ G.PATRONAGE = [
   { id: 'p_beyond', name: 'Visionaries', col: 5, tier: 2, req: ['p_cun'], costs: [70, 140], desc: 'Ideas Beyond the Age of Sail cost 15% less per level.' },
 ];
 
+// ======================= UPDATE 21: THE COLONIAL AGE =======================
+// After the Age of Sail, your nation becomes a crowned realm with lands across the sea. Prestige replaces
+// Learning; each goal brings a new technology for the Crown tree. Your ruler founds a dynasty: heirs
+// inherit by the law you choose, and colonies grow, trade, and can rebel.
+G.STAGES.colonial = {
+  name: 'Colonial Age', turnName: 'Generation',
+  drafts: [8, 22, 38, 56, 78, 102, 130, 160, 192, 226, 262],
+  milestones: [{ at: 0, event: 'colonial_dawn' }, { at: 70, event: 'the_succession' }, { at: 145, event: 'the_great_rebellion' }],
+  evolveAt: 300,
+};
+// Your realm's name, from your kind of people.
+G.REALM_NAMES = {
+  tool: { land: 'the Hearth Crown', sea: 'the Forge Realm' },
+  song: { land: 'the Song Throne', sea: 'the Tide Throne' },
+  many: { land: 'the Shifting Crown', sea: 'the Lantern Realm' },
+  swarm: { land: 'the Great Hive', sea: 'the Coral Throne' },
+  garden: { land: 'the Living Crown', sea: 'the Kelp Throne' },
+};
+// Lands across the sea: names for colonies, built from two parts.
+G.COLONY_SYLLABLES = { a: ['New ', 'Far ', 'Port ', 'Cape ', 'Isle of ', 'Fort ', 'Bay of ', 'Saint '], b: ['Amber', 'Thorn', 'Haven', 'Mire', 'Gale', 'Coral', 'Ember', 'Dusk', 'Spire', 'Wren', 'Salt', 'Morrow'] };
+// The Imperial Crown: the Colonial Age's endings, one road for each Disposition.
+G.COLONIAL_ENDINGS = {
+  federation: { name: 'A Commonwealth of Shores', desc: 'Your colonies become partners, not possessions: a family of free lands under one crown.' },
+  dominion: { name: 'The Crown of Many Lands', desc: 'One throne, many peoples, held together by law, roads and ships.' },
+  conquest: { name: 'The Iron Empire', desc: 'Every shore your ships touched now flies your flag, whether it wanted to or not.' },
+};
+G.CROWN_DEEDS = {
+  cd_colony: 'You founded your first colony across the sea.',
+  cd_heir: 'An heir came to the throne without a war.',
+  cd_marriage: 'Your dynasty married into another royal house.',
+  cd_rebellion: 'You ended a rebellion in your colonies.',
+  cd_trade: 'Your merchants built a trading post overseas.',
+  cd_war: 'You won a war across the sea.',
+};
+G.CROWN_NEED = 13; // Crown ideas your realm must hold before the Imperial Crown
+// The Crown tree: the Colonial Age's own tree.
+//   inherit: one idea for how your ships met the world (the Age of Sail)
+//   people: your kind of people's own technology (two each; land and sea names)
+//   tech: technologies grafted by Prestige drafts (tiers I-III; some only for some Dispositions)
+//   law: Crown laws that rule each other out (succession, rule, trade, the navy)
+//   dynasty: ideas grafted by the deeds of your dynasty and your colonies
+//   gate: the Imperial Crown; beyond: one per Disposition, carried into the age of empires
+G.CROWN = [
+  // ----- Inheritance: the Age of Sail -----
+  { id: 'ci_explore', band: 'inherit', road: 'explore', name: 'The Great Charts', tier: 1, mods: { cun: 2, exploreBonus: 2 }, lean: 'peace', desc: 'You went to see what was there, and you wrote it all down.' },
+  { id: 'ci_trade', band: 'inherit', road: 'trade', name: 'The Merchant Fleets', tier: 1, mods: { cha: 1, foodPerTurn: 2 }, lean: 'peace', desc: 'Every shore is a market.' },
+  { id: 'ci_conquer', band: 'inherit', road: 'conquer', name: 'The Admiralty', tier: 1, mods: { str: 2, damageReduce: 1 }, lean: 'war', desc: 'Ships of the line, and the men to sail them.' },
+  // ----- Your people: technology changed by your kind -----
+  { id: 'cp_tool_engines', band: 'people', path: 'tool', name: { land: 'Steam Engines', sea: 'Vent Dynamos' }, tier: 1, mods: { influencePerTurn: 1, str: 1 }, desc: 'Fire made to work: wheels turn by themselves.' },
+  { id: 'cp_tool_rails', band: 'people', path: 'tool', name: { land: 'Railways', sea: 'Cable Roads' }, tier: 2, mods: { foodPerTurn: 2, spd: 1 }, desc: 'The whole realm, a day apart.' },
+  { id: 'cp_song_telegraph', band: 'people', path: 'song', name: 'Song-Wires', tier: 1, mods: { influencePerTurn: 1, cha: 1 }, desc: 'A song sung in the capital is heard in every colony by nightfall.' },
+  { id: 'cp_song_halls', band: 'people', path: 'song', name: 'Concert Halls', tier: 2, mods: { cha: 2 }, desc: 'Every colony gets a hall, and every hall the same songs.' },
+  { id: 'cp_many_light', band: 'people', path: 'many', name: 'Living Light', tier: 1, mods: { influencePerTurn: 1, cun: 1 }, desc: 'Cities that glow, and signals that cross a sea in an instant.' },
+  { id: 'cp_many_bureau', band: 'people', path: 'many', name: 'The Cipher Bureau', tier: 2, mods: { cun: 2 }, desc: 'Every secret in the world, read before breakfast.' },
+  { id: 'cp_swarm_factories', band: 'people', path: 'swarm', name: 'Living Factories', tier: 1, mods: { influencePerTurn: 1, tou: 1 }, desc: 'Workers bred for one task each, and a mound that never stops making.' },
+  { id: 'cp_swarm_mound', band: 'people', path: 'swarm', name: { land: 'The Great Mound', sea: 'The Great Reef' }, tier: 2, mods: { maxPop: 4 }, desc: 'A home the size of a mountain.' },
+  { id: 'cp_garden_ships', band: 'people', path: 'garden', name: 'Grown Ships', tier: 1, mods: { influencePerTurn: 1, exploreBonus: 2 }, desc: 'Hulls grown from seed, that heal their own leaks.' },
+  { id: 'cp_garden_medicine', band: 'people', path: 'garden', name: 'Spore Medicine', tier: 2, mods: { popPerTurn: 1, tou: 1 }, desc: 'A cure for every fever, grown in a jar.' },
+  // ----- Technology: grafted by Prestige -----
+  { id: 'ct_steam', band: 'tech', name: 'Steamships', tier: 1, mods: { exploreBonus: 2, spd: 1 }, desc: 'Ships that sail against the wind.' },
+  { id: 'ct_telegraph', band: 'tech', name: 'The Telegraph', tier: 1, mods: { influencePerTurn: 1, cun: 1 }, desc: 'News in minutes, not months.' },
+  { id: 'ct_vaccines', band: 'tech', name: 'Vaccines', tier: 1, mods: { popPerTurn: 1, tou: 1 }, lean: 'peace', desc: 'Plagues that never come.' },
+  { id: 'ct_canals', band: 'tech', name: 'Great Canals', tier: 1, mods: { foodPerTurn: 2 }, lean: 'guard', desc: 'A new sea road, dug by hand.' },
+  { id: 'ct_rifles', band: 'tech', name: { tool: 'Rifles', song: 'War Horns', many: 'Lightning Ink', swarm: 'Soldier Castes', garden: 'Thorn Walls' }, tier: 1, mods: { str: 2 }, lean: 'war', desc: 'A new and better way to win.' },
+  { id: 'ct_press', band: 'tech', name: 'Newspapers', tier: 2, mods: { cha: 2 }, desc: 'Everyone reads the same news, and believes it.' },
+  { id: 'ct_factories', band: 'tech', name: 'Factories', tier: 2, mods: { influencePerTurn: 1, maxPop: 3 }, desc: 'Towns that make more in a day than villages did in a year.' },
+  { id: 'ct_companies', band: 'tech', name: 'Chartered Companies', tier: 2, mods: { foodPerTurn: 1, influencePerTurn: 1 }, lean: 'peace', disposition: ['peace', 'guard'], desc: 'Merchants with their own ships, and their own flags.' },
+  { id: 'ct_ironclads', band: 'tech', name: 'Ironclads', tier: 2, mods: { tou: 2, damageReduce: 1 }, lean: 'guard', disposition: ['guard', 'war'], desc: 'Ships that shrug off cannon.' },
+  { id: 'ct_electricity', band: 'tech', name: 'Electricity', tier: 3, mods: { influencePerTurn: 2 }, desc: 'Light without fire, and power without muscle.' },
+  { id: 'ct_world_fair', band: 'tech', name: 'The World\'s Fair', tier: 3, mods: { cha: 2, influencePerTurn: 1 }, lean: 'peace', disposition: ['peace'], desc: 'Every people on earth, in one great hall.' },
+  { id: 'ct_dreadnoughts', band: 'tech', name: 'Dreadnoughts', tier: 3, mods: { str: 3 }, lean: 'war', disposition: ['war'], desc: 'One ship that outguns a fleet.' },
+  { id: 'ct_steel_cities', band: 'tech', name: 'Cities of Steel', tier: 3, mods: { maxPop: 4, tou: 1 }, desc: 'Towers that touch the clouds.' },
+  // ----- Crown laws: forks -----
+  { id: 'cl_primogeniture', band: 'law', name: 'Primogeniture', tier: 1, excl: 'cl_elective', mods: { tou: 1, influencePerTurn: 1 }, lean: 'guard', rule: 'heir_sure', desc: 'The eldest inherits, always. No arguments, no wars.' },
+  { id: 'cl_elective', band: 'law', name: 'Elective Crown', tier: 1, excl: 'cl_primogeniture', mods: { cha: 1, cun: 1 }, lean: 'peace', rule: 'heir_chosen', desc: 'The council chooses the best of the family.' },
+  { id: 'cl_direct', band: 'law', name: 'Direct Rule', tier: 2, excl: 'cl_councils', mods: { str: 1, influencePerTurn: 1 }, lean: 'war', desc: 'Governors from the capital, and soldiers to back them.' },
+  { id: 'cl_councils', band: 'law', name: 'Colonial Councils', tier: 2, excl: 'cl_direct', mods: { cha: 1, foodPerTurn: 1 }, lean: 'peace', rule: 'calm_colonies', desc: 'Each colony governs itself, mostly.' },
+  { id: 'cl_free_trade', band: 'law', name: 'Free Trade', tier: 2, excl: 'cl_mercantile', mods: { foodPerTurn: 2 }, lean: 'peace', desc: 'Every port open to every ship.' },
+  { id: 'cl_mercantile', band: 'law', name: 'The Navigation Acts', tier: 2, excl: 'cl_free_trade', mods: { influencePerTurn: 1, str: 1 }, lean: 'guard', desc: 'Our colonies trade with us, and only with us.' },
+  // ----- Dynasty and colonies: deeds -----
+  { id: 'cd_first_shore', band: 'dynasty', when: { deed: 'cd_colony' }, name: 'The First Shore', tier: 2, mods: { exploreBonus: 2, influencePerTurn: 1 }, desc: 'Where your people first stepped onto a new land.' },
+  { id: 'cd_long_line', band: 'dynasty', when: { deed: 'cd_heir' }, name: 'The Long Line', tier: 2, mods: { cha: 1, tou: 1 }, lean: 'guard', desc: 'A family that has ruled for longer than anyone remembers.' },
+  { id: 'cd_royal_cousins', band: 'dynasty', when: { deed: 'cd_marriage' }, name: 'Royal Cousins', tier: 2, mods: { cha: 2 }, lean: 'peace', desc: 'Half the thrones of the world are family now.' },
+  { id: 'cd_garrisons', band: 'dynasty', when: { deed: 'cd_rebellion' }, name: 'Garrisons', tier: 2, mods: { tou: 2 }, lean: 'war', rule: 'calm_colonies', desc: 'Never again will a colony rise.' },
+  { id: 'cd_trading_houses', band: 'dynasty', when: { deed: 'cd_trade' }, name: 'Trading Houses', tier: 2, mods: { foodPerTurn: 2 }, lean: 'peace', desc: 'Families of merchants in every port.' },
+  { id: 'cd_war_office', band: 'dynasty', when: { deed: 'cd_war' }, name: 'The War Office', tier: 2, mods: { str: 2 }, lean: 'war', rule: 'know_foe', desc: 'Every war planned years before it starts.' },
+  // ----- The Imperial Crown: the Gate -----
+  { id: 'crown_gate', band: 'gate', name: 'The Imperial Crown', tier: 3, mods: { cha: 1 }, desc: 'A crown for a realm that spans the sea. How it rules depends on your Disposition. This ends the Colonial Age.' },
+  // ----- Beyond: one per Disposition; carried into the age of empires -----
+  { id: 'cb_peace', band: 'beyond', disposition: 'peace', name: 'The Commonwealth', tier: 3, mods: { cha: 2, influencePerTurn: 1 }, inherit: { cha: 2, foodPerTurn: 1 }, req: { known: 12 }, lean: 'peace', desc: 'Free peoples who choose the same crown.' },
+  { id: 'cb_guard', band: 'beyond', disposition: 'guard', name: 'The Concert of Crowns', tier: 3, mods: { tou: 2, influencePerTurn: 1 }, inherit: { tou: 2, cun: 1 }, req: { known: 12 }, lean: 'guard', desc: 'The great crowns agree: no one of them will rule them all.' },
+  { id: 'cb_war', band: 'beyond', disposition: 'war', name: 'The Grand Army', tier: 3, mods: { str: 2, influencePerTurn: 1 }, inherit: { str: 2, tou: 1 }, req: { known: 12 }, lean: 'war', desc: 'An army that marches across continents.' },
+];
+G.CROWN_ID = {}; G.CROWN.forEach((x) => { G.CROWN_ID[x.id] = x; });
+G.MIND_RULES.heir_sure = 'Your heirs inherit without a crisis.';
+G.MIND_RULES.heir_chosen = 'When a ruler dies, the council chooses the best heir: your new ruler gets an extra good trait.';
+G.MIND_RULES.calm_colonies = 'Your colonies grow restless more slowly.';
+G.ACTIVITIES.push(
+  { id: 'colonize', name: 'Found a colony', stage: 'colonial', turns: 3, desc: 'Ships, settlers and supplies cross the sea (−8 Food, −6 of your people\'s resource): a new colony, which adds Prestige every turn.' },
+  { id: 'trade_post', name: 'Build a trading post', target: 'species', stage: 'colonial', turns: 3, desc: 'A people across the sea who like you (opinion 10 or more) let your merchants settle: +1 resource a turn, and they like you more.' },
+  { id: 'subjugate', name: 'Conquer a people', target: 'species', stage: 'colonial', turns: 4, desc: 'War across the sea: if your armies win, their land becomes a restless colony.' },
+  { id: 'royal_tour', name: 'A royal tour', stage: 'colonial', turns: 2, desc: 'Your ruler visits the colonies: every colony grows calmer.' },
+);
+// Charters: the Colonial Age's own tree on the Evolution screen. Opens once you reach the Colonial Age.
+G.CHARTERS = [
+  { id: 'c_prestige', name: 'Old Glory', col: 0, tier: 1, costs: [30, 65], desc: 'Every Colonial Age begins with +10 Prestige per level.' },
+  { id: 'c_crown', name: 'Royal Academies', col: 1, tier: 1, costs: [35, 70, 110], desc: 'Crown ideas cost 10% less per level.' },
+  { id: 'c_fleet', name: 'The Old Fleet', col: 2, tier: 1, costs: [30, 65], desc: 'Every Colonial Age begins with one colony per level.' },
+  { id: 'c_heirs', name: 'Royal Nurseries', col: 3, tier: 1, costs: [30, 65], desc: 'Your heirs are born with one extra good trait per level.' },
+  { id: 'c_calm', name: 'Loyal Governors', col: 4, tier: 1, costs: [35, 70], desc: 'Colonies grow restless a third more slowly per level.' },
+  { id: 'c_tou', name: 'Fortified Ports', col: 5, tier: 1, costs: [35, 70], mods: { tou: 1 }, desc: '+1 Toughness per level in the Colonial Age.' },
+  { id: 'c_branches', name: 'Many Technologies', col: 0, tier: 2, req: ['c_prestige'], costs: [70], desc: 'Every new branch of the Crown tree offers one more choice.' },
+  { id: 'c_gate', name: 'Ancient Regalia', col: 1, tier: 2, req: ['c_crown'], costs: [70, 130], desc: 'The Imperial Crown needs two fewer Crown ideas per level, and its checks are 1 easier per level.' },
+  { id: 'c_cha', name: 'Court Splendour', col: 2, tier: 2, req: ['c_fleet'], costs: [50, 100], mods: { cha: 1 }, desc: '+1 Charm per level in the Colonial Age.' },
+  { id: 'c_str', name: 'Marines', col: 3, tier: 2, req: ['c_heirs'], costs: [50, 100], mods: { str: 1 }, desc: '+1 Strength per level in the Colonial Age.' },
+  { id: 'c_tech', name: 'Inventors\' Guild', col: 4, tier: 2, req: ['c_calm'], costs: [80], desc: 'Every Colonial Age begins with one technology already known.' },
+  { id: 'c_beyond', name: 'Imperial Dreams', col: 5, tier: 2, req: ['c_tou'], costs: [80, 150], desc: 'Ideas Beyond the Imperial Crown cost 15% less per level.' },
+];
+
 // First-time tips. Each shows once, the first time its feature appears, whatever run that is.
 // Checked in order; the first unseen one whose condition holds is shown.
 G.TUTORIALS = [
@@ -1025,6 +1143,12 @@ G.TUTORIALS = [
     text: 'Your people are one nation now, among other nations. Learning replaces Influence, and each goal brings an invention for your Reason tree. The Nation tab shows how each neighbour nation feels about you: peaceful 🕊️, territorial 🛡️ or warlike ⚔️. Back patrons, send voyages and form leagues from Activities.' },
   { id: 'reason', title: 'The Reason tree', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'renaissance',
     text: 'The Renaissance has its own tree: the Reason tree. Choose an invention to add; take it up now with your people\'s resource, or later from the Reason tab. Movements come in opposed pairs, the Schism adds a faith idea, and your deeds add more. The Age of Sail needs enough Learning and Reason. Your Disposition can still shift until then, and it decides what your ships will do.' },
+  { id: 'colonial', title: 'The Colonial Age', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'colonial',
+    text: 'Your nation is a crown with lands across the sea. Prestige replaces Learning, and each goal brings a technology for your Crown tree. Found colonies from Activities: they bring Food and Prestige, but grow restless and can rebel. Your heir waits in the Realm tab; a Crown law decides how they inherit.' },
+  { id: 'crown', title: 'The Crown tree', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'colonial',
+    text: 'The Colonial Age has its own tree: the Crown tree. Choose a technology to add; take it up now with your people\'s resource, or later from the Crown tab. Crown laws come in opposed pairs, and the deeds of your dynasty add more. The Imperial Crown needs enough Prestige and Crown ideas, and your Disposition decides what kind of crown it will be.' },
+  { id: 'unrest', title: 'Restless colonies', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'colonial' && (run.colonies || []).some((c) => c.unrest >= 60),
+    text: 'One of your colonies is close to rebellion. At 100 unrest it breaks away for good. A royal tour (Activities) calms every colony; Colonial Councils and Garrisons in the Crown tree keep them calm for longer.' },
   { id: 'nation_war', title: 'War', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'renaissance' && run.species.some((x) => x.nation && !x.extinct && x.nationDisp === 'war' && x.opinion < 0 && !x.treaty),
     text: 'A warlike nation that dislikes you can invade. Your Strength and Toughness decide whether your armies hold; a league ally helps. Lose a battle and they take a city, and if they take your last one, your nation falls. Gifts, treaties and leagues keep them away; found new cities from Activities.' },
   { id: 'kind_many', title: 'Many Minds', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe' && run.path === 'many',
@@ -1626,4 +1750,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '20.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.0';

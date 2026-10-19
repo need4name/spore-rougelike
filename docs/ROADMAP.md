@@ -510,7 +510,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **The Reason tree:** built from your inventions, movements and the patrons you back. Its Gate is the **Age of Sail**, which opens the world.
 - **Patronage:** the Renaissance's between-lineage tree.
 
-## Update 21: Colonial Age (Empire stage, part 1)
+## Update 21: Colonial Age (Empire stage, part 1) ✅
 
 *The most Crusader Kings 3 part of the game.*
 

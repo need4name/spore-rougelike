@@ -26,7 +26,7 @@ window.G = window.G || {};
       unlocked: { archetypes: ['drifter', 'grazer'], origins: ['tidal'], packs: [] },
       boons: {},
       maxHostility: 0,
-      codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [], discoveries: [], tribeEndings: [], societyEndings: [], traditions: [], renaissanceEndings: [], reason: [] },
+      codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [], discoveries: [], tribeEndings: [], societyEndings: [], traditions: [], renaissanceEndings: [], reason: [], colonialEndings: [], crown: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0, creatures: 0 },
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {}, stageStarts: [],
       options: { numbers: false, theme: 'tide' },
@@ -58,7 +58,7 @@ window.G = window.G || {};
       const list = (saved.unlocked && saved.unlocked[k]) || [];
       list.forEach((id) => { if (!m.unlocked[k].includes(id)) m.unlocked[k].push(id); });
     });
-    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings', 'societyEndings', 'traditions', 'renaissanceEndings', 'reason'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
+    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings', 'societyEndings', 'traditions', 'renaissanceEndings', 'reason', 'colonialEndings', 'crown'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
     Object.assign(m.stats, saved.stats || {});
     // Saves from before the beginner's grace: count the lineages that already left the cell stage.
     if (!saved.stats || saved.stats.creatures == null) m.stats.creatures = (saved.history || []).filter((h) => h.reached && !/^(Single cell|Multicellular)/.test(h.reached)).length + (m.stats.wins || 0);
@@ -69,6 +69,7 @@ window.G = window.G || {};
   G.WISDOM.forEach((w) => { G.BOON[w.id] = w; });
   G.HERITAGE.forEach((w) => { G.BOON[w.id] = w; });
   G.PATRONAGE.forEach((w) => { G.BOON[w.id] = w; });
+  G.CHARTERS.forEach((w) => { G.BOON[w.id] = w; });
   G.meta = mergeMeta(load(SAVE_META));
   G.run = load(SAVE_RUN);
   // Patch 15.1 counts Population in individuals (×10). Older runs and fossils are converted when loaded.
@@ -100,7 +101,12 @@ window.G = window.G || {};
   // The Tribe and Society stages: you are a people now, not a lineage.
   G.people = (run) => !!run && (run.stage === 'tribe' || G.civ(run));
   // A civilisation: the Society stage and the Renaissance after it share settlements, a council and neighbours.
-  G.civ = (run) => !!run && (run.stage === 'society' || run.stage === 'renaissance');
+  G.civ = (run) => !!run && (run.stage === 'society' || run.stage === 'renaissance' || run.stage === 'colonial');
+  // Nations (Update 20) and the peoples across the sea stay nations in the Colonial Age.
+  G.nations = (run) => !!run && (run.stage === 'renaissance' || run.stage === 'colonial');
+  // Later stages still draw the earlier civilisation stages' events and activities.
+  G.STAGE_INHERIT = { renaissance: ['society'], colonial: ['society', 'renaissance'] };
+  const inherits = (run, stages) => (G.STAGE_INHERIT[run.stage] || []).some((st) => [].concat(stages).includes(st));
   G.gimmick = (run) => (run && !G.people(run) && G.ARCHETYPE[run.archetype] && G.ARCHETYPE[run.archetype].gimmick) || null;
   const speciesNamed = (run, name) => (name ? run.species.find((s) => s.name === name && !s.extinct) || null : null);
   G.partnerOf = (run) => (G.gimmick(run) === 'symbiote' ? speciesNamed(run, run.partner) : null);
@@ -480,6 +486,7 @@ window.G = window.G || {};
     if (G.people(run)) tribeMods(run).forEach((m) => list.push(m.src ? m : tag(m, 'Your people')));
     if (G.civ(run)) societyMods(run).forEach((m) => list.push(m.src ? m : tag(m, 'Your society')));
     if (run.stage === 'renaissance') renaissanceMods(run).forEach((m) => list.push(m));
+    if (run.stage === 'colonial') colonialMods(run).forEach((m) => list.push(m));
     const season = G.season(run);
     // Warm blood shrugs off the food cost of cold seasons.
     const warm = run.traits.includes('blood_warm') || G.firelit(run);
@@ -560,6 +567,7 @@ window.G = window.G || {};
     if (g === 'symbiote' && run.partner && (!partner || partner.pop < partner.cap * 0.3)) parts.push({ label: 'Your partner is struggling', v: -2, kind: pref });
     if (run.instinct === 'explore' || run.instinct === 'hide') parts.push({ label: G.INSTINCT[run.instinct].name, v: -1, kind: pref });
     // A society's settlements farm, fish and herd.
+    if (run.stage === 'colonial' && (run.colonies || []).length) parts.push({ label: 'Colonies', v: (run.colonies || []).length, kind: pref });
     if (G.civ(run)) parts.push({ label: `${G.socKind(run).settlement[0].toUpperCase()}${G.socKind(run).settlement.slice(1)}s`, v: (run.settlements || []).reduce((t, x) => t + x.size, 0), kind: pref });
     const fpt = G.mod(run, 'foodPerTurn');
     const gathered = Math.max(0, parts.reduce((s, p) => s + p.v, 0));
@@ -608,7 +616,7 @@ window.G = window.G || {};
   const finaleEase = (run) => (run.phase === 'event' && run.event && G.EVENT[run.event.id] && G.EVENT[run.event.id].finale ? (run.finaleTries || 0) + G.harsh(run) : 0);
   // A Mimic disguised as the species in this event finds everything easier.
   const disguise = (run) => { const m = G.mimicOf(run); return m && run.phase === 'event' && run.event && run.event.species != null && run.species[run.event.species] === m ? 2 : 0; };
-  G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (G.people(run) ? (G.civ(run) ? (run.stage === 'renaissance' ? G.REN_HARSH : G.SOC_HARSH) : G.TRIBE_HARSH - G.boonLevel('w_elders')) - (finaleEase(run) ? (run.stage === 'tribe' ? 2 * G.boonLevel('w_founding') : 0) + (run.stage === 'society' ? G.boonLevel('h_union') : run.stage === 'renaissance' ? G.boonLevel('p_sail') : 0) : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
+  G.difficulty = (run, base) => base + G.harsh(run) - finaleEase(run) - disguise(run) + (run.stage !== 'cell' ? 0.5 + (run.era - 1) * 1.5 + (G.people(run) ? (G.civ(run) ? (run.stage === 'colonial' ? G.COL_HARSH : run.stage === 'renaissance' ? G.REN_HARSH : G.SOC_HARSH) : G.TRIBE_HARSH - G.boonLevel('w_elders')) - (finaleEase(run) ? (run.stage === 'tribe' ? 2 * G.boonLevel('w_founding') : 0) + (run.stage === 'society' ? G.boonLevel('h_union') : run.stage === 'renaissance' ? G.boonLevel('p_sail') : 0) : 0) : 0) : 0) + Math.min(2, Math.floor((run.eraTurn - 1) / 6)) + run.hostility;
   // Odds follow a gentle S-curve scaled to the check, so risky options are real choices at every stage:
   // equal to the difficulty is 50%, a few points short is still a gamble, and only big gaps get near 5% or 95%.
   // ---------- Fair Fights (Patch 16.4) ----------
@@ -678,7 +686,7 @@ window.G = window.G || {};
         const pl = run.plot != null && run.council && run.council[run.plot];
         w.plotter = pl ? `${G.COUNCIL_ROLES[pl.role].name} ${pl.name}` : 'a councillor';
         w.myth = G.mythName(run);
-        w.nation = G.nationName(run); w.faith = run.faith ? run.faith.name : 'the old faith';
+        w.nation = G.nationName(run); w.realm = G.realmName(run); w.faith = run.faith ? run.faith.name : 'the old faith';
       }
       return w;
     }
@@ -887,14 +895,14 @@ window.G = window.G || {};
     const base = Math.floor(run.totalDna / 3);
     const tribe = run.stage === 'tribe'; const soc = G.civ(run);
     const hab = run.habitat === 'sea' ? 'sea' : 'land';
-    const progress = run.stage === 'renaissance' ? 5 + Math.min(15, (run.reason || []).length + (run.renDeeds || []).length) : soc ? 5 + Math.min(15, (run.settlements || []).length * 2 + (run.traditions || []).length) : tribe ? 5 + Math.min(10, (run.discoveries || []).length * 2) : (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
+    const progress = run.stage === 'colonial' ? 5 + Math.min(15, (run.crown || []).length + (run.colonies || []).length) : run.stage === 'renaissance' ? 5 + Math.min(15, (run.reason || []).length + (run.renDeeds || []).length) : soc ? 5 + Math.min(15, (run.settlements || []).length * 2 + (run.traditions || []).length) : tribe ? 5 + Math.min(10, (run.discoveries || []).length * 2) : (run.multicellular ? 5 : 0) + (run.stage === 'creature' ? 10 : 0) + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     // Later endings are worth less than a Creature ending, which has already been paid out.
     const winBonus = victory ? (tribe || soc ? 25 : 40) : 0;
     // Each new ending in the Codex is worth a bonus.
-    const ren = run.stage === 'renaissance';
-    const endKey = victory && (ren ? (run.renaissanceEnding ? `${run.path}|${run.renaissanceEnding}` : null) : soc ? (run.societyEnding ? `${run.path}|${hab}|${run.societyEnding}` : null) : tribe ? (run.tribeEnding ? `${run.path}|${hab}|${run.tribeEnding}` : null)
+    const ren = run.stage === 'renaissance'; const col = run.stage === 'colonial';
+    const endKey = victory && (col ? (run.colonialEnding ? `${run.path}|${run.colonialEnding}` : null) : ren ? (run.renaissanceEnding ? `${run.path}|${run.renaissanceEnding}` : null) : soc ? (run.societyEnding ? `${run.path}|${hab}|${run.societyEnding}` : null) : tribe ? (run.tribeEnding ? `${run.path}|${hab}|${run.tribeEnding}` : null)
       : run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null);
-    const codexList = ren ? 'renaissanceEndings' : soc ? 'societyEndings' : tribe ? 'tribeEndings' : 'endings';
+    const codexList = col ? 'colonialEndings' : ren ? 'renaissanceEndings' : soc ? 'societyEndings' : tribe ? 'tribeEndings' : 'endings';
     const firstEnding = endKey && !(G.meta.codex[codexList] || []).includes(endKey) ? 10 : 0;
     const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
     return { base, progress, winBonus, firstEnding, mult, endKey, codexList, tribe, soc };
@@ -921,7 +929,7 @@ window.G = window.G || {};
     m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? (soc ? G.civEndingName(run) : tribe ? G.tribeEndingName(run) : G.endingName(run)) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
     m.history = m.history.slice(0, 30);
     run.phase = 'end';
-    log(run, victory ? (run.stage === 'renaissance' ? `${G.renaissanceEndingName(run)}: ${G.nationName(run)} sets sail.` : soc ? `${G.societyEndingName(run)}: your people unite the region.` : tribe ? `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes a people.` : `${G.endingName(run)}: your people are born.`) : `${tribe || soc ? 'Your people are gone.' : 'Extinction.'} ${cause}`);
+    log(run, victory ? (run.stage === 'colonial' ? `${G.colonialEndingName(run)}: ${G.realmName(run)} wears the Imperial Crown.` : run.stage === 'renaissance' ? `${G.renaissanceEndingName(run)}: ${G.nationName(run)} sets sail.` : soc ? `${G.societyEndingName(run)}: your people unite the region.` : tribe ? `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes a people.` : `${G.endingName(run)}: your people are born.`) : `${tribe || soc ? 'Your people are gone.' : 'Extinction.'} ${cause}`);
     save();
   }
 
@@ -1278,6 +1286,14 @@ window.G = window.G || {};
     if (eff.renaissanceEnding) run.renaissanceEnding = eff.renaissanceEnding;
     if (eff.schism) { run.schism = eff.schism; lines.push({ t: `The Schism: ${G.REASON.find((x) => x.schism === eff.schism).name} joins your Reason tree`, good: true }); }
     if (eff.renDeed) G.addRenDeed(run, eff.renDeed);
+    if (eff.colonialEnding) run.colonialEnding = eff.colonialEnding;
+    if (eff.crownDeed) G.addCrownDeed(run, eff.crownDeed);
+    if (eff.colony && run.stage === 'colonial') { const c = foundColony(run, eff.colony); lines.push({ t: `A new colony: ${c.name}`, good: true }); }
+    if (eff.unrest && (run.colonies || []).length) { run.colonies.forEach((c) => { c.unrest = clamp(c.unrest + eff.unrest, 0, 100); }); lines.push({ t: `Your colonies grow ${eff.unrest > 0 ? 'more restless' : 'calmer'}`, good: eff.unrest < 0, bad: eff.unrest > 0 }); }
+    if (eff.loseColony && (run.colonies || []).length) { const c = run.colonies.shift(); (run.lostColonies = run.lostColonies || []).push(c); lines.push({ t: `${c.name} goes its own way`, bad: true }); }
+    if (eff.overseasOpinion) run.species.forEach((x) => { if (x.overseas && !x.extinct) x.opinion = clamp(x.opinion + eff.overseasOpinion, -100, 100); });
+    if (eff.heirTrait && run.heir) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !run.heir.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) { run.heir.traits.push(pick(good)); lines.push({ t: `Your heir, ${run.heir.name}, grows into the role`, good: true }); } }
+    if (eff.newHeir && run.stage === 'colonial') { run.heir = newHeir(run); lines.push({ t: `${run.heir.name} is the new heir` }); }
     // Lasting changes to a society, from what it has lived through.
     if (eff.mods) { run.socBoons = (run.socBoons || []).concat([eff.mods]); lines.push({ t: G.describeMods(eff.mods), good: true }); }
     if (eff.loyalty && run.council) { run.council.forEach((c) => { c.loyalty = clamp(c.loyalty + eff.loyalty, -100, 100); }); lines.push({ t: `Your council ${eff.loyalty > 0 ? 'warms to' : 'cools on'} your ruler`, good: eff.loyalty > 0, bad: eff.loyalty < 0 }); }
@@ -1417,7 +1433,7 @@ window.G = window.G || {};
 
   function eventAllowed(run, e) {
     if (e.finale || e.milestone) return false;
-    if (e.stage !== 'any' && ![].concat(e.stage).includes(run.stage) && !(run.stage === 'renaissance' && [].concat(e.stage).includes('society'))) return false;
+    if (e.stage !== 'any' && ![].concat(e.stage).includes(run.stage) && !inherits(run, e.stage)) return false;
     if (e.habitat && e.habitat !== run.habitat) return false;
     if (e.zones && !(run.habitat === 'sea' && e.zones.includes(G.zone(run)))) return false;
     if (e.chained) return false;
@@ -1590,6 +1606,7 @@ window.G = window.G || {};
       else if (run.stage === 'creature' && G.TRIBE_PATHS.includes(run.path)) becomeTribe(run);
       else if (run.stage === 'tribe' && G.SOCIETY_PATHS.includes(run.path)) becomeSociety(run);
       else if (run.stage === 'society') becomeRenaissance(run);
+      else if (run.stage === 'renaissance') becomeColonial(run);
       else endRun(run, true);
     } else {
       nextStep(run, false);
@@ -1838,7 +1855,7 @@ window.G = window.G || {};
   G.activityState = (run, id, target) => {
     const a = G.ACTIVITY[id];
     if (!a || run.phase === 'end') return { ok: false, why: '' };
-    if (a.stage && ![].concat(a.stage).includes(run.stage) && !(run.stage === 'renaissance' && [].concat(a.stage).includes('society'))) return { ok: false, hidden: true, why: '' };
+    if (a.stage && ![].concat(a.stage).includes(run.stage) && !inherits(run, a.stage)) return { ok: false, hidden: true, why: '' };
     if (a.path && a.path !== run.path) return { ok: false, hidden: true, why: '' };
     if (id === 'cross' && G.people(run)) return { ok: false, hidden: true, why: '' };
     if (id === 'hunt' && (G.diet(run) === 'herb' || G.gimmick(run) === 'grazer')) return { ok: false, hidden: true, why: '' };
@@ -1890,7 +1907,7 @@ window.G = window.G || {};
     act.turns += 1;
     const t = G.activityTarget(run);
     if (a.target && !t) { lines.push(finishActivity(run, `The ${act.target} are gone. ${a.name} is over.`, true)); return; }
-    if (a.stage && [].concat(a.stage).some((x) => x === 'tribe' || x === 'society' || x === 'renaissance')) { tribeActivityTurn(run, act, t, lines); return; }
+    if (a.stage && [].concat(a.stage).some((x) => x === 'tribe' || x === 'society' || x === 'renaissance' || x === 'colonial')) { tribeActivityTurn(run, act, t, lines); return; }
     if (act.id === 'migrate') {
       G.spendFood(run, 1);
       // Wanderer peoples move camp a turn faster, and learn on the way.
@@ -2066,7 +2083,7 @@ window.G = window.G || {};
       const gap = atk - def;
       const hit = clamp(G.PREDATION + 0.04 * gap + (hostile ? 0.1 : 0), 0.04, run.stage === 'tribe' ? G.TRIBE_HIT_CAP : G.people(run) ? 0.6 : 0.45) * (run.instinct === 'hide' ? 0.5 : 1) * (1 + 0.4 * (run.power || 0));
       if (rand() >= hit * crowdEase * (G.biomeMatters(run) ? G.biome(run).danger || 1 : 1) * (s.nemesis ? 1.5 : 1) * (run.traits.includes('skeleton_soft') ? 0.8 : 1) * G.campShield(run)) return;
-      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (G.people(run) && run.stageTurn > G.TRIBE_GRACE ? (run.stage === 'tribe' ? G.TRIBE_BLOW : run.stage === 'renaissance' && s.band ? 2 : 1) : 0);
+      const n = clamp(1 + Math.floor(gap / 3), 1, s.band ? 4 : 3) + (G.people(run) && run.stageTurn > G.TRIBE_GRACE ? (run.stage === 'tribe' ? G.TRIBE_BLOW : G.nations(run) && s.band ? 2 : 1) : 0);
       if (s.band) G.addDeed(run, 'deed_raid'); G.remember(s, 'attacked');
       lines.push({ t: s.band ? `The ${s.name} raided your ${G.civ(run) ? G.socKind(run).settlement : G.kind(run).camp}: −${damage(run, n)} ${G.popWord(run)}` : `The ${s.name} hunted you: −${damage(run, n)} ${G.popWord(run)}`, bad: true });
     });
@@ -2175,7 +2192,7 @@ window.G = window.G || {};
   // What an idea costs: Beyond-the-Gate ideas are cheaper with Old Paths (Evolution Tree).
   G.innovationCost = (run, inv) => Math.max(1, Math.round(inv.cost * (inv.group === 'beyond' ? 1 - 0.15 * G.boonLevel('old_paths') : 1)));
   // Awakenings: does your Mind know an idea with this rule?
-  G.mindRule = (run, id) => !!run && ((run.innovations || []).some((i) => G.INNOVATION[i] && G.INNOVATION[i].rule === id) || (G.people(run) && (run.discoveries || []).some((i) => G.DISCOVERY[i] && G.DISCOVERY[i].rule === id)) || (G.civ(run) && (run.traditions || []).some((i) => G.TRADITION[i] && G.TRADITION[i].rule === id)) || (run.stage === 'renaissance' && (run.reason || []).some((i) => G.REASON_ID[i] && G.REASON_ID[i].rule === id)));
+  G.mindRule = (run, id) => !!run && ((run.innovations || []).some((i) => G.INNOVATION[i] && G.INNOVATION[i].rule === id) || (G.people(run) && (run.discoveries || []).some((i) => G.DISCOVERY[i] && G.DISCOVERY[i].rule === id)) || (G.civ(run) && (run.traditions || []).some((i) => G.TRADITION[i] && G.TRADITION[i].rule === id)) || (G.nations(run) && (run.reason || []).some((i) => G.REASON_ID[i] && G.REASON_ID[i].rule === id)) || (run.stage === 'colonial' && (run.crown || []).some((i) => G.CROWN_ID[i] && G.CROWN_ID[i].rule === id)));
   // The stat a check really uses: some awakenings let one stat stand in for another.
   const SWAPS = { outwit: ['str', 'cun'], charm_wit: ['cha', 'cun'], swift_strike: ['str', 'spd'] };
   G.checkStat = (run, stat) => {
@@ -2190,6 +2207,7 @@ window.G = window.G || {};
     (run.discoveries || []).forEach((id) => { const d = G.DISCOVERY[id]; if (d && d.lean) out[d.lean] += 1; });
     (run.traditions || []).forEach((id) => { const t = G.TRADITION[id]; if (t && t.lean) out[t.lean] += 1; });
     (run.reason || []).forEach((id) => { const t = G.REASON_ID[id]; if (t && t.lean) out[t.lean] += 1; });
+    (run.crown || []).forEach((id) => { const t = G.CROWN_ID[id]; if (t && t.lean) out[t.lean] += 1; });
     return out;
   };
   // The Memory of Kinds: what your lineage has done to each species, kept for good. Their descendants
@@ -2215,7 +2233,7 @@ window.G = window.G || {};
   G.specialUpkeep = (run) => (G.civ(run) ? Math.floor((run.settlements || []).length / 4) : Math.floor(Math.max(0, G.heads(run) - 30) / 20));
   // In the Renaissance, Learning past what the Age of Sail needs pays for scholars: +1 resource per 25 surplus, at most 4.
   G.scholarGain = (run) => (run.stage === 'renaissance' && G.goals(run).evolveAt ? clamp(Math.floor((run.dna - G.goals(run).evolveAt) / 25), 0, 4) : 0);
-  G.specialGain = (run) => Math.max(0, 2 + G.mod(run, 'specialPerTurn') + (G.civ(run) ? Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) : 0));
+  G.specialGain = (run) => Math.max(0, 2 + G.mod(run, 'specialPerTurn') + (run.stage === 'colonial' ? (run.tradePosts || 0) : 0) + (G.civ(run) ? Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) : 0));
   function addSpecial(run, n) {
     const cur = run.special || 0;
     if (n >= 0) { const under = Math.min(n, Math.max(0, G.SPECIAL_SOFT - cur)); run.special = Math.min(G.SPECIAL_HARD, cur + under + Math.floor((n - under) / 2)); }
@@ -2344,6 +2362,7 @@ window.G = window.G || {};
   const GATES = {
     tribe: { id: 'founding_gate', tab: 'found', tabName: 'Lore', verb: 'Learn', name: 'the Founding', list: (run) => run.discoveries, avail: (run) => G.loreAvailable(run, G.DISCOVERY.founding_gate) },
     society: { id: 'union_gate', tab: 'laws', tabName: 'Law', verb: 'Adopt', name: 'the Union', list: (run) => run.traditions, avail: (run) => G.lawAvailable(run, G.TRADITION.union_gate) },
+    colonial: { id: 'crown_gate', tab: 'crown', tabName: 'Crown', verb: 'Claim', name: 'the Imperial Crown', list: (run) => run.crown, avail: (run) => G.crownAvailable(run, G.CROWN_ID.crown_gate) },
     renaissance: { id: 'sail_gate', tab: 'reason', tabName: 'Reason', verb: 'Take up', name: 'the Age of Sail', list: (run) => run.reason, avail: (run) => G.reasonAvailable(run, G.REASON_ID.sail_gate) },
   };
   G.gateFor = (run) => {
@@ -2398,13 +2417,15 @@ window.G = window.G || {};
     }
     // Bands compete for the same land: unless you are allies, they slowly sour on you.
     // Even allies need tending: friendship with another people never lasts on its own.
-    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (run.stage === 'renaissance' && x.nationDisp ? (x.league ? 0 : G.NATION_SOUR[x.nationDisp] - (G.hasFlag(run, 'peaceful') ? 1 : 0)) : G.civ(run) ? (G.hasFlag(run, 'peaceful') || (run.path === 'song' && (run.special || 0) >= 6) ? 0 : 1) : run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.BAND_SOUR)); });
-    if (run.stage === 'renaissance') nationsTurn(run, lines);
+    run.species.forEach((x) => { if (x.band && !x.extinct) x.opinion = Math.max(-100, x.opinion - (G.nations(run) && x.nationDisp ? (x.league ? 0 : G.NATION_SOUR[x.nationDisp] - (G.hasFlag(run, 'peaceful') ? 1 : 0)) : G.civ(run) ? (G.hasFlag(run, 'peaceful') || (run.path === 'song' && (run.special || 0) >= 6) ? 0 : 1) : run.path === 'song' && (run.special || 0) >= 6 ? 1 : G.BAND_SOUR)); });
+    if (G.nations(run)) nationsTurn(run, lines);
+    if (run.stage === 'colonial') colonialTurn(run, lines);
     if (run.leader && run.turn - run.leader.since >= run.leader.life) {
       endReign(run, run.leader, 'died of old age');
       lines.push({ t: `${run.leader.name}, your leader, has died of old age`, bad: true });
       log(run, `${G.leaderTitle(run.leader)} died of old age.`);
       run.leader = null; run.needLeader = true;
+      succeed(run, lines);
     }
   }
   // Singers: when many die at once, verses are lost, and with them, discoveries.
@@ -2527,9 +2548,9 @@ window.G = window.G || {};
   G.holdDiscovery = function (pid) {
     const run = G.run;
     if (!run || run.phase !== 'draft' || !G.people(run) || !run.draft.options.includes(pid)) return;
-    if (run.stage === 'renaissance') { run.reasonGrafts = run.reasonGrafts || []; addUnique(run.reasonGrafts, pid); } else if (run.stage === 'society') { run.lawGrafts = run.lawGrafts || []; addUnique(run.lawGrafts, pid); } else { run.grafts = run.grafts || []; addUnique(run.grafts, pid); }
+    if (run.stage === 'colonial') { run.crownGrafts = run.crownGrafts || []; addUnique(run.crownGrafts, pid); } else if (run.stage === 'renaissance') { run.reasonGrafts = run.reasonGrafts || []; addUnique(run.reasonGrafts, pid); } else if (run.stage === 'society') { run.lawGrafts = run.lawGrafts || []; addUnique(run.lawGrafts, pid); } else { run.grafts = run.grafts || []; addUnique(run.grafts, pid); }
     if (!run.draft.source) run.draftsTaken += 1;
-    log(run, run.stage === 'renaissance' ? `A new branch of Reason: ${G.loreName(G.REASON_ID[pid], run)}, to take up when your nation can.` : run.stage === 'society' ? `A new branch of Law: ${G.TRADITION[pid].name}, to adopt when your people can.` : `A new branch of Lore: ${G.DISCOVERY[pid].name}, to learn when your people can.`);
+    log(run, run.stage === 'colonial' ? `A new branch of the Crown: ${G.loreName(G.CROWN_ID[pid], run)}, to take up when your realm can.` : run.stage === 'renaissance' ? `A new branch of Reason: ${G.loreName(G.REASON_ID[pid], run)}, to take up when your nation can.` : run.stage === 'society' ? `A new branch of Law: ${G.TRADITION[pid].name}, to adopt when your people can.` : `A new branch of Lore: ${G.DISCOVERY[pid].name}, to learn when your people can.`);
     run.draft = null;
     nextStep(run, false);
     save();
@@ -2578,6 +2599,14 @@ window.G = window.G || {};
     if ((id === 'gift' || id === 'trade' || id === 'raid' || id === 'treaty' || id === 'marry') && s && !s.band) return 'Only neighbour peoples';
     if (id === 'treaty' && s && s.treaty) return 'You already have a treaty';
     if (id === 'patronize' && (run.special || 0) < 5) return `Needs 5 ${G.kind(run).resource}`;
+    if (id === 'colonize' && run.food < 8) return 'Needs 8 Food';
+    if (id === 'colonize' && (run.special || 0) < 6) return `Needs 6 ${G.kind(run).resource}`;
+    if (id === 'colonize' && (run.colonies || []).length >= 6) return 'Six colonies is all your fleets can hold';
+    if ((id === 'trade_post' || id === 'subjugate') && s && !s.overseas) return 'Only peoples across the sea';
+    if (id === 'trade_post' && s && s.opinion < 10) return 'They need to like you first (opinion 10)';
+    if (id === 'trade_post' && s && s.tradePost) return 'You already trade with them';
+    if (id === 'subjugate' && G.disposition(run) === 'peace') return 'A Peaceful crown does not conquer';
+    if (id === 'royal_tour' && !(run.colonies || []).length) return 'You have no colonies to visit';
     if (id === 'voyage' && run.food < 4) return 'Needs 4 Food';
     if (id === 'league' && s && !s.band) return 'Only nations';
     if (id === 'league' && s && s.league) return 'Already in a league with you';
@@ -2591,7 +2620,7 @@ window.G = window.G || {};
   }
   function tribeActivityTurn(run, act, t, lines) {
     const a = G.ACTIVITY[act.id];
-    if (['found', 'build', 'gift', 'trade', 'raid', 'treaty', 'marry', 'patronize', 'voyage', 'league'].includes(act.id)) { societyActivityTurn(run, act, t, lines); return; }
+    if (['found', 'build', 'gift', 'trade', 'raid', 'treaty', 'marry', 'patronize', 'voyage', 'league', 'colonize', 'trade_post', 'subjugate', 'royal_tour'].includes(act.id)) { societyActivityTurn(run, act, t, lines); return; }
     if (act.id === 'tame') {
       const bonus = (G.temperament(run).id === 'bond' ? 20 : 0) + 15 * G.boonLevel('w_kin');
       const chance = clamp(35 + (G.stat(run, 'cha') - 3) * 8 + bonus, 15, 95);
@@ -2665,6 +2694,25 @@ window.G = window.G || {};
       if (win) { run.bandWins = (run.bandWins || 0) + 1; G.addFood(run, 5, 'meat'); gainDna(run, run.socType === 'conquer' ? 5 : 2); t.pop = Math.max(0, t.pop - t.cap * 0.1); lines.push(finishActivity(run, `The raid on the ${t.name} brought back food and glory.`, true)); }
       else lines.push(finishActivity(run, `The raid on the ${t.name} failed: −${damage(run, 2)} people.`, false));
     }
+    if (act.id === 'colonize' && act.turns >= a.turns) {
+      G.spendFood(run, 8); run.special = Math.max(0, (run.special || 0) - 6);
+      const c = foundColony(run, 'settle');
+      lines.push(finishActivity(run, `Settlers land across the sea: ${c.name} is founded.`, true));
+    }
+    if (act.id === 'trade_post' && act.turns >= a.turns) {
+      t.tradePost = true; run.tradePosts = (run.tradePosts || 0) + 1; t.opinion = clamp(t.opinion + 10, -100, 100); G.remember(t, 'befriended'); G.addCrownDeed(run, 'cd_trade');
+      lines.push(finishActivity(run, `A trading post among the ${t.name}: +1 ${G.kind(run).resource} a turn.`, true));
+    }
+    if (act.id === 'subjugate' && act.turns >= a.turns) {
+      const win = G.stat(run, 'str') + rand() * 6 > G.speciesStat(t, 'str') + G.wildEdge(run) + rand() * 6;
+      G.remember(t, 'warred'); t.opinion = clamp(t.opinion - 30, -100, 100);
+      if (win) { const c = foundColony(run, 'conquer', t.name); t.pop = Math.max(1, t.pop * 0.6); G.addCrownDeed(run, 'cd_war'); gainDna(run, 5); lines.push(finishActivity(run, `The ${t.name} are conquered: their land becomes ${c.name}. It will not be quiet.`, true)); }
+      else lines.push(finishActivity(run, `The war against the ${t.name} is lost: −${damage(run, 3)} people.`, false));
+    }
+    if (act.id === 'royal_tour' && act.turns >= a.turns) {
+      (run.colonies || []).forEach((c) => { c.unrest = clamp(c.unrest - 25, 0, 100); });
+      lines.push(finishActivity(run, 'The royal tour is a triumph: every colony grows calmer.', true));
+    }
     if (act.id === 'patronize') {
       if (act.turns === 1) run.special = Math.max(0, (run.special || 0) - 5);
       gainDna(run, 2); lines.push({ t: 'Your patrons pay for genius: +2 Learning', good: true });
@@ -2731,7 +2779,7 @@ window.G = window.G || {};
     const snap = JSON.parse(JSON.stringify(run));
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null; snap.event = null; snap.scene = null; snap.draft = null; snap.result = null;
     m.stageStarts = (m.stageStarts || []).filter((x) => x.key !== key);
-    m.stageStarts.unshift({ key, stage: run.stage, date: Date.now(), archetype: run.archetype, ending: run.stage === 'renaissance' ? G.societyEndingName(run) : run.stage === 'society' ? G.tribeEndingName(run) : G.endingName(run), kind: run.stage === 'society' ? G.socKind(run).name : G.kind(run).name, body: G.bodyOf(run), run: snap });
+    m.stageStarts.unshift({ key, stage: run.stage, date: Date.now(), archetype: run.archetype, ending: run.stage === 'colonial' ? G.renaissanceEndingName(run) : run.stage === 'renaissance' ? G.societyEndingName(run) : run.stage === 'society' ? G.tribeEndingName(run) : G.endingName(run), kind: run.stage === 'society' ? G.socKind(run).name : G.kind(run).name, body: G.bodyOf(run), run: snap });
     G.saveMeta();
   }
   G.stageStarts = () => G.meta.stageStarts || [];
@@ -2745,7 +2793,7 @@ window.G = window.G || {};
     run.baseFoodCap = G.FOOD_CAP + 2 * G.boonLevel('pantry');
     run.secondChanceUsed = false; run.power = G.power();
     run.result = null; run.phase = 'evolved';
-    if (run.stage === 'renaissance') renaissanceStart(run); else if (run.stage === 'society') societyStart(run); else tribeStart(run);
+    if (run.stage === 'colonial') colonialStart(run); else if (run.stage === 'renaissance') renaissanceStart(run); else if (run.stage === 'society') societyStart(run); else tribeStart(run);
     run.notices = [`Stage Select: your ${st.kind} begins again, from ${st.ending}.`];
     m.stats.runs += 1;
     G.run = run;
@@ -2771,12 +2819,12 @@ window.G = window.G || {};
   }
   // ---------- The Society stage (Update 16) ----------
   G.popWord = (run) => (G.civ(run) ? 'people' : run.stage === 'tribe' ? 'members' : 'Population');
-  G.dnaWord = (run) => (run.stage === 'renaissance' ? 'Learning' : run.stage === 'society' ? 'Influence' : run.stage === 'tribe' ? 'Ideas' : 'DNA');
+  G.dnaWord = (run) => (run.stage === 'colonial' ? 'Prestige' : run.stage === 'renaissance' ? 'Learning' : run.stage === 'society' ? 'Influence' : run.stage === 'tribe' ? 'Ideas' : 'DNA');
   G.socKind = (run) => G.SOCIETY_KINDS[run.path] && G.SOCIETY_KINDS[run.path][run.habitat === 'sea' ? 'sea' : 'land'];
   G.hasFlag = (run, flag) => G.civ(run) && (run.traditions || []).some((id) => G.TRADITION[id] && G.TRADITION[id].flag === flag);
   G.mythName = (run) => run.myth || 'The First Days';
   G.renaissanceEndingName = (run) => { const e = run.renaissanceEnding && G.RENAISSANCE_ENDINGS[run.renaissanceEnding]; return e ? e.name : ''; };
-  G.civEndingName = (run) => (run.stage === 'renaissance' ? G.renaissanceEndingName(run) : G.societyEndingName(run));
+  G.civEndingName = (run) => (run.stage === 'colonial' ? G.colonialEndingName(run) : run.stage === 'renaissance' ? G.renaissanceEndingName(run) : G.societyEndingName(run));
   G.societyEndingName = (run) => { const e = run.societyEnding && G.SOCIETY_ENDINGS[run.path] && G.SOCIETY_ENDINGS[run.path][run.habitat === 'sea' ? 'sea' : 'land'][run.societyEnding]; return e ? e.name : ''; };
   function settlementName(run) {
     const A = G.SETTLEMENT_SYLLABLES; let n; let guard = 0;
@@ -2803,7 +2851,7 @@ window.G = window.G || {};
     if (allies) list.push(tag({ foodPerTurn: Math.min(2, allies) }, 'Allied peoples'));
     return list;
   }
-  G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + G.mod(run, 'dnaPerTurn') + Math.trunc(G.mod(run, 'ideasPerTurn') / 2) + (run.instinct === 'explore' ? 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2) : 0));
+  G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + G.mod(run, 'dnaPerTurn') + Math.trunc(G.mod(run, 'ideasPerTurn') / 2) + (run.stage === 'colonial' ? Math.floor(G.colonySize(run) / 2) : 0) + (run.instinct === 'explore' ? 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2) : 0));
   // One generation of society: the council's loyalty shifts, and grudges may become plots.
   function societyTurn(run, lines) {
     if ((run.council || []).length && run.council.every((c) => c.loyalty >= 40)) G.addSocDeed(run, 'sd_golden_age');
@@ -3062,6 +3110,197 @@ window.G = window.G || {};
     run.phase = 'evolved';
     saveStageStart(run);
   }
+  // ---------- The Colonial Age and its Crown tree (Update 21) ----------
+  G.COL_HARSH = 9;
+  G.realmName = (run) => { const n = G.REALM_NAMES[run.path] && G.REALM_NAMES[run.path][run.habitat === 'sea' ? 'sea' : 'land']; return n || 'the Realm'; };
+  G.colonialEndingName = (run) => { const e = run.colonialEnding && G.COLONIAL_ENDINGS[run.colonialEnding]; return e ? e.name : ''; };
+  G.chartersOpen = () => G.stageStarts().some((x) => x.stage === 'colonial') || (G.meta.codex.colonialEndings || []).length > 0;
+  const crownFits = (run, x) => !x.path || x.path === run.path;
+  G.crownVisible = (run, x) => {
+    if ((run.crown || []).includes(x.id)) return true;
+    if (!crownFits(run, x)) return false;
+    switch (x.band) {
+      case 'inherit': return x.road === run.renaissanceEnding;
+      case 'people': case 'law': case 'gate': return true;
+      case 'tech': return (run.crownGrafts || []).includes(x.id) && (!x.disposition || x.disposition.includes(G.disposition(run)));
+      case 'dynasty': return (run.crownDeeds || []).includes(x.when.deed);
+      case 'beyond': return x.disposition === G.disposition(run);
+      default: return false;
+    }
+  };
+  G.crownKnown = (run) => (run.crown || []).filter((id) => G.CROWN_ID[id] && G.CROWN_ID[id].band !== 'gate').length;
+  G.crownNeed = () => Math.max(5, G.CROWN_NEED - 2 * G.boonLevel('c_gate'));
+  G.crownAvailable = (run, x) => {
+    const known = run.crown || [];
+    if (known.includes(x.id)) return { ok: false, reason: 'Known' };
+    if (!G.crownVisible(run, x)) return { ok: false, hidden: true, reason: 'Not in your tree' };
+    const blocker = known.find((id) => x.excl === id || (G.CROWN_ID[id] && G.CROWN_ID[id].excl === x.id));
+    if (blocker) return { ok: false, blocked: true, reason: `Ruled out by ${G.loreName(G.CROWN_ID[blocker], run)}` };
+    const n = G.crownKnown(run);
+    if (x.tier === 2 && (x.band === 'tech' || x.band === 'people' || x.band === 'law') && n < 2) return { ok: false, reason: 'Needs 2 Crown ideas known first' };
+    if (x.tier === 3 && x.band === 'tech' && n < 5) return { ok: false, reason: 'Needs 5 Crown ideas known first' };
+    if (x.band === 'gate') {
+      const goal = G.goals(run).evolveAt;
+      if (run.dna < goal) return { ok: false, reason: `Needs ${goal} Prestige (you have ${run.dna})` };
+      if (n < G.crownNeed()) return { ok: false, reason: `Needs ${G.crownNeed()} Crown ideas known (you have ${n})` };
+    }
+    const r = x.req || {};
+    if (r.known && n < r.known) return { ok: false, reason: `Needs ${r.known} Crown ideas known (you have ${n})` };
+    if (x.band === 'beyond' && known.includes('crown_gate')) return { ok: false, reason: 'Too late: the Imperial Crown is already worn' };
+    return { ok: true };
+  };
+  const CROWN_BASE = { inherit: 6, people: 8, law: 8, dynasty: 10, gate: 18, beyond: 30 };
+  G.crownCost = (run, id) => {
+    const x = G.CROWN_ID[id]; if (!x || run.stage !== 'colonial') return 0;
+    const base = x.band === 'tech' ? [0, 7, 10, 13][x.tier] || 10 : (CROWN_BASE[x.band] || 9) + (x.band === 'people' && x.tier === 2 ? 3 : 0);
+    const pct = clamp(G.discoveryCostPct(run) + 10 * G.boonLevel('w_lore') - 10 * G.boonLevel('c_crown'), -60, 100);
+    const agree = x.band === 'gate' ? 1 : 1 + 0.08 * G.crownKnown(run);
+    return costRound(base * (1 + pct / 100) * agree * (x.band === 'beyond' ? 1 - 0.15 * G.boonLevel('c_beyond') : 1));
+  };
+  function learnCrown(run, id) {
+    const x = G.CROWN_ID[id];
+    addUnique(run.crown = run.crown || [], id);
+    if (run.crownGrafts) run.crownGrafts = run.crownGrafts.filter((y) => y !== id);
+    addUnique(G.meta.codex.crown = G.meta.codex.crown || [], id);
+    log(run, `Crown: ${G.loreName(x, run)}.${x.excl ? ` (${G.loreName(G.CROWN_ID[x.excl], run)} is no longer possible.)` : ''}`);
+    if (id === 'crown_gate') { run.disposition = G.disposition(run); run.book = run.book || {}; run.book.crown = { seen: G.CROWN.filter((y) => G.crownVisible(run, y)).map((y) => y.id), known: run.crown.slice(), leaning: G.leaning(run), disposition: run.disposition, rulers: (run.rulers || []).slice(-8) }; }
+    if (!run.draft || !run.draft.source) run.draftsTaken += 1;
+    run.draft = null;
+    run.scene = { title: 'The Crown', label: `Your realm takes up ${G.loreName(x, run)}`, text: '', lines: [], anim: 'mutate', mood: 'proud', mutation: true, crown: id };
+    run.phase = 'mutated';
+    save();
+  }
+  G.learnCrown = function (id) {
+    const run = G.run; const x = G.CROWN_ID[id];
+    if (!run || run.stage !== 'colonial' || run.phase === 'end' || !x || !G.crownAvailable(run, x).ok) return;
+    const cost = G.crownCost(run, id);
+    if (cost > (run.special || 0)) return;
+    const held = holdScreen(run);
+    run.special -= cost;
+    run.draft = { options: [id], source: 'crown' };
+    learnCrown(run, id);
+    resumeScreen(run, held, G.loreName(x, run));
+  };
+  function crownOptions(run) {
+    const known = run.crown || []; const n = G.crownKnown(run);
+    let pool = G.CROWN.filter((x) => x.band === 'tech' && !known.includes(x.id) && !(run.crownGrafts || []).includes(x.id) && (!x.disposition || x.disposition.includes(G.disposition(run))) && (x.tier === 1 || (x.tier === 2 && n >= 2) || (x.tier === 3 && n >= 5)));
+    const out = []; const k = (G.meta.boons.choice ? 4 : 3) + G.boonLevel('c_branches');
+    while (out.length < k && pool.length) { const x = weightedPick(pool, (y) => (y.tier > 1 ? 1.3 : 1) * (y.disposition ? 1.5 : 1)); out.push(x.id); pool = pool.filter((y) => y.id !== x.id); }
+    return out;
+  }
+  G.addCrownDeed = (run, id) => {
+    if (!run || run.stage !== 'colonial' || !G.CROWN_DEEDS[id]) return;
+    run.crownDeeds = run.crownDeeds || [];
+    if (run.crownDeeds.includes(id)) return;
+    run.crownDeeds.push(id);
+    const x = G.CROWN.find((y) => y.when && y.when.deed === id);
+    if (x) run.notices.push(`A deed remembered: ${G.CROWN_DEEDS[id]} Your Crown tree grows a new idea: ${G.loreName(x, run)}.`);
+  };
+  function colonialMods(run) {
+    const list = [];
+    (run.crown || []).forEach((id) => { const x = G.CROWN_ID[id]; if (x) list.push(tag(x.mods, `Crown: ${G.loreName(x, run)}`)); });
+    (run.reason || []).forEach((id) => { const x = G.REASON_ID[id]; if (x && x.inherit) list.push(tag(x.inherit, `Inheritance: ${G.loreName(x, run)}`)); });
+    G.CHARTERS.forEach((h) => { const lvl = G.boonLevel(h.id); if (h.mods && lvl) { const m = {}; Object.entries(h.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(tag(m, `Charter: ${h.name}`)); } });
+    return list;
+  }
+  // ----- Colonies: lands across the sea that grow, pay, and can rebel -----
+  function colonyName(run) {
+    const A = G.COLONY_SYLLABLES; let n; let guard = 0;
+    do { n = pick(A.a) + pick(A.b); } while ((run.colonies || []).concat(run.lostColonies || []).some((x) => x.name === n) && guard++ < 30);
+    return n;
+  }
+  G.colonySize = (run) => (run.colonies || []).reduce((t, c) => t + c.size, 0);
+  function foundColony(run, how, from) {
+    run.colonies = run.colonies || [];
+    const c = { name: colonyName(run), how, size: 1, unrest: how === 'conquer' ? 30 : 0, since: run.turn, from: from || null };
+    run.colonies.push(c);
+    G.addCrownDeed(run, 'cd_colony');
+    log(run, `A colony was founded across the sea: ${c.name}.`);
+    return c;
+  }
+  G.colonyUnrestRate = (run, c) => ({ settle: 1.6, trade: 1, conquer: 4 }[c.how] || 1.6) * (1 - G.boonLevel('c_calm') / 3) * (G.mindRule(run, 'calm_colonies') ? 0.6 : 1) * (1 + c.size * 0.15);
+  function colonialTurn(run, lines) {
+    (run.colonies || []).slice().forEach((c) => {
+      c.unrest = clamp(c.unrest + G.colonyUnrestRate(run, c), 0, 100);
+      if (c.size < 4 && c.unrest < 50 && (run.turn - c.since) % 8 === 7) { c.size += 1; lines.push({ t: `${c.name} has grown`, good: true }); }
+      if (c.unrest >= 100) {
+        run.colonies = run.colonies.filter((x) => x !== c);
+        (run.lostColonies = run.lostColonies || []).push(c);
+        run.pop = Math.max(1, run.pop - Math.round(run.pop * 0.08)); run.dna = Math.max(0, run.dna - 10);
+        // The rebels become a people of their own across the sea, and they have not forgiven you.
+        const src = run.species.find((x) => x.overseas && !x.extinct) || run.species.find((x) => x.band && !x.extinct);
+        if (src) { const b = JSON.parse(JSON.stringify(src)); b.name = `${c.name} Rebels`; b.overseas = true; b.nation = true; b.nationDisp = 'war'; b.opinion = -60; b.pop = 14 + c.size * 4; b.cap = 30; b.tradePost = false; b.league = false; b.treaty = false; b.history = { warred: 1 }; b.hue = (src.hue + 90) % 360; run.species.push(b); }
+        lines.push({ t: `Rebellion! ${c.name} declares itself free of your crown (−10 Prestige)`, bad: true });
+        run.notices.push(`${c.name} has rebelled and broken away, and its rebels may come for you. Keep colonies calm with royal tours, laws and garrisons.`);
+        log(run, `${c.name} rebelled and broke away.`);
+      }
+    });
+  }
+  // ----- The dynasty: an heir waits beside every ruler -----
+  function newHeir(run) {
+    const h = newLeader(run);
+    for (let i = 0; i < G.boonLevel('c_heirs'); i++) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !h.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) h.traits.push(pick(good)); }
+    h.heir = true;
+    return h;
+  }
+  // The heir takes the throne when the ruler dies; returns true if they did.
+  function succeed(run, lines) {
+    if (run.stage !== 'colonial' || !run.heir) return false;
+    const h = run.heir;
+    if (G.mindRule(run, 'heir_chosen')) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !h.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) h.traits.push(pick(good)); }
+    delete h.heir; h.since = run.turn; run.leader = h; run.needLeader = false; startReign(run, h);
+    run.heir = newHeir(run);
+    if (!G.mindRule(run, 'heir_sure')) {
+      (run.council || []).forEach((c) => { c.loyalty = clamp(c.loyalty - 8, -100, 100); });
+      // Without a clear law of succession, a rival claimant may fight for the throne.
+      if (rand() < (G.mindRule(run, 'heir_chosen') ? 0.2 : 0.45)) { const n = Math.max(1, Math.round(run.pop * 0.12)); run.pop -= n; (run.colonies || []).forEach((c) => { c.unrest = clamp(c.unrest + 15, 0, 100); }); lines.push({ t: `War of Succession! A rival claimant fights for the throne: −${n} people, and the colonies are restless`, bad: true }); log(run, 'A war of succession was fought.'); }
+    }
+    G.addCrownDeed(run, 'cd_heir');
+    lines.push({ t: `${G.leaderTitle(h)} succeeds to the throne`, good: true });
+    log(run, `${G.leaderTitle(h)} succeeded to the throne.`);
+    return true;
+  }
+  // Peoples across the sea: they meet you as you met them in the Age of Sail.
+  function makeOverseas(run) {
+    const road = run.renaissanceEnding || 'explore';
+    const first = { explore: [0, 'guard'], trade: [20, 'peace'], conquer: [-30, 'war'] }[road] || [0, 'guard'];
+    const srcs = run.species.filter((x) => !x.extinct && !x.band && !x.tamed).sort((a, b) => b.pop - a.pop).slice(0, 2);
+    srcs.forEach((src, i) => {
+      const kindPath = pick(G.TRIBE_PATHS);
+      const word = G.KINDS[kindPath][run.habitat === 'sea' ? 'sea' : 'land'].band;
+      const b = JSON.parse(JSON.stringify(src));
+      b.name = `Far ${src.name.replace(/s$/, '')} ${word[0].toUpperCase()}${word.slice(1)}`;
+      b.band = true; b.nation = true; b.overseas = true; b.role = 'rival'; b.cap = 30; b.pop = 22; b.size = Math.max(src.size, 0.9); b.from = src.name; b.kindPath = kindPath;
+      b.opinion = clamp(first[0] + (i ? -10 : 0) + 15 * G.boonLevel('p_envoys'), -100, 100); b.nationDisp = first[1]; b.history = {}; b.nemesis = false; b.tamed = false; b.league = false; b.treaty = false;
+      b.hue = (src.hue + 160) % 360;
+      run.species.push(b);
+    });
+  }
+  function colonialStart(run) {
+    run.dna = 0; run.totalDna = 0; run.draftsTaken = 0; run.finaleRetryAt = 0; run.finaleTries = 0;
+    run.crown = []; run.crownGrafts = []; run.crownDeeds = []; run.plot = null;
+    run.colonies = run.colonies || []; run.tradePosts = run.tradePosts || 0;
+    run.specialOn = true;
+    if (G.boonLevel('c_prestige')) gainDna(run, 10 * G.boonLevel('c_prestige'));
+    if (!run.fromStage) for (let i = 0; i < G.boonLevel('c_fleet'); i++) foundColony(run, 'settle');
+    if (G.boonLevel('c_tech')) { const opts = crownOptions(run); if (opts.length) run.crown.push(pick(opts)); }
+    if (!run.species.some((x) => x.overseas)) makeOverseas(run);
+    if (!run.heir) run.heir = newHeir(run);
+    // The Age of Sail fixed who you were; a crown can change its mind before it becomes imperial.
+    if (run.disposition) { run.sailDisposition = run.disposition; run.disposition = null; }
+  }
+  function becomeColonial(run) {
+    stageCheckpoint(run);
+    run.stage = 'colonial'; run.stageTurn = 1; run.eraTurn = 1;
+    colonialStart(run);
+    run.needLeader = !run.leader; run.activity = null; run.chains = [];
+    if (run.food < 12) G.addFood(run, 12 - run.food);
+    run.evolved = { colonial: true, kind: G.realmName(run), ending: G.renaissanceEndingName(run) };
+    run.notices = [];
+    log(run, `${G.renaissanceEndingName(run)}: ${G.nationName(run)} becomes ${G.realmName(run)}, a crown across the sea.`);
+    run.phase = 'evolved';
+    saveStageStart(run);
+  }
   function traditionOptions(run) {
     const known = run.traditions || []; const hab = run.habitat === 'sea' ? 'sea' : 'land';
     const locked = new Set(known.map((id) => G.TRADITION[id] && G.TRADITION[id].excl).filter(Boolean));
@@ -3092,7 +3331,7 @@ window.G = window.G || {};
     m.genes += genes; m.stats.wins += 1;
     if (r.endKey) addUnique(m.codex[r.codexList] = m.codex[r.codexList] || [], r.endKey);
     run.checkpointGenes = (run.checkpointGenes || 0) + genes;
-    run.notices.push(`${run.stage === 'society' ? G.societyEndingName(run) : G.tribeEndingName(run)}: +${genes} Genetic Memory, kept whatever happens next.`);
+    run.notices.push(`${run.stage === 'renaissance' ? G.renaissanceEndingName(run) : run.stage === 'society' ? G.societyEndingName(run) : G.tribeEndingName(run)}: +${genes} Genetic Memory, kept whatever happens next.`);
     G.saveMeta();
   }
   function societyStart(run) {
@@ -3210,10 +3449,10 @@ window.G = window.G || {};
     // Lineages that reached the Spark before Paths existed choose one now.
     if (run.stage === 'creature' && run.mind && !run.path) { setEvent(run, G.EVENT.path_choice); return; }
     if (needsFascination(run)) { run.phase = 'mind'; return; }
-    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'creature' ? !!run.path && run.innovations.includes(`${run.path}_cap`) : run.stage === 'tribe' ? run.discoveries.includes('founding_gate') : run.stage === 'renaissance' ? (run.reason || []).includes('sail_gate') : run.stage === 'society' ? run.traditions.includes('union_gate') : run.dna >= st.evolveAt);
+    const finaleReady = run.turn >= run.finaleRetryAt && (run.stage === 'creature' ? !!run.path && run.innovations.includes(`${run.path}_cap`) : run.stage === 'tribe' ? run.discoveries.includes('founding_gate') : run.stage === 'colonial' ? (run.crown || []).includes('crown_gate') : run.stage === 'renaissance' ? (run.reason || []).includes('sail_gate') : run.stage === 'society' ? run.traditions.includes('union_gate') : run.dna >= st.evolveAt);
     if (finaleReady) {
       const hab = run.habitat === 'sea' ? 'sea' : 'land';
-      const id = run.stage === 'cell' ? 'cell_finale' : run.stage === 'renaissance' ? 'sail_finale' : run.stage === 'society' ? `union_${run.path}_${hab}` : run.stage === 'tribe' ? `founding_${run.path}_${hab}` : `finale_${run.path}_${hab}`;
+      const id = run.stage === 'cell' ? 'cell_finale' : run.stage === 'colonial' ? 'crown_finale' : run.stage === 'renaissance' ? 'sail_finale' : run.stage === 'society' ? `union_${run.path}_${hab}` : run.stage === 'tribe' ? `founding_${run.path}_${hab}` : `finale_${run.path}_${hab}`;
       setEvent(run, G.EVENT[id]);
       return;
     }
@@ -3232,6 +3471,7 @@ window.G = window.G || {};
 
   // ---------- Mutation drafts ----------
   function draftOptions(run) {
+    if (run.stage === 'colonial') return crownOptions(run);
     if (run.stage === 'renaissance') return reasonOptions(run);
     if (run.stage === 'society') return traditionOptions(run);
     if (run.stage === 'tribe') return discoveryOptions(run);
@@ -3264,6 +3504,14 @@ window.G = window.G || {};
   G.pickDraft = function (pid, mode, socket) {
     const run = G.run;
     if (!run || run.phase !== 'draft' || !run.draft.options.includes(pid)) return;
+    if (run.stage === 'colonial') {
+      run.crownGrafts = run.crownGrafts || []; addUnique(run.crownGrafts, pid);
+      const cost = G.crownCost(run, pid);
+      if (mode !== 'learn' || cost > (run.special || 0)) { G.holdDiscovery(pid); return; }
+      run.special -= cost;
+      learnCrown(run, pid);
+      return;
+    }
     if (run.stage === 'renaissance') {
       run.reasonGrafts = run.reasonGrafts || []; addUnique(run.reasonGrafts, pid);
       const cost = G.reasonCost(run, pid);
@@ -3311,7 +3559,7 @@ window.G = window.G || {};
     const run = G.run;
     if (!run || run.phase !== 'draft') return;
     G.addFood(run, 3);
-    run.notices.push(`You skipped a ${run.stage === 'renaissance' ? 'invention' : run.stage === 'society' ? 'tradition' : run.stage === 'tribe' ? 'discovery' : 'mutation'} and gained 3 Food.`);
+    run.notices.push(`You skipped a ${run.stage === 'colonial' ? 'technology' : run.stage === 'renaissance' ? 'invention' : run.stage === 'society' ? 'tradition' : run.stage === 'tribe' ? 'discovery' : 'mutation'} and gained 3 Food.`);
     if (!run.draft.source) run.draftsTaken += 1;
     run.draft = null;
     nextStep(run, false);
@@ -3400,6 +3648,7 @@ window.G = window.G || {};
   // ---------- Fossils and history ----------
   // How far a run got, in words.
   G.reachedLabel = (run) => {
+    if (run.stage === 'colonial') return `Colonial Age: ${G.realmName(run)}`;
     if (run.stage === 'renaissance') return `Renaissance: ${G.nationName(run)}`;
     if (run.stage === 'society') return `Society stage: ${G.socKind(run).name}`;
     if (run.stage === 'tribe') return `Tribe stage: ${G.kind(run).name}`;
@@ -3475,6 +3724,7 @@ window.G = window.G || {};
       if (b && id.startsWith('w_') && !G.wisdomOpen()) return false;
       if (b && id.startsWith('h_') && !G.heritageOpen()) return false;
       if (b && id.startsWith('p_') && !G.patronageOpen()) return false;
+      if (b && id.startsWith('c_') && !G.chartersOpen()) return false;
       cost = b && G.boonCost(b);
       if (cost == null || m.genes < cost || !G.boonOpen(b)) return false;
       m.boons[id] = G.boonLevel(id) + 1;
@@ -3508,4 +3758,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '20.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.0';
