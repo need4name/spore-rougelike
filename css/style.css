@@ -757,3 +757,13 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .node.open.cant, .node.current.cant { box-shadow: none !important; border-color: rgba(242, 181, 68, 0.45); }
 .node .n-xs { font-size: 0.74em; }
 .node span { overflow-wrap: break-word; }
+
+/* Fossil Record: lineages with names (Patch 21.2) */
+.lineage-card { background: color-mix(in srgb, var(--panel) 55%, transparent); border-radius: var(--radius); padding: 10px; margin-bottom: 12px; }
+.lineage-card > .note { margin: 2px 0 8px; }
+.lineage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lineage-head h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.live-tag { font-size: 0.7rem; font-weight: 400; color: var(--good, #8fd16a); margin-left: 4px; }
+.amber-tag { font-size: 0.7rem; padding: 1px 6px; border-radius: 99px; background: rgba(242, 181, 68, 0.25); color: #f2b544; vertical-align: middle; }
+.rename-row, .name-row { display: flex; gap: 6px; align-items: center; }
+.rename-row input, .name-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--muted) 50%, transparent); background: var(--panel); color: inherit; }

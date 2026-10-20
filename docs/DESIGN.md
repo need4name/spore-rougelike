@@ -91,6 +91,12 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.2: A clearer Fossil Record
+
+- **Lineages have names.** `run.lineage = { id, name }` is set by `G.newRun` (typed on the setup screen, or two random syllables from `G.LINEAGE_SYLLABLES`). Fossils, Stage Select starts and history entries copy it; revived runs keep it. Older fossils each become their own lineage named after their archetype. `G.renameLineage` renames every copy at once (max 24 letters).
+- **The Fossil Record groups fossils by lineage**, furthest point first, each with a detail line (`G.fossilDetail`: land or sea, diet, Path, numbers, parts).
+- **Delete:** `G.deleteFossil` removes any fossil, in amber or not, after a second tap. With amber full, the other fossils say "Amber full" and the note explains how to make room.
+
 ## Patch 21.1: Early-game polish
 
 - **Tribe blows are capped.** Sims of 170 Tribe runs per setting showed raids and hunts on the map caused almost every Tribe loss: about one hit a turn, often a quarter to half of the people at once. In the Tribe stage one blow now takes at most `G.TRIBE_HIT_SHARE` (20%) of your members, plus 2% per point of the blow, never less than one Population head. Founding now succeeds 95–100% on every Path with an empty Evolution Tree (it was 25% for Song, 100% for Many). Ancestral Wisdom still makes it faster.

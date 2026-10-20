@@ -43,6 +43,8 @@ window.G = window.G || {};
     m.boons = saved.boons || {};
     Object.keys(m.boons).forEach((id) => { if (!G.BOON[id]) delete m.boons[id]; else m.boons[id] = Math.min(m.boons[id], G.BOON[id].costs.length); });
     m.fossils = saved.fossils || [];
+    // Fossils from before lineages had names: each becomes its own lineage, named after its archetype, until you rename it.
+    m.fossils.forEach((f) => { if (!f.lineage) f.lineage = (f.run && f.run.lineage) || { id: `old-${f.id}`, name: `${((G.ARCHETYPES.find((x) => x.id === f.archetype)) || { name: 'Old' }).name} lineage` }; });
     m.stageStarts = saved.stageStarts || [];
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
@@ -83,6 +85,34 @@ window.G = window.G || {};
   G.saveRun = () => store(SAVE_RUN, G.run);
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
   function save() { G.saveRun(); G.saveMeta(); }
+
+  // ---------- Lineage names ----------
+  // Every lineage has a name you can change, carried by its fossils, its Stage Select start and its history.
+  G.LINEAGE_NAME_MAX = 24;
+  G.randomLineageName = () => { const S = G.LINEAGE_SYLLABLES; const pick = (a) => a[Math.floor(Math.random() * a.length)]; return pick(S.a) + pick(S.b); };
+  G.newLineage = (name) => ({ id: `L${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`, name: G.cleanName(name) || G.randomLineageName() });
+  G.cleanName = (name) => String(name || '').replace(/\s+/g, ' ').trim().slice(0, G.LINEAGE_NAME_MAX);
+  G.lineageName = (run) => (run && run.lineage && run.lineage.name) || 'Unnamed lineage';
+  if (G.run && !G.run.lineage) { G.run.lineage = G.newLineage(); }
+  G.renameLineage = function (id, name) {
+    const n = G.cleanName(name);
+    if (!n || !id) return false;
+    const m = G.meta; const fix = (x) => { if (x && x.lineage && x.lineage.id === id) x.lineage.name = n; };
+    m.fossils.forEach((f) => { fix(f); if (f.run) fix(f.run); });
+    (m.stageStarts || []).forEach((x) => { fix(x); if (x.run) fix(x.run); });
+    m.history.forEach(fix);
+    if (G.run) fix(G.run);
+    save();
+    return true;
+  };
+  // Throw a fossil away for good, to make room or tidy the record.
+  G.deleteFossil = function (id) {
+    const m = G.meta; const n = m.fossils.length;
+    m.fossils = m.fossils.filter((f) => f.id !== id);
+    if (m.fossils.length === n) return false;
+    G.saveMeta();
+    return true;
+  };
 
   // The next first-time tip to show, if any.
   G.nextTutorial = (run, ui) => {
@@ -842,7 +872,7 @@ window.G = window.G || {};
   };
 
   // ---------- Starting and ending runs ----------
-  G.newRun = function (archetypeId, originId, hostility) {
+  G.newRun = function (archetypeId, originId, hostility, name) {
     const arch = G.ARCHETYPE[archetypeId];
     const b = G.meta.boons;
     const run = {
@@ -860,11 +890,12 @@ window.G = window.G || {};
       draftsTaken: 0, milestonesDone: [], finaleRetryAt: 0, popV: 2,
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
       quietTicks: 2, look: {}, knownEvos: G.meta.codex.evolutions.slice(),
+      lineage: G.newLineage(name),
     };
     Object.entries(arch.start.cell).forEach(([slot, id]) => { run.parts[slot] = { id, merged: null }; });
     setupGimmick(run);
     run.pop = Math.min(run.pop, G.hardPop(run));
-    log(run, `Life stirs in the ${G.ORIGIN[originId].name}. A new ${arch.name} lineage begins.`);
+    log(run, `Life stirs in the ${G.ORIGIN[originId].name}. A new ${arch.name} lineage begins: the ${run.lineage.name}.`);
     run.notices.push(`You share these waters with the ${run.species.map((s) => s.name).join(', ')}.`);
     G.meta.stats.runs += 1;
     noteParts(run);
@@ -927,7 +958,7 @@ window.G = window.G || {};
     }
     m.stats.bestDna = Math.max(m.stats.bestDna || 0, run.totalDna);
     run.result = { victory, cause, genes, breakdown: { base, progress, winBonus, survival, firstEnding, mult, revived: !!run.revived } };
-    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? (soc ? G.civEndingName(run) : tribe ? G.tribeEndingName(run) : G.endingName(run)) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run) });
+    m.history.unshift({ date: Date.now(), archetype: run.archetype, origin: run.origin, victory, cause: victory ? (soc ? G.civEndingName(run) : tribe ? G.tribeEndingName(run) : G.endingName(run)) : cause, reached: G.reachedLabel(run), genes, turns: run.turn, revived: !!run.revived, body: G.bodyOf(run), lineage: run.lineage ? { ...run.lineage } : null });
     m.history = m.history.slice(0, 30);
     run.phase = 'end';
     log(run, victory ? (run.stage === 'colonial' ? `${G.colonialEndingName(run)}: ${G.realmName(run)} wears the Imperial Crown.` : run.stage === 'renaissance' ? `${G.renaissanceEndingName(run)}: ${G.nationName(run)} sets sail.` : soc ? `${G.societyEndingName(run)}: your people unite the region.` : tribe ? `${G.tribeEndingName(run)}: your ${G.kind(run).band} becomes a people.` : `${G.endingName(run)}: your people are born.`) : `${tribe || soc ? 'Your people are gone.' : 'Extinction.'} ${cause}`);
@@ -2783,7 +2814,7 @@ window.G = window.G || {};
     const snap = JSON.parse(JSON.stringify(run));
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null; snap.event = null; snap.scene = null; snap.draft = null; snap.result = null;
     m.stageStarts = (m.stageStarts || []).filter((x) => x.key !== key);
-    m.stageStarts.unshift({ key, stage: run.stage, date: Date.now(), archetype: run.archetype, ending: run.stage === 'colonial' ? G.renaissanceEndingName(run) : run.stage === 'renaissance' ? G.societyEndingName(run) : run.stage === 'society' ? G.tribeEndingName(run) : G.endingName(run), kind: run.stage === 'society' ? G.socKind(run).name : G.kind(run).name, body: G.bodyOf(run), run: snap });
+    m.stageStarts.unshift({ key, stage: run.stage, date: Date.now(), archetype: run.archetype, ending: run.stage === 'colonial' ? G.renaissanceEndingName(run) : run.stage === 'renaissance' ? G.societyEndingName(run) : run.stage === 'society' ? G.tribeEndingName(run) : G.endingName(run), kind: run.stage === 'society' ? G.socKind(run).name : G.kind(run).name, body: G.bodyOf(run), lineage: run.lineage ? { ...run.lineage } : null, run: snap });
     G.saveMeta();
   }
   G.stageStarts = () => G.meta.stageStarts || [];
@@ -3665,6 +3696,18 @@ window.G = window.G || {};
   };
   const reviveKey = (run) => (G.civ(run) ? 'society' : run.stage === 'tribe' ? 'tribe' : run.stage === 'cell' ? 'multicellular' : run.mind ? 'mind' : run.era >= 2 ? 'giants' : 'creature');
   G.amberSlots = () => 1 + G.boonLevel('amber');
+  // A short line saying what a fossil holds, so two fossils of one lineage are easy to tell apart.
+  G.fossilDetail = function (run) {
+    try {
+      const bits = [];
+      if (run.stage !== 'cell') bits.push(run.habitat === 'sea' ? 'Sea' : 'Land');
+      bits.push(G.DIET_NAMES[G.diet(run)]);
+      if (run.path && G.PATH[run.path]) bits.push(`${G.PATH[run.path].icon} ${G.PATH[run.path].name}`);
+      bits.push(`${run.pop} ${G.popWord(run)}`);
+      if (run.stage === 'creature' || run.stage === 'cell') bits.push(`${Object.keys(run.parts || {}).length} parts`);
+      return bits.join(' · ');
+    } catch (e) { return ''; }
+  };
   // Save a fossil of the run as it is now. Called after each milestone and each new stage.
   G.fossilize = function (run) {
     const m = G.meta;
@@ -3672,7 +3715,8 @@ window.G = window.G || {};
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null;
     snap.phase = 'map'; snap.event = null; snap.scene = null; snap.draft = null; snap.evolved = null;
     const key = reviveKey(run);
-    m.fossils.unshift({ id: `f${Date.now()}${Math.floor(rand() * 1000)}`, date: Date.now(), archetype: run.archetype, origin: run.origin, label: G.reachedLabel(run), key, turn: run.turn, amber: false, body: G.bodyOf(run), run: snap });
+    if (!run.lineage) run.lineage = G.newLineage();
+    m.fossils.unshift({ id: `f${Date.now()}${Math.floor(rand() * 1000)}`, date: Date.now(), archetype: run.archetype, origin: run.origin, label: G.reachedLabel(run), key, turn: run.turn, amber: false, body: G.bodyOf(run), lineage: { ...run.lineage }, detail: G.fossilDetail(run), run: snap });
     const amber = m.fossils.filter((f) => f.amber);
     const loose = m.fossils.filter((f) => !f.amber).slice(0, G.FOSSIL_KEEP);
     m.fossils = m.fossils.filter((f) => amber.includes(f) || loose.includes(f));
@@ -3695,6 +3739,7 @@ window.G = window.G || {};
     m.genes -= G.reviveCost(f);
     const run = G.migratePop(JSON.parse(JSON.stringify(f.run)));
     run.revived = true;
+    if (!run.lineage) run.lineage = f.lineage ? { ...f.lineage } : G.newLineage();
     run.knownEvos = m.codex.evolutions.slice();
     run.baseMaxPop = G.BASE_POP + G.boonLevel('hardy');
     run.baseFoodCap = G.FOOD_CAP + 2 * G.boonLevel('pantry');
@@ -3764,4 +3809,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.1';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.2';

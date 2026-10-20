@@ -555,6 +555,48 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 ---
 
+## Expansions: decisions that push back (CK3-style)
+
+*Each expansion adds one new kind of decision that runs through every stage, the way a Crusader Kings 3 expansion adds a system to the whole game rather than one more region. The aim: fewer "pick the best option and move on" events, more choices that start something, get answered, and come back later.*
+
+**First, in the base game: the Decisions tab.** CK3's best idea is that big choices are not only things that happen *to* you. A Decisions tab lists the big moves you can make whenever you meet their conditions, with what they cost and what they risk: *Migrate to the shallows*, *Abandon the old hunting grounds*, *Declare the sacred grove*, *Split the tribe*, *Move the capital*, *Outlaw the old faith*. Each stage gets 6–10. Every expansion below adds its own.
+
+### 1. Rivals and Nemeses ("the lineage that hates you")
+- One species you hurt (or lost to) becomes your **Rival**: it is named, has its own small tree, and grows as you do. It answers your choices: hunt it and it gets armour; ignore it and it takes your food.
+- It **follows you between stages**: the predator becomes the rival band, then the rival city, then the rival empire, keeping its grudges.
+- You choose how it ends: **wipe it out, make peace, absorb it, or let it go.** A rival that survives becomes a rival in your next lineage (the Fossil Record remembers).
+
+### 2. Schemes ("plans that take time and can go wrong")
+- Multi-turn plans with a **hidden progress bar and a chance of being found out**: in the Creature stage, steal a nest or herd a rival into a trap; in the Tribe stage, sway another band's leader; in the Society stage, plots, spies and coups.
+- **Agents** join or refuse depending on your traits and gifts. **Secrets** you uncover can be kept, used as leverage, or traded.
+- Others scheme against you too: you get warnings, not certainties.
+
+### 3. Characters and the Council Room ("people with opinions")
+- From the Tribe stage on, leaders, keepers and heirs are **people with traits, memories and opinions of you**. Ask too much of them and they refuse, leave or plot.
+- **Requests:** council members come to you wanting things (a war, a temple, a marriage). Grant them, refuse them, or bargain.
+- **Temperament and stress:** your lineage's temperament (from the Mind stage) makes some choices cost **Strain** when you act against it. Too much Strain brings breakdowns that can become new traits.
+
+### 4. Struggles ("one crisis, many turns")
+- Long crises with **phases** that change depending on what everyone does: the **Ice Age** (Creature), the **Great Drought** (Tribe), the **Plague Years** (Society), the **Age of Revolutions** (Colonial).
+- Each phase changes the rules (food halves, migrations open, trade stops). **Catalysts** (your choices and others') push it to the next phase.
+- It ends in one of several ways, and you choose your role: ride it out, profit from it, or end it, each with its own reward.
+
+### 5. Legends and Myths ("what your people remember")
+- Your great deeds become **Legends** that spread across the map and grow stronger as more peoples hear them: *the Eater of Giants*, *the Flood Walkers*, *the Singing Ships*.
+- Choose how to tell each one (truthfully, grander or as a warning). That changes what bonus it gives and who believes it.
+- Legends from past lineages can return as **myths** that new peoples tell about your old fossils.
+
+### 6. Journeys ("going somewhere is a story")
+- **Migrations, pilgrimages and voyages** as event chains along a route you pick on the map: each stop offers a choice, companions join or leave, and you can turn back.
+- Creature-stage migrations across biomes; Tribe pilgrimages to sacred places; Society envoys; Colonial grand tours.
+- What you bring back (a new part, a discovery, a marriage, a plague) depends on the route and the choices.
+
+### 7. The Creature Wardrobe (looks, below)
+
+**Suggested order:** the Decisions tab first (it makes every expansion easier to fit), then **Rivals** (it fixes "the world doesn't react to me" the fastest), then **Characters**, **Schemes**, **Struggles**, **Legends** and **Journeys**. Each one is planned as its own update with its own tests.
+
+---
+
 ## Scrapped
 
 - **The Space stage** (was Updates 18–19). The game now ends with the Empire stage. Its best ideas moved: the true ending and New Game+ go to Update 19, and past lineages returning as rivals go to Updates 10 and 19.
@@ -564,5 +606,4 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 ## Ideas waiting for a home
 
 - Sharing a creature as an image or a link.
-- A creature-naming screen.
 - Hybrid symmetry (for example, a radial creature with a bilateral head).

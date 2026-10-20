@@ -152,6 +152,7 @@ window.G = window.G || {};
     G.ui.screen = screen;
     G.ui.confirmAbandon = false;
     G.ui.confirmReset = false;
+    G.ui.confirmDel = null; G.ui.renaming = null;
     G.ui.sheet = null;
     render();
     window.scrollTo(0, 0);
@@ -169,7 +170,7 @@ window.G = window.G || {};
           <p class="lede">Guide one lineage from a single cell to the first spark of a people. Events shape its body, its mind and its story. When it goes extinct, its genetic memory makes the next one stronger.</p>
         </div>
         <div class="menu">
-          ${live ? `<button class="btn primary" data-act="continue">Continue lineage <small>${esc(G.STAGES[G.run.stage].name)}, ${esc(G.STAGES[G.run.stage].turnName)} ${G.run.stageTurn}</small></button>` : ''}
+          ${live ? `<button class="btn primary" data-act="continue">Continue ${G.run.lineage ? `the ${esc(G.run.lineage.name)}` : 'lineage'} <small>${esc(G.STAGES[G.run.stage].name)}, ${esc(G.STAGES[G.run.stage].turnName)} ${G.run.stageTurn}</small></button>` : ''}
           <button class="btn ${live ? '' : 'primary'}" data-act="setup">New lineage</button>
           <button class="btn" data-act="go" data-arg="unlocks">Evolution Tree and unlocks <span class="gene-count">${ICON.gene} ${m.genes}</span></button>
           <button class="btn" data-act="go" data-arg="fossils">Fossil Record${m.fossils.some((f) => f.amber) ? ` <small>${m.fossils.filter((f) => f.amber).length} in amber</small>` : ''}</button>
@@ -217,7 +218,7 @@ window.G = window.G || {};
         <p class="note">Start in the Tribe, Society, Renaissance or Colonial Age, from a people you have founded before. It is free, and earlier endings are not paid out again.</p>
         <div class="choices">${list.map((x) => { const p = G.PATH[x.key.split('|')[0]]; return `
           <button class="choice" data-act="stage-start" data-arg="${esc(x.key)}">
-            <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong></span>
+            <span class="choice-head"><span class="swatch" style="--h:${x.body && x.body.hue != null ? x.body.hue : 200}"></span><strong>The ${esc(x.kind)}</strong>${x.lineage ? `<small class="muted">${esc(x.lineage.name)}</small>` : ''}</span>
             <span class="choice-desc">${x.stage === 'colonial' ? '👑 Colonial Age · ' : x.stage === 'renaissance' ? '📚 Renaissance · ' : x.stage === 'society' ? '🏛️ Society · ' : '🔥 Tribe · '}${p ? `${p.icon} ${esc(p.name)} · ` : ''}${esc(x.ending)} · ${esc(G.ARCHETYPE[x.archetype] ? G.ARCHETYPE[x.archetype].name : '')}</span>
           </button>`; }).join('')}</div>
       </details>`;
@@ -246,6 +247,7 @@ window.G = window.G || {};
         <section class="setup-group"><h2>Archetype</h2><div class="choices">${G.ARCHETYPES.filter((a) => m.unlocked.archetypes.includes(a.id)).map((a) => card('archetype', a, st.archetype === a.id)).join('')}</div></section>
         ${m.unlocked.origins.length > 1 ? `<section class="setup-group"><h2>Home world</h2><div class="choices">${G.ORIGINS.filter((o) => m.unlocked.origins.includes(o.id)).map((o) => card('origin', o, st.origin === o.id)).join('')}</div></section>` : ''}
         ${hostility}
+        <section class="setup-group"><h2>Name</h2><div class="name-row"><input id="lineage-name" type="text" maxlength="${G.LINEAGE_NAME_MAX}" value="${esc(st.name || '')}" aria-label="Lineage name" autocomplete="off"><button class="btn small ghost" data-act="name-dice" aria-label="Pick another name">🎲</button></div><p class="note">Your lineage keeps this name in the Fossil Record, so you can tell your save points apart. You can change it later.</p></section>
         <div class="sticky-cta"><button class="btn primary wide" data-act="begin">Begin in the ${esc(G.ORIGIN[st.origin].name)}</button></div>
       </main>`;
   }
@@ -1923,7 +1925,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${run.lineage ? `${esc(run.lineage.name)} · ` : ''}${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
@@ -2156,41 +2158,69 @@ window.G = window.G || {};
   G.applyTheme();
 
   // ---------- Fossil Record ----------
+  // Fossils are grouped by lineage. Each lineage has a name you can change; each fossil is one save point you can
+  // keep in amber, revive from, or delete.
   function fossilScreen() {
     const m = G.meta;
     const amberCount = m.fossils.filter((f) => f.amber).length;
     const slots = G.amberSlots();
+    const full = amberCount >= slots;
     const when = (t) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const archName = (id) => (G.ARCHETYPE[id] ? G.ARCHETYPE[id].name : 'Unknown');
+    const detailOf = (f) => f.detail != null ? f.detail : f.run ? G.fossilDetail(f.run) : '';
     const fossil = (f) => {
       const cost = G.reviveCost(f);
-      const arch = G.ARCHETYPE[f.archetype];
+      const del = G.ui.confirmDel === f.id;
       return `<li class="fossil ${f.amber ? 'amber' : ''}">
         <canvas class="portrait" data-fossil="${f.id}"></canvas>
         <div class="fossil-info">
-          <strong>${esc(arch ? arch.name : 'Unknown')} lineage</strong>
-          <span>${esc(f.label)} · turn ${f.turn} · ${when(f.date)}</span>
-          <div class="row tight">
+          <strong>${f.amber ? '<span class="amber-tag">In amber</span> ' : ''}${esc(f.label)}</strong>
+          ${detailOf(f) ? `<span>${esc(detailOf(f))}</span>` : ''}
+          <span>Turn ${f.turn} · ${when(f.date)}</span>
+          <div class="row tight wrap">
             ${f.amber
-              ? `<button class="btn small primary" ${m.genes >= cost ? `data-act="revive" data-arg="${f.id}"` : 'disabled'}>Revive (${ICON.gene} ${cost})</button><button class="btn small ghost" data-act="amber-off" data-arg="${f.id}">Release</button>`
-              : `<button class="btn small" ${amberCount < slots ? `data-act="amber-on" data-arg="${f.id}"` : 'disabled'}>Keep in amber</button>`}
+              ? `<button class="btn small primary" ${m.genes >= cost ? `data-act="revive" data-arg="${f.id}"` : 'disabled'}>Continue from here (${ICON.gene} ${cost})</button><button class="btn small ghost" data-act="amber-off" data-arg="${f.id}">Release</button>`
+              : `<button class="btn small" ${full ? 'disabled' : `data-act="amber-on" data-arg="${f.id}"`}>${full ? 'Amber full' : 'Keep in amber'}</button>`}
+            ${del
+              ? `<button class="btn small danger" data-act="fossil-del-yes" data-arg="${f.id}">Delete for good</button><button class="btn small ghost" data-act="fossil-del-no">Cancel</button>`
+              : `<button class="btn small ghost" data-act="fossil-del" data-arg="${f.id}">Delete</button>`}
           </div>
         </div>
       </li>`;
     };
+    // Group by lineage, newest lineage first; within a lineage, the furthest point comes first.
+    const groups = [];
+    m.fossils.forEach((f) => {
+      const id = (f.lineage && f.lineage.id) || f.id;
+      let g = groups.find((x) => x.id === id);
+      if (!g) { g = { id, name: (f.lineage && f.lineage.name) || `${archName(f.archetype)} lineage`, archetype: f.archetype, origin: f.origin, list: [] }; groups.push(g); }
+      g.list.push(f);
+    });
+    groups.forEach((g) => g.list.sort((a, b) => b.turn - a.turn || b.date - a.date));
+    const live = G.run && G.run.phase !== 'end';
+    const liveId = live && G.run.lineage ? G.run.lineage.id : null;
+    const head = (g) => G.ui.renaming === g.id
+      ? `<form class="rename-row" data-form="rename" data-arg="${esc(g.id)}"><input id="rename-input" type="text" maxlength="${G.LINEAGE_NAME_MAX}" value="${esc(g.name)}" aria-label="Lineage name" autocomplete="off"><button class="btn small primary" type="submit">Save</button><button class="btn small ghost" type="button" data-act="rename-cancel">Cancel</button></form>`
+      : `<div class="lineage-head"><h3>${esc(g.name)}${g.id === liveId ? ' <small class="live-tag">playing now</small>' : ''}</h3><button class="btn small ghost" data-act="rename-start" data-arg="${esc(g.id)}">Rename</button></div>`;
+    const group = (g) => `
+      <section class="lineage-card">
+        ${head(g)}
+        <p class="note">${esc(archName(g.archetype))}${G.ORIGIN[g.origin] ? ` · ${esc(G.ORIGIN[g.origin].name)}` : ''} · ${g.list.length} fossil${g.list.length === 1 ? '' : 's'}</p>
+        <ul class="fossil-list">${g.list.map(fossil).join('')}</ul>
+      </section>`;
     const hist = (h, i) => `<li class="fossil ${h.victory ? 'won' : ''}">
         <canvas class="portrait" data-history="${i}"></canvas>
         <div class="fossil-info">
-          <strong>${esc(G.ARCHETYPE[h.archetype] ? G.ARCHETYPE[h.archetype].name : '')} lineage${h.revived ? ' (revived)' : ''}</strong>
-          <span>Reached: ${esc(h.reached)} · ${h.turns} turn${h.turns === 1 ? '' : 's'} · ${when(h.date)}</span>
+          <strong>${esc(h.lineage && h.lineage.name ? h.lineage.name : `${archName(h.archetype)} lineage`)}${h.revived ? ' (revived)' : ''}</strong>
+          <span>${esc(archName(h.archetype))} · Reached: ${esc(h.reached)} · ${h.turns} turn${h.turns === 1 ? '' : 's'} · ${when(h.date)}</span>
           <span class="${h.victory ? 'good-text' : 'muted'}">${esc(h.cause)} · +${h.genes} Genetic Memory</span>
         </div>
       </li>`;
-    const live = G.run && G.run.phase !== 'end';
     return `
       <main class="shop">
         <header class="screen-head"><button class="btn ghost" data-act="go" data-arg="title">Back</button><h1>Fossil Record</h1><span class="gene-count big">${ICON.gene} ${m.genes}</span></header>
-        <p class="note">Every milestone leaves a fossil of your lineage. Keep your favourites in amber (${amberCount}/${slots} used; the Amber upgrade gives more room). A fossil in amber can be revived as a new run from that point. Revived lineages earn ${Math.round(G.REVIVE_MULT * 100)}% Genetic Memory.${live ? ' Reviving ends the lineage you are playing now.' : ''}</p>
-        <section><h2>Fossils</h2>${m.fossils.length ? `<ul class="fossil-list">${m.fossils.map(fossil).join('')}</ul>` : '<p class="empty">No fossils yet. Reach a milestone, like becoming multicellular, to leave one.</p>'}</section>
+        <p class="note">Every milestone leaves a fossil: a save point you can come back to. Keep the ones you want in amber, then <b>Continue from here</b> to play that lineage again from that moment. Amber: <b>${amberCount}/${slots}</b> used${full ? '. To keep another, release or delete one in amber first' : ''}. The Amber upgrade gives more room. Continued lineages earn ${Math.round(G.REVIVE_MULT * 100)}% Genetic Memory.${live ? ' Continuing ends the lineage you are playing now.' : ''}</p>
+        <section><h2>Fossils</h2>${groups.length ? groups.map(group).join('') : '<p class="empty">No fossils yet. Reach a milestone, like becoming multicellular, to leave one.</p>'}</section>
         <section><h2>Past lineages</h2>${m.history.length ? `<ul class="fossil-list">${m.history.map(hist).join('')}</ul>` : '<p class="empty">No finished lineages yet.</p>'}</section>
       </main>`;
   }
@@ -2274,6 +2304,7 @@ window.G = window.G || {};
       case 'setup':
         if (G.meta.seenVersion !== G.VERSION) { G.meta.seenVersion = G.VERSION; G.saveMeta(); }
         G.ui.setup = G.ui.setup || { archetype: 'drifter', origin: 'tidal', hostility: 0 };
+        if (!G.ui.setup.name) G.ui.setup.name = G.randomLineageName();
         if (!G.meta.unlocked.archetypes.includes(G.ui.setup.archetype)) G.ui.setup.archetype = 'drifter';
         if (!G.meta.unlocked.origins.includes(G.ui.setup.origin)) G.ui.setup.origin = 'tidal';
         G.ui.setup.hostility = Math.min(G.ui.setup.hostility, G.meta.maxHostility);
@@ -2282,7 +2313,7 @@ window.G = window.G || {};
       case 'pick-origin': G.ui.setup.origin = arg; break;
       case 'pick-hostility': G.ui.setup.hostility = Number(arg); break;
       case 'stage-start': if (G.startFromStage(arg)) { if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); } return;
-      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility); if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
+      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility, G.ui.setup.name); G.ui.setup.name = null; if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
       case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
       case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
       case 'continue-mutation': G.continueMutation(); parts = ['top', 'hud', 'modal']; break;
@@ -2342,6 +2373,12 @@ window.G = window.G || {};
       case 'ch-sel': G.ui.chSel = arg; break;
       case 'caste': G.setCaste(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'amber-on': G.setAmber(arg, true); break;
+      case 'fossil-del': G.ui.confirmDel = arg; break;
+      case 'fossil-del-no': G.ui.confirmDel = null; break;
+      case 'fossil-del-yes': G.deleteFossil(arg); G.ui.confirmDel = null; break;
+      case 'rename-start': G.ui.renaming = arg; render(); { const i = app.querySelector('#rename-input'); if (i) { i.focus(); i.select(); } } return;
+      case 'rename-cancel': G.ui.renaming = null; break;
+      case 'name-dice': G.ui.setup.name = G.randomLineageName(); break;
       case 'amber-off': G.setAmber(arg, false); break;
       case 'revive':
         if (G.run && G.run.phase !== 'end') G.endRunEarly();
@@ -2365,7 +2402,16 @@ window.G = window.G || {};
     if (G.startEditing()) { G.meta.editorShown = true; G.saveMeta(); G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); run.notices.push('You can change how your creature looks at any time from the Look tab. It never changes your stats.'); }
   }
 
+  app.addEventListener('submit', (e) => {
+    const f = e.target.closest('form[data-form="rename"]');
+    if (!f) return;
+    e.preventDefault();
+    const i = f.querySelector('input');
+    if (i && G.renameLineage(f.dataset.arg, i.value)) G.ui.renaming = null;
+    render();
+  });
   app.addEventListener('input', (e) => {
+    if (e.target.id === 'lineage-name' && G.ui.setup) { G.ui.setup.name = e.target.value; return; }
     const el = e.target.closest('[data-look]');
     if (!el) return;
     G.setLook(el.dataset.look, el.value);
@@ -2412,4 +2458,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.1';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.2';

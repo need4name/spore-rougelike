@@ -575,6 +575,11 @@ G.BOON = {}; G.BOONS.forEach((b) => { G.BOON[b.id] = b; });
 G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45, tribe: 50, society: 60 };
 G.REVIVE_MULT = 0.6;
 G.FOSSIL_KEEP = 8; // recent fossils kept besides the ones in amber
+// Lineage names: a start and an end, put together. You can always type your own.
+G.LINEAGE_SYLLABLES = {
+  a: ['Vel', 'Mor', 'Ash', 'Kel', 'Thri', 'Oon', 'Sab', 'Ly', 'Quor', 'Ren', 'Tal', 'Zhe', 'Bri', 'Cor', 'Ny', 'Esk', 'Ul', 'Wyn', 'Ira', 'Dra'],
+  b: ['ith', 'ora', 'un', 'ax', 'elle', 'omo', 'ari', 'yx', 'ene', 'ul', 'avin', 'oth', 'ia', 'esk', 'umbra', 'en'],
+};
 
 // Stage pacing. DNA earned in a stage triggers drafts, milestones and finally the finale.
 // Milestones are big events that change the rules (multicellularity, size, mind).
@@ -861,10 +866,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.1';
+G.VERSION = '21.2';
 G.WHATS_NEW = {
-  title: 'Patch 21.1, and Update 21: The Colonial Age',
+  title: 'Patch 21.2: a clearer Fossil Record',
   items: [
+    'Name your lineage when you start (or roll a random name). The name stays with its fossils, its Stage Select start and its history, and shows when you continue.',
+    'The Fossil Record groups fossils by lineage, with what each one holds: stage, land or sea, diet, Path, numbers and turn. The one you are playing is marked.',
+    'Rename any lineage, and delete fossils you no longer want, to make room in amber for others. "Continue from here" starts that lineage again from that moment.',
     'Patch 21.1: a gentler Tribe. Raids and hunts now wear a Tribe down instead of wiping it out in one bad roll: a single blow takes at most about a quarter of your members (more only when you are badly outmatched). The Spreading Fever now costs a share of your members, not a flat 40.',
     'Patch 21.1: offers your diet can\'t use (hunting parts for a plant-eater, foraging parts for a Predator) turn up far less often. Mouths still appear, since they change what you eat.',
     'Patch 21.1: descriptions no longer promise fixed numbers that change with your size (Armor, Strong Blood, Frozen Sea, Toxic, egg-laying and mid-sized choices).',
@@ -1753,4 +1761,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.1';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.2';
