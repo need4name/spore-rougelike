@@ -88,15 +88,40 @@ window.G = window.G || {};
   G.saveRun = () => store(SAVE_RUN, G.run);
   // ---------- Moving a save ----------
   // Safari and a home-screen app keep separate saves on an iPhone, so progress moves as a code you copy and paste.
-  const SAVE_TAG = 'PRIMORDIA1:';
-  G.exportSave = () => SAVE_TAG + btoa(unescape(encodeURIComponent(JSON.stringify({ meta: G.meta, run: G.run, at: Date.now() }))));
-  // Returns null when the save was loaded (the page should then reload), or a sentence saying what is wrong.
-  G.importSave = function (code) {
-    const text = String(code || '').replace(/\s+/g, '');
-    if (!text) return 'Paste a save code first.';
-    if (!text.startsWith(SAVE_TAG)) return 'That is not a Primordia save code. It should start with PRIMORDIA1:';
+  // The code is the save squeezed with gzip (PRIMORDIA2:), about a tenth of its raw size; browsers without
+  // compression write the plain form (PRIMORDIA1:). Both can always be loaded. Compressed codes end in :END.
+  const b64 = (bytes) => { let out = ''; for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(out); };
+  const unb64 = (str) => { const bin = atob(str); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return bytes; };
+  G.exportSave = async function () {
+    const json = JSON.stringify({ meta: G.meta, run: G.run, at: Date.now() });
+    if (window.CompressionStream) {
+      try {
+        const buf = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+        return 'PRIMORDIA2:' + b64(new Uint8Array(buf)) + ':END';
+      } catch (e) { /* fall through to the plain form */ }
+    }
+    return 'PRIMORDIA1:' + btoa(unescape(encodeURIComponent(json)));
+  };
+  // Finds the code inside whatever was pasted (stray spaces, quotes or text around it are ignored) and loads it.
+  // Resolves to null when the save was stored (the page should then reload), or to a sentence saying what is wrong.
+  G.importSave = async function (code) {
+    const raw = String(code || '');
+    const text = raw.replace(/[\s​-‍﻿"'“”‘’<>]/g, '');
+    if (!text) return 'Nothing was pasted. Copy your save code first, then paste it here.';
+    const m = /PRIMORDIA([12]):([A-Za-z0-9+/=_-]+)(:END)?/.exec(text);
+    if (!m) return `That is not a save code. A save code starts with PRIMORDIA. What was pasted (${raw.trim().length} letters) starts with "${raw.trim().slice(0, 24)}".`;
+    // New codes end in :END, so a code that arrives without it was cut off on the way.
+    if (m[1] === '2' && !m[3]) return `That save code is cut short (${m[2].length} letters arrived, and the end is missing). Copy it again, all of it, and try again.`;
     let data = null;
-    try { data = JSON.parse(decodeURIComponent(escape(atob(text.slice(SAVE_TAG.length))))); } catch (e) { return 'That save code is incomplete. Copy the whole code and try again.'; }
+    try {
+      const body = m[2].replace(/-/g, '+').replace(/_/g, '/');
+      let json;
+      if (m[1] === '2') {
+        if (!window.DecompressionStream) return 'This browser is too old to open this save code. Try updating it.';
+        json = await new Response(new Blob([unb64(body)]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      } else json = decodeURIComponent(escape(atob(body)));
+      data = JSON.parse(json);
+    } catch (e) { return `That save code is cut short (${m[2].length} letters arrived). Copy it again, all of it, and try again.`; }
     if (!data || !data.meta || typeof data.meta !== 'object' || data.meta.genes == null || !data.meta.stats) return 'That save code is damaged.';
     try {
       localStorage.setItem(SAVE_META, JSON.stringify(data.meta));
@@ -3859,4 +3884,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.4';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.5';

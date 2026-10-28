@@ -194,6 +194,7 @@ window.G = window.G || {};
     G.ui.confirmAbandon = false;
     G.ui.confirmReset = false;
     G.ui.confirmDel = null; G.ui.renaming = null; G.ui.saveMove = null;
+    if (screen === 'options') prepareSaveCode();
     G.ui.sheet = null;
     render();
     window.scrollTo(0, 0);
@@ -2213,22 +2214,43 @@ window.G = window.G || {};
       </main>`;
   }
   // Move a save between Safari and the home-screen app (or another device): copy a code here, paste it there.
+  // The code is made when Options opens, so the Copy tap can put it on the clipboard straight away (iPhones only
+  // allow copying during the tap itself).
+  function prepareSaveCode() {
+    G.ui.saveCode = null;
+    G.exportSave().then((c) => { G.ui.saveCode = c; if (G.ui.screen === 'options') render(); });
+  }
   function saveSection() {
     const u = G.ui.saveMove || {};
+    const code = G.ui.saveCode;
+    const size = code ? `${Math.max(1, Math.round(code.length / 1000))}k letters` : '';
     return `<section class="save-move"><h2>Move your save</h2>
-      <p class="note">On an iPhone, Safari and the home-screen app keep separate saves. To move your progress, copy your save code in one and paste it into the other.</p>
-      <div class="row tight wrap"><button class="btn small" data-act="save-copy">${u.copied ? 'Copied ✓' : 'Copy save code'}</button><button class="btn small ghost" data-act="save-paste-open">Paste a save code</button><button class="btn small ghost" data-act="save-download">Save as a file</button><label class="btn small ghost file-btn">Load a file<input type="file" accept=".txt,text/plain" data-save-file hidden></label></div>
-      ${u.show ? `<textarea class="save-code" readonly rows="4" aria-label="Your save code">${esc(G.exportSave())}</textarea><p class="note">Select all of this code and copy it.</p>` : ''}
-      ${u.paste ? `<textarea class="save-code" id="save-paste" rows="4" placeholder="Paste the code here" aria-label="Save code to load"></textarea>
+      <p class="note">On an iPhone, Safari and the home-screen app keep separate saves. To move your progress: tap <b>Copy save code</b> here, open the other one, go to Options, and tap <b>Paste from clipboard</b>.</p>
+      <div class="row tight wrap">
+        <button class="btn small primary" ${code ? 'data-act="save-copy"' : 'disabled'}>${!code ? 'Preparing…' : u.copied ? 'Copied ✓' : 'Copy save code'}</button>
+        <button class="btn small" data-act="save-paste-clip">Paste from clipboard</button>
+      </div>
+      ${u.copied ? `<p class="note good-text">Your save code is on the clipboard (${size}, starting with ${esc(code.slice(0, 11))}).</p>` : ''}
+      ${u.show ? `<textarea class="save-code" id="save-out" rows="4" aria-label="Your save code">${esc(code || '')}</textarea><p class="note">Copying did not work here. Tap the box, choose Select All, then Copy.</p>` : ''}
+      ${u.paste ? `<textarea class="save-code" id="save-paste" rows="4" placeholder="Paste the save code here" aria-label="Save code to load"></textarea>
         <p class="note warn-text">Loading a save replaces all progress here, including the lineage you are playing.</p>
-        <div class="row tight"><button class="btn small danger" data-act="save-load">Replace my progress with this save</button><button class="btn small ghost" data-act="save-paste-close">Cancel</button></div>` : ''}
+        <div class="row tight wrap"><button class="btn small danger" data-act="save-load">Replace my progress with this save</button><button class="btn small ghost" data-act="save-paste-close">Cancel</button></div>` : ''}
       ${u.error ? `<p class="note bad-text">${esc(u.error)}</p>` : ''}
+      <details class="save-more"><summary>Other ways</summary>
+        <div class="row tight wrap"><button class="btn small ghost" data-act="save-paste-open">Paste by hand</button><button class="btn small ghost" ${code ? 'data-act="save-download"' : 'disabled'}>Save as a file</button><label class="btn small ghost file-btn">Load a file<input type="file" accept=".txt,text/plain" data-save-file hidden></label></div>
+        <p class="note">A save file is also a backup. On an iPhone, "Save as a file" opens the Share menu: choose Save to Files.</p>
+      </details>
     </section>`;
   }
+  // Show the paste box with this text in it, ready to confirm.
+  function showPasted(text, error) {
+    G.ui.saveMove = { paste: true, error: error || null };
+    render();
+    const t = app.querySelector('#save-paste');
+    if (t) t.value = text || '';
+  }
   function loadSaveCode(code) {
-    const err = G.importSave(code);
-    if (err) { G.ui.saveMove = Object.assign({}, G.ui.saveMove, { error: err }); render(); return; }
-    location.reload();
+    G.importSave(code).then((err) => { if (err) showPasted(code, err); else location.reload(); });
   }
   G.applyTheme = () => { document.documentElement.dataset.theme = (G.meta && G.meta.options && G.meta.options.theme) || 'tide'; };
   G.applyTheme();
@@ -2375,19 +2397,35 @@ window.G = window.G || {};
       case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
       case 'guide-replay': G.replayGuide(); break;
       case 'save-copy': {
-        const code = G.exportSave();
+        const code = G.ui.saveCode; if (!code) return;
         const ok = () => { G.ui.saveMove = { copied: true }; render(); };
-        const fail = () => { G.ui.saveMove = { show: true }; render(); const t = app.querySelector('.save-code'); if (t) { t.focus(); t.select(); } };
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, fail); else fail();
+        // Older iPhones and some embedded pages refuse the clipboard; then copy through a hidden box, and if even
+        // that fails, show the code to copy by hand.
+        const byHand = () => { G.ui.saveMove = { show: true }; render(); const t = app.querySelector('#save-out'); if (t) { t.focus(); t.setSelectionRange(0, t.value.length); } };
+        const oldWay = () => {
+          const t = document.createElement('textarea'); t.value = code; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+          document.body.appendChild(t); t.focus(); t.setSelectionRange(0, code.length);
+          let done = false; try { done = document.execCommand('copy'); } catch (e) { done = false; }
+          t.remove(); if (done) ok(); else byHand();
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, oldWay); else oldWay();
         return;
       }
-      case 'save-paste-open': G.ui.saveMove = { paste: true }; render(); { const t = app.querySelector('#save-paste'); if (t) t.focus(); } return;
+      case 'save-paste-clip':
+        if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then((t) => { if (!t) { showPasted('', 'The clipboard is empty. Copy your save code first.'); return; } showPasted(t); G.importSave(t).then((err) => { if (err) showPasted(t, err); }); }, () => showPasted('', 'This browser would not let the game read the clipboard. Paste the code into the box instead (tap the box, then Paste).'));
+        else showPasted('', 'Paste the code into the box (tap the box, then Paste).');
+        return;
+      case 'save-paste-open': showPasted(''); { const t = app.querySelector('#save-paste'); if (t) t.focus(); } return;
       case 'save-paste-close': G.ui.saveMove = null; break;
       case 'save-load': { const t = app.querySelector('#save-paste'); loadSaveCode(t ? t.value : ''); return; }
       case 'save-download': {
+        const code = G.ui.saveCode; if (!code) return;
+        const name = `primordia-save-${new Date().toISOString().slice(0, 10)}.txt`;
+        const file = typeof File === 'function' ? new File([code], name, { type: 'text/plain' }) : null;
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: 'Primordia save' }).catch(() => {}); return; }
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([G.exportSave()], { type: 'text/plain' }));
-        a.download = `primordia-save-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+        a.download = name;
         document.body.appendChild(a); a.click(); a.remove();
         return;
       }
@@ -2502,7 +2540,7 @@ window.G = window.G || {};
     const el = e.target.closest('[data-save-file]');
     if (!el || !el.files || !el.files[0]) return;
     const r = new FileReader();
-    r.onload = () => { G.ui.saveMove = { paste: true }; render(); const t = app.querySelector('#save-paste'); if (t) t.value = String(r.result || ''); };
+    r.onload = () => showPasted(String(r.result || ''));
     r.readAsText(el.files[0]);
   });
   app.addEventListener('submit', (e) => {
@@ -2561,4 +2599,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.4';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.5';

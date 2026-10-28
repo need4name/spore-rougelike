@@ -866,10 +866,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.4';
+G.VERSION = '21.5';
 G.WHATS_NEW = {
-  title: 'Patch 21.4: Primordia as an app',
+  title: 'Patch 21.5: moving your save, fixed',
   items: [
+    'Moving your save works properly now. Save codes are squeezed to about a twentieth of their old size, so they copy and paste in one go on a phone, and they end in :END so a cut-off code is spotted at once.',
+    'In the other copy of the game (Safari or the home-screen app), tap Paste from clipboard in Options: no need to paste by hand. Spaces or words pasted around the code are ignored, and if something is wrong it says exactly what.',
+    'Save as a file opens the Share menu on an iPhone (choose Save to Files). Older save codes still load.',
     'Add Primordia to your Home Screen (in Safari: Share, then Add to Home Screen). It opens full-screen with its own icon, and works without internet once it has been opened once.',
     'Updates arrive on their own: whenever you have a connection, the app loads the newest version.',
     'Move your save (Options): on an iPhone, Safari and the home-screen app keep separate saves. Copy your save code in one and paste it into the other, or save it as a file.',
@@ -1819,4 +1822,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.4';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.5';

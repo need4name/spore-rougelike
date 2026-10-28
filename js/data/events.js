@@ -3362,4 +3362,4 @@ G.EVENTS.push(
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.4';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.5';

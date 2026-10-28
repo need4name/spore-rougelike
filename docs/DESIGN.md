@@ -91,6 +91,14 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.5: Moving a save, fixed
+
+- **The bug:** a played save is large (a measured late-game save was 545,000 letters of data, an 800,000-letter code), mostly fossils and Stage Select starts, which keep whole runs. Codes that size did not survive copy and paste on a phone, and hand-selecting them in a read-only box was not possible on iOS.
+- **Smaller codes:** `G.exportSave` gzips the save (`CompressionStream`) and writes `PRIMORDIA2:<base64>:END`, about 18 times smaller. Browsers without compression write the old `PRIMORDIA1:` form, which still loads.
+- **The code is made when Options opens**, so the Copy tap can write it straight to the clipboard (iOS only allows that during the tap). If the clipboard refuses, a hidden box with `execCommand('copy')` is tried, then an editable box to copy by hand.
+- **Paste from clipboard** reads the clipboard directly (iOS shows its own Paste prompt). `G.importSave` finds the code inside whatever was pasted, ignoring spaces, quotes and words around it. It says whether nothing arrived, it isn't a code (and what it starts with), or the code was cut short (no `:END`). A pasted code stays in the box after an error.
+- **Save as a file** uses the Share sheet where files can be shared (Save to Files on iPhone), otherwise a download.
+
 ## Patch 21.4: Primordia as an app
 
 - **Installable:** `manifest.webmanifest` (standalone, portrait, dark theme) and icons in `icons/` (a 180 px Apple touch icon, 192 and 512 px icons, and a maskable 512 px icon). `index.html` links both.
