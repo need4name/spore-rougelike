@@ -1,11 +1,11 @@
 // Primordia's offline helper. It keeps a copy of the game on the phone so it opens without internet,
 // and fetches the newest page first whenever there is a connection, so updates arrive on their own.
 // tools/stamp.py updates VERSION with every release; a new VERSION makes the browser install this again.
-const VERSION = '21.7';
+const VERSION = '21.8';
 const CACHE = `primordia-${VERSION}`;
 const FONTS = 'primordia-fonts';
 const FILES = ['parts', 'world', 'events'].map((f) => `js/data/${f}.js?v=${VERSION}`)
-  .concat(['game', 'render', 'ui'].map((f) => `js/${f}.js?v=${VERSION}`))
+  .concat(['game', 'render', 'audio', 'ui'].map((f) => `js/${f}.js?v=${VERSION}`))
   .concat([`css/style.css?v=${VERSION}`, './', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png']);
 
 self.addEventListener('install', (e) => {

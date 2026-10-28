@@ -798,3 +798,8 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .daily-head span { color: var(--muted); font-size: 0.85rem; }
 .install-hint.urgent { border: 2px solid var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--panel)); }
 .install-hint ol { margin: 4px 0 8px; padding-left: 20px; font-size: 0.9rem; line-height: 1.4; }
+
+/* Sound (Patch 21.8) */
+.vol-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.vol-row label { flex: 0 0 9.5em; font-size: 0.9rem; color: var(--muted); }
+.vol-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }

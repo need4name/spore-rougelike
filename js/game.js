@@ -60,7 +60,7 @@ window.G = window.G || {};
       codex: { events: [], parts: [], legacies: [], evolutions: [], endings: [], discoveries: [], tribeEndings: [], societyEndings: [], traditions: [], renaissanceEndings: [], reason: [], colonialEndings: [], crown: [] },
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0, creatures: 0 },
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {}, stageStarts: [],
-      options: { numbers: false, theme: 'tide' },
+      options: { numbers: false, theme: 'tide', sound: true, sfxVol: 0.7, ambVol: 0.5 },
       guide: { on: true, done: [] },
     };
   }
@@ -3986,4 +3986,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.7';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.8';

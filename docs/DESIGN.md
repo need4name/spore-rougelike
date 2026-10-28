@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.8: Sound
+
+- **Everything is synthesised** in `js/audio.js` (Web Audio), so there are no sound files and it works offline. On iOS, `navigator.audioSession.type = 'ambient'` makes it mix with other audio and follow the silent switch. Nothing plays until the first tap (`unlock`), and the audio pauses while the page is hidden.
+- **Ambience** follows `G.audioScape(run, screen)`: title, cell, sea, land, tribe or civ (Society onwards). Each has a pad of slow detuned notes behind a low-pass filter, a bed of filtered noise that swells (waves, wind), soft music notes from its own scale every few seconds, and small sounds of the place (bubbles, whale song, birds, fire crackle and drum, town bells). Changing place fades the old one out.
+- **Effects** come from `G.audio.update()`, which runs after every redraw and plays one when the game moves into a new moment: event (danger events and finales get a drum), scene result (success, failure, mutation), draft, mutation reveal, evolved (new stage) and end (fanfare or the extinction tune). Buttons give a very quiet tap.
+- **Options:** Sound on or off (`options.sound`), and Effects and Ambience-and-music volumes (`sfxVol`, `ambVol`). Ambience at 0 stops it entirely.
+
 ## Patch 21.7: Keeping the save safe
 
 - **The risk:** WebKit deletes a site's script-writable storage (localStorage included) after 7 days of Safari use without interaction with that site. Home-screen web apps are exempt: they keep their own storage and their own count of days of use.

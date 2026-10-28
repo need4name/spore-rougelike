@@ -89,6 +89,7 @@ window.G = window.G || {};
     renderInner(parts);
     renderGuide();
     renderTip();
+    if (G.audio) G.audio.update();
   }
   function renderInner(parts) {
     const s = G.ui.screen;
@@ -2277,6 +2278,10 @@ window.G = window.G || {};
           ${toggle('guide', G.meta.guide.on, 'Guide', 'A guide that walks you through your first lineage, one thing at a time.')}
         </div><div class="row tight">${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}<button class="btn small ghost" data-act="guide-replay">Replay the guide from the start</button></div></section>
         <section><h2>Colours</h2><div class="theme-row">${Object.entries(G.THEMES).map(([id, name]) => `<button class="theme-swatch ${o.theme === id ? 'on' : ''}" data-theme-swatch="${id}" data-act="opt-theme" data-arg="${id}" aria-pressed="${o.theme === id}"><span></span>${esc(name)}</button>`).join('')}</div></section>
+        <section><h2>Sound</h2><div class="choices">
+          ${toggle('sound', o.sound !== false, 'Sound', 'Sounds of each place, soft music, and effects for events, mutations and endings. On an iPhone it follows the silent switch.')}
+        </div>${o.sound !== false ? `<div class="vol-row"><label for="vol-sfx">Effects</label><input id="vol-sfx" type="range" min="0" max="1" step="0.05" value="${o.sfxVol != null ? o.sfxVol : 0.7}" data-vol="sfxVol"></div>
+          <div class="vol-row"><label for="vol-amb">Ambience and music</label><input id="vol-amb" type="range" min="0" max="1" step="0.05" value="${o.ambVol != null ? o.ambVol : 0.5}" data-vol="ambVol"></div>` : ''}</section>
         ${complicationsSection(toggle)}
         ${saveSection()}
       </main>`;
@@ -2467,6 +2472,7 @@ window.G = window.G || {};
   app.addEventListener('click', (e) => {
     const el = e.target.closest('[data-act]');
     if (!el || el.disabled) return;
+    if (G.audio && el.matches('.btn, .option, .choice, .tab, .seg')) G.audio.tap();
     const act = el.dataset.act;
     const arg = el.dataset.arg;
     const run = G.run;
@@ -2476,7 +2482,7 @@ window.G = window.G || {};
       case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on;
         else if (arg.startsWith('comp:')) { const id = arg.slice(5); const list = G.chosenComplications(); G.meta.options.complications = list.includes(id) ? list.filter((x) => x !== id) : list.concat(id); }
         else G.meta.options[arg] = !G.meta.options[arg];
-        G.saveMeta(); break;
+        G.saveMeta(); if (arg === 'sound' && G.audio) G.audio.settingsChanged(); break;
       case 'guide-replay': G.replayGuide(); break;
       case 'save-copy': {
         const code = G.ui.saveCode; if (!code) return;
@@ -2655,6 +2661,7 @@ window.G = window.G || {};
   });
   app.addEventListener('input', (e) => {
     if (e.target.id === 'lineage-name' && G.ui.setup) { G.ui.setup.name = e.target.value; return; }
+    if (e.target.dataset && e.target.dataset.vol) { G.meta.options[e.target.dataset.vol] = Number(e.target.value); G.saveMeta(); if (G.audio) { G.audio.settingsChanged(); if (e.target.dataset.vol === 'sfxVol') G.audio.play('soft'); } return; }
     const el = e.target.closest('[data-look]');
     if (!el) return;
     G.setLook(el.dataset.look, el.value);
@@ -2702,4 +2709,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.7';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.8';

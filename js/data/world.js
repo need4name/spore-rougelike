@@ -883,10 +883,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.7';
+G.VERSION = '21.8';
 G.WHATS_NEW = {
-  title: 'Patch 21.7: keeping your save safe',
+  title: 'Patch 21.8: Sound',
   items: [
+    'Primordia has sound. Each place has its own ambience and soft music: bubbles in the first sea, swells and distant whale song in the ocean, wind and birds on land, a crackling fire for the Tribe, and bells once your people build towns.',
+    'Effects mark the moments: a chime for an event (a deep drum when it is dangerous), notes for success and failure, a shimmer for mutations and discoveries, a fanfare for new stages and endings, and a falling tune for extinction.',
+    'Options has a Sound switch and separate volumes for effects and for ambience and music. On an iPhone it follows the silent switch and plays alongside your own music. Sound starts after your first tap.',
     'In Safari, iPhones delete a website\'s saved data after 7 days of using Safari without opening it. The Home Screen app keeps its own save. If you play in Safari, the title screen now says so and walks you through moving to the Home Screen app, with a backup button.',
     'Backups: "Save a backup file" (to Files or iCloud Drive) keeps your progress even if the browser clears its data or you change phones. The game remembers your last backup and reminds you every two weeks or so.',
     'The game now asks the browser to keep its storage for good, where the browser allows it.',
@@ -1845,4 +1848,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.7';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.8';

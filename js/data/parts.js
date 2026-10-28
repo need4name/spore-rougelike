@@ -518,4 +518,4 @@ G.EVOLUTIONS.filter((e) => !e.limbEvo).forEach((e) => {
   G.PART[e.id] = e;
 });
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).parts = '21.7';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).parts = '21.8';
