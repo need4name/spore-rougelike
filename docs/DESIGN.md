@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.7: Keeping the save safe
+
+- **The risk:** WebKit deletes a site's script-writable storage (localStorage included) after 7 days of Safari use without interaction with that site. Home-screen web apps are exempt: they keep their own storage and their own count of days of use.
+- **In Safari on iOS with progress**, the title screen shows a warning with three steps: save a backup, Add to Home Screen, then load the backup there. It offers Save a backup file and Copy save code (the code is prepared when the title or Options opens). It can be hidden for the session only.
+- **Backup reminders** elsewhere: after 3 lineages, if no backup has been made (copied code or saved file, `meta.lastBackupAt`) for 14 days, the title screen suggests one. Not now snoozes it for 7 days. Options shows when the last backup was made.
+- **Persistent storage:** `navigator.storage.persist()` is requested at start-up where supported (`G.persisted`), so the browser keeps the storage when space runs low.
+
 ## Patch 21.6: Complications, the Daily Run, safer saves
 
 - **Complications** (`G.COMPLICATIONS`, world.js) are switched on in Options (`meta.options.complications`) and copied onto each new lineage (`run.complications`), so changing them never affects the lineage in play. Stage Select starts take the current choice. Rules: Lean Times (upkeep +1), Fragile (−1 Toughness), Small Herd (maxPop −2, that is −20), Slow Genes (every goal ×1.25 in `G.goals`), Few Choices (drafts and rerolls one option fewer, never below 2), Blind Odds (`chanceTag` shows only the stat), Restless World (+15% event chance per quiet tick) and No Second Chances. Bonuses add to Hostility's in `G.geneMult`.

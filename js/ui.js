@@ -194,7 +194,7 @@ window.G = window.G || {};
     G.ui.confirmAbandon = false;
     G.ui.confirmReset = false;
     G.ui.confirmDel = null; G.ui.renaming = null; G.ui.saveMove = null; G.ui.confirmDaily = false; G.ui.dailyShared = false;
-    if (screen === 'options') prepareSaveCode();
+    if (screen === 'options' || screen === 'title') prepareSaveCode();
     G.ui.sheet = null;
     render();
     window.scrollTo(0, 0);
@@ -204,12 +204,37 @@ window.G = window.G || {};
   // On the hosted game (which has a manifest), suggest adding it to the home screen until it is, or until dismissed.
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); G.installPrompt = e; if (G.ui.screen === 'title') render(); });
   const standalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const hosted = () => !!document.querySelector('link[rel="manifest"]');
+  const ago = (t) => { const d = Math.floor((Date.now() - t) / 86400000); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`; };
+  // Keeping progress safe. In Safari on an iPhone, a site's saved data is deleted after 7 days of using Safari
+  // without opening that site; a home-screen app keeps its own. So: in Safari with progress, say so plainly and
+  // offer a backup; elsewhere, remind now and then to save a backup file that lives outside the browser.
   function installHint() {
-    if (standalone() || !document.querySelector('link[rel="manifest"]') || (G.meta.options && G.meta.options.installHidden)) return '';
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!ios && !G.installPrompt) return '';
+    const m = G.meta; const o = m.options || {};
+    const backupBtns = `<button class="btn small primary" ${G.ui.saveCode ? 'data-act="save-download"' : 'disabled'}>${G.ui.saveCode ? 'Save a backup file' : 'Preparing…'}</button><button class="btn small" ${G.ui.saveCode ? 'data-act="save-copy-title"' : 'disabled'}>${G.ui.titleCopied ? 'Copied ✓' : 'Copy save code'}</button>`;
+    const hasProgress = m.stats.runs > 0 || m.genes > 0;
+    if (!standalone() && hosted() && isIOS() && hasProgress && !G.ui.safetyHidden) {
+      return `<div class="install-hint urgent">
+        <p><b>⚠️ Keep your progress safe.</b> In Safari, iPhones delete a website's saved data after 7 days of using Safari without opening it. The <b>Home Screen app</b> keeps its own save, so play from there:</p>
+        <ol><li>Save a backup file (or copy your save code) below.</li><li>Tap Share (the square with an arrow), then <b>Add to Home Screen</b>.</li><li>Open Primordia from your Home Screen, go to <b>Options</b>, and load the file (or tap <b>Paste from clipboard</b>).</li></ol>
+        <div class="row tight wrap">${backupBtns}<button class="btn small ghost" data-act="safety-hide">Hide for now</button></div>
+        ${m.lastBackupAt ? `<p class="note">Last backup: ${ago(m.lastBackupAt)}.</p>` : ''}
+      </div>`;
+    }
+    // A gentle reminder in the app (or any browser) for players with progress worth keeping.
+    const due = !m.lastBackupAt || Date.now() - m.lastBackupAt > 14 * 86400000;
+    const snoozed = o.backupSnooze && Date.now() - o.backupSnooze < 7 * 86400000;
+    if (m.stats.runs >= 3 && due && !snoozed) {
+      return `<div class="install-hint">
+        <p><b>Back up your progress.</b> ${m.lastBackupAt ? `Your last backup was ${ago(m.lastBackupAt)}.` : 'You have not made a backup yet.'} A backup file saved to Files or iCloud Drive keeps your progress even if this browser clears its data or you change phones.</p>
+        <div class="row tight wrap">${backupBtns}<button class="btn small ghost" data-act="backup-snooze">Not now</button></div>
+      </div>`;
+    }
+    if (standalone() || !hosted() || o.installHidden) return '';
+    if (!isIOS() && !G.installPrompt) return '';
     return `<div class="install-hint">
-        <p><b>Play it like an app.</b> ${ios ? 'Tap Share (the square with an arrow), then <b>Add to Home Screen</b>.' : 'Install Primordia on this device.'} It opens full-screen and works without internet. Your progress here stays here: use <b>Options → Move your save</b> to take it with you.</p>
+        <p><b>Play it like an app.</b> ${isIOS() ? 'Tap Share (the square with an arrow), then <b>Add to Home Screen</b>.' : 'Install Primordia on this device.'} It opens full-screen, works without internet${isIOS() ? ', and keeps your save safe (Safari can delete it after a week away)' : ''}. Your progress here stays here: use <b>Options → Move your save</b> to take it with you.</p>
         <div class="row tight">${G.installPrompt ? '<button class="btn small primary" data-act="install">Install</button>' : ''}<button class="btn small ghost" data-act="install-hide">Not now</button></div>
       </div>`;
   }
@@ -2269,8 +2294,8 @@ window.G = window.G || {};
   // The code is made when Options opens, so the Copy tap can put it on the clipboard straight away (iPhones only
   // allow copying during the tap itself).
   function prepareSaveCode() {
-    G.ui.saveCode = null;
-    G.exportSave().then((c) => { G.ui.saveCode = c; if (G.ui.screen === 'options') render(); });
+    G.ui.saveCode = null; G.ui.titleCopied = false;
+    G.exportSave().then((c) => { G.ui.saveCode = c; if (G.ui.screen === 'options' || G.ui.screen === 'title') render(); });
   }
   function saveSection() {
     const u = G.ui.saveMove || {};
@@ -2288,6 +2313,7 @@ window.G = window.G || {};
         <p class="note warn-text">Loading a save replaces all progress here, including the lineage you are playing.</p>
         <div class="row tight wrap"><button class="btn small danger" data-act="save-load">Replace my progress with this save</button><button class="btn small ghost" data-act="save-paste-close">Cancel</button></div>` : ''}
       ${u.error ? `<p class="note bad-text">${esc(u.error)}</p>` : ''}
+      <p class="note">${G.meta.lastBackupAt ? `Last backup: ${ago(G.meta.lastBackupAt)}.` : 'No backup made yet.'} ${G.persisted ? 'This device has agreed to keep your save.' : standalone() ? '' : isIOS() && hosted() ? '<b>In Safari your save can be deleted after 7 days of Safari use without opening the game. The Home Screen app keeps its save.</b>' : ''}</p>
       ${G.previousSave() ? `<p class="note">You loaded a save on ${esc(new Date(G.previousSave().at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}. <button class="btn small ghost" data-act="save-undo">Undo it: go back to the progress you had before</button></p>` : ''}
       <details class="save-more"><summary>Other ways</summary>
         <div class="row tight wrap"><button class="btn small ghost" data-act="save-paste-open">Paste by hand</button><button class="btn small ghost" ${code ? 'data-act="save-download"' : 'disabled'}>Save as a file</button><label class="btn small ghost file-btn">Load a file<input type="file" accept=".txt,text/plain" data-save-file hidden></label></div>
@@ -2454,7 +2480,7 @@ window.G = window.G || {};
       case 'guide-replay': G.replayGuide(); break;
       case 'save-copy': {
         const code = G.ui.saveCode; if (!code) return;
-        const ok = () => { G.ui.saveMove = { copied: true }; render(); };
+        const ok = () => { G.markBackedUp(); G.ui.saveMove = { copied: true }; render(); };
         // Older iPhones and some embedded pages refuse the clipboard; then copy through a hidden box, and if even
         // that fails, show the code to copy by hand.
         const byHand = () => { G.ui.saveMove = { show: true }; render(); const t = app.querySelector('#save-out'); if (t) { t.focus(); t.setSelectionRange(0, t.value.length); } };
@@ -2489,7 +2515,8 @@ window.G = window.G || {};
         const code = G.ui.saveCode; if (!code) return;
         const name = `primordia-save-${new Date().toISOString().slice(0, 10)}.txt`;
         const file = typeof File === 'function' ? new File([code], name, { type: 'text/plain' }) : null;
-        if (file && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: 'Primordia save' }).catch(() => {}); return; }
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: 'Primordia save' }).then(() => { G.markBackedUp(); render(); }, () => {}); return; }
+        G.markBackedUp();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
         a.download = name;
@@ -2497,6 +2524,14 @@ window.G = window.G || {};
         return;
       }
       case 'install': if (G.installPrompt) { G.installPrompt.prompt(); G.installPrompt = null; } return;
+      case 'safety-hide': G.ui.safetyHidden = true; break;
+      case 'backup-snooze': G.meta.options.backupSnooze = Date.now(); G.saveMeta(); break;
+      case 'save-copy-title': {
+        const code = G.ui.saveCode; if (!code) return;
+        const ok = () => { G.markBackedUp(); G.ui.titleCopied = true; render(); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, () => go('options')); else go('options');
+        return;
+      }
       case 'install-hide': G.meta.options.installHidden = true; G.saveMeta(); break;
       case 'opt-theme': G.meta.options.theme = arg; G.saveMeta(); G.applyTheme(); break;
       case 'affinity': G.buyAffinity(arg); break;
@@ -2663,7 +2698,8 @@ window.G = window.G || {};
     if (e.key === ' ' && G.ui.screen === 'game' && G.run && G.run.phase === 'map' && !e.target.closest('input')) { e.preventDefault(); G.ui.speed = G.ui.speed ? 0 : 1; render(['top']); }
   });
 
+  prepareSaveCode();
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.6';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.7';

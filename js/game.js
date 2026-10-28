@@ -37,6 +37,17 @@ window.G = window.G || {};
     if (backup) G.restoredFromBackup = true;
     return backup;
   }
+  // Ask the browser to keep this site's storage for good, instead of clearing it when space runs low or the
+  // site goes unvisited. Browsers decide for themselves; home-screen apps are the most likely to be allowed.
+  G.persisted = null;
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then((p) => (p ? true : navigator.storage.persist())).then((p) => { G.persisted = !!p; }, () => { G.persisted = false; });
+    }
+  } catch (e) { /* not supported */ }
+  // A backup that leaves the phone (a file in Files or iCloud Drive, or a code pasted elsewhere) is the only
+  // copy that survives the browser clearing its storage, so the game remembers when you last made one.
+  G.markBackedUp = () => { G.meta.lastBackupAt = Date.now(); store(SAVE_META, G.meta); };
   G.backupMeta = () => { if (G.meta && (G.meta.stats.runs > 0 || G.meta.genes > 0)) store(SAVE_BACKUP, G.meta); };
 
   function freshMeta() {
@@ -69,6 +80,7 @@ window.G = window.G || {};
     m.stageStarts = saved.stageStarts || [];
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
+    m.lastBackupAt = saved.lastBackupAt || null;
     // Players from before tips existed have already learned the basics.
     m.affinity = saved.affinity || {};
     m.tips = saved.tips || ((saved.stats && saved.stats.runs >= 3) ? ['welcome', 'event', 'draft', 'instinct', 'arch_drifter', 'arch_grazer'] : []);
@@ -3974,4 +3986,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.6';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.7';

@@ -883,10 +883,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.6';
+G.VERSION = '21.7';
 G.WHATS_NEW = {
-  title: 'Patch 21.6: Complications, the Daily Run, and safer saves',
+  title: 'Patch 21.7: keeping your save safe',
   items: [
+    'In Safari, iPhones delete a website\'s saved data after 7 days of using Safari without opening it. The Home Screen app keeps its own save. If you play in Safari, the title screen now says so and walks you through moving to the Home Screen app, with a backup button.',
+    'Backups: "Save a backup file" (to Files or iCloud Drive) keeps your progress even if the browser clears its data or you change phones. The game remembers your last backup and reminds you every two weeks or so.',
+    'The game now asks the browser to keep its storage for good, where the browser allows it.',
     'The Daily Run (title screen, once you have reached the Creature stage): one world a day, the same for everyone, with its own archetype, home world and two complications, even ones you have not unlocked. +25% Genetic Memory on top, your best result of the day, a streak, and a Share button.',
     'Complications (Options): eight optional rules that make new lineages harder for more Genetic Memory: Lean Times, Fragile, Small Herd, Slow Genes, Few Choices, Blind Odds, Restless World and No Second Chances.',
     'Safer saves: the game keeps a backup copy of your progress (made when it opens and after every lineage) and uses it if your save is ever damaged; it warns you if your phone will not store your progress; and loading a save code can be undone from Options.',
@@ -1842,4 +1845,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.6';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.7';
