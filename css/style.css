@@ -767,3 +767,16 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .amber-tag { font-size: 0.7rem; padding: 1px 6px; border-radius: 99px; background: rgba(242, 181, 68, 0.25); color: #f2b544; vertical-align: middle; }
 .rename-row, .name-row { display: flex; gap: 6px; align-items: center; }
 .rename-row input, .name-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--muted) 50%, transparent); background: var(--panel); color: inherit; }
+
+/* The guide (First Steps) */
+#guide { position: fixed; inset: 0; z-index: 85; pointer-events: none; }
+#guide:empty { display: none; }
+.guide-card { position: absolute; left: 12px; right: 12px; margin: 0 auto; max-width: 520px; pointer-events: auto; background: var(--card); border: 2px solid var(--accent); border-radius: var(--radius); padding: 10px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: tip-in 0.25s ease-out; }
+#guide[data-place="center"] .guide-card { bottom: calc(16px + var(--safe-bottom)); }
+.guide-card h3 { margin: 2px 0 4px; font-size: 1.05rem; }
+.guide-card p { margin: 0 0 8px; font-size: 0.92rem; line-height: 1.4; }
+.guide-card .eyebrow { color: var(--accent); margin: 0; }
+.guide-target { position: relative; z-index: 3; outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 10px; box-shadow: 0 0 0 100vmax rgba(3, 8, 10, 0.55); animation: guide-pulse 1.6s ease-in-out infinite; }
+.guide-target.guide-light { box-shadow: none; }
+@keyframes guide-pulse { 50% { outline-color: color-mix(in srgb, var(--accent) 40%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .guide-card, .guide-target { animation: none; } }

@@ -91,6 +91,14 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.3: First Steps (the guide)
+
+- **A guide for the first lineage.** `G.GUIDE` (world.js) is an ordered list of steps. Each one has a moment (`when`), the steps it comes `after`, and a `target` on screen. The bubble sits above or below the target, and the target is lit with an outline and a dark surround (`.guide-target`). Steps that sit over an event or draft use `light` (outline only) so the choices stay readable.
+- **Reading steps** (`hold`) stop the clock and wait for Next. **Doing steps** (`done`) wait for the player to do the thing, such as tapping Instinct, pressing play or picking an answer. On the map, `pause` makes a doing step stop the clock too. A step that was just shown counts as done once you do it, even if doing it changed the screen.
+- **What it covers:** the map, Population, Food, DNA, Instinct (a Drifter is told the current chooses), play, the first event, the first mutation, the body sheet and its tabs, the loop, becoming multicellular, the Creature stage, extinction and the Evolution Tree.
+- **It replaces the matching first-time tips** (welcome, instinct, event, draft, multicellular, creature, extinct, tree). They are marked seen as each step finishes, and other tips wait while a step is on screen.
+- **Who sees it:** new players (`meta.guide.on`). Anyone with a finished lineage starts with it off. Options has a Guide switch and "Replay the guide from the start". "Skip the guide" turns it off and hands back to the ordinary tips. A guided new lineage starts paused, so the player can press play themselves.
+
 ## Patch 21.2: A clearer Fossil Record
 
 - **Lineages have names.** `run.lineage = { id, name }` is set by `G.newRun` (typed on the setup screen, or two random syllables from `G.LINEAGE_SYLLABLES`). Fossils, Stage Select starts and history entries copy it; revived runs keep it. Older fossils each become their own lineage named after their archetype. `G.renameLineage` renames every copy at once (max 24 letters).

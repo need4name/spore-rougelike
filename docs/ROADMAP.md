@@ -520,6 +520,17 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Technology:** engines on land; electricity, living light and coral-shaping at sea, changed again by your kind of people.
 - **The Crown tree:** built from your rulers, heirs, wars and technology.
 
+## Before Update 22: polish first
+
+*Update 22 waits while the early game gets easier to learn. The order:*
+
+1. **Early-game polish** (Patch 21.1) ✅
+2. **A clearer Fossil Record** (Patch 21.2): named lineages, delete and rename ✅
+3. **First Steps: a guided first run** (Patch 21.3) ✅
+4. **Home-screen app:** installs to your phone, works offline, updates itself.
+5. **Complications in Options, and a daily run.**
+6. **Sound,** then **the Creature Wardrobe.**
+
 ## Update 22: Empires (Empire stage, part 2)
 
 - **Rival empires** descended from the species you met along the way, and from lineages in your Fossil Record, carrying the Memory of Kinds.

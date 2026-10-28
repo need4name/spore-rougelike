@@ -30,6 +30,7 @@ window.G = window.G || {};
       stats: { runs: 0, wins: 0, extinctions: 0, bestDna: 0, creatures: 0 },
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {}, stageStarts: [],
       options: { numbers: false, theme: 'tide' },
+      guide: { on: true, done: [] },
     };
   }
   // Odds in words; the exact numbers are an option (Options: Detailed numbers).
@@ -55,6 +56,8 @@ window.G = window.G || {};
     // Players who have already reached the Creature stage have seen the editor.
     m.editorShown = saved.editorShown != null ? !!saved.editorShown : !!(saved.history || []).some((h) => h.reached && !/^(Single cell|Multicellular)/.test(h.reached));
     m.options = Object.assign(m.options, saved.options || {});
+    // The guide is for new players: anyone who has already finished a lineage starts with it off (Options can replay it).
+    m.guide = saved.guide || { on: !(saved.stats && saved.stats.runs >= 1), done: [] };
     m.maxHostility = saved.maxHostility || 0;
     ['archetypes', 'origins', 'packs'].forEach((k) => {
       const list = (saved.unlocked && saved.unlocked[k]) || [];
@@ -117,8 +120,37 @@ window.G = window.G || {};
   // The next first-time tip to show, if any.
   G.nextTutorial = (run, ui) => {
     if (G.meta.tipsOff || ui.editor) return null;
-    return G.TUTORIALS.find((t) => !G.meta.tips.includes(t.id) && (() => { try { return t.when(run, ui); } catch (e) { return false; } })()) || null;
+    return G.TUTORIALS.find((t) => !G.meta.tips.includes(t.id) && !(G.guideOn() && G.GUIDE_TIPS.has(t.id)) && (() => { try { return t.when(run, ui); } catch (e) { return false; } })()) || null;
   };
+  // ---------- The guide (First Steps) ----------
+  G.guideOn = () => !!(G.meta.guide && G.meta.guide.on) && G.GUIDE.some((g) => !G.meta.guide.done.includes(g.id));
+  G.guideDone = (id) => !!(G.meta.guide && G.meta.guide.done.includes(id));
+  // The step to show now: the first unfinished step whose earlier steps are done and whose moment has come.
+  // Steps that ask you to do something are ticked off as soon as you have done it.
+  G.guideStep = (run, ui) => {
+    if (!G.guideOn() || ui.editor) return null;
+    for (const g of G.GUIDE) {
+      if (G.guideDone(g.id)) continue;
+      const after = [].concat(g.after || []);
+      if (!after.every(G.guideDone)) continue;
+      let ok = false; try { ok = g.when(run, ui); } catch (e) { ok = false; }
+      // A step you were just shown counts as done once you do it, even if doing it changed the screen.
+      if (g.done && (ok || ui.guideShown === g.id)) { let d = false; try { d = g.done(run, ui); } catch (e) { d = false; } if (d) { G.finishGuideStep(g.id); continue; } }
+      if (!ok) continue;
+      return g;
+    }
+    return null;
+  };
+  G.finishGuideStep = (id) => {
+    const m = G.meta; const g = G.GUIDE_STEP[id];
+    if (!g || m.guide.done.includes(id)) return;
+    m.guide.done.push(id);
+    (g.tips || []).forEach((t) => { if (!m.tips.includes(t)) m.tips.push(t); });
+    G.saveMeta();
+  };
+  // Skipping hands back to the ordinary first-time tips; replaying starts the guide from the top.
+  G.skipGuide = () => { G.meta.guide.on = false; G.saveMeta(); };
+  G.replayGuide = () => { G.meta.guide = { on: true, done: [] }; G.saveMeta(); };
   G.seeTutorial = (id) => { if (id && !G.meta.tips.includes(id)) G.meta.tips.push(id); G.saveMeta(); };
 
   // ---------- Lookups and helpers ----------
@@ -3809,4 +3841,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.2';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.3';

@@ -866,23 +866,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.2';
+G.VERSION = '21.3';
 G.WHATS_NEW = {
-  title: 'Patch 21.2: a clearer Fossil Record',
+  title: 'Patch 21.3: First Steps',
   items: [
-    'Name your lineage when you start (or roll a random name). The name stays with its fossils, its Stage Select start and its history, and shows when you continue.',
-    'The Fossil Record groups fossils by lineage, with what each one holds: stage, land or sea, diet, Path, numbers and turn. The one you are playing is marked.',
-    'Rename any lineage, and delete fossils you no longer want, to make room in amber for others. "Continue from here" starts that lineage again from that moment.',
-    'Patch 21.1: a gentler Tribe. Raids and hunts now wear a Tribe down instead of wiping it out in one bad roll: a single blow takes at most about a quarter of your members (more only when you are badly outmatched). The Spreading Fever now costs a share of your members, not a flat 40.',
-    'Patch 21.1: offers your diet can\'t use (hunting parts for a plant-eater, foraging parts for a Predator) turn up far less often. Mouths still appear, since they change what you eat.',
-    'Patch 21.1: descriptions no longer promise fixed numbers that change with your size (Armor, Strong Blood, Frozen Sea, Toxic, egg-laying and mid-sized choices).',
-    'A new stage after the Renaissance: win the Age of Sail and your nation becomes a crown with lands across the sea. Prestige replaces Learning.',
-    'Colonies: found them from Activities, build trading posts with friendly peoples overseas, or conquer them if your Disposition allows. Colonies bring Food and Prestige as they grow, but they grow restless: at 100 unrest a colony rebels, breaks away and may come for you. Royal tours, Colonial Councils and Garrisons keep them calm.',
-    'A dynasty: your ruler has an heir waiting in the Realm tab. When the ruler dies the heir takes the throne, and without a clear law a rival claimant can start a war of succession. Primogeniture makes it certain; an Elective Crown picks the best of the family.',
-    'New peoples across the sea meet you as you met them in the Age of Sail: explorers find them wary, traders find them friendly, conquerors find them hostile.',
-    'The Crown tree (the Crown tab): an Inheritance from the Age of Sail, your kind of people\'s own technology (Steam Engines, Song-Wires, Living Light, Living Factories, Grown Ships...), new technologies from each Prestige goal, Crown laws that rule each other out, and ideas grown from your dynasty\'s deeds. The Imperial Crown is its Gate, with three endings by Disposition.',
-    'Charters, the Colonial Age\'s own tree on the Evolution screen (12 upgrades), opens once a lineage reaches the Colonial Age.',
-    'The Book gains its Crown page with your dynasty, Stage Select can start at a coronation, and the Codex lists Colonial endings.',
+    'A guide for your first lineage. It points at one thing at a time (Population, Food, DNA, Instinct, the clock, your first event and mutation, your body) and stops the clock while you read. It comes back for becoming multicellular, the Creature stage, extinction and the Evolution Tree.',
+    'New players get it automatically. If you have played before, turn it on in Options, or tap "Replay the guide from the start". "Skip the guide" turns it off at any time.',
+    'Patch 21.2: name your lineage, and the Fossil Record groups fossils by lineage, with rename and delete.',
   ],
 };
 
@@ -1194,6 +1184,73 @@ G.TUTORIALS = [
     text: 'Each milestone leaves a fossil. Keep your favourites in amber, and you can revive one later to play on from that moment (it earns a little less Genetic Memory).' },
 ];
 G.TUTORIAL = {}; G.TUTORIALS.forEach((t) => { G.TUTORIAL[t.id] = t; });
+
+// ======================= FIRST STEPS: THE GUIDE =======================
+// A guided first run. Each step points at one thing on screen. "hold" steps stop the clock and wait for
+// "Next"; the others wait for you to do the thing they ask (done), and "pause" ones stop the clock meanwhile. Steps run in order: a step only shows
+// once every step it comes after is done. "tips" names the first-time tips the step replaces.
+const onMap = (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && !ui.sheet && !ui.editor && ui.viewer == null;
+G.GUIDE = [
+  { id: 'g_hello', hold: true, tips: ['welcome'], when: (run, ui) => onMap(run, ui) && run.stage === 'cell',
+    title: 'Welcome to Primordia',
+    text: (run) => `This is your lineage, the ${G.lineageName(run)}: a few cells in a warm sea, marked "You" on the map. The clock is stopped while I show you around. Your first goal is to survive and grow until you become multicellular.` },
+  { id: 'g_pop', hold: true, after: 'g_hello', target: '.res.pop', when: onMap,
+    title: 'Population',
+    text: 'This is how many of you there are. If it ever reaches 0, your lineage is extinct. You can tap any number up here to see where it comes from.' },
+  { id: 'g_food', hold: true, after: 'g_pop', target: '.res.food', when: onMap,
+    title: 'Food',
+    text: 'Your cells eat every turn. The small number is what you gain or lose each turn. Spare Food grows more of you; running out shrinks you.' },
+  { id: 'g_dna', hold: true, after: 'g_food', target: '.evo', when: onMap,
+    title: 'DNA',
+    text: 'You earn DNA every turn. When the bar fills, you get a mutation: a new part for your body.' },
+  { id: 'g_instinct_auto', hold: true, after: 'g_dna', target: '.instinct-btn', tips: ['instinct'], when: (run, ui) => onMap(run, ui) && G.gimmick(run) === 'drifter',
+    title: 'Instinct',
+    text: 'Your Instinct is what your cells spend each turn doing: foraging, hunting, exploring or hiding. You are a Drifter, so the current chooses for you. Other kinds of life choose for themselves.' },
+  { id: 'g_instinct', pause: true, after: 'g_dna', target: '.instinct-btn', tips: ['instinct'], when: (run, ui) => onMap(run, ui) && G.gimmick(run) !== 'drifter',
+    done: (run, ui) => ui.sheet === 'instinct',
+    title: 'Instinct',
+    text: 'Your Instinct is what your cells spend each turn doing. Tap it.' },
+  { id: 'g_instinct_pick', after: 'g_instinct', target: '.sheet .instincts', when: (run, ui) => ui.sheet === 'instinct', done: (run, ui) => !ui.sheet,
+    title: 'Pick one',
+    text: 'Forage finds plants, Hunt finds meat, Explore finds new things, Hide keeps you safe. Tap one, then close this with ✕.' },
+  { id: 'g_play', after: ['g_dna'], target: '.speeds .play', when: (run, ui) => onMap(run, ui) && ['g_instinct_auto', 'g_instinct_pick'].some((x) => G.guideDone(x)),
+    done: (run, ui) => ui.speed > 0 || run.phase !== 'map',
+    title: 'Start the clock',
+    text: 'Press play. Time runs on the map until something happens; then it stops so you can choose. The button next to it changes the speed.' },
+  { id: 'g_event', tips: ['event'], after: 'g_play', target: '#modal .options', light: true, place: 'top', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'event' && !G.EVENT[run.event.id].finale,
+    done: (run) => run.phase !== 'event',
+    title: 'Something happened',
+    text: 'Read the story, then pick an answer. Each says how likely it is to work. Answers you cannot take say what they need.' },
+  { id: 'g_draft', tips: ['draft'], after: 'g_play', target: '#modal', light: true, place: 'top', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'draft' && run.stage === 'cell',
+    done: (run) => run.phase !== 'draft',
+    title: 'A mutation',
+    text: 'Pick one new part. "Grow it" puts it in an empty slot. The grey box shows how it compares with what you have. Some pairs of parts evolve into something better.' },
+  { id: 'g_body', pause: true, after: 'g_draft', target: '.portrait-btn', when: onMap,
+    done: (run, ui) => !!ui.sheet,
+    title: 'Your body',
+    text: 'Tap your portrait to see your body, your stats and your parts.' },
+  { id: 'g_tabs', hold: true, after: 'g_body', target: '.sheet .tabs', when: (run, ui) => ui.screen === 'game' && !!ui.sheet,
+    title: 'Everything about your lineage',
+    text: 'These tabs show your body, traits, Instinct, Activities, the world and your story so far. Close this with ✕ when you are done.' },
+  { id: 'g_loop', hold: true, after: 'g_tabs', target: '.evo', when: onMap,
+    title: 'That is the loop',
+    text: 'Grow, answer events and take mutations. Keep your Population fed and your DNA coming. Tap any other herd on the map to see who they are and what they want. Good luck!' },
+  { id: 'g_multi', hold: true, tips: ['multicellular'], after: 'g_loop', target: '.portrait-btn', when: (run, ui) => onMap(run, ui) && run.stage === 'cell' && run.multicellular,
+    title: 'Many cells, one body',
+    text: 'You are multicellular! Two new slots are open (Senses and an Organ), and where you live now matters. Keep evolving: the next goal takes you out of the cell stage for good.' },
+  { id: 'g_creature', hold: true, tips: ['creature'], when: (run, ui) => onMap(run, ui) && run.stage === 'creature',
+    title: 'A real creature',
+    target: '.portrait-btn',
+    text: 'You have a real body now. Open your portrait: the Body plan tab changes your legs or fins, the Look tab changes how you look, and Activities lets you migrate, hunt, court or fight. Other species now have opinions of you.' },
+  { id: 'g_end', hold: true, tips: ['extinct'], target: '[data-act="go"][data-arg="unlocks"]', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'end' && run.result && !run.result.victory,
+    title: 'Extinction is not the end',
+    text: 'Every lineage earns Genetic Memory, even one that dies out. Spend it in the Evolution Tree to make the next lineage stronger. Most players get a creature within their first few lineages.' },
+  { id: 'g_tree', hold: true, tips: ['tree'], when: (run, ui) => ui.screen === 'unlocks',
+    title: 'The Evolution Tree',
+    text: 'Buy upgrades that last for every future lineage: more Population and Food, better stats, cheaper goals. Lower rows open once you own the one above. Then start a New lineage from the title screen.' },
+];
+G.GUIDE_STEP = {}; G.GUIDE.forEach((g) => { G.GUIDE_STEP[g.id] = g; });
+G.GUIDE_TIPS = new Set(G.GUIDE.flatMap((g) => g.tips || []));
 
 // Gene Affinities (late game): spend Genetic Memory to make a family of mutations turn up more
 // often in drafts. Each level doubles, triples, then quadruples the family's draft weight.
@@ -1761,4 +1818,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.2';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.3';

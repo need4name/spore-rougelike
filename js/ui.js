@@ -27,6 +27,7 @@ window.G = window.G || {};
   // First-time tips float above everything and pause the game until dismissed.
   const tipEl = document.createElement('div'); tipEl.id = 'tip'; document.body.appendChild(tipEl);
   function renderTip() {
+    if (G.ui.guideShown) { tipEl.innerHTML = ''; return; }
     if (!G.ui.tip) { const next = G.nextTutorial(G.run, G.ui); if (next) G.ui.tip = next.id; }
     const t = G.ui.tip && G.TUTORIAL[G.ui.tip];
     const text = t && (typeof t.text === 'function' ? t.text(G.run) : t.text);
@@ -44,9 +45,49 @@ window.G = window.G || {};
     renderTip();
   });
 
+  // ---------- The guide (First Steps) ----------
+  // A small coach bubble that points at one thing at a time. It lights up its target and sits above or
+  // below it. Steps that need reading stop the clock; steps that ask you to do something wait for you.
+  const guideEl = document.createElement('div'); guideEl.id = 'guide'; document.body.appendChild(guideEl);
+  G.guideHolding = () => { const g = G.ui.guideShown && G.GUIDE_STEP[G.ui.guideShown]; return !!(g && !G.guideDone(g.id) && G.guideOn() && (g.hold || g.pause)); };
+  function renderGuide() {
+    const g = G.guideStep(G.run, G.ui);
+    document.querySelectorAll('.guide-target').forEach((el) => el.classList.remove('guide-target', 'guide-light'));
+    G.ui.guideShown = g ? g.id : null;
+    if (!g) { guideEl.innerHTML = ''; guideEl.dataset.step = ''; return; }
+    const text = typeof g.text === 'function' ? g.text(G.run) : g.text;
+    // Only rebuild the card when the step changes; the clock redraws the screen every turn.
+    if (guideEl.dataset.step !== g.id) guideEl.innerHTML = `<div class="guide-card" role="dialog" aria-label="Guide: ${esc(g.title)}">
+        <p class="eyebrow">Guide</p><h3>${esc(g.title)}</h3><p>${esc(text)}</p>
+        <div class="row tight">${g.hold ? '<button class="btn primary small" data-guide="next">Next</button>' : ''}<button class="btn ghost small" data-guide="skip">Skip the guide</button></div>
+      </div>`;
+    guideEl.dataset.step = g.id;
+    const target = g.target && Array.from(document.querySelectorAll(g.target)).find((el) => el.offsetParent !== null || el.getClientRects().length);
+    const card = guideEl.firstElementChild;
+    if (target) {
+      target.classList.add('guide-target');
+      if (g.light) target.classList.add('guide-light');
+      const r = target.getBoundingClientRect();
+      // Sit below a target in the top half of the screen, above one in the bottom half (or where the step says).
+      const below = g.place ? g.place === 'bottom' : r.top + r.height / 2 < window.innerHeight / 2;
+      guideEl.dataset.place = below ? 'below' : 'above';
+      card.style.top = below ? `${Math.min(window.innerHeight - 160, r.bottom + 12)}px` : '';
+      card.style.bottom = below ? '' : `${Math.max(12, window.innerHeight - r.top + 12)}px`;
+      if (g.place === 'top') { card.style.top = 'calc(12px + var(--safe-top))'; card.style.bottom = ''; }
+    } else { guideEl.dataset.place = 'center'; }
+  }
+  guideEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-guide]');
+    if (!b) return;
+    if (b.dataset.guide === 'skip') G.skipGuide(); else if (G.ui.guideShown) G.finishGuideStep(G.ui.guideShown);
+    render(G.ui.screen === 'game' && app.querySelector('.game') ? ['top', 'hud'] : null);
+  });
+  window.addEventListener('resize', () => renderGuide());
+
   // parts: redraw only these pieces of a mounted game ('top', 'hud', 'modal', 'sheet', 'viewer').
   function render(parts) {
     renderInner(parts);
+    renderGuide();
     renderTip();
   }
   function renderInner(parts) {
@@ -2149,7 +2190,8 @@ window.G = window.G || {};
         <section><h2>Information</h2><div class="choices">
           ${toggle('numbers', o.numbers, 'Detailed numbers', 'Show exact odds as percentages, your stat against theirs, and what each mutation would change in every slot. Off: odds are shown in words, like "Likely".')}
           ${toggle('tips', !G.meta.tipsOff, 'Tips', 'Short tips the first time you meet something new.')}
-        </div>${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}</section>
+          ${toggle('guide', G.meta.guide.on, 'Guide', 'A guide that walks you through your first lineage, one thing at a time.')}
+        </div><div class="row tight">${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}<button class="btn small ghost" data-act="guide-replay">Replay the guide from the start</button></div></section>
         <section><h2>Colours</h2><div class="theme-row">${Object.entries(G.THEMES).map(([id, name]) => `<button class="theme-swatch ${o.theme === id ? 'on' : ''}" data-theme-swatch="${id}" data-act="opt-theme" data-arg="${id}" aria-pressed="${o.theme === id}"><span></span>${esc(name)}</button>`).join('')}</div></section>
         <p class="note">More ways to make a run harder are coming in a later update.</p>
       </main>`;
@@ -2296,7 +2338,8 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
-      case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
+      case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
+      case 'guide-replay': G.replayGuide(); break;
       case 'opt-theme': G.meta.options.theme = arg; G.saveMeta(); G.applyTheme(); break;
       case 'affinity': G.buyAffinity(arg); break;
       case 'tips-reset': G.meta.tips = []; G.meta.tipsOff = false; G.saveMeta(); break;
@@ -2313,7 +2356,7 @@ window.G = window.G || {};
       case 'pick-origin': G.ui.setup.origin = arg; break;
       case 'pick-hostility': G.ui.setup.hostility = Number(arg); break;
       case 'stage-start': if (G.startFromStage(arg)) { if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); } return;
-      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility, G.ui.setup.name); G.ui.setup.name = null; if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game'); return;
+      case 'begin': G.newRun(G.ui.setup.archetype, G.ui.setup.origin, G.ui.setup.hostility, G.ui.setup.name); G.ui.setup.name = null; if (G.resetMap) G.resetMap(); G.ui.speed = G.guideOn() && !G.guideDone('g_play') ? 0 : Math.max(1, G.ui.speed); go('game'); return;
       case 'option': G.chooseOption(Number(arg)); parts = ['top', 'hud', 'modal']; break;
       case 'continue-scene': G.continueScene(); parts = ['top', 'hud', 'modal']; autoEditor(parts); break;
       case 'continue-mutation': G.continueMutation(); parts = ['top', 'hud', 'modal']; break;
@@ -2433,7 +2476,7 @@ window.G = window.G || {};
     const dt = Math.min(0.25, (now - lastT) / 1000);
     lastT = now;
     const run = G.run;
-    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && !G.ui.tip && !G.ui.explain && G.ui.speed > 0;
+    const running = G.ui.screen === 'game' && run && run.phase === 'map' && !G.ui.sheet && G.ui.viewer == null && !G.ui.editor && !G.ui.tip && !G.guideHolding() && !G.ui.explain && G.ui.speed > 0;
     const per = G.SPEEDS[G.ui.speed] || 1;
     if (running) {
       acc += dt;
@@ -2458,4 +2501,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.2';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.3';
