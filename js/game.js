@@ -6,11 +6,16 @@ window.G = window.G || {};
   const SAVE_RUN = 'primordia.run.v3';
 
   // ---------- Saving ----------
+  const SAVE_BACKUP = 'primordia.meta.backup';
+  const SAVE_BROKEN = 'primordia.meta.broken';
+  const SAVE_PREVIOUS = 'primordia.meta.previous';
+  // A failed write (storage full or blocked) is remembered so the title screen can warn about it.
   function store(key, value) {
     try {
       if (value == null) localStorage.removeItem(key);
       else localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) { /* storage blocked: progress lasts until the tab closes */ }
+      if (key === SAVE_META) G.storageFailed = false;
+    } catch (e) { if (key !== SAVE_BACKUP) G.storageFailed = true; }
   }
   function load(key) {
     try {
@@ -18,6 +23,21 @@ window.G = window.G || {};
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
+  // Your progress (meta) is never thrown away by accident: a save that will not read is kept aside, and the
+  // backup copy (made when the game opens and after every lineage) is used instead.
+  function loadMeta() {
+    let raw = null;
+    try { raw = localStorage.getItem(SAVE_META); } catch (e) { return null; }
+    if (raw) {
+      try { return JSON.parse(raw); } catch (e) {
+        try { localStorage.setItem(SAVE_BROKEN, raw); } catch (e2) { /* nowhere to keep it */ }
+      }
+    }
+    const backup = load(SAVE_BACKUP);
+    if (backup) G.restoredFromBackup = true;
+    return backup;
+  }
+  G.backupMeta = () => { if (G.meta && (G.meta.stats.runs > 0 || G.meta.genes > 0)) store(SAVE_BACKUP, G.meta); };
 
   function freshMeta() {
     return {
@@ -75,7 +95,9 @@ window.G = window.G || {};
   G.HERITAGE.forEach((w) => { G.BOON[w.id] = w; });
   G.PATRONAGE.forEach((w) => { G.BOON[w.id] = w; });
   G.CHARTERS.forEach((w) => { G.BOON[w.id] = w; });
-  G.meta = mergeMeta(load(SAVE_META));
+  G.meta = mergeMeta(loadMeta());
+  if (G.restoredFromBackup) store(SAVE_META, G.meta);
+  G.backupMeta();
   G.run = load(SAVE_RUN);
   // Patch 15.1 counts Population in individuals (×10). Older runs and fossils are converted when loaded.
   G.migratePop = (run) => { if (run && !run.popV) { run.pop = Math.round(run.pop * G.POP_SCALE); run.popV = 2; } return run; };
@@ -124,10 +146,23 @@ window.G = window.G || {};
     } catch (e) { return `That save code is cut short (${m[2].length} letters arrived). Copy it again, all of it, and try again.`; }
     if (!data || !data.meta || typeof data.meta !== 'object' || data.meta.genes == null || !data.meta.stats) return 'That save code is damaged.';
     try {
+      // Keep what was here, so loading the wrong save can be undone.
+      const before = localStorage.getItem(SAVE_META);
+      if (before) localStorage.setItem(SAVE_PREVIOUS, JSON.stringify({ meta: before, run: localStorage.getItem(SAVE_RUN), at: Date.now() }));
       localStorage.setItem(SAVE_META, JSON.stringify(data.meta));
       if (data.run) localStorage.setItem(SAVE_RUN, JSON.stringify(data.run)); else localStorage.removeItem(SAVE_RUN);
     } catch (e) { return 'This browser would not store the save (it may be full or in private mode).'; }
     return null;
+  };
+  G.previousSave = () => load(SAVE_PREVIOUS);
+  G.restorePreviousSave = function () {
+    const p = load(SAVE_PREVIOUS); if (!p || !p.meta) return false;
+    try {
+      localStorage.setItem(SAVE_META, p.meta);
+      if (p.run) localStorage.setItem(SAVE_RUN, p.run); else localStorage.removeItem(SAVE_RUN);
+      localStorage.removeItem(SAVE_PREVIOUS);
+    } catch (e) { return false; }
+    return true;
   };
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
   function save() { G.saveRun(); G.saveMeta(); }
@@ -248,7 +283,12 @@ window.G = window.G || {};
     return { ok: true };
   };
 
-  const rand = () => Math.random();
+  // A seeded lineage (the Daily Run) draws from its own stream, kept in the save, so the same day gives the
+  // same world; everything else uses the ordinary random numbers.
+  let seedBox = null;
+  const seeded = (box) => { box.s = (box.s + 0x6D2B79F5) | 0; let t = box.s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const rand = () => { const box = seedBox || (G.run && G.run.rng); return box ? seeded(box) : Math.random(); };
+  G.seededRandom = (seed) => { const box = { s: seed | 0 }; return () => seeded(box); };
   const pick = (arr) => arr[Math.floor(rand() * arr.length)];
   function weightedPick(items, weightOf) {
     const total = items.reduce((s, it) => s + weightOf(it), 0);
@@ -609,6 +649,7 @@ window.G = window.G || {};
     G.BOONS.forEach((b) => { const lvl = G.boonLevel(b.id); if (b.mods && lvl) { const m = {}; Object.entries(b.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(tag(m, `Evolution Tree: ${b.name}`)); } });
     if (run.hostility >= 2) list.push(tag({ upkeep: 1 }, 'A hostile world'));
     if (run.hostility >= 4) list.push(tag({ maxPop: -2 }, 'A hostile world'));
+    (run.complications || []).forEach((id) => { const c = G.COMPLICATION[id]; if (c && c.mods) list.push(tag(c.mods, `Complication: ${c.name}`)); });
     return list;
   }
   // Where a modifier comes from: [{ src, v }], biggest first, sources added together.
@@ -947,7 +988,8 @@ window.G = window.G || {};
   };
 
   // ---------- Starting and ending runs ----------
-  G.newRun = function (archetypeId, originId, hostility, name) {
+  G.newRun = function (archetypeId, originId, hostility, name, opts) {
+    if (opts && opts.seed != null) seedBox = { s: opts.seed | 0 };
     const arch = G.ARCHETYPE[archetypeId];
     const b = G.meta.boons;
     const run = {
@@ -966,6 +1008,8 @@ window.G = window.G || {};
       phase: 'map', event: null, scene: null, draft: null, lastTurn: null, legacy: null, result: null, lastEvent: null,
       quietTicks: 2, look: {}, knownEvos: G.meta.codex.evolutions.slice(),
       lineage: G.newLineage(name),
+      complications: opts && opts.complications ? opts.complications.slice() : G.chosenComplications(),
+      daily: (opts && opts.daily) || null, rng: seedBox,
     };
     Object.entries(arch.start.cell).forEach(([slot, id]) => { run.parts[slot] = { id, merged: null }; });
     setupGimmick(run);
@@ -976,6 +1020,7 @@ window.G = window.G || {};
     noteParts(run);
     G.run = run;
     if (G.boonLevel('head_start')) startDraft(run);
+    seedBox = null;
     save();
     return run;
   };
@@ -1011,7 +1056,7 @@ window.G = window.G || {};
       : run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null);
     const codexList = col ? 'colonialEndings' : ren ? 'renaissanceEndings' : soc ? 'societyEndings' : tribe ? 'tribeEndings' : 'endings';
     const firstEnding = endKey && !(G.meta.codex[codexList] || []).includes(endKey) ? 10 : 0;
-    const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
+    const mult = G.geneMult(run);
     return { base, progress, winBonus, firstEnding, mult, endKey, codexList, tribe, soc };
   }
   function endRun(run, victory, cause) {
@@ -1019,10 +1064,12 @@ window.G = window.G || {};
     // Lineages that die as cells still learn something: 1 per 4 turns survived, and never less
     // than 6 in all, so early runs can afford the first upgrades.
     const survival = run.stage === 'cell' ? Math.max(Math.floor(run.turn / 4), 6 - base - progress - winBonus, 0) : 0;
-    const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
+    const mult = G.geneMult(run);
     const genes = Math.round((base + progress + winBonus + survival + firstEnding) * mult);
     const m = G.meta;
     m.genes += genes;
+    if (run.daily) recordDaily(run, victory, genes);
+    setTimeout(G.backupMeta, 0);
     if (victory) {
       m.stats.wins += 1;
       m.maxHostility = Math.max(m.maxHostility, Math.min(G.MAX_HOSTILITY, run.hostility + 1));
@@ -1203,7 +1250,7 @@ window.G = window.G || {};
       log(run, 'A few of your people held on against all odds.');
       return true;
     }
-    if (!G.boonLevel('second_chance') || run.secondChanceUsed) return false;
+    if (!G.boonLevel('second_chance') || run.secondChanceUsed || G.hasComp(run, 'no_second')) return false;
     run.secondChanceUsed = true;
     run.pop = 3 * G.POP_SCALE;
     run.notices.push('Second Chance: your kind should have died out, but a few survivors cling on.');
@@ -2897,7 +2944,7 @@ window.G = window.G || {};
     const m = G.meta; const st = G.stageStarts().find((x) => x.key === key);
     if (!st) return false;
     const run = G.migratePop(JSON.parse(JSON.stringify(st.run)));
-    run.fromStage = true; run.checkpointGenes = 0;
+    run.fromStage = true; run.checkpointGenes = 0; run.complications = G.chosenComplications(); run.daily = null; run.rng = null;
     run.knownEvos = m.codex.evolutions.slice();
     run.baseMaxPop = G.BASE_POP + G.boonLevel('hardy');
     run.baseFoodCap = G.FOOD_CAP + 2 * G.boonLevel('pantry');
@@ -2917,7 +2964,7 @@ window.G = window.G || {};
     const progress = (run.multicellular ? 5 : 0) + 10 + (run.era >= 2 ? 5 : 0) + (run.era >= 3 ? 10 : 0);
     const endKey = run.legacy && !G.LEGACIES[run.legacy].old ? `${run.legacy}|${G.temperament(run).id}` : null;
     const firstEnding = endKey && !(m.codex.endings || []).includes(endKey) ? 10 : 0;
-    const mult = (1 + 0.25 * run.hostility) * (run.revived ? G.REVIVE_MULT : 1);
+    const mult = G.geneMult(run);
     const genes = Math.round((base + progress + 40 + firstEnding) * mult);
     m.genes += genes; m.stats.wins += 1;
     m.maxHostility = Math.max(m.maxHostility, Math.min(G.MAX_HOSTILITY, run.hostility + 1));
@@ -3539,7 +3586,7 @@ window.G = window.G || {};
   // DNA goals for this stage, lowered by the Short Road upgrade.
   G.goals = (run) => {
     const st = G.STAGES[run.stage];
-    const k = 1 - 0.08 * G.boonLevel('short_road');
+    const k = (1 - 0.08 * G.boonLevel('short_road')) * (G.hasComp(run, 'slow_genes') ? 1.25 : 1);
     // A Tribe's first milestone comes straight away; everywhere else goals need at least 1.
     const f = (n) => (n > 0 || !G.people(run) ? Math.max(1, Math.round(n * k)) : 0);
     return { drafts: st.drafts.map(f), milestones: st.milestones.map((m) => ({ ...m, at: f(m.at) })), evolveAt: st.evolveAt && f(st.evolveAt) };
@@ -3574,7 +3621,7 @@ window.G = window.G || {};
       if (!chain.species || idx >= 0) { run.quietTicks = 0; setEvent(run, G.EVENT[chain.id], idx >= 0 ? idx : null); return; }
     }
     // Events pop up at random, more likely the longer it has been quiet.
-    if (allowEvent && rand() < 0.38 + 0.2 * run.quietTicks) { run.quietTicks = 0; drawEvent(run); return; }
+    if (allowEvent && rand() < 0.38 + 0.2 * run.quietTicks + (G.hasComp(run, 'restless') ? 0.15 : 0)) { run.quietTicks = 0; drawEvent(run); return; }
     if (allowEvent) run.quietTicks += 1;
     run.phase = 'map';
   }
@@ -3609,6 +3656,7 @@ window.G = window.G || {};
     const options = draftOptions(run);
     // Nothing left to offer (every branch already in the Lore tree): the goal passes with a little food.
     if (!options.length) { run.draftsTaken += 1; G.addFood(run, 3); run.notices.push(run.stage === 'tribe' ? 'Every branch your people could find is already in your Lore tree: +3 Food instead.' : 'Nothing new to choose: +3 Food instead.'); nextStep(run, false); return; }
+    if (G.hasComp(run, 'few_choices') && options.length > 2) options.length -= 1;
     run.draft = { options, rerolls: G.meta.boons.reroll ? 1 : 0 };
     run.phase = 'draft';
   }
@@ -3683,6 +3731,7 @@ window.G = window.G || {};
     if (!run || run.phase !== 'draft' || run.draft.rerolls < 1) return;
     run.draft.rerolls -= 1;
     run.draft.options = draftOptions(run);
+    if (G.hasComp(run, 'few_choices') && run.draft.options.length > 2) run.draft.options.length -= 1;
     G.saveRun();
   };
 
@@ -3759,6 +3808,41 @@ window.G = window.G || {};
 
   // ---------- Fossils and history ----------
   // How far a run got, in words.
+  // ---------- The Daily Run ----------
+  G.dailyKey = (d) => { const x = d || new Date(); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  G.dailySeed = (key) => { let h = 2166136261; for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); } return h | 0; };
+  G.dailyOpen = () => (G.meta.stats.creatures || 0) >= 1 || G.meta.history.length >= 2;
+  // Today's world: drawn from the date alone, so it is the same on every phone.
+  G.dailySetup = (key) => {
+    const r = G.seededRandom(G.dailySeed(key));
+    const pick = (arr) => arr[Math.floor(r() * arr.length)];
+    const archetype = pick(G.ARCHETYPES).id; const origin = pick(G.ORIGINS).id;
+    const pool = G.COMPLICATIONS.map((c) => c.id); const comps = [];
+    while (comps.length < 2) { const c = pick(pool); if (!comps.includes(c)) comps.push(c); }
+    return { key, archetype, origin, hostility: G.DAILY_HOSTILITY, complications: comps, seed: G.dailySeed(key) };
+  };
+  G.startDaily = function () {
+    const d = G.dailySetup(G.dailyKey());
+    const day = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const run = G.newRun(d.archetype, d.origin, d.hostility, `Daily ${day}`, { seed: d.seed, daily: d.key, complications: d.complications });
+    run.notices.push(`The Daily Run for ${day}: everyone gets this same world today.`);
+    return run;
+  };
+  // How far a lineage got, as a number to compare Daily results with.
+  G.reachRank = (run) => ({ cell: run.multicellular ? 1 : 0, creature: run.mind ? 4 : run.era >= 2 ? 3 : 2, tribe: 5, society: 6, renaissance: 7, colonial: 8 }[run.stage] || 0) + (run.result && run.result.victory ? 0.5 : 0);
+  G.dailyRecord = () => G.meta.daily || { streak: 0, last: null, days: {} };
+  function recordDaily(run, victory, genes) {
+    const m = G.meta; const d = (m.daily = G.dailyRecord()); const key = run.daily;
+    const entry = { reached: G.reachedLabel(run), rank: G.reachRank(run), turns: run.turn, genes, victory: !!victory };
+    const old = d.days[key];
+    if (!old || entry.rank > old.rank || (entry.rank === old.rank && entry.turns < old.turns)) d.days[key] = entry;
+    if (d.last !== key) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      d.streak = d.last === G.dailyKey(y) ? d.streak + 1 : 1;
+      d.last = key;
+    }
+    Object.keys(d.days).sort().slice(0, -30).forEach((k) => { delete d.days[k]; });
+  }
   G.reachedLabel = (run) => {
     if (run.stage === 'colonial') return `Colonial Age: ${G.realmName(run)}`;
     if (run.stage === 'renaissance') return `Renaissance: ${G.nationName(run)}`;
@@ -3770,6 +3854,12 @@ window.G = window.G || {};
     return run.habitat === 'sea' ? 'Creature of the sea' : 'Creature of the land';
   };
   const reviveKey = (run) => (G.civ(run) ? 'society' : run.stage === 'tribe' ? 'tribe' : run.stage === 'cell' ? 'multicellular' : run.mind ? 'mind' : run.era >= 2 ? 'giants' : 'creature');
+  // ---------- Complications ----------
+  G.hasComp = (run, id) => !!(run && run.complications && run.complications.includes(id));
+  G.compBonus = (list) => (list || []).reduce((sum, id) => sum + ((G.COMPLICATION[id] && G.COMPLICATION[id].bonus) || 0), 0);
+  // Complications switched on in Options, for the next new lineage.
+  G.chosenComplications = () => ((G.meta.options && G.meta.options.complications) || []).filter((id) => G.COMPLICATION[id]);
+  G.geneMult = (run) => (1 + 0.25 * run.hostility + G.compBonus(run.complications) + (run.daily ? G.DAILY_BONUS : 0)) * (run.revived ? G.REVIVE_MULT : 1);
   G.amberSlots = () => 1 + G.boonLevel('amber');
   // A short line saying what a fossil holds, so two fossils of one lineage are easy to tell apart.
   G.fossilDetail = function (run) {
@@ -3884,4 +3974,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.5';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.6';

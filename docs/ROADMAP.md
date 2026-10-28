@@ -528,7 +528,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 2. **A clearer Fossil Record** (Patch 21.2): named lineages, delete and rename ✅
 3. **First Steps: a guided first run** (Patch 21.3) ✅
 4. **Home-screen app** (Patch 21.4): installs to your phone, works offline, updates itself, and moves your save ✅
-5. **Complications in Options, and a daily run.**
+5. **Complications in Options, and a daily run** (Patch 21.6), with automatic save backups ✅
 6. **Sound,** then **the Creature Wardrobe.**
 
 ## Update 22: Empires (Empire stage, part 2)

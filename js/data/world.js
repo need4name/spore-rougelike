@@ -575,6 +575,23 @@ G.BOON = {}; G.BOONS.forEach((b) => { G.BOON[b.id] = b; });
 G.REVIVE_COST = { multicellular: 12, creature: 25, giants: 35, mind: 45, tribe: 50, society: 60 };
 G.REVIVE_MULT = 0.6;
 G.FOSSIL_KEEP = 8; // recent fossils kept besides the ones in amber
+// Complications: optional rules, switched on in Options, that make every new lineage harder for more
+// Genetic Memory. Their bonuses add to Hostility's (+25% per level).
+G.COMPLICATIONS = [
+  { id: 'lean', name: 'Lean Times', bonus: 0.15, mods: { upkeep: 1 }, desc: 'Your kind eats 1 more Food every turn, in every stage.' },
+  { id: 'fragile', name: 'Fragile', bonus: 0.1, mods: { tou: -1 }, desc: '−1 Toughness, in every stage.' },
+  { id: 'small_herd', name: 'Small Herd', bonus: 0.1, mods: { maxPop: -2 }, desc: 'A smaller comfortable size (−20 Population, members or people), in every stage.' },
+  { id: 'slow_genes', name: 'Slow Genes', bonus: 0.25, desc: 'Every goal (DNA, Ideas, Influence and the rest) is a quarter further away.' },
+  { id: 'few_choices', name: 'Few Choices', bonus: 0.1, desc: 'Every draft offers one choice fewer.' },
+  { id: 'blind', name: 'Blind Odds', bonus: 0.15, desc: 'Event answers no longer say how likely they are to work.' },
+  { id: 'restless', name: 'Restless World', bonus: 0.1, desc: 'Events come more often, good and bad.' },
+  { id: 'no_second', name: 'No Second Chances', bonus: 0.1, desc: 'The Second Chance upgrade does nothing.' },
+];
+G.COMPLICATION = {}; G.COMPLICATIONS.forEach((c) => { G.COMPLICATION[c.id] = c; });
+// The Daily Run: one world a day, the same for everyone (archetype, home world, Hostility 1 and two
+// complications, all drawn from the date), worth +25% Genetic Memory on top.
+G.DAILY_BONUS = 0.25;
+G.DAILY_HOSTILITY = 1;
 // Lineage names: a start and an end, put together. You can always type your own.
 G.LINEAGE_SYLLABLES = {
   a: ['Vel', 'Mor', 'Ash', 'Kel', 'Thri', 'Oon', 'Sab', 'Ly', 'Quor', 'Ren', 'Tal', 'Zhe', 'Bri', 'Cor', 'Ny', 'Esk', 'Ul', 'Wyn', 'Ira', 'Dra'],
@@ -866,10 +883,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.5';
+G.VERSION = '21.6';
 G.WHATS_NEW = {
-  title: 'Patch 21.5: moving your save, fixed',
+  title: 'Patch 21.6: Complications, the Daily Run, and safer saves',
   items: [
+    'The Daily Run (title screen, once you have reached the Creature stage): one world a day, the same for everyone, with its own archetype, home world and two complications, even ones you have not unlocked. +25% Genetic Memory on top, your best result of the day, a streak, and a Share button.',
+    'Complications (Options): eight optional rules that make new lineages harder for more Genetic Memory: Lean Times, Fragile, Small Herd, Slow Genes, Few Choices, Blind Odds, Restless World and No Second Chances.',
+    'Safer saves: the game keeps a backup copy of your progress (made when it opens and after every lineage) and uses it if your save is ever damaged; it warns you if your phone will not store your progress; and loading a save code can be undone from Options.',
     'Moving your save works properly now. Save codes are squeezed to about a twentieth of their old size, so they copy and paste in one go on a phone, and they end in :END so a cut-off code is spotted at once.',
     'In the other copy of the game (Safari or the home-screen app), tap Paste from clipboard in Options: no need to paste by hand. Spaces or words pasted around the code are ignored, and if something is wrong it says exactly what.',
     'Save as a file opens the Share menu on an iPhone (choose Save to Files). Older save codes still load.',
@@ -1822,4 +1842,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.5';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.6';

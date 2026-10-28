@@ -789,3 +789,10 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .file-btn { cursor: pointer; }
 .save-more { margin-top: 10px; }
 .save-more summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.save-warn { width: min(520px, 100%); margin: 0 auto 12px; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--bad) 22%, var(--panel)); border: 1px solid var(--bad); font-size: 0.9rem; text-align: left; }
+
+/* Daily Run (Patch 21.6) */
+.daily-card { width: min(520px, 100%); margin: 0 auto 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--panel); border: 1px solid color-mix(in srgb, var(--dna, #f2b544) 50%, transparent); text-align: left; }
+.daily-card p { margin: 4px 0; font-size: 0.9rem; line-height: 1.4; }
+.daily-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.daily-head span { color: var(--muted); font-size: 0.85rem; }

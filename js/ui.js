@@ -193,7 +193,7 @@ window.G = window.G || {};
     G.ui.screen = screen;
     G.ui.confirmAbandon = false;
     G.ui.confirmReset = false;
-    G.ui.confirmDel = null; G.ui.renaming = null; G.ui.saveMove = null;
+    G.ui.confirmDel = null; G.ui.renaming = null; G.ui.saveMove = null; G.ui.confirmDaily = false; G.ui.dailyShared = false;
     if (screen === 'options') prepareSaveCode();
     G.ui.sheet = null;
     render();
@@ -214,6 +214,43 @@ window.G = window.G || {};
       </div>`;
   }
 
+  // ---------- The Daily Run ----------
+  function dailyCard(live) {
+    if (!G.dailyOpen()) return '';
+    const key = G.dailyKey(); const d = G.dailySetup(key);
+    const rec = G.dailyRecord(); const today = rec.days[key];
+    const arch = G.ARCHETYPE[d.archetype]; const origin = G.ORIGIN[d.origin];
+    const pct = Math.round((0.25 * d.hostility + G.compBonus(d.complications) + G.DAILY_BONUS) * 100);
+    const playingIt = live && G.run.daily === key;
+    const confirm = G.ui.confirmDaily;
+    return `<section class="daily-card">
+        <div class="daily-head"><strong>📅 Daily Run</strong><span>${esc(new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }))}</span></div>
+        <p>${esc(arch.name)} in the ${esc(origin.name)} · Hostility ${d.hostility} · ${d.complications.map((id) => esc(G.COMPLICATION[id].name)).join(', ')} · <b>+${pct}% Genetic Memory</b></p>
+        <p class="note">The same world for everyone today, even if you have not unlocked it yet.</p>
+        ${today ? `<p class="note good-text">Your best today: ${esc(today.reached)}${today.victory ? ' (won)' : ''} in ${today.turns} turns.</p>` : ''}
+        ${rec.streak > 1 && rec.last === key ? `<p class="note">🔥 ${rec.streak}-day streak</p>` : ''}
+        <div class="row tight wrap">
+          ${playingIt ? '' : confirm
+            ? '<span class="note">This ends the lineage you are playing now.</span><button class="btn small danger" data-act="daily-yes">Play the Daily Run</button><button class="btn small ghost" data-act="daily-no">Cancel</button>'
+            : `<button class="btn small primary" data-act="daily-start">${today ? 'Play it again' : 'Play today\'s run'}</button>`}
+          ${today ? `<button class="btn small ghost" data-act="daily-share">${G.ui.dailyShared ? 'Copied ✓' : 'Share result'}</button>` : ''}
+        </div>
+      </section>`;
+  }
+  function dailyShareText() {
+    const key = G.dailyKey(); const d = G.dailySetup(key); const rec = G.dailyRecord(); const t = rec.days[key];
+    if (!t) return '';
+    return [`Primordia Daily Run, ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+      `${G.ARCHETYPE[d.archetype].name} in the ${G.ORIGIN[d.origin].name} · ${d.complications.map((id) => G.COMPLICATION[id].name).join(', ')}`,
+      `🧬 ${t.reached}${t.victory ? ' (won)' : ''} in ${t.turns} turns`,
+      rec.streak > 1 && rec.last === key ? `🔥 ${rec.streak}-day streak` : ''].filter(Boolean).join('\n');
+  }
+  function beginDaily() {
+    if (G.run && G.run.phase !== 'end') G.endRunEarly();
+    G.startDaily(); G.ui.confirmDaily = false;
+    if (G.resetMap) G.resetMap(); G.ui.speed = Math.max(1, G.ui.speed); go('game');
+  }
+
   // ---------- Title ----------
   function titleScreen() {
     const m = G.meta;
@@ -225,7 +262,10 @@ window.G = window.G || {};
           <h1>Primordia</h1>
           <p class="lede">Guide one lineage from a single cell to the first spark of a people. Events shape its body, its mind and its story. When it goes extinct, its genetic memory makes the next one stronger.</p>
         </div>
+        ${G.storageFailed ? '<p class="save-warn">Your progress could not be saved on this device (its storage is full or blocked). Copy your save code in Options to keep it safe.</p>' : ''}
+        ${G.restoredFromBackup ? '<p class="save-warn">Your save could not be read, so the game loaded its backup copy.</p>' : ''}
         ${installHint()}
+        ${dailyCard(live)}
         <div class="menu">
           ${live ? `<button class="btn primary" data-act="continue">Continue ${G.run.lineage ? `the ${esc(G.run.lineage.name)}` : 'lineage'} <small>${esc(G.STAGES[G.run.stage].name)}, ${esc(G.STAGES[G.run.stage].turnName)} ${G.run.stageTurn}</small></button>` : ''}
           <button class="btn ${live ? '' : 'primary'}" data-act="setup">New lineage</button>
@@ -304,6 +344,7 @@ window.G = window.G || {};
         <section class="setup-group"><h2>Archetype</h2><div class="choices">${G.ARCHETYPES.filter((a) => m.unlocked.archetypes.includes(a.id)).map((a) => card('archetype', a, st.archetype === a.id)).join('')}</div></section>
         ${m.unlocked.origins.length > 1 ? `<section class="setup-group"><h2>Home world</h2><div class="choices">${G.ORIGINS.filter((o) => m.unlocked.origins.includes(o.id)).map((o) => card('origin', o, st.origin === o.id)).join('')}</div></section>` : ''}
         ${hostility}
+        ${G.chosenComplications().length ? `<section class="setup-group"><h2>Complications</h2><p class="note">${G.chosenComplications().map((id) => esc(G.COMPLICATION[id].name)).join(', ')}: <b>+${Math.round(G.compBonus(G.chosenComplications()) * 100)}% Genetic Memory</b>. <button class="btn small ghost" data-act="go" data-arg="options">Change in Options</button></p></section>` : ''}
         <section class="setup-group"><h2>Name</h2><div class="name-row"><input id="lineage-name" type="text" maxlength="${G.LINEAGE_NAME_MAX}" value="${esc(st.name || '')}" aria-label="Lineage name" autocomplete="off"><button class="btn small ghost" data-act="name-dice" aria-label="Pick another name">🎲</button></div><p class="note">Your lineage keeps this name in the Fossil Record, so you can tell your save points apart. You can change it later.</p></section>
         <div class="sticky-cta"><button class="btn primary wide" data-act="begin">Begin in the ${esc(G.ORIGIN[st.origin].name)}</button></div>
       </main>`;
@@ -536,6 +577,8 @@ window.G = window.G || {};
   }
 
   function chanceTag(stat, chance, foe) {
+    // Blind Odds (a complication): only the stat being tested is shown.
+    if (G.hasComp(G.run, 'blind')) return `<span class="chance">${statName(stat)} · ?</span>`;
     const cls = chance >= 70 ? 'good' : chance <= 35 ? 'bad' : '';
     if (!G.showNumbers()) return `<span class="chance ${cls}">${statName(stat)} · ${G.oddsWord(chance)}</span>`;
     return `<span class="chance ${cls}">${statName(stat)} · ${chance}%</span>${foe ? `<span class="vs">your ${foe.you} vs their ${foe.them}</span>` : ''}`;
@@ -1982,7 +2025,7 @@ window.G = window.G || {};
       <aside class="sheet" role="dialog" aria-modal="true" aria-label="Your lineage">
         <header class="sheet-head">
           <button class="portrait-zoom" data-act="view" data-arg="you" aria-label="See your creature full screen"><canvas class="portrait big"></canvas><i>${ICON.expand}</i></button>
-          <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${run.lineage ? `${esc(run.lineage.name)} · ` : ''}${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}</p></div>
+          <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${run.daily ? `📅 Daily run · ` : ''}${run.lineage ? `${esc(run.lineage.name)} · ` : ''}${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}${(run.complications || []).length ? `<br><span class="muted">Complications: ${run.complications.map((id) => esc((G.COMPLICATION[id] || {}).name || id)).join(', ')}</span>` : ''}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
@@ -2209,9 +2252,18 @@ window.G = window.G || {};
           ${toggle('guide', G.meta.guide.on, 'Guide', 'A guide that walks you through your first lineage, one thing at a time.')}
         </div><div class="row tight">${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}<button class="btn small ghost" data-act="guide-replay">Replay the guide from the start</button></div></section>
         <section><h2>Colours</h2><div class="theme-row">${Object.entries(G.THEMES).map(([id, name]) => `<button class="theme-swatch ${o.theme === id ? 'on' : ''}" data-theme-swatch="${id}" data-act="opt-theme" data-arg="${id}" aria-pressed="${o.theme === id}"><span></span>${esc(name)}</button>`).join('')}</div></section>
+        ${complicationsSection(toggle)}
         ${saveSection()}
-        <p class="note">More ways to make a run harder are coming in a later update.</p>
       </main>`;
+  }
+  // Complications: optional rules for new lineages, each worth more Genetic Memory.
+  function complicationsSection(toggle) {
+    const on = G.chosenComplications();
+    const pct = Math.round(G.compBonus(on) * 100);
+    return `<section><h2>Complications</h2>
+      <p class="note">Optional rules that make every <b>new</b> lineage harder, for more Genetic Memory. The lineage you are playing keeps the rules it began with.${on.length ? ` Now: <b>+${pct}% Genetic Memory</b>.` : ''}</p>
+      <div class="choices">${G.COMPLICATIONS.map((c) => toggle(`comp:${c.id}`, on.includes(c.id), `${c.name} (+${Math.round(c.bonus * 100)}%)`, c.desc)).join('')}</div>
+    </section>`;
   }
   // Move a save between Safari and the home-screen app (or another device): copy a code here, paste it there.
   // The code is made when Options opens, so the Copy tap can put it on the clipboard straight away (iPhones only
@@ -2236,6 +2288,7 @@ window.G = window.G || {};
         <p class="note warn-text">Loading a save replaces all progress here, including the lineage you are playing.</p>
         <div class="row tight wrap"><button class="btn small danger" data-act="save-load">Replace my progress with this save</button><button class="btn small ghost" data-act="save-paste-close">Cancel</button></div>` : ''}
       ${u.error ? `<p class="note bad-text">${esc(u.error)}</p>` : ''}
+      ${G.previousSave() ? `<p class="note">You loaded a save on ${esc(new Date(G.previousSave().at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}. <button class="btn small ghost" data-act="save-undo">Undo it: go back to the progress you had before</button></p>` : ''}
       <details class="save-more"><summary>Other ways</summary>
         <div class="row tight wrap"><button class="btn small ghost" data-act="save-paste-open">Paste by hand</button><button class="btn small ghost" ${code ? 'data-act="save-download"' : 'disabled'}>Save as a file</button><label class="btn small ghost file-btn">Load a file<input type="file" accept=".txt,text/plain" data-save-file hidden></label></div>
         <p class="note">A save file is also a backup. On an iPhone, "Save as a file" opens the Share menu: choose Save to Files.</p>
@@ -2394,7 +2447,10 @@ window.G = window.G || {};
     let parts = null; // null = full redraw
     switch (act) {
       case 'go': go(arg); return;
-      case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
+      case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on;
+        else if (arg.startsWith('comp:')) { const id = arg.slice(5); const list = G.chosenComplications(); G.meta.options.complications = list.includes(id) ? list.filter((x) => x !== id) : list.concat(id); }
+        else G.meta.options[arg] = !G.meta.options[arg];
+        G.saveMeta(); break;
       case 'guide-replay': G.replayGuide(); break;
       case 'save-copy': {
         const code = G.ui.saveCode; if (!code) return;
@@ -2417,6 +2473,17 @@ window.G = window.G || {};
         return;
       case 'save-paste-open': showPasted(''); { const t = app.querySelector('#save-paste'); if (t) t.focus(); } return;
       case 'save-paste-close': G.ui.saveMove = null; break;
+      case 'daily-start': if (G.run && G.run.phase !== 'end') { G.ui.confirmDaily = true; break; } beginDaily(); return;
+      case 'daily-yes': beginDaily(); return;
+      case 'daily-no': G.ui.confirmDaily = false; break;
+      case 'daily-share': {
+        const text = dailyShareText();
+        const done = () => { G.ui.dailyShared = true; render(); };
+        if (navigator.share) { navigator.share({ text }).then(done, () => {}); return; }
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => {});
+        return;
+      }
+      case 'save-undo': if (G.restorePreviousSave()) location.reload(); return;
       case 'save-load': { const t = app.querySelector('#save-paste'); loadSaveCode(t ? t.value : ''); return; }
       case 'save-download': {
         const code = G.ui.saveCode; if (!code) return;
@@ -2599,4 +2666,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.5';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.6';
