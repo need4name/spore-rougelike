@@ -193,10 +193,24 @@ window.G = window.G || {};
     G.ui.screen = screen;
     G.ui.confirmAbandon = false;
     G.ui.confirmReset = false;
-    G.ui.confirmDel = null; G.ui.renaming = null;
+    G.ui.confirmDel = null; G.ui.renaming = null; G.ui.saveMove = null;
     G.ui.sheet = null;
     render();
     window.scrollTo(0, 0);
+  }
+
+  // ---------- Home-screen app ----------
+  // On the hosted game (which has a manifest), suggest adding it to the home screen until it is, or until dismissed.
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); G.installPrompt = e; if (G.ui.screen === 'title') render(); });
+  const standalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  function installHint() {
+    if (standalone() || !document.querySelector('link[rel="manifest"]') || (G.meta.options && G.meta.options.installHidden)) return '';
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!ios && !G.installPrompt) return '';
+    return `<div class="install-hint">
+        <p><b>Play it like an app.</b> ${ios ? 'Tap Share (the square with an arrow), then <b>Add to Home Screen</b>.' : 'Install Primordia on this device.'} It opens full-screen and works without internet. Your progress here stays here: use <b>Options → Move your save</b> to take it with you.</p>
+        <div class="row tight">${G.installPrompt ? '<button class="btn small primary" data-act="install">Install</button>' : ''}<button class="btn small ghost" data-act="install-hide">Not now</button></div>
+      </div>`;
   }
 
   // ---------- Title ----------
@@ -210,6 +224,7 @@ window.G = window.G || {};
           <h1>Primordia</h1>
           <p class="lede">Guide one lineage from a single cell to the first spark of a people. Events shape its body, its mind and its story. When it goes extinct, its genetic memory makes the next one stronger.</p>
         </div>
+        ${installHint()}
         <div class="menu">
           ${live ? `<button class="btn primary" data-act="continue">Continue ${G.run.lineage ? `the ${esc(G.run.lineage.name)}` : 'lineage'} <small>${esc(G.STAGES[G.run.stage].name)}, ${esc(G.STAGES[G.run.stage].turnName)} ${G.run.stageTurn}</small></button>` : ''}
           <button class="btn ${live ? '' : 'primary'}" data-act="setup">New lineage</button>
@@ -2193,8 +2208,27 @@ window.G = window.G || {};
           ${toggle('guide', G.meta.guide.on, 'Guide', 'A guide that walks you through your first lineage, one thing at a time.')}
         </div><div class="row tight">${G.meta.tips.length ? '<button class="btn small ghost" data-act="tips-reset">Show all tips again</button>' : ''}<button class="btn small ghost" data-act="guide-replay">Replay the guide from the start</button></div></section>
         <section><h2>Colours</h2><div class="theme-row">${Object.entries(G.THEMES).map(([id, name]) => `<button class="theme-swatch ${o.theme === id ? 'on' : ''}" data-theme-swatch="${id}" data-act="opt-theme" data-arg="${id}" aria-pressed="${o.theme === id}"><span></span>${esc(name)}</button>`).join('')}</div></section>
+        ${saveSection()}
         <p class="note">More ways to make a run harder are coming in a later update.</p>
       </main>`;
+  }
+  // Move a save between Safari and the home-screen app (or another device): copy a code here, paste it there.
+  function saveSection() {
+    const u = G.ui.saveMove || {};
+    return `<section class="save-move"><h2>Move your save</h2>
+      <p class="note">On an iPhone, Safari and the home-screen app keep separate saves. To move your progress, copy your save code in one and paste it into the other.</p>
+      <div class="row tight wrap"><button class="btn small" data-act="save-copy">${u.copied ? 'Copied ✓' : 'Copy save code'}</button><button class="btn small ghost" data-act="save-paste-open">Paste a save code</button><button class="btn small ghost" data-act="save-download">Save as a file</button><label class="btn small ghost file-btn">Load a file<input type="file" accept=".txt,text/plain" data-save-file hidden></label></div>
+      ${u.show ? `<textarea class="save-code" readonly rows="4" aria-label="Your save code">${esc(G.exportSave())}</textarea><p class="note">Select all of this code and copy it.</p>` : ''}
+      ${u.paste ? `<textarea class="save-code" id="save-paste" rows="4" placeholder="Paste the code here" aria-label="Save code to load"></textarea>
+        <p class="note warn-text">Loading a save replaces all progress here, including the lineage you are playing.</p>
+        <div class="row tight"><button class="btn small danger" data-act="save-load">Replace my progress with this save</button><button class="btn small ghost" data-act="save-paste-close">Cancel</button></div>` : ''}
+      ${u.error ? `<p class="note bad-text">${esc(u.error)}</p>` : ''}
+    </section>`;
+  }
+  function loadSaveCode(code) {
+    const err = G.importSave(code);
+    if (err) { G.ui.saveMove = Object.assign({}, G.ui.saveMove, { error: err }); render(); return; }
+    location.reload();
   }
   G.applyTheme = () => { document.documentElement.dataset.theme = (G.meta && G.meta.options && G.meta.options.theme) || 'tide'; };
   G.applyTheme();
@@ -2340,6 +2374,25 @@ window.G = window.G || {};
       case 'go': go(arg); return;
       case 'opt': if (arg === 'tips') G.meta.tipsOff = !G.meta.tipsOff; else if (arg === 'guide') G.meta.guide.on = !G.meta.guide.on; else G.meta.options[arg] = !G.meta.options[arg]; G.saveMeta(); break;
       case 'guide-replay': G.replayGuide(); break;
+      case 'save-copy': {
+        const code = G.exportSave();
+        const ok = () => { G.ui.saveMove = { copied: true }; render(); };
+        const fail = () => { G.ui.saveMove = { show: true }; render(); const t = app.querySelector('.save-code'); if (t) { t.focus(); t.select(); } };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, fail); else fail();
+        return;
+      }
+      case 'save-paste-open': G.ui.saveMove = { paste: true }; render(); { const t = app.querySelector('#save-paste'); if (t) t.focus(); } return;
+      case 'save-paste-close': G.ui.saveMove = null; break;
+      case 'save-load': { const t = app.querySelector('#save-paste'); loadSaveCode(t ? t.value : ''); return; }
+      case 'save-download': {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([G.exportSave()], { type: 'text/plain' }));
+        a.download = `primordia-save-${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(a); a.click(); a.remove();
+        return;
+      }
+      case 'install': if (G.installPrompt) { G.installPrompt.prompt(); G.installPrompt = null; } return;
+      case 'install-hide': G.meta.options.installHidden = true; G.saveMeta(); break;
       case 'opt-theme': G.meta.options.theme = arg; G.saveMeta(); G.applyTheme(); break;
       case 'affinity': G.buyAffinity(arg); break;
       case 'tips-reset': G.meta.tips = []; G.meta.tipsOff = false; G.saveMeta(); break;
@@ -2445,6 +2498,13 @@ window.G = window.G || {};
     if (G.startEditing()) { G.meta.editorShown = true; G.saveMeta(); G.ui.editor = true; G.ui.editorTab = 'body'; parts.push('editor'); run.notices.push('You can change how your creature looks at any time from the Look tab. It never changes your stats.'); }
   }
 
+  app.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-save-file]');
+    if (!el || !el.files || !el.files[0]) return;
+    const r = new FileReader();
+    r.onload = () => { G.ui.saveMove = { paste: true }; render(); const t = app.querySelector('#save-paste'); if (t) t.value = String(r.result || ''); };
+    r.readAsText(el.files[0]);
+  });
   app.addEventListener('submit', (e) => {
     const f = e.target.closest('form[data-form="rename"]');
     if (!f) return;
@@ -2501,4 +2561,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.4';

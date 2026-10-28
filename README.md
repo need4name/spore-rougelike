@@ -9,7 +9,8 @@ An evolution roguelike for phone, tablet and computer, played in the browser. Gu
 ## Playing it
 
 - **On this computer:** double-click `index.html`. It opens in your browser and needs no installs.
-- **On iPhone/iPad:** host it (below), open the link in Safari, then tap Share and **Add to Home Screen**. It then opens full-screen like an app.
+- **On iPhone/iPad:** host it (below), open the link in Safari, then tap Share and **Add to Home Screen**. It then opens full-screen like an app, works offline once opened, and updates itself when online. Safari and the home-screen app keep separate saves: use **Options → Move your save** to copy progress across.
+- **Releasing:** run `python3 tools/stamp.py <version>` so every file (and the offline copy) moves to the new release together.
 - Progress saves automatically in the browser you play in.
 
 ## Hosting it for free (GitHub Pages)

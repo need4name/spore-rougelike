@@ -86,6 +86,24 @@ window.G = window.G || {};
   if (G.run && G.run.held && G.run.held.length) { G.run.grafts = (G.run.grafts || []).concat(G.run.held); G.run.held = []; }
   G.saveMeta = () => store(SAVE_META, G.meta);
   G.saveRun = () => store(SAVE_RUN, G.run);
+  // ---------- Moving a save ----------
+  // Safari and a home-screen app keep separate saves on an iPhone, so progress moves as a code you copy and paste.
+  const SAVE_TAG = 'PRIMORDIA1:';
+  G.exportSave = () => SAVE_TAG + btoa(unescape(encodeURIComponent(JSON.stringify({ meta: G.meta, run: G.run, at: Date.now() }))));
+  // Returns null when the save was loaded (the page should then reload), or a sentence saying what is wrong.
+  G.importSave = function (code) {
+    const text = String(code || '').replace(/\s+/g, '');
+    if (!text) return 'Paste a save code first.';
+    if (!text.startsWith(SAVE_TAG)) return 'That is not a Primordia save code. It should start with PRIMORDIA1:';
+    let data = null;
+    try { data = JSON.parse(decodeURIComponent(escape(atob(text.slice(SAVE_TAG.length))))); } catch (e) { return 'That save code is incomplete. Copy the whole code and try again.'; }
+    if (!data || !data.meta || typeof data.meta !== 'object' || data.meta.genes == null || !data.meta.stats) return 'That save code is damaged.';
+    try {
+      localStorage.setItem(SAVE_META, JSON.stringify(data.meta));
+      if (data.run) localStorage.setItem(SAVE_RUN, JSON.stringify(data.run)); else localStorage.removeItem(SAVE_RUN);
+    } catch (e) { return 'This browser would not store the save (it may be full or in private mode).'; }
+    return null;
+  };
   G.resetAll = () => { G.meta = freshMeta(); G.run = null; G.saveMeta(); G.saveRun(); };
   function save() { G.saveRun(); G.saveMeta(); }
 
@@ -3841,4 +3859,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.4';

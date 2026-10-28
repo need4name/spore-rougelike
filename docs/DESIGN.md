@@ -91,6 +91,14 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.4: Primordia as an app
+
+- **Installable:** `manifest.webmanifest` (standalone, portrait, dark theme) and icons in `icons/` (a 180 px Apple touch icon, 192 and 512 px icons, and a maskable 512 px icon). `index.html` links both.
+- **Offline:** `sw.js` registers only on the hosted game (https or localhost, never from a file or inside the artifact). On install it saves every file of the current release; each file's address carries the release (`?v=21.4`), so a saved copy is always the right one. The page itself is network-first with a 4-second fallback to the saved copy, so a phone with a connection always gets the newest release. Fonts are served from a saved copy and refreshed in the background. Old releases' caches are deleted when a new worker takes over; saves are in localStorage and are never touched.
+- **Releases:** `python3 tools/stamp.py <version>` stamps the version on index.html (file addresses and the build check), on each script's build stamp and on `sw.js`. A changed `sw.js` makes browsers install the new release.
+- **Moving a save:** Safari and a home-screen app keep separate storage on iOS. `G.exportSave` writes meta and the current run as a `PRIMORDIA1:` code (base64 JSON); `G.importSave` checks it, writes it to storage and the page reloads. Options can copy the code (or show it to copy by hand), paste one, save it as a .txt file, or load a file. Loading asks before it replaces everything.
+- **Install hint:** the title screen suggests Add to Home Screen on iPhone and iPad (or shows Install where the browser offers it) until the game runs as an app or the player taps Not now. It only appears on the hosted game, which has a manifest.
+
 ## Patch 21.3: First Steps (the guide)
 
 - **A guide for the first lineage.** `G.GUIDE` (world.js) is an ordered list of steps. Each one has a moment (`when`), the steps it comes `after`, and a `target` on screen. The bubble sits above or below the target, and the target is lit with an outline and a dark surround (`.guide-target`). Steps that sit over an event or draft use `light` (outline only) so the choices stay readable.

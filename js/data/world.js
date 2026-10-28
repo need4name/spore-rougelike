@@ -866,13 +866,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.3';
+G.VERSION = '21.4';
 G.WHATS_NEW = {
-  title: 'Patch 21.3: First Steps',
+  title: 'Patch 21.4: Primordia as an app',
   items: [
-    'A guide for your first lineage. It points at one thing at a time (Population, Food, DNA, Instinct, the clock, your first event and mutation, your body) and stops the clock while you read. It comes back for becoming multicellular, the Creature stage, extinction and the Evolution Tree.',
-    'New players get it automatically. If you have played before, turn it on in Options, or tap "Replay the guide from the start". "Skip the guide" turns it off at any time.',
-    'Patch 21.2: name your lineage, and the Fossil Record groups fossils by lineage, with rename and delete.',
+    'Add Primordia to your Home Screen (in Safari: Share, then Add to Home Screen). It opens full-screen with its own icon, and works without internet once it has been opened once.',
+    'Updates arrive on their own: whenever you have a connection, the app loads the newest version.',
+    'Move your save (Options): on an iPhone, Safari and the home-screen app keep separate saves. Copy your save code in one and paste it into the other, or save it as a file.',
+    'Patch 21.3: a guide for your first lineage (replay it from Options).',
   ],
 };
 
@@ -1818,4 +1819,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.3';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.4';
