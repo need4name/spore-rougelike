@@ -818,3 +818,15 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .earn-list { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; font-size: 0.85rem; }
 .earn-list li { opacity: 0.75; }
 .earn-list li.got { opacity: 1; }
+
+/* Decisions (Patch 21.10) */
+.decisions { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.decision { background: var(--panel); border-radius: var(--radius); padding: 10px 12px; border: 1px solid var(--line); }
+.decision.ready { border-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+.dec-head { display: flex; align-items: center; gap: 8px; }
+.dec-head .muted { margin-left: auto; font-size: 0.75rem; }
+.dec-icon { font-size: 1.2rem; }
+.decision .note { margin: 4px 0; }
+.dec-needs { list-style: none; padding: 0; margin: 4px 0 6px; font-size: 0.85rem; display: grid; gap: 2px; }
+.dec-boons { padding-left: 18px; font-size: 0.9rem; }
+.tab .badge { display: inline-block; min-width: 1.3em; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-ink, #1a1200); font-size: 0.75rem; line-height: 1.4; text-align: center; }

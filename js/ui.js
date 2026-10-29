@@ -2027,6 +2027,25 @@ window.G = window.G || {};
       }).join('')}</ul>`;
   }
 
+  // ---------- Decisions ----------
+  // Big moves you can make whenever you meet their conditions: what each needs (ticked when met), what it costs,
+  // and a button to take it. Taking one opens its own event.
+  function decisionsTab(run) {
+    const list = G.DECISIONS.map((d) => ({ d, st: G.decisionState(run, d) })).filter((x) => x.st.visible);
+    list.sort((a, b) => (b.st.ok - a.st.ok));
+    const boons = G.activeDecisionBoons(run);
+    const card = ({ d, st }) => `<li class="decision ${st.ok ? 'ready' : ''}">
+        <div class="dec-head"><span class="dec-icon" aria-hidden="true">${d.icon || '⭐'}</span><strong>${esc(d.name)}</strong>${d.once === false ? '<span class="muted">repeatable</span>' : ''}</div>
+        <p class="note">${esc(d.desc)}</p>
+        ${st.needs.length ? `<ul class="dec-needs">${st.needs.map((n) => `<li class="${n.ok ? 'good-text' : 'bad-text'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul>` : ''}
+        <div class="row tight wrap">${d.cost && G.decisionCostText(run, d.cost) ? `<span class="note">Costs ${esc(G.decisionCostText(run, d.cost))}</span>` : '<span class="note">Free</span>'}
+          ${st.why ? `<span class="note">${esc(st.why)}</span>` : `<button class="btn small ${st.ok ? 'primary' : ''}" ${st.ok && run.phase === 'map' ? `data-act="decide" data-arg="${d.id}"` : 'disabled'}>Decide</button>`}</div>
+      </li>`;
+    return `<p class="note">Big moves you can make at any time, once you meet what they need. Each costs something now and opens a choice about how it goes.</p>
+      ${list.length ? `<ul class="decisions">${list.map(card).join('')}</ul>` : '<p class="empty">No decisions open right now. New ones appear as your lineage grows.</p>'}
+      ${boons.length ? `<section><h3>Lasting effects of your decisions</h3><ul class="dec-boons">${boons.map((b) => `<li><b>${esc(b.name)}</b>: ${esc(G.describeMods(b.mods))}${b.stage === 'any' ? ' (for good)' : ''}</li>`).join('')}</ul></section>` : ''}`;
+  }
+
   function chronicleTab(run) {
     return `<ol class="log">${run.log.map((e) => `<li><span class="when">${esc(e.when)}</span>${esc(e.text)}</li>`).join('')}</ol>`;
   }
@@ -2036,15 +2055,17 @@ window.G = window.G || {};
     if (!tab) return '';
     const tribe = G.people(run);
     const tabs = run.stage === 'colonial'
-      ? [['society', 'Realm'], ['council', 'Council'], ['crown', 'Crown'], ['book', 'Book'], ['reason', 'Reason'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['society', 'Realm'], ['council', 'Council'], ['crown', 'Crown'], ['book', 'Book'], ['reason', 'Reason'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['decide', 'Decisions'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : run.stage === 'renaissance'
-      ? [['society', 'Nation'], ['council', 'Council'], ['reason', 'Reason'], ['book', 'Book'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['society', 'Nation'], ['council', 'Council'], ['reason', 'Reason'], ['book', 'Book'], ['laws', 'Law'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['decide', 'Decisions'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : run.stage === 'society'
-      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Law'], ['book', 'Book'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      ? [['society', 'Society'], ['council', 'Council'], ['laws', 'Law'], ['book', 'Book'], ['found', 'Lore'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['decide', 'Decisions'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
       : tribe
-      ? [['people', 'People'], ['found', 'Lore'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
-      : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
-    const panels = { body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, reason: reasonTab, crown: crownTab, book: bookTab };
+      ? [['people', 'People'], ['found', 'Lore'], ['book', 'Book'], ['body', 'Body'], ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['decide', 'Decisions'], ['world', 'World'], ['map', 'Map'], ['log', 'Chronicle']]
+      : [['body', 'Body'], ['plan', 'Body plan'], ...(run.stage === 'creature' ? [['look', 'Look']] : []), ['traits', 'Traits'], ['instinct', 'Instinct'], ['acts', 'Activities'], ['decide', 'Decisions'], ['world', 'World'], ['map', 'Map'], ...(run.mind ? [['mind', 'Mind']] : []), ...(run.stage !== 'cell' ? [['book', 'Book']] : []), ['log', 'Chronicle']];
+    // Decisions sit second, where they are easy to find.
+    const di = tabs.findIndex(([id]) => id === 'decide'); if (di > 1) tabs.splice(1, 0, tabs.splice(di, 1)[0]);
+    const panels = { decide: decisionsTab, body: bodyTab, plan: planTab, look: lookTab, traits: traitsTab, instinct: instinctTab, acts: activitiesTab, world: worldTab, map: mapTab, mind: (r) => `<p class="note">Insight: ${r.insight} (${G.insightPerTurn(r)} per turn)</p>${mindTree(r)}`, log: chronicleTab, people: peopleTab, found: discoveriesTab, society: societyTab, council: councilTab, laws: traditionsTab, reason: reasonTab, crown: crownTab, book: bookTab };
     const panel = (tabs.some(([id]) => id === tab) ? panels[tab] : panels[tabs[0][0]])(run);
     const arch = G.ARCHETYPE[run.archetype];
     const where = run.stage === 'cell' ? 'Primordial sea' : run.habitat === 'sea' ? 'Open sea' : 'Land';
@@ -2056,7 +2077,7 @@ window.G = window.G || {};
           <div><h2>${run.stage === 'colonial' ? esc(G.realmName(run)) : run.stage === 'renaissance' ? esc(G.nationName(run)) : run.stage === 'society' ? `The ${esc(G.socKind(run).name)}` : tribe ? `The ${esc(G.kind(run).name)}` : `${esc(arch.name)} lineage`}</h2><p class="note">${run.daily ? `📅 Daily run · ` : ''}${run.lineage ? `${esc(run.lineage.name)} · ` : ''}${dietBadge(run)} ${where} · ${esc(G.ORIGIN[run.origin].name)}${(run.complications || []).length ? `<br><span class="muted">Complications: ${run.complications.map((id) => esc((G.COMPLICATION[id] || {}).name || id)).join(', ')}</span>` : ''}</p></div>
           <button class="btn ghost small icon" data-act="close-sheet" aria-label="Close">${ICON.close}</button>
         </header>
-        <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}</button>`).join('')}</div>
+        <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="sheet" data-arg="${id}">${label}${id === 'decide' && G.decisionsReady(run) ? ` <span class="badge">${G.decisionsReady(run)}</span>` : ''}</button>`).join('')}</div>
         <div class="sheet-body">${panel}
           ${run.phase !== 'end' ? `<div class="abandon">${G.ui.confirmAbandon
             ? '<span>End this lineage? You keep Genetic Memory for what you achieved.</span><button class="btn small danger" data-act="abandon-yes">End it</button><button class="btn small ghost" data-act="abandon-no">Keep going</button>'
@@ -2650,6 +2671,7 @@ window.G = window.G || {};
       case 'arms': G.setArms(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'editor-random': G.randomiseLook(arg === 'all' ? null : arg); G.ui.keepEditorScroll = true; parts = ['top', 'editor']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
+      case 'decide': if (G.takeDecision(arg)) { G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; } else parts = ['sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;
       case 'species-back': G.ui.speciesView = null; parts = ['sheet']; break;
@@ -2766,4 +2788,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.9';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.10';

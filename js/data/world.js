@@ -961,10 +961,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.9';
+G.VERSION = '21.10';
 G.WHATS_NEW = {
-  title: 'Patch 21.9: The Creature Wardrobe',
+  title: 'Patch 21.10: Decisions',
   items: [
+    'A new Decisions tab (tap your portrait): big moves you choose to make yourself, whenever you meet what they need, like Crusader Kings\' decisions. 37 of them across every stage: Seek new waters, Engulf a rival strain, Claim a territory, Dig a den, Challenge the apex predator, Split the tribe, Call a gathering of the bands, Move the capital, Outlaw the old ways, Found a great academy, Build a royal navy and more.',
+    'Each decision shows what it needs (ticked when you have it) and what it costs, then opens its own event where you choose how it goes. Some are one-time choices, some can be repeated after a while.',
+    'Many leave lasting effects for the rest of the stage, listed at the bottom of the tab and in the explanations of your numbers. A badge on the tab shows how many you can take right now.',
     'Eight new patterns (Speckles, Dapple, Chevrons, Scales, Eyespots, Marbled, Harlequin, Lightning) and four new finishes (Velvet, Pearl, Sparkle, Metallic).',
     'Every body plan gets its own looks: jellyfish bells (dome, tall, saucer, frilled), starfish arms (webbed, curled, knobbly), colony styles (bubbly, crystal, stacked), and collars for land creatures and serpents (hood, frill, mane, spiked crown). Serpents now show every pattern.',
     'Colour sets: four colours in one tap, from Tide to Coral Reef. Most open by visiting a biome.',
@@ -1243,6 +1246,8 @@ G.TUTORIALS = [
     text: 'You have a real body now. The Body plan tab changes your number of legs or fins. The Look tab opens the Creature Editor. The Activities tab lets you migrate, go to war, court, hunt or scout.' },
   { id: 'tribe', title: 'The Tribe stage', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'tribe',
     text: 'Your kind is a people now. Population is now your members, and Ideas replace DNA: each goal brings a Discovery. Your body no longer changes, but what it can do decides which discoveries come. The People tab shows your leader, your Fire or Song, and your talents. Reach the Founding to choose your people\'s future.' },
+  { id: 'decisions', title: 'Decisions', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && !ui.sheet && G.decisionsReady(run) > 0,
+    text: 'You can make a Decision: a big move you choose to make yourself, like claiming a territory or splitting the tribe. Tap your portrait, then the Decisions tab. Each one lists what it needs and what it costs.' },
   { id: 'crowding', title: 'Crowded', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.pop > G.maxPop(run),
     text: 'You have grown past your comfortable size. You can keep going, up to half as many again, but crowded members eat twice, young cost more and crowding sickness takes a tenth of the excess every turn.' },
   { id: 'biomes', title: 'Biomes', when: (run, ui) => ui.screen === 'game' && run && run.phase === 'map' && run.stage === 'creature' && run.biome && run.biome !== G.HOME_BIOME[run.habitat],
@@ -1931,4 +1936,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.9';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.10';

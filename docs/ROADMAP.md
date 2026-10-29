@@ -570,7 +570,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 *Each expansion adds one new kind of decision that runs through every stage, the way a Crusader Kings 3 expansion adds a system to the whole game rather than one more region. The aim: fewer "pick the best option and move on" events, more choices that start something, get answered, and come back later.*
 
-**First, in the base game: the Decisions tab.** CK3's best idea is that big choices are not only things that happen *to* you. A Decisions tab lists the big moves you can make whenever you meet their conditions, with what they cost and what they risk: *Migrate to the shallows*, *Abandon the old hunting grounds*, *Declare the sacred grove*, *Split the tribe*, *Move the capital*, *Outlaw the old faith*. Each stage gets 6–10. Every expansion below adds its own.
+**First, in the base game: the Decisions tab** ✅ (Patch 21.10, 37 decisions). CK3's best idea is that big choices are not only things that happen *to* you. A Decisions tab lists the big moves you can make whenever you meet their conditions, with what they cost and what they risk: *Migrate to the shallows*, *Abandon the old hunting grounds*, *Declare the sacred grove*, *Split the tribe*, *Move the capital*, *Outlaw the old faith*. Each stage gets 6–10. Every expansion below adds its own.
 
 ### 1. Rivals and Nemeses ("the lineage that hates you")
 - One species you hurt (or lost to) becomes your **Rival**: it is named, has its own small tree, and grows as you do. It answers your choices: hunt it and it gets armour; ignore it and it takes your food.

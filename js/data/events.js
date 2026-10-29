@@ -3361,5 +3361,246 @@ G.EVENTS.push(
 
 G.EVENT = {};
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
+
+// ======================= DECISIONS =======================
+// Big moves you choose to make (the Decisions tab), like Crusader Kings' decisions. Each lists what it needs,
+// costs something up front, and opens its own event where you choose how it goes. Most can be taken once per
+// lineage; `once: false` ones come back after `cooldown` turns. `boon` effects last for the rest of the stage
+// (or for good, with lasting: true).
+(function () {
+  const st = (r, k) => G.stat(r, k);
+  const need = (label, test) => ({ label, test });
+  const stat = (k, n) => need(`${G.STATS.find((x) => x.id === k).name} ${n} or more`, (r) => st(r, k) >= n);
+  const popShare = (f) => need(`Population at ${Math.round(f * 100)}% of your comfortable size or more`, (r) => r.pop >= G.maxPop(r) * f);
+  const friend = need('A friendly or allied species nearby', (r) => r.species.some((x) => !x.extinct && !x.band && ['friendly', 'allied'].includes(G.speciesStatus(x))));
+  const band = need('A neighbouring people', (r) => r.species.some((x) => x.band && !x.extinct && !x.nation));
+  const friendlyNeighbour = need('A friendly neighbour', (r) => r.species.some((x) => (x.band || x.nation) && !x.extinct && x.opinion >= 15));
+  G.DECISIONS = [
+    // ---------- Cell ----------
+    { id: 'new_waters', stage: ['cell'], icon: '🌊', name: 'Seek new waters', show: (r) => G.biomeMatters(r), cost: { dna: 2 }, needs: [stat('spd', 3)],
+      desc: 'Leave the place you were born for richer or safer waters.',
+      event: { title: 'Seek new waters', text: 'Your kind gathers at the edge of the only home it has known. Where will the current take you?', options: [
+        { label: 'Down to the thermal vents', hint: 'Warm, rich, dangerous', result: { text: 'You settle in the heat of the vents.', biome: 'vent', anim: 'rest' } },
+        { label: 'Up to the sunlit surface', hint: 'Light and plenty', result: { text: 'You rise into the light.', biome: 'surface', anim: 'rest' } },
+        { label: 'Into the mud flats', hint: 'Quiet and sheltered', result: { text: 'You sink into the soft mud.', biome: 'mud', anim: 'rest' } },
+      ] } },
+    { id: 'hoard', stage: ['cell'], icon: '🫧', name: 'Store food in your membranes', cost: { food: 6 }, needs: [need('8 Food or more', (r) => r.food >= 8)],
+      desc: 'Turn a good season into a lasting advantage.',
+      event: { title: 'A full larder', text: 'Your cells are swollen with stored food. How will you use it?', options: [
+        { label: 'Grow fat and many', result: { text: 'Your colony grows larger and more crowded.', boon: { name: 'Stored plenty', mods: { maxPop: 1 } }, anim: 'social' } },
+        { label: 'Thicken your walls', result: { text: 'Harder to break, harder to eat.', boon: { name: 'Thick walls', mods: { damageReduce: 1 } }, anim: 'rest' } },
+      ] } },
+    { id: 'engulf', stage: ['cell'], icon: '🦠', name: 'Engulf a rival strain', cost: { dna: 2 }, needs: [stat('str', 3), popShare(0.5)],
+      desc: 'Swallow a weaker kind whole and keep what it knew.',
+      event: { title: 'Engulf a rival strain', text: 'A smaller strain drifts close. You could swallow it whole and keep what made it strong.', options: [
+        { label: 'Engulf it', check: { stat: 'str', diff: 4 }, success: { text: 'You absorb it, and its secrets with it.', dna: 4, food: 2, anim: 'eat' }, fail: { text: 'It fights back from the inside.', popPct: -0.12, anim: 'hurt' } },
+        { label: 'Lure it in slowly', check: { stat: 'cun', diff: 4 }, success: { text: 'It never knew what happened.', dna: 3, anim: 'eat' }, fail: { text: 'It slips away.', anim: 'rest' } },
+      ] } },
+    { id: 'offshoot', stage: ['cell'], icon: '✨', name: 'Bud off a daring offshoot', cost: { popPct: 0.25 }, needs: [popShare(0.7)],
+      desc: 'Some of your kind leave to try something new. They take part of your number with them.',
+      event: { title: 'A daring offshoot', text: 'A quarter of your kind breaks away to live differently.', options: [
+        { label: 'Let them explore', result: { text: 'What they learn drifts back to you.', dna: 5, anim: 'mutate' } },
+        { label: 'Let them guard the home waters', result: { text: 'A tough outer ring forms around your kind.', boon: { name: 'Guardian strain', mods: { tou: 1 } }, anim: 'rest' } },
+      ] } },
+    // ---------- Creature ----------
+    { id: 'territory', stage: ['creature'], icon: '🚩', name: 'Claim a territory', cost: { dna: 3 }, needs: [stat('str', 4), popShare(0.5)],
+      desc: 'Mark out land or water as yours, and keep others out of it.',
+      event: { title: 'Claim a territory', text: 'Your kind picks the best ground it knows and decides it belongs to you.', options: [
+        { label: 'Mark it with scent and signs', check: { stat: 'cun', diff: 4 }, success: { text: 'Others learn to keep away.', boon: { name: 'Marked territory', mods: { foodPerTurn: 1, damageReduce: 1 } }, anim: 'rest' }, fail: { text: 'Nobody seems to notice.', food: 1 } },
+        { label: 'Drive everyone else out', check: { stat: 'str', diff: 5 }, success: { text: 'The ground is yours, and everyone knows it.', boon: { name: 'Held territory', mods: { foodPerTurn: 2 } }, anim: 'fight' }, fail: { text: 'They push back hard.', popPct: -0.1, anim: 'hurt' } },
+      ] } },
+    { id: 'den', stage: ['creature'], icon: '🕳️', name: 'Dig a den', show: (r) => r.habitat === 'land', cost: { food: 5 }, needs: [stat('tou', 3)],
+      desc: 'A safe place for the young, out of the wind and away from hunters.',
+      event: { title: 'Dig a den', text: 'Your kind digs deep into the earth.', options: [
+        { label: 'A deep burrow', result: { text: 'Safe and warm below ground.', boon: { name: 'The den', mods: { damageReduce: 1, maxPop: 1 } }, anim: 'rest' } },
+        { label: 'A wide nesting ground', result: { text: 'Room for many young.', boon: { name: 'Nesting ground', mods: { maxPop: 2 } }, anim: 'social' } },
+      ] } },
+    { id: 'reef_home', stage: ['creature'], icon: '🪸', name: 'Settle into the reef', show: (r) => r.habitat === 'sea', cost: { food: 4 }, needs: [stat('cha', 3)],
+      desc: 'Make the crowded, colourful reef your home, and its creatures your neighbours.',
+      event: { title: 'Settle into the reef', text: 'The reef is full of hiding places, and full of other lives.', options: [
+        { label: 'Live among them', result: { text: 'You become part of the reef.', zone: 'reef', boon: { name: 'Reef dwellers', mods: { cha: 1 } }, anim: 'social' } },
+        { label: 'Take the best crevices for yourselves', check: { stat: 'str', diff: 4 }, success: { text: 'The safest holes are yours.', zone: 'reef', boon: { name: 'Reef holdfast', mods: { damageReduce: 1, tou: 1 } }, anim: 'fight' }, fail: { text: 'The reef pushes you out.', popPct: -0.08, anim: 'hurt' } },
+      ] } },
+    { id: 'hunt_together', stage: ['creature'], icon: '🤝', name: 'Hunt with a friendly species', cost: { dna: 2 }, needs: [friend, stat('cha', 3)],
+      desc: 'Two kinds working together catch what neither could alone.',
+      event: { title: 'Hunt together', text: 'A friendly species hunts beside you. You could make it a habit.', options: [
+        { label: 'Share every kill', result: { text: 'A partnership is born.', boon: { name: 'Hunting partners', mods: { huntBonus: 1, foodPerTurn: 1 } }, anim: 'social' } },
+        { label: 'Let them do the chasing', check: { stat: 'cun', diff: 4 }, success: { text: 'They tire; you eat.', boon: { name: 'Clever partners', mods: { huntBonus: 2 } }, anim: 'eat' }, fail: { text: 'They notice, and stop hunting with you.', food: -2 } },
+      ] } },
+    { id: 'gorge', stage: ['creature'], once: false, cooldown: 18, icon: '🍖', name: 'Gorge before the cold', cost: { food: 8 }, needs: [need('10 Food or more', (r) => r.food >= 10)],
+      desc: 'Eat everything now, and grow while you can.',
+      event: { title: 'Gorge', text: 'Your kind eats until it can eat no more.', options: [
+        { label: 'Raise young', result: { text: 'A season of young.', popMaxPct: 0.15, anim: 'social' } },
+        { label: 'Grow strong', result: { text: 'Fat and strong.', dna: 3, anim: 'rest' } },
+      ] } },
+    { id: 'tools', stage: ['creature'], icon: '🪨', name: 'Use sticks and stones', show: (r) => G.hasTag(r, 'grasp'), cost: { dna: 4 }, needs: [stat('cun', 5)],
+      desc: 'Hands that can hold can do more than grab food.',
+      event: { title: 'Sticks and stones', text: 'One of your kind cracks a shell with a stone. The others watch.', options: [
+        { label: 'Teach the young', result: { text: 'It spreads through your kind.', boon: { name: 'Tool users', mods: { cun: 1, forageBonus: 1 }, lasting: true }, insight: 2, anim: 'mutate' } },
+        { label: 'Use them as weapons', result: { text: 'A thrown stone is a long claw.', boon: { name: 'Stone throwers', mods: { str: 1, huntBonus: 1 } }, anim: 'fight' } },
+      ] } },
+    { id: 'apex', stage: ['creature'], icon: '👑', name: 'Challenge the apex predator', show: (r) => r.species.some((x) => !x.extinct && x.role === 'predator'), cost: { dna: 4 }, needs: [stat('str', 6), stat('tou', 5)],
+      desc: 'Face the thing that hunts you, and end its reign.',
+      event: { title: 'Challenge the apex predator', species: 'predator', text: 'The {them} have hunted your kind for generations. Today you hunt them.', options: [
+        { label: 'Fight it head on', check: { stat: 'str', diff: 6 }, success: { text: 'The hunter becomes the hunted.', opinion: -40, dna: 6, boon: { name: 'Apex', mods: { damageReduce: 1, cha: 1 } }, anim: 'fight' }, fail: { text: 'It was ready for you.', popPct: -0.25, anim: 'hurt' } },
+        { label: 'Ambush it', check: { stat: 'cun', diff: 6 }, success: { text: 'It never saw you coming.', opinion: -30, dna: 5, anim: 'fight' }, fail: { text: 'The ambush is sprung on you.', popPct: -0.15, anim: 'hurt' } },
+        { label: 'Lose your nerve', result: { text: 'Another day.', anim: 'rest' } },
+      ] } },
+    { id: 'birthplace', stage: ['creature'], icon: '🧭', name: 'Return to the birthplace', show: (r) => r.mind || r.era >= 2, cost: { food: 4 }, needs: [stat('spd', 4)],
+      desc: 'A long journey back to where your kind began.',
+      event: { title: 'The old waters', text: 'Your kind travels back to where it all began. Something stirs in their memory.', options: [
+        { label: 'Remember', result: { text: 'Old instincts wake.', insight: 4, dna: 2, anim: 'mutate' } },
+        { label: 'Leave a mark for those who come after', result: { text: 'A sign that you were here.', boon: { name: 'Pilgrims', mods: { cha: 1 }, lasting: true }, anim: 'social' } },
+      ] } },
+    // ---------- Tribe ----------
+    { id: 'eternal_flame', stage: ['tribe'], icon: '🔥', name: 'Keep an eternal flame', show: (r) => r.specialOn, cost: { special: 8 }, needs: [need('10 or more of your resource', (r) => (r.special || 0) >= 10)],
+      desc: 'Something your people never let go out.',
+      event: { title: 'The eternal flame', text: 'Your people choose one thing to keep alive forever.', options: [
+        { label: 'Tend it by the elders', result: { text: 'It burns night and day.', boon: { name: 'Eternal flame', mods: { specialPerTurn: 1, cha: 1 } }, anim: 'social' } },
+        { label: 'Carry it with you everywhere', result: { text: 'Wherever you go, it goes.', boon: { name: 'Carried flame', mods: { specialPerTurn: 1, spd: 1 } }, anim: 'rest' } },
+      ] } },
+    { id: 'move_camp', stage: ['tribe'], once: false, cooldown: 25, icon: '🏕️', name: 'Move the camp to better ground', cost: { food: 5 },
+      desc: 'Pack up everything and start again somewhere richer.',
+      event: { title: 'Move the camp', text: 'Your people pack up the camp. The scouts point two ways.', options: [
+        { label: 'Toward the rivers', result: { text: 'Fish and fresh water.', boon: { name: 'River camp', mods: { foodPerTurn: 2 } }, anim: 'rest' } },
+        { label: 'Up into the hills', result: { text: 'Hard to find, easy to hold.', boon: { name: 'Hill camp', mods: { damageReduce: 1 } }, anim: 'rest' } },
+      ] } },
+    { id: 'split_tribe', stage: ['tribe'], icon: '🪢', name: 'Split the tribe', cost: { popPct: 0.3 }, needs: [popShare(0.8)],
+      desc: 'Too many for one camp. Some of you will have to go.',
+      event: { title: 'Split the tribe', text: 'A third of your people will leave. Where do they go, and how do you part?', options: [
+        { label: 'As a sister band, nearby', result: { text: 'They stay close, and stay friends.', neighbourOpinion: 20, anim: 'social' } },
+        { label: 'Far away, to see the world', result: { text: 'Stories come back with travellers.', dna: 6, anim: 'rest' } },
+      ] } },
+    { id: 'gathering', stage: ['tribe'], once: false, cooldown: 30, icon: '🎉', name: 'Call a gathering of the bands', cost: { food: 6 }, needs: [band, stat('cha', 4)],
+      desc: 'Feasting, trading and stories with your neighbours.',
+      event: { title: 'The gathering', text: 'Bands from all around come to your fires.', options: [
+        { label: 'Trade stories', result: { text: 'Ideas pass from fire to fire.', discovery: true, neighbourOpinion: 10, anim: 'social' } },
+        { label: 'Arrange marriages', result: { text: 'Your people are bound to theirs.', neighbourOpinion: 25, anim: 'social' } },
+        { label: 'Show off your strength', check: { stat: 'str', diff: 5 }, success: { text: 'They will not cross you.', neighbourOpinion: -5, boon: { name: 'Feared', mods: { damageReduce: 1 } } }, fail: { text: 'You look foolish.', neighbourOpinion: -10 } },
+      ] } },
+    { id: 'vision_quest', stage: ['tribe'], once: false, cooldown: 20, icon: '🌙', name: 'Send the young on a vision quest', show: (r) => r.specialOn, cost: { special: 4 },
+      desc: 'The young go out alone. Some come back changed.',
+      event: { title: 'The vision quest', text: 'The young walk into the wild alone.', options: [
+        { label: 'Into the deep woods', check: { stat: 'cun', diff: 4 }, success: { text: 'They return with a vision.', discovery: true, anim: 'mutate' }, fail: { text: 'Not all of them return.', popFlat: -10, anim: 'hurt' } },
+        { label: 'To the high places', check: { stat: 'tou', diff: 4 }, success: { text: 'They saw the whole world below.', dna: 5 }, fail: { text: 'The cold turns them back.', anim: 'rest' } },
+      ] } },
+    { id: 'cairn', stage: ['tribe'], icon: '🗿', name: 'Raise a cairn to the ancestors', show: (r) => r.specialOn, cost: { special: 6 }, needs: [need('4 or more Discoveries', (r) => (r.discoveries || []).length >= 4)],
+      desc: 'A place where the dead are remembered, and listened to.',
+      event: { title: 'The cairn', text: 'Stone by stone, your people raise a cairn.', options: [
+        { label: 'For wisdom', result: { text: 'The elders speak more clearly here.', boon: { name: 'Ancestor cairn', mods: { ideasPerTurn: 1 } }, anim: 'social' } },
+        { label: 'For courage', result: { text: 'Hunters touch it before every hunt.', boon: { name: 'War cairn', mods: { str: 1, huntBonus: 1 } }, anim: 'fight' } },
+      ] } },
+    { id: 'war_band', stage: ['tribe'], icon: '🗡️', name: 'Train a war band', cost: { food: 6 }, needs: [stat('str', 5)],
+      desc: 'Warriors who do nothing but fight. Your neighbours will notice.',
+      event: { title: 'The war band', text: 'Your strongest are chosen to fight and only fight.', options: [
+        { label: 'To defend', result: { text: 'Raiders think twice.', boon: { name: 'Defenders', mods: { damageReduce: 1, tou: 1 } }, anim: 'rest' } },
+        { label: 'To raid', result: { text: 'They come back with food, and enemies.', boon: { name: 'Raiders', mods: { str: 1, huntBonus: 1 } }, neighbourOpinion: -10, anim: 'fight' } },
+      ] } },
+    // ---------- Society ----------
+    { id: 'capital', stage: ['society'], icon: '🏛️', name: 'Move the capital', cost: { dna: 15 }, needs: [need('3 or more settlements', (r) => (r.settlements || []).length >= 3)],
+      desc: 'Rule from a new place. Some will be pleased, some will not.',
+      event: { title: 'Move the capital', text: 'Your ruler will move the seat of power.', options: [
+        { label: 'To the busiest crossroads', result: { text: 'Everyone passes through the new capital.', boon: { name: 'Crossroads capital', mods: { influencePerTurn: 1 } }, loyalty: -10, anim: 'social' } },
+        { label: 'To the safest stronghold', result: { text: 'Hard to reach, harder to take.', boon: { name: 'Stronghold capital', mods: { damageReduce: 1 } }, loyalty: 5, anim: 'rest' } },
+      ] } },
+    { id: 'monument', stage: ['society'], icon: '🗽', name: 'Raise a great monument', show: (r) => r.specialOn, cost: { special: 12 }, needs: [need('12 or more of your resource', (r) => (r.special || 0) >= 12)],
+      desc: 'Something so big it will outlast you all.',
+      event: { title: 'The great monument', text: 'Thousands work for years on one great thing.', options: [
+        { label: 'A temple', result: { text: 'People come from far away to see it.', boon: { name: 'The great temple', mods: { cha: 2 } }, neighbourOpinion: 10, anim: 'social' } },
+        { label: 'A wall', result: { text: 'Nothing gets in.', boon: { name: 'The great wall', mods: { damageReduce: 2 } }, anim: 'rest' } },
+      ] } },
+    { id: 'outlaw', stage: ['society'], icon: '⚖️', name: 'Outlaw the old ways', cost: { dna: 10 }, needs: [need('3 or more Traditions', (r) => (r.traditions || []).length >= 3)],
+      desc: 'Make the new ways the only ways. The council will not all agree.',
+      event: { title: 'Outlaw the old ways', text: 'The old customs are banned. Some will resist.', options: [
+        { label: 'Persuade them', check: { stat: 'cha', diff: 6 }, success: { text: 'They come round in the end.', boon: { name: 'New ways', mods: { dnaPerTurn: 1 } } }, fail: { text: 'Grumbling everywhere.', loyalty: -15 } },
+        { label: 'Enforce it', result: { text: 'It is done, but resented.', boon: { name: 'Enforced ways', mods: { dnaPerTurn: 1 } }, loyalty: -20, anim: 'fight' } },
+      ] } },
+    { id: 'royal_marriage', stage: ['society', 'renaissance', 'colonial'], icon: '💍', name: 'Marry into a neighbour\'s ruling family', cost: { dna: 8 }, needs: [friendlyNeighbour],
+      desc: 'A wedding that binds two peoples together.',
+      event: { title: 'A royal wedding', text: 'Your ruling family will marry into a neighbour\'s.', options: [
+        { label: 'A grand wedding', result: { text: 'Two peoples celebrate together.', neighbourOpinion: 25, loyalty: 10, anim: 'social' } },
+        { label: 'A quiet, binding treaty', result: { text: 'Less joy, more certainty.', neighbourOpinion: 15, boon: { name: 'Marriage pact', mods: { damageReduce: 1 } } } },
+      ] } },
+    { id: 'frontier', stage: ['society'], once: false, cooldown: 25, icon: '🛖', name: 'Found a frontier town', cost: { food: 10 }, needs: [need('Fewer than 8 settlements', (r) => (r.settlements || []).length < 8), popShare(0.6)],
+      desc: 'Settlers set out to build somewhere new.',
+      event: { title: 'The frontier', text: 'Settlers set off with everything they own.', options: [
+        { label: 'Build it fast', result: { text: 'A new settlement rises.', newSettlement: true, anim: 'social' } },
+        { label: 'Build it well', check: { stat: 'tou', diff: 5 }, success: { text: 'A strong new settlement.', newSettlement: true, settlementGrow: true }, fail: { text: 'It takes far longer than planned.', newSettlement: true, food: -3 } },
+      ] } },
+    { id: 'census', stage: ['society', 'renaissance'], icon: '📜', name: 'Count your people', cost: { dna: 6 },
+      desc: 'Know exactly who you rule, and waste less.',
+      event: { title: 'The census', text: 'Clerks go door to door.', options: [
+        { label: 'For fair rationing', result: { text: 'Nothing goes to waste.', boon: { name: 'The census', mods: { upkeep: -1 } } } },
+        { label: 'For taxes', result: { text: 'Every coin is counted.', boon: { name: 'Tax rolls', mods: { dnaPerTurn: 1 } }, loyalty: -5 } },
+      ] } },
+    // ---------- Renaissance ----------
+    { id: 'academy', stage: ['renaissance'], icon: '🎓', name: 'Found a great academy', cost: { dna: 20 }, needs: [stat('cun', 6)],
+      desc: 'Bring the best minds together under one roof.',
+      event: { title: 'The academy', text: 'Scholars arrive from every corner of the nation.', options: [
+        { label: 'For natural philosophy', result: { text: 'Questions, experiments, answers.', boon: { name: 'The academy', mods: { dnaPerTurn: 2 } }, anim: 'mutate' } },
+        { label: 'For the arts', result: { text: 'Beauty that other nations envy.', boon: { name: 'The art school', mods: { cha: 2, dnaPerTurn: 1 } }, neighbourOpinion: 10 } },
+      ] } },
+    { id: 'canal', stage: ['renaissance', 'colonial'], icon: '🚣', name: 'Dig a great canal', cost: { food: 12 }, needs: [popShare(0.6)],
+      desc: 'Join two waters and the trade between them.',
+      event: { title: 'The great canal', text: 'An army of diggers sets to work.', options: [
+        { label: 'For trade', result: { text: 'Barges come and go day and night.', boon: { name: 'The canal', mods: { foodPerTurn: 2, dnaPerTurn: 1 } } } },
+        { label: 'For defence', result: { text: 'A moat around your heartland.', boon: { name: 'The moat canal', mods: { damageReduce: 1, foodPerTurn: 1 } } } },
+      ] } },
+    { id: 'festival', stage: ['renaissance'], once: false, cooldown: 25, icon: '🎭', name: 'Hold a grand festival', cost: { food: 8 },
+      desc: 'Music, theatre and fireworks for everyone.',
+      event: { title: 'The grand festival', text: 'The whole nation stops for a week of celebration.', options: [
+        { label: 'Invite the other nations', result: { text: 'Your guests go home impressed.', neighbourOpinion: 15, anim: 'social' } },
+        { label: 'Keep it for your own people', result: { text: 'Your people love you for it.', loyalty: 15, popMaxPct: 0.05, anim: 'social' } },
+      ] } },
+    { id: 'shipyard', stage: ['renaissance'], icon: '⚓', name: 'Build the great shipyards', cost: { dna: 15 }, needs: [stat('tou', 5)],
+      desc: 'Ships for trade, for war, and for whatever lies beyond the sea.',
+      event: { title: 'The shipyards', text: 'Hammers ring from dawn to dusk.', options: [
+        { label: 'Merchant ships', result: { text: 'Trade flows.', boon: { name: 'Merchant fleet', mods: { foodPerTurn: 2 } } } },
+        { label: 'Warships', result: { text: 'Nobody threatens your coasts now.', boon: { name: 'War fleet', mods: { str: 1, damageReduce: 1 } } } },
+      ] } },
+    { id: 'reform_faith', stage: ['renaissance'], icon: '⛪', name: 'Reform the faith', cost: { dna: 12 }, needs: [stat('cha', 5)],
+      desc: 'Change what your people believe. Not everyone will follow.',
+      event: { title: 'Reform the faith', text: 'Your ruler calls the priests together.', options: [
+        { label: 'Gently, over a generation', check: { stat: 'cha', diff: 6 }, success: { text: 'Hardly anyone notices it change.', boon: { name: 'Reformed faith', mods: { cha: 1, dnaPerTurn: 1 } } }, fail: { text: 'It stalls halfway.', loyalty: -10 } },
+        { label: 'All at once', result: { text: 'It is done. Some leave rather than follow.', boon: { name: 'New faith', mods: { dnaPerTurn: 2 } }, popPct: -0.08, loyalty: -10 } },
+      ] } },
+    // ---------- Colonial ----------
+    { id: 'charter', stage: ['colonial'], icon: '📃', name: 'Grant a royal charter', cost: { dna: 15 }, needs: [need('A colony', (r) => (r.colonies || []).length >= 1)],
+      desc: 'Let a company run a colony in the crown\'s name.',
+      event: { title: 'The royal charter', text: 'Merchants ask for the right to run a colony.', options: [
+        { label: 'Grant it, with strict rules', result: { text: 'Profit, and order.', boon: { name: 'Chartered company', mods: { dnaPerTurn: 1 } }, unrest: -10 } },
+        { label: 'Grant it, and let them do as they like', result: { text: 'Great profits; angry colonists.', boon: { name: 'Free company', mods: { dnaPerTurn: 2 } }, unrest: 20 } },
+      ] } },
+    { id: 'self_rule', stage: ['colonial'], icon: '🕊️', name: 'Give the colonies their own councils', cost: { dna: 12 }, needs: [need('A colony', (r) => (r.colonies || []).length >= 1)],
+      desc: 'Let colonies govern themselves, and stay loyal by choice.',
+      event: { title: 'Colonial councils', text: 'Each colony may choose its own council.', options: [
+        { label: 'Let them', result: { text: 'The colonies breathe easier.', unrest: -30, boon: { name: 'Self-ruling colonies', mods: { cha: 1 } } } },
+        { label: 'Only with a royal governor watching', result: { text: 'A little freedom, a lot of watching.', unrest: -15, loyalty: 5 } },
+      ] } },
+    { id: 'exhibition', stage: ['colonial'], icon: '🎡', name: 'Hold a grand exhibition', cost: { food: 12 },
+      desc: 'Show the whole world what your realm can do.',
+      event: { title: 'The grand exhibition', text: 'Wonders from every corner of the realm, under one roof.', options: [
+        { label: 'Show off your inventions', result: { text: 'Visitors gasp.', dna: 10, overseasOpinion: 10 } },
+        { label: 'Show off your colonies', result: { text: 'The colonies are proud to be seen.', unrest: -15, overseasOpinion: 5 } },
+      ] } },
+    { id: 'navy', stage: ['colonial'], icon: '🚢', name: 'Build a royal navy', cost: { dna: 18 }, needs: [stat('str', 6)],
+      desc: 'Rule the waves, and everything they touch.',
+      event: { title: 'The royal navy', text: 'The greatest fleet the world has ever seen.', options: [
+        { label: 'To protect trade', result: { text: 'Pirates vanish from your routes.', boon: { name: 'Royal navy', mods: { foodPerTurn: 2, damageReduce: 1 } } } },
+        { label: 'To overawe the world', result: { text: 'Everyone takes you seriously now.', boon: { name: 'Grand fleet', mods: { str: 2 } }, overseasOpinion: -10 } },
+      ] } },
+    { id: 'coronation', stage: ['colonial'], icon: '👑', name: 'Hold a grand coronation', cost: { food: 10 }, needs: [need('An heir in waiting', (r) => !!r.heir)],
+      desc: 'Crown your ruler again before the whole realm, and name the heir.',
+      event: { title: 'The coronation', text: 'Crowds line the streets.', options: [
+        { label: 'A celebration for all', result: { text: 'The realm cheers as one.', loyalty: 20, unrest: -10, anim: 'social' } },
+        { label: 'A display of power', result: { text: 'Everyone remembers who rules.', boon: { name: 'Crown majesty', mods: { cha: 2 } }, anim: 'social' } },
+      ] } },
+  ];
+  G.DECISION = {};
+  G.DECISIONS.forEach((d) => {
+    G.DECISION[d.id] = d;
+    G.EVENT[`dec_${d.id}`] = { ...d.event, id: `dec_${d.id}`, decision: d.id, stage: d.stage, prop: 'social', tags: ['decision'] };
+  });
+}());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.9';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.10';

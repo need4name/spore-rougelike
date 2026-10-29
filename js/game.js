@@ -740,6 +740,7 @@ window.G = window.G || {};
     if (run.hostility >= 2) list.push(tag({ upkeep: 1 }, 'A hostile world'));
     if (run.hostility >= 4) list.push(tag({ maxPop: -2 }, 'A hostile world'));
     (run.complications || []).forEach((id) => { const c = G.COMPLICATION[id]; if (c && c.mods) list.push(tag(c.mods, `Complication: ${c.name}`)); });
+    G.activeDecisionBoons(run).forEach((b) => list.push(tag(b.mods, `Decision: ${b.name}`)));
     return list;
   }
   // Where a modifier comes from: [{ src, v }], biggest first, sources added together.
@@ -1543,6 +1544,8 @@ window.G = window.G || {};
     if (eff.heirTrait && run.heir) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !run.heir.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) { run.heir.traits.push(pick(good)); lines.push({ t: `Your heir, ${run.heir.name}, grows into the role`, good: true }); } }
     if (eff.newHeir && run.stage === 'colonial') { run.heir = newHeir(run); lines.push({ t: `${run.heir.name} is the new heir` }); }
     // Lasting changes to a society, from what it has lived through.
+    // A lasting effect from a decision: its modifiers hold for the rest of this stage (or for good, with lasting: true).
+    if (eff.boon) { (run.decBoons = run.decBoons || []).push({ name: eff.boon.name, mods: eff.boon.mods, stage: eff.boon.lasting ? 'any' : run.stage }); lines.push({ t: `${eff.boon.name}: ${G.describeMods(eff.boon.mods)}${eff.boon.lasting ? '' : ' (this stage)'}`, good: true }); }
     if (eff.mods) { run.socBoons = (run.socBoons || []).concat([eff.mods]); lines.push({ t: G.describeMods(eff.mods), good: true }); }
     if (eff.loyalty && run.council) { run.council.forEach((c) => { c.loyalty = clamp(c.loyalty + eff.loyalty, -100, 100); }); lines.push({ t: `Your council ${eff.loyalty > 0 ? 'warms to' : 'cools on'} your ruler`, good: eff.loyalty > 0, bad: eff.loyalty < 0 }); }
     if (eff.plotEnds && run.plot != null && run.council && run.council[run.plot]) {
@@ -1712,6 +1715,44 @@ window.G = window.G || {};
     if (hz && G.mindRule(run, 'hazard_sense')) w *= 0.6;
     return w;
   }
+
+  // ---------- Decisions ----------
+  // Big moves you choose to make, whenever you meet their conditions (like Crusader Kings' decisions). Each one
+  // lists what it needs, costs something up front, and opens its own event where you choose how it goes.
+  G.activeDecisionBoons = (run) => (run.decBoons || []).filter((b) => b.stage === 'any' || b.stage === run.stage);
+  G.decisionCostText = (run, c) => [c.dna ? `${c.dna} ${G.dnaWord(run)}` : '', c.food ? `${c.food} Food` : '', c.special ? `${c.special} ${G.kind(run) ? G.kind(run).resource : 'resource'}` : '', c.popPct ? `${Math.round(c.popPct * 100)}% of your ${G.popWord(run)}` : ''].filter(Boolean).join(', ');
+  G.decisionState = function (run, d) {
+    const st = { visible: false, ok: false, needs: [], why: null };
+    if (!run || !d.stage.includes(run.stage)) return st;
+    let shown = true; try { shown = !d.show || d.show(run); } catch (e) { shown = false; }
+    const taken = (run.decisions || {})[d.id];
+    if (!shown || (d.once !== false && taken != null)) return st;
+    st.visible = true;
+    st.needs = (d.needs || []).map((n) => { let ok = false; try { ok = !!n.test(run); } catch (e) { ok = false; } return { label: n.label, ok }; });
+    const c = d.cost || {};
+    const afford = (!c.dna || run.dna >= c.dna) && (!c.food || run.food >= c.food) && (!c.special || (run.special || 0) >= c.special);
+    if (!afford) st.needs.push({ label: `Can pay ${G.decisionCostText(run, c)}`, ok: false });
+    const wait = d.once === false && taken != null ? taken + (d.cooldown || 20) - run.turn : 0;
+    if (wait > 0) st.why = `Again in ${wait} ${G.STAGES[run.stage].turnName.toLowerCase()}${wait === 1 ? '' : 's'}`;
+    st.ok = st.needs.every((n) => n.ok) && wait <= 0;
+    return st;
+  };
+  G.takeDecision = function (id) {
+    const run = G.run; const d = G.DECISION[id];
+    if (!run || !d || run.phase !== 'map' || !G.decisionState(run, d).ok) return false;
+    const c = d.cost || {};
+    if (c.dna) run.dna -= c.dna;
+    if (c.food) G.spendFood(run, c.food);
+    if (c.special) run.special -= c.special;
+    if (c.popPct) run.pop = Math.max(1, run.pop - Math.round(run.pop * c.popPct));
+    (run.decisions = run.decisions || {})[id] = run.turn;
+    log(run, `Decision: ${d.name}.`);
+    const ev = G.EVENT[`dec_${id}`];
+    setEvent(run, ev, ev.species ? undefined : -1);
+    save();
+    return true;
+  };
+  G.decisionsReady = (run) => (G.DECISIONS || []).filter((d) => G.decisionState(run, d).ok).length;
 
   function setEvent(run, ev, forced) {
     const s = forced != null ? forced : speciesFor(run, ev.species);
@@ -4069,4 +4110,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.9';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.10';

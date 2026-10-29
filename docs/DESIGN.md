@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.10: Decisions
+
+- **What they are:** big moves the player chooses to make (the CK3 idea), listed in a Decisions tab (second in the lineage panel, with a badge counting the ones ready). `G.DECISIONS` (end of events.js) has 37 across the six stages: 4 cell, 8 creature, 7 tribe, 6 society (one shared with later stages), 6 Renaissance, 5 Colonial.
+- **Each decision** has `stage`, an optional `show(run)` (whether it appears at all), `needs` (labelled tests shown ticked or crossed), a `cost` (stage resource, Food, the people's resource or a share of Population) paid when taken, and an `event` registered as `dec_<id>` but never drawn at random. Taking it (`G.takeDecision`) pays, records the turn in `run.decisions`, and opens the event (aimed at a species if the event names one). Most are once per lineage; `once: false` ones return after `cooldown` turns.
+- **Lasting effects:** a new effect, `boon: { name, mods, lasting? }`, adds to `run.decBoons`. Its modifiers count while the stage lasts (or for good with `lasting`) and show as "Decision: …" in every breakdown.
+- **Tested** by bots that take every decision they can across whole campaigns: all 37 were taken, with no errors.
+
 ## Patch 21.9: The Creature Wardrobe
 
 - **New looks** (`G.APPEARANCE`): 8 patterns and 4 finishes, plus groups for the body plans that had only sliders: `bell` (jellyfish), `armStyle` (starfish), `colony` (colonial) and `collar` (land and serpent; fish draw no separate head). Options carry `bodies` (editor body kinds) as well as `only` (habitat); `G.lookOptionState` hides options for other bodies. Finishes are now also drawn on radial and colonial bodies, and serpents map every pattern to cross-stripes, spots or a shading along the body.
