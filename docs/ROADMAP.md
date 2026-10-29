@@ -572,7 +572,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 **First, in the base game: the Decisions tab** ✅ (Patch 21.10, 37 decisions). CK3's best idea is that big choices are not only things that happen *to* you. A Decisions tab lists the big moves you can make whenever you meet their conditions, with what they cost and what they risk: *Migrate to the shallows*, *Abandon the old hunting grounds*, *Declare the sacred grove*, *Split the tribe*, *Move the capital*, *Outlaw the old faith*. Each stage gets 6–10. Every expansion below adds its own.
 
-### 1. Rivals and Nemeses ("the lineage that hates you")
+### 1. Rivals and Nemeses ("the lineage that hates you") ✅ (Patch 21.11)
 - One species you hurt (or lost to) becomes your **Rival**: it is named, has its own small tree, and grows as you do. It answers your choices: hunt it and it gets armour; ignore it and it takes your food.
 - It **follows you between stages**: the predator becomes the rival band, then the rival city, then the rival empire, keeping its grudges.
 - You choose how it ends: **wipe it out, make peace, absorb it, or let it go.** A rival that survives becomes a rival in your next lineage (the Fossil Record remembers).

@@ -2508,7 +2508,7 @@ window.G = window.G || {};
             ctx.drawImage(spr, -size / 2, -size / 2, size, size);
             ctx.restore();
           }
-          const bond = !l.s ? '' : l.s.name === run.partner && G.gimmick(run) === 'symbiote' ? '♥ ' : l.s.name === run.host && G.gimmick(run) === 'parasite' ? 'Host · ' : l.s.bud ? '✦ ' : l.s.name === run.mimic && G.gimmick(run) === 'mimic' ? '🎭 ' : '';
+          const bond = !l.s ? '' : l.s.name === run.partner && G.gimmick(run) === 'symbiote' ? '♥ ' : l.s.name === run.host && G.gimmick(run) === 'parasite' ? 'Host · ' : l.s.bud ? '✦ ' : l.s.name === run.mimic && G.gimmick(run) === 'mimic' ? '🎭 ' : l.s.rival && G.rivalActive(run) ? '⚔️ ' : '';
           // A crowded world keeps other species' labels short (tap one for the details).
           const brief = l.key !== 'you' && live.length > 8 && !bond;
           const label = brief ? l.key : `${bond}${l.key === 'you' ? 'You' : l.key} · ${l.key === 'you' ? run.pop : Math.round(l.pop * G.POP_SCALE)}${run.stage === 'cell' ? '' : ` · ${G.sizeLabel(realSize(run, l.s), run.stage)}`}`;
@@ -2600,4 +2600,4 @@ window.G = window.G || {};
   G.stopScene = function () { if (sceneFrame) cancelAnimationFrame(sceneFrame); sceneFrame = null; };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).render = '21.10';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).render = '21.11';

@@ -830,3 +830,9 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .dec-needs { list-style: none; padding: 0; margin: 4px 0 6px; font-size: 0.85rem; display: grid; gap: 2px; }
 .dec-boons { padding-left: 18px; font-size: 0.9rem; }
 .tab .badge { display: inline-block; min-width: 1.3em; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-ink, #1a1200); font-size: 0.75rem; line-height: 1.4; text-align: center; }
+
+/* Rivals (Patch 21.11) */
+.rival-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; margin-bottom: 10px; border-radius: var(--radius); background: color-mix(in srgb, var(--bad) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent); font-size: 0.9rem; }
+.rival-card.ended { background: var(--panel); border-color: var(--line); }
+.rival-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rival-card .pill { font-size: 0.75rem; padding: 1px 8px; border-radius: 99px; background: var(--bad); color: #2b0d08; }

@@ -809,6 +809,25 @@ G.SCULPT = [
 G.SCULPT_BY_ID = {}; G.SCULPT.forEach((x) => { G.SCULPT_BY_ID[x.id] = x; });
 G.COLOR_KEYS = ['hue', 'belly', 'accent', 'accent2']; // hue sliders, 0-359
 
+// ======================= RIVALS =======================
+// How your Rival adapts at each of your milestones: an answer to how you have been treating it.
+G.RIVAL_ADAPT = {
+  armored: { name: 'Thick hide', mods: { tou: 2 }, why: 'because you keep fighting them' },
+  fierce: { name: 'Bigger weapons', mods: { str: 2 }, why: 'because you keep fighting them' },
+  swift: { name: 'Faster', mods: { spd: 2 }, why: 'because you keep outrunning them' },
+  wary: { name: 'Wary', mods: { cun: 2 }, why: 'because you keep outwitting them' },
+  charming: { name: 'Winning ways', mods: { cha: 2 }, why: 'because your friendliness taught them how' },
+  many: { name: 'Many more of them', mods: {}, desc: 'more numerous', why: 'because you have left them alone to grow' },
+};
+// The four ways a rivalry can end (and 'gone', when they die out on their own).
+G.RIVAL_ENDINGS = {
+  destroyed: { name: 'Rival destroyed', desc: 'You wiped them out.' },
+  peace: { name: 'Peace with your rival', desc: 'The old feud is over.' },
+  absorbed: { name: 'Rival absorbed', desc: 'They became part of you, and you kept their strength.' },
+  released: { name: 'Rival let go', desc: 'You let the feud go, and they left for other lands.' },
+  gone: { name: 'Rival gone', desc: 'They died out before you could settle it.' },
+};
+
 // ======================= THE CREATURE WARDROBE =======================
 // Looks earned by playing. Each earns once, for every lineage after. `test` reads your lasting progress.
 G.WARDROBE_EARN = {
@@ -961,10 +980,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.10';
+G.VERSION = '21.11';
 G.WHATS_NEW = {
-  title: 'Patch 21.10: Decisions',
+  title: 'Patch 21.11: Rivals',
   items: [
+    'Every lineage now meets a Rival: one named species that sets itself against you at the start of the Creature stage (or earlier, if a species comes to hate you). It is marked ⚔️ on the map and shown at the top of the World tab.',
+    'It grows a level at each of your milestones and adapts to how you treat it: fight it and it grows a thick hide or bigger weapons, outrun it and it gets faster, outwit it and it grows wary, befriend it and it learns winning ways, leave it alone and it multiplies. Its checks use its own stats, so those adaptations matter.',
+    'It follows you from stage to stage: the beast becomes a rival band, then a neighbour people, then a nation. It raids you, challenges you, spies on you, lures your young away, and sometimes offers a truce (which you can betray).',
+    'End it your way from the Decisions tab: destroy it, make peace, absorb it (and keep half its strengths for good), or let the old feud go. If a rival outlives your lineage, it may come back in your next one. The Codex records how your rivalries ended.',
     'A new Decisions tab (tap your portrait): big moves you choose to make yourself, whenever you meet what they need, like Crusader Kings\' decisions. 37 of them across every stage: Seek new waters, Engulf a rival strain, Claim a territory, Dig a den, Challenge the apex predator, Split the tribe, Call a gathering of the bands, Move the capital, Outlaw the old ways, Found a great academy, Build a royal navy and more.',
     'Each decision shows what it needs (ticked when you have it) and what it costs, then opens its own event where you choose how it goes. Some are one-time choices, some can be repeated after a while.',
     'Many leave lasting effects for the rest of the stage, listed at the bottom of the tab and in the explanations of your numbers. A badge on the tab shows how many you can take right now.',
@@ -1936,4 +1959,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.10';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.11';

@@ -82,6 +82,7 @@ window.G = window.G || {};
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
     m.lastBackupAt = saved.lastBackupAt || null;
+    m.rivals = saved.rivals || []; m.rivalLog = saved.rivalLog || [];
     m.wardrobe = Object.assign({ marks: [], biomes: [], saved: [], auto: null }, saved.wardrobe || {});
     // Saves from before the Wardrobe: give the looks for every stage already reached.
     if (!saved.wardrobe) {
@@ -108,7 +109,7 @@ window.G = window.G || {};
       const list = (saved.unlocked && saved.unlocked[k]) || [];
       list.forEach((id) => { if (!m.unlocked[k].includes(id)) m.unlocked[k].push(id); });
     });
-    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings', 'societyEndings', 'traditions', 'renaissanceEndings', 'reason', 'colonialEndings', 'crown'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
+    ['events', 'parts', 'legacies', 'evolutions', 'endings', 'discoveries', 'tribeEndings', 'societyEndings', 'traditions', 'renaissanceEndings', 'reason', 'colonialEndings', 'crown', 'rivals'].forEach((k) => { m.codex[k] = (saved.codex && saved.codex[k]) || []; });
     Object.assign(m.stats, saved.stats || {});
     // Saves from before the beginner's grace: count the lineages that already left the cell stage.
     if (!saved.stats || saved.stats.creatures == null) m.stats.creatures = (saved.history || []).filter((h) => h.reached && !/^(Single cell|Multicellular)/.test(h.reached)).length + (m.stats.wins || 0);
@@ -1068,6 +1069,7 @@ window.G = window.G || {};
       + (s.skeleton === 'shell' && key === 'tou' ? 2 : 0) + (s.skeleton === 'soft' && key === 'cun' ? 1 : 0);
     const off = G.speciesBody(s).off;
     Object.entries(s.parts || {}).filter(([k]) => !off.includes(k)).map(([, slot]) => slot).forEach((slot) => [slot.id, slot.merged].filter(Boolean).forEach((id) => { v += (G.PART[id].mods[key] || 0); }));
+    if (s.rival && G.run && G.run.rival) v += G.rivalBonus(G.run, key);
     return Math.max(0, v);
   };
   G.speciesBody = (s) => {
@@ -1161,6 +1163,7 @@ window.G = window.G || {};
     m.genes += genes;
     if (run.daily) recordDaily(run, victory, genes);
     run.newLooks = G.wardrobeMark(run, { victory });
+    if (G.rivalActive(run) && run.rival.level >= 2) { m.rivals = [{ name: run.rival.name, level: run.rival.level, adapt: run.rival.adapt, lineage: G.lineageName(run) }].concat(m.rivals || []).slice(0, 4); run.rival.survived = true; }
     setTimeout(G.backupMeta, 0);
     if (victory) {
       m.stats.wins += 1;
@@ -1236,7 +1239,8 @@ window.G = window.G || {};
     const diet = G.diet(run);
     if (!free) run.instinct = diet === 'herb' ? 'forage' : diet === 'carn' ? 'hunt' : pick(['forage', 'hunt']);
     // You leave your worst enemy behind and meet someone new.
-    const movable = run.species.filter((s) => !s.extinct && !s.bud).sort((a, b) => a.opinion - b.opinion);
+    // (Your Rival rides the same current: it is never left behind.)
+    const movable = run.species.filter((s) => !s.extinct && !s.bud && !s.rival).sort((a, b) => a.opinion - b.opinion);
     let met = null;
     if (movable.length) {
       const gone = movable[0];
@@ -1488,7 +1492,8 @@ window.G = window.G || {};
       const s = run.species[speciesIdx];
       const before = G.speciesStatus(s);
       s.opinion = clamp(s.opinion + eff.opinion, -100, 100);
-      if (s.opinion <= -90 && !s.nemesis) { s.nemesis = true; lines.push({ t: `The ${s.name} are now your nemesis`, bad: true }); }
+      if (s.opinion <= -90 && !s.nemesis) { s.nemesis = true; lines.push({ t: `The ${s.name} are now your nemesis`, bad: true }); if (!run.rival) G.makeRival(run, s, 'nemesis'); }
+      if (s.rival && run.rival) { if (eff.opinion < 0) run.rival.fights = (run.rival.fights || 0) + 1; else run.rival.friends = (run.rival.friends || 0) + 1; }
       if (s.opinion >= 90 && !s.sworn) { s.sworn = true; lines.push({ t: `The ${s.name} are now your sworn allies`, good: true }); }
       const after = G.speciesStatus(s);
       lines.push({ t: `${s.name} opinion ${eff.opinion > 0 ? '+' : '−'}${Math.abs(eff.opinion)}`, bad: eff.opinion < 0 });
@@ -1544,6 +1549,8 @@ window.G = window.G || {};
     if (eff.heirTrait && run.heir) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !run.heir.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) { run.heir.traits.push(pick(good)); lines.push({ t: `Your heir, ${run.heir.name}, grows into the role`, good: true }); } }
     if (eff.newHeir && run.stage === 'colonial') { run.heir = newHeir(run); lines.push({ t: `${run.heir.name} is the new heir` }); }
     // Lasting changes to a society, from what it has lived through.
+    if (eff.rivalEnd && G.rivalActive(run)) lines.push(...G.endRival(run, eff.rivalEnd));
+    if (eff.rivalGrow && G.rivalActive(run)) { const a = G.rivalGrow(run, true); if (a) lines.push({ t: `The ${run.rival.name} adapt: ${a.name}`, bad: true }); }
     // A lasting effect from a decision: its modifiers hold for the rest of this stage (or for good, with lasting: true).
     if (eff.boon) { (run.decBoons = run.decBoons || []).push({ name: eff.boon.name, mods: eff.boon.mods, stage: eff.boon.lasting ? 'any' : run.stage }); lines.push({ t: `${eff.boon.name}: ${G.describeMods(eff.boon.mods)}${eff.boon.lasting ? '' : ' (this stage)'}`, good: true }); }
     if (eff.mods) { run.socBoons = (run.socBoons || []).concat([eff.mods]); lines.push({ t: G.describeMods(eff.mods), good: true }); }
@@ -1670,6 +1677,7 @@ window.G = window.G || {};
       if (role === 'hostile' || role === 'allied') return st === role;
       if (role === 'target') return run.activity && run.activity.target === s.name;
       if (role === 'nemesis') return !!s.nemesis;
+      if (role === 'rival_main') return !!s.rival && G.rivalActive(G.run);
       if (role === 'sworn') return !!s.sworn || s.opinion >= 90;
       if (role === 'migrant') return !!s.migrant;
       if (role === 'band') return !!s.band;
@@ -1716,6 +1724,106 @@ window.G = window.G || {};
     return w;
   }
 
+  // ---------- Rivals ----------
+  // One named rival per lineage. It is born from the species that hates you most (or at the start of the Creature
+  // stage), grows a level at each of your milestones, adapts to how you treat it, follows you from stage to stage,
+  // and ends one of four ways. A rival that outlives your lineage may come back in the next one.
+  G.rivalActive = (run) => !!(run && run.rival && run.rival.state === 'active');
+  G.rivalSpecies = (run) => (G.rivalActive(run) ? run.species.find((x) => x.rival && !x.extinct) || null : null);
+  G.rivalBonus = (run, key) => (G.rivalActive(run) ? (run.rival.adapt || []).reduce((t, id) => t + (((G.RIVAL_ADAPT[id] || {}).mods || {})[key] || 0), 0) : 0);
+  G.makeRival = function (run, s, origin, past) {
+    if (!s || run.rival) return null;
+    run.species.forEach((x) => { x.rival = false; });
+    s.rival = true;
+    if (past) { s.name = past.name; s.opinion = Math.min(s.opinion, -40); }
+    run.rival = { home: run.stage, name: s.name, names: [s.name], level: past ? Math.max(1, past.level - 1) : 1, adapt: past ? (past.adapt || []).slice(0, 2) : [], state: 'active', origin, since: run.turn, fights: 0, friends: 0, lastAt: run.turn, from: past ? past.lineage : null };
+    G.rivalApplyNumbers(run, s);
+    run.notices.push(past ? `An old enemy returns: the ${s.name}, who outlived your ${past.lineage}. They remember everything.` : `A rival: the ${s.name}. They will grow as you grow, learn from how you treat them, and follow you from age to age. See them in the World tab.`);
+    log(run, `The ${s.name} became your rival.`);
+    return run.rival;
+  };
+  // The Rival's numbers: each level makes it a little more numerous; "Many" adds more.
+  G.rivalApplyNumbers = (run, s) => { const r = run.rival; const extra = (r.level - 1) * 2 + ((r.adapt || []).includes('many') ? 6 : 0); s.cap = Math.max(s.cap || 10, 10 + extra); s.pop = Math.max(s.pop || 1, Math.min(s.cap, 6 + extra)); };
+  // Pick how the Rival adapts, as an answer to how you have been treating it.
+  G.rivalGrow = function (run, force) {
+    const r = run.rival; const s = G.rivalSpecies(run);
+    if (!G.rivalActive(run) || !s) return null;
+    if (!force && r.lastGrowTurn === run.turn) return null;
+    if (!force && run.turn <= r.since) return null;
+    r.lastGrowTurn = run.turn; r.level += 1;
+    const mine = (k) => G.stat(run, k); const theirs = (k) => G.speciesStat(s, k);
+    const wants = [];
+    if ((r.fights || 0) > (r.friends || 0)) wants.push(r.adapt.includes('armored') ? 'fierce' : 'armored');
+    if (mine('spd') >= theirs('spd')) wants.push('swift');
+    if (mine('cun') >= theirs('cun')) wants.push('wary');
+    if ((r.friends || 0) > (r.fights || 0)) wants.push('charming');
+    if (!(r.fights || r.friends)) wants.push('many');
+    const pickId = wants.find((id) => !r.adapt.includes(id)) || Object.keys(G.RIVAL_ADAPT).find((id) => !r.adapt.includes(id));
+    r.fights = 0; r.friends = 0;
+    G.rivalApplyNumbers(run, s);
+    if (!pickId) { run.notices.push(`The ${r.name} grow stronger (level ${r.level}).`); return null; }
+    r.adapt.push(pickId);
+    const a = G.RIVAL_ADAPT[pickId];
+    G.rivalApplyNumbers(run, s);
+    run.notices.push(`Your rival, the ${r.name}, adapt: ${a.name} (${G.describeMods(a.mods || {}) || a.desc}), ${a.why}.`);
+    log(run, `The ${r.name} adapted: ${a.name}.`);
+    return a;
+  };
+  // Keep the Rival tied to a living species: through new worlds, bands and nations it follows you.
+  G.syncRival = function (run) {
+    if (!run) return;
+    if (!run.rival) {
+      // The Creature stage brings a rival: an old one returning from a past lineage, or the species most against you.
+      if (run.stage !== 'creature' || run.rivalTried) return;
+      run.rivalTried = true;
+      const pool = run.species.filter((x) => !x.extinct && !x.tamed && !x.band && (x.role === 'rival' || x.role === 'predator'));
+      const s = pool.sort((a, b) => a.opinion - b.opinion)[0]; if (!s) return;
+      const past = (G.meta.rivals || [])[0];
+      if (past && rand() < 0.6) { G.meta.rivals.shift(); G.saveMeta(); G.makeRival(run, s, 'returned', past); } else G.makeRival(run, s, 'born');
+      return;
+    }
+    if (!G.rivalActive(run)) return;
+    const r = run.rival;
+    const tier = (x) => (x.nation ? 3 : x.band ? 2 : 1);
+    const kin = run.species.filter((x) => !x.extinct && (x.rival || r.names.includes(x.name) || r.names.includes(x.from)));
+    const best = kin.sort((a, b) => tier(b) - tier(a))[0];
+    if (best) {
+      r.home = run.stage;
+      if (!best.rival || run.species.some((x) => x.rival && x !== best)) { run.species.forEach((x) => { x.rival = x === best; }); }
+      if (best.name !== r.name) { run.notices.push(`Your rival, the ${r.name}, are now the ${best.name}.`); r.name = best.name; if (!r.names.includes(best.name)) r.names.push(best.name); }
+      return;
+    }
+    // A new world (a new stage, a migration, the current): the Rival follows you there, unless it truly died.
+    const died = run.species.some((x) => x.extinct && !x.left && (x.rival || r.names.includes(x.name)));
+    if (!died) {
+      const s = run.species.filter((x) => !x.extinct && !x.tamed && (x.band || x.role === 'rival' || x.role === 'predator')).sort((a, b) => (b.band ? 1 : 0) - (a.band ? 1 : 0) || a.opinion - b.opinion)[0];
+      if (s) { s.rival = true; r.home = run.stage; if (!s.band) s.name = r.name; else { r.name = s.name; if (!r.names.includes(s.name)) r.names.push(s.name); } s.opinion = Math.min(s.opinion, -30); G.rivalApplyNumbers(run, s); run.notices.push(`Your rival followed you into a new age: the ${s.name}.`); return; }
+    }
+    // Their kind is gone: died out or wiped out by something else.
+    r.state = 'ended'; r.ending = 'gone'; r.endedAt = run.turn;
+    run.notices.push(`Your rival, the ${r.name}, are gone from the world.`);
+  };
+  G.endRival = function (run, how) {
+    const r = run.rival; const s = G.rivalSpecies(run); const E = G.RIVAL_ENDINGS[how];
+    if (!G.rivalActive(run) || !E) return [];
+    const lines = [{ t: `${E.name}: the ${r.name}`, good: true }];
+    if (s) {
+      if (how === 'peace') { s.opinion = Math.max(s.opinion, 60); s.nemesis = false; s.rival = false; }
+      else { s.extinct = true; s.pop = 0; s.rival = false; }
+    }
+    if (how === 'absorbed') {
+      const mods = {}; (r.adapt || []).forEach((id) => Object.entries((G.RIVAL_ADAPT[id] || {}).mods || {}).forEach(([k, v]) => { mods[k] = (mods[k] || 0) + Math.ceil(v / 2); }));
+      if (Object.keys(mods).length) { (run.decBoons = run.decBoons || []).push({ name: `The ${r.name}'s strength`, mods, stage: 'any' }); lines.push({ t: `You keep their strength: ${G.describeMods(mods)}`, good: true }); }
+    }
+    r.state = 'ended'; r.ending = how; r.endedAt = run.turn;
+    const m = G.meta; m.rivalLog = m.rivalLog || [];
+    m.rivalLog.unshift({ name: r.name, ending: how, level: r.level, lineage: G.lineageName(run), date: Date.now() }); m.rivalLog = m.rivalLog.slice(0, 20);
+    addUnique(m.codex.rivals = m.codex.rivals || [], how);
+    log(run, `${E.name}: the ${r.name}.`);
+    G.saveMeta();
+    return lines;
+  };
+
   // ---------- Decisions ----------
   // Big moves you choose to make, whenever you meet their conditions (like Crusader Kings' decisions). Each one
   // lists what it needs, costs something up front, and opens its own event where you choose how it goes.
@@ -1757,6 +1865,7 @@ window.G = window.G || {};
   function setEvent(run, ev, forced) {
     const s = forced != null ? forced : speciesFor(run, ev.species);
     run.event = { id: ev.id, species: s === -1 ? null : s };
+    if (ev.rival && run.rival) run.rival.lastAt = run.turn;
     run.lastEvent = ev.id;
     run.phase = 'event';
   }
@@ -1933,6 +2042,7 @@ window.G = window.G || {};
   // Time flows on the world map. Each tick is one Epoch or Generation: your lineage eats,
   // grows and evolves, the other species rise and fall, and sometimes an event happens.
   G.tick = function () {
+    if (G.run && G.run.phase === 'map') G.syncRival(G.run);
     const run = G.run;
     if (!run || run.phase !== 'map') return;
     endTurn(run);
@@ -1959,6 +2069,8 @@ window.G = window.G || {};
         prey.forEach((p) => { p.pop -= s.pop * 0.03 / Math.max(1, prey.length / 2); });
       }
       s.pop = Math.min(s.cap * 1.1, s.pop);
+      // Your Rival never just fades away: it hangs on until you settle the feud.
+      if (s.rival && G.rivalActive(run)) s.pop = Math.max(s.pop, 1.5);
       if (s.pop < 0.6) {
         s.extinct = true; s.pop = 0;
         run.notices.push(`The ${s.name} have died out. Their place in the world is empty.`);
@@ -2098,7 +2210,7 @@ window.G = window.G || {};
     if (!run.seenBiomes.includes(id)) run.seenBiomes.push(id);
     if (!keepSpecies) {
       const world = run.stage === 'cell' ? 'cell' : run.habitat;
-      const bound = (s) => s.name === run.partner || s.name === run.host || s.bud || s.nemesis;
+      const bound = (s) => s.name === run.partner || s.name === run.host || s.bud || s.nemesis || (s.rival && G.rivalActive(run));
       run.species.forEach((s) => { if (!s.extinct && !bound(s)) { s.extinct = true; s.left = true; s.pop = 0; } });
       const fresh = makeWorld(world).filter((n) => !run.species.some((x) => x.name === n.name));
       run.species.push(...fresh.slice(0, run.stage === 'cell' ? 5 : 8));
@@ -2736,7 +2848,7 @@ window.G = window.G || {};
     const bands = run.species.filter((x) => x.band && !x.extinct);
     if (bands.length >= (limit || (second ? 2 : 1))) return null;
     const alive = run.species.filter((x) => !x.extinct && !x.tamed && !x.band && !bands.some((b) => b.from === x.name));
-    const src = (!second && alive.find((x) => x.nemesis)) || alive.filter((x) => x.role === 'rival' || x.role === 'predator').sort((a, b) => a.opinion - b.opinion)[0] || alive.sort((a, b) => b.pop - a.pop)[0];
+    const src = (!second && alive.find((x) => x.rival && G.rivalActive(run))) || (!second && alive.find((x) => x.nemesis)) || alive.filter((x) => x.role === 'rival' || x.role === 'predator').sort((a, b) => a.opinion - b.opinion)[0] || alive.sort((a, b) => b.pop - a.pop)[0];
     if (!src) return null;
     // Each band thinks in its own way: a hive, a choir, a den...
     const kindPath = pick(G.TRIBE_PATHS.filter((pth) => !bands.some((b) => b.kindPath === pth)));
@@ -4012,6 +4124,7 @@ window.G = window.G || {};
   G.fossilize = function (run) {
     const m = G.meta;
     G.wardrobeMark(run).forEach((n) => run.notices.push(`New in the Creature Wardrobe: ${n}.`));
+    G.syncRival(run); if (G.rivalActive(run)) G.rivalGrow(run);
     const snap = JSON.parse(JSON.stringify(run));
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null;
     snap.phase = 'map'; snap.event = null; snap.scene = null; snap.draft = null; snap.evolved = null;
@@ -4110,4 +4223,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.10';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.11';

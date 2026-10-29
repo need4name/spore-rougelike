@@ -91,6 +91,15 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.11: Rivals
+
+- **One Rival per lineage** (`run.rival`): born at the start of the Creature stage from the species most against you (a rival or predator), or earlier when a species becomes your nemesis. If a past rival is waiting (`meta.rivals`, kept when a rival of level 2+ outlives a lineage), it returns 60% of the time with its name, level − 1 and two of its adaptations.
+- **Growth:** a level at every fossil (each milestone and new stage), skipping the turn it was born. Each level adds numbers, and the first levels each add an adaptation (`G.RIVAL_ADAPT`), chosen as an answer to how you treated it since the last level: more fights → Thick hide, then Bigger weapons; your Speed at least theirs → Faster; your Cunning at least theirs → Wary; more friendly acts → Winning ways; no contact → Many more of them. Adaptation stats are added in `G.speciesStat`, so Fair Fights checks against the Rival get harder.
+- **Following you:** `G.syncRival` runs every turn. It keeps the flag on the highest kin (nation, then band, then beast) whose name or `from` is one of the Rival's names, and renames the Rival as it becomes a band or nation. When the world is replaced (a new stage, a migration, the Drifter's current), it picks the new world's rival, predator or band and gives it the Rival's name. It ends as "gone" only if the Rival truly died. The Rival never dies out on its own, follows you when you move biome, and is never left behind by the Drifter's current.
+- **Events** (`species: 'rival_main'`, at most one every 6 turns): a raid on your stores, a challenge, spies, your young lured away, and a truce offer you can accept or betray. `rivalGrow` and `rivalEnd` are new effects.
+- **Endings** (four repeatable decisions, every stage): destroy (Strength at least theirs), make peace (their opinion −20 or better), absorb (them below half their numbers, Charm 4; you keep half their adaptation stats for good), or let go. Recorded in `meta.codex.rivals` and `meta.rivalLog`, and shown in the Codex.
+- **Tested** with bot campaigns: every rival followed its lineage through the Creature and Tribe stages into the Society stage, reached level 9 to 11 with all six adaptations, and was ended by peace, letting go or destruction. Early-game success rates did not change.
+
 ## Patch 21.10: Decisions
 
 - **What they are:** big moves the player chooses to make (the CK3 idea), listed in a Decisions tab (second in the lineage panel, with a badge counting the ones ready). `G.DECISIONS` (end of events.js) has 37 across the six stages: 4 cell, 8 creature, 7 tribe, 6 society (one shared with later stages), 6 Renaissance, 5 Colonial.

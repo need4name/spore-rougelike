@@ -1851,6 +1851,7 @@ window.G = window.G || {};
   // Tags that mark a species' place in your story.
   function speciesTags(run, s) {
     const t = [];
+    if (s.rival && G.rivalActive(G.run)) t.push(`<span class="tag bad">⚔️ Your rival · level ${G.run.rival.level}</span>`);
     if (s.nemesis) t.push('<span class="tag bad">Nemesis</span>');
     if (s.sworn) t.push('<span class="tag good">Sworn ally</span>');
     if (s.migrant) t.push('<span class="tag">Passing through</span>');
@@ -1859,12 +1860,26 @@ window.G = window.G || {};
     return t.join('');
   }
 
+  // Your Rival: who they are, how far they have grown, how they adapted to you, and how to end it.
+  function rivalCard(run) {
+    const r = run.rival; if (!r) return '';
+    if (r.state !== 'active') { const E = G.RIVAL_ENDINGS[r.ending] || {}; return `<div class="rival-card ended"><strong>⚔️ Your rival: the ${esc(r.name)}</strong><span>${esc(E.name || '')}. ${esc(E.desc || '')}</span></div>`; }
+    const s = G.rivalSpecies(run); const i = run.species.indexOf(s);
+    const mood = s ? (s.opinion <= -60 ? 'They hate you.' : s.opinion <= -20 ? 'They resent you.' : s.opinion < 15 ? 'An uneasy standoff.' : 'Almost friendly.') : '';
+    return `<div class="rival-card">
+        <div class="rival-head"><strong>⚔️ Your rival: the ${esc(r.name)}</strong><span class="pill">Level ${r.level}</span></div>
+        <span>${r.origin === 'returned' ? `Back from your ${esc(r.from || 'last lineage')}. ` : ''}${esc(mood)}${s ? ` Opinion ${s.opinion}.` : ''}</span>
+        ${r.adapt.length ? `<span>Adapted: ${r.adapt.map((id) => `<b>${esc(G.RIVAL_ADAPT[id].name)}</b>${G.RIVAL_ADAPT[id].mods && Object.keys(G.RIVAL_ADAPT[id].mods).length ? ` (${esc(G.describeMods(G.RIVAL_ADAPT[id].mods))})` : ''}`).join(', ')}</span>` : '<span>They have not adapted to you yet.</span>'}
+        <span class="note">They grow at each of your milestones and adapt to how you treat them: fight them and they toughen, outrun them and they get faster, leave them alone and they multiply. End it from the Decisions tab: destroy them, make peace, absorb them, or let them go.</span>
+        <div class="row tight">${i >= 0 ? `<button class="btn small" data-act="species" data-arg="${i}">See them</button>` : ''}<button class="btn small ghost" data-act="sheet" data-arg="decide">Decisions</button></div>
+      </div>`;
+  }
   function worldTab(run) {
     if (G.ui.speciesView != null && run.species[G.ui.speciesView]) return speciesSheet(run, G.ui.speciesView);
     const gone = run.species.filter((s) => s.extinct);
     const ages = (run.ages || []).filter((a) => a.stage === run.stage).slice().reverse();
     const season = G.season(run);
-    return `${season ? `<p class="season-line"><b>${esc(season.name)}</b> · ${esc(season.desc)}</p>` : ''}
+    return `${rivalCard(run)}${season ? `<p class="season-line"><b>${esc(season.name)}</b> · ${esc(season.desc)}</p>` : ''}
       <ul class="rivals">${run.species.map((s, i) => {
       if (s.extinct) return '';
       const st = G.speciesStatus(s);
@@ -2500,6 +2515,12 @@ window.G = window.G || {};
             return `<li><strong>${pth.icon} ${esc(pth.name)} · ${l.habitat === 'sea' ? 'Sea' : 'Land'}</strong><span class="note">${esc(l.desc)}</span><ul>${G.ARCHETYPES.map((a) => { const tm = G.TEMPERAMENTS[a.id]; const got = (c.endings || []).includes(`${id}|${tm.id}`);
               return `<li class="${got ? 'got' : ''}"><span>${esc(a.name)}</span><b>${got ? esc(l.flavor[tm.id]) : '???'}</b></li>`; }).join('')}</ul></li>`; }).join('')}</ul>
         </section>
+        <section><h2>Rivals <span class="count">${(c.rivals || []).length} / 4</span></h2>
+          <p class="note">Every lineage meets a rival. How have your rivalries ended?</p>
+          <ul class="codex-grid">${['destroyed', 'peace', 'absorbed', 'released'].map((k) => (c.rivals || []).includes(k) ? `<li><strong>${esc(G.RIVAL_ENDINGS[k].name)}</strong><span>${esc(G.RIVAL_ENDINGS[k].desc)}</span></li>` : '<li class="unknown"><strong>???</strong><span>Not yet</span></li>').join('')}</ul>
+          ${(G.meta.rivalLog || []).length ? `<p class="note">${G.meta.rivalLog.slice(0, 6).map((x) => `The ${esc(x.name)} (${esc(G.RIVAL_ENDINGS[x.ending].name.toLowerCase())}, level ${x.level}, ${esc(x.lineage)})`).join(' · ')}</p>` : ''}
+          ${(G.meta.rivals || []).length ? `<p class="note">Waiting to return: ${G.meta.rivals.map((x) => `the ${esc(x.name)} (level ${x.level})`).join(', ')}.</p>` : ''}
+        </section>
         <section><h2>Tribe endings <span class="count">${(c.tribeEndings || []).length} / 12</span></h2>
           <p class="note">How each kind of people can found itself: Settle, Roam or Conquer. A new one is worth +10 Genetic Memory.</p>
           <ul class="codex-grid">${Object.entries(G.TRIBE_ENDINGS).flatMap(([path, byHab]) => Object.entries(byHab).flatMap(([hab, ends]) => Object.entries(ends).map(([road, e]) => { const got = (c.tribeEndings || []).includes(`${path}|${hab}|${road}`); const k = G.KINDS[path][hab];
@@ -2788,4 +2809,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.10';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.11';

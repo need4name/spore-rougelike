@@ -3360,6 +3360,37 @@ G.EVENTS.push(
 );
 
 G.EVENT = {};
+// ======================= RIVAL EVENTS =======================
+// Your Rival strikes now and then (never more than once every 6 turns). Checks are against their own stats,
+// which grow with every adaptation, so a rival you have taught to be tough is tough to beat.
+(function () {
+  const due = (r) => G.rivalActive(r) && r.turn - (r.rival.lastAt || 0) >= 6;
+  [
+    { id: 'rival_raid', title: 'The {them} Raid', tags: ['danger'], text: 'Your rival, the {them}, strike at your stores while you are not looking.', options: [
+      { label: 'Drive them off', check: { stat: 'str', diff: 4 }, success: { text: 'They flee with nothing.', opinion: -8, dna: 2, anim: 'attack' }, fail: { text: 'They take what they came for.', food: -4, popPct: -0.05, anim: 'hurt' } },
+      { label: 'Set a trap for next time', check: { stat: 'cun', diff: 4 }, success: { text: 'Next time, they walk straight into it.', opinion: -10, dna: 3 }, fail: { text: 'They saw the trap.', food: -3 } },
+      { label: 'Let them have it', result: { text: 'Not worth the fight.', food: -3, opinion: 4 } },
+    ] },
+    { id: 'rival_challenge', title: 'A Challenge', tags: ['danger'], text: 'The strongest of the {them} stands in the open and calls out yours.', options: [
+      { label: 'Accept the challenge', check: { stat: 'str', diff: 5 }, success: { text: 'Your champion wins. The {them} slink away.', opinion: -6, dna: 4, anim: 'attack' }, fail: { text: 'Your champion is beaten.', popPct: -0.06, rivalGrow: true, anim: 'hurt' } },
+      { label: 'Out-dance them', check: { stat: 'cha', diff: 5 }, success: { text: 'A display so fine that even they are impressed.', opinion: 8, dna: 2, anim: 'social' }, fail: { text: 'They laugh at you.', opinion: -4 } },
+      { label: 'Ignore it', result: { text: 'They take it as a win.', rivalGrow: true } },
+    ] },
+    { id: 'rival_spies', title: 'Watched', text: 'You catch the {them} watching you, learning how you live.', options: [
+      { label: 'Chase them off', check: { stat: 'spd', diff: 4 }, success: { text: 'They learned nothing.', opinion: -4 }, fail: { text: 'They saw enough.', rivalGrow: true } },
+      { label: 'Show them something false', check: { stat: 'cun', diff: 5 }, success: { text: 'They learn exactly the wrong lesson.', opinion: -4, dna: 3 }, fail: { text: 'They see through it.', rivalGrow: true } },
+    ] },
+    { id: 'rival_lure', title: 'Lured Away', text: 'Some of your young have wandered off toward the {them}, drawn by their calls.', options: [
+      { label: 'Bring them back', check: { stat: 'spd', diff: 4 }, success: { text: 'Every one of them comes home.', anim: 'flee' }, fail: { text: 'Some never come back.', popPct: -0.07, anim: 'hurt' } },
+      { label: 'Call louder', check: { stat: 'cha', diff: 4 }, success: { text: 'They turn back to you.', opinion: 3 }, fail: { text: 'The {them} gain a few.', popPct: -0.05, rivalGrow: true } },
+    ] },
+    { id: 'rival_truce', title: 'An Offer from the {them}', text: 'The {them} come without weapons raised. They want the feud to rest, for now.', when: (r) => r.rival && G.rivalSpecies(r) && G.rivalSpecies(r).opinion >= -45, options: [
+      { label: 'Accept the truce', result: { text: 'For a while, there is peace.', opinion: 25, anim: 'social' } },
+      { label: 'Use the truce to strike', check: { stat: 'cun', diff: 5 }, success: { text: 'They never saw it coming.', opinion: -40, dna: 6, popPct: 0.03, anim: 'attack' }, fail: { text: 'They were ready for betrayal.', opinion: -30, popPct: -0.1, anim: 'hurt' } },
+      { label: 'Refuse', result: { text: 'The feud goes on.', opinion: -5 } },
+    ] },
+  ].forEach((e) => { e.stage = 'any'; e.species = 'rival_main'; e.rival = true; e.repeat = true; e.weight = 1.4; e.prop = e.prop || 'social'; const w = e.when; e.when = (r) => due(r) && (!w || w(r)); G.EVENTS.push(e); });
+}());
 G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
 
 // ======================= DECISIONS =======================
@@ -3595,6 +3626,34 @@ G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
         { label: 'A celebration for all', result: { text: 'The realm cheers as one.', loyalty: 20, unrest: -10, anim: 'social' } },
         { label: 'A display of power', result: { text: 'Everyone remembers who rules.', boon: { name: 'Crown majesty', mods: { cha: 2 } }, anim: 'social' } },
       ] } },
+    // ---------- Your Rival (every stage) ----------
+    { id: 'rival_destroy', once: false, cooldown: 12, stage: ['cell', 'creature', 'tribe', 'society', 'renaissance', 'colonial'], icon: '⚔️', name: 'Destroy your rival', show: (r) => !!G.rivalSpecies(r), cost: { food: 6 },
+      needs: [need('Strength at least as high as theirs', (r) => G.stat(r, 'str') >= G.speciesStat(G.rivalSpecies(r), 'str'))],
+      desc: 'End the feud the hard way. If it fails, they come back stronger.',
+      event: { title: 'The final reckoning', species: 'rival_main', text: 'This is the day the feud with the {them} ends, one way or the other.', options: [
+        { label: 'All-out attack', check: { stat: 'str', diff: 5 }, success: { text: 'The {them} are no more.', rivalEnd: 'destroyed', dna: 8, anim: 'attack' }, fail: { text: 'They break your attack and grow bolder.', popPct: -0.2, rivalGrow: true, anim: 'hurt' } },
+        { label: 'Starve them out', check: { stat: 'cun', diff: 5 }, success: { text: 'Their lands go bare. They are gone.', rivalEnd: 'destroyed', dna: 5 }, fail: { text: 'It costs you as much as them.', food: -6, rivalGrow: true } },
+        { label: 'Hold back', result: { text: 'Not today.', anim: 'rest' } },
+      ] } },
+    { id: 'rival_peace', once: false, cooldown: 12, stage: ['cell', 'creature', 'tribe', 'society', 'renaissance', 'colonial'], icon: '🕊️', name: 'Make peace with your rival', show: (r) => !!G.rivalSpecies(r), cost: { food: 4 },
+      needs: [need('They no longer hate you (opinion −20 or better)', (r) => G.rivalSpecies(r).opinion >= -20)],
+      desc: 'End the feud for good, and turn an enemy into a neighbour.',
+      event: { title: 'Peace with the {them}', species: 'rival_main', text: 'You meet the {them} with nothing in your hands.', options: [
+        { label: 'Speak plainly', check: { stat: 'cha', diff: 5 }, success: { text: 'The feud is over.', rivalEnd: 'peace', boon: { name: 'Old enemies, new friends', mods: { cha: 1 }, lasting: true }, anim: 'social' }, fail: { text: 'Old wounds open again.', opinion: -15 } },
+        { label: 'Bring a great gift', result: { text: 'They accept. The feud is over.', food: -6, rivalEnd: 'peace', anim: 'social' } },
+      ] } },
+    { id: 'rival_absorb', once: false, cooldown: 12, stage: ['cell', 'creature', 'tribe', 'society', 'renaissance', 'colonial'], icon: '🧬', name: 'Absorb your rival', show: (r) => !!G.rivalSpecies(r), cost: { dna: 4 },
+      needs: [need('They are few (below half their numbers)', (r) => { const s = G.rivalSpecies(r); return s.pop <= s.cap * 0.5; }), stat('cha', 4)],
+      desc: 'Take what is left of them into your own kind, and keep the strengths they grew.',
+      event: { title: 'One people', species: 'rival_main', text: 'The last of the {them} are tired of fighting.', options: [
+        { label: 'Take them in as equals', check: { stat: 'cha', diff: 5 }, success: { text: 'They become part of you.', rivalEnd: 'absorbed', popPct: 0.08, anim: 'social' }, fail: { text: 'They will not come.', opinion: -10 } },
+        { label: 'Take them by force', check: { stat: 'str', diff: 5 }, success: { text: 'They are yours now, like it or not.', rivalEnd: 'absorbed', anim: 'attack' }, fail: { text: 'They fight to the last.', popPct: -0.1, rivalGrow: true, anim: 'hurt' } },
+      ] } },
+    { id: 'rival_release', once: false, cooldown: 12, stage: ['cell', 'creature', 'tribe', 'society', 'renaissance', 'colonial'], icon: '🍃', name: 'Let the old feud go', show: (r) => !!G.rivalSpecies(r),
+      desc: 'Leave them be. They will go their own way, and so will you.',
+      event: { title: 'Letting go', species: 'rival_main', text: 'Your kind turns away from the {them}, and does not look back.', options: [
+        { label: 'Let them go', result: { text: 'The {them} leave for other lands.', rivalEnd: 'released', food: 2, anim: 'rest' } },
+      ] } },
   ];
   G.DECISION = {};
   G.DECISIONS.forEach((d) => {
@@ -3603,4 +3662,4 @@ G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
   });
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.10';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.11';
