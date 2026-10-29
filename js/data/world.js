@@ -673,11 +673,50 @@ G.APPEARANCE = {
     { id: 'rosettes', name: 'Rosettes', need: { stat: ['cun', 5] }, why: 'Needs Cunning 5' },
     { id: 'tiger', name: 'Tiger stripes', need: { stat: ['str', 5] }, why: 'Needs Strength 5' },
     { id: 'iridescent', name: 'Iridescent', need: { era: 2 }, why: 'Opens in the Age of Giants' },
+    // The Creature Wardrobe: more patterns, some earned by playing (`earn`, see G.WARDROBE_EARN).
+    { id: 'speckles', name: 'Speckles' },
+    { id: 'dapple', name: 'Dapple' },
+    { id: 'chevrons', name: 'Chevrons', earn: 'creature' },
+    { id: 'scales', name: 'Scales', earn: 'giants' },
+    { id: 'eyespots', name: 'Eyespots', earn: 'mind' },
+    { id: 'marble', name: 'Marbled', earn: 'tribe' },
+    { id: 'harlequin', name: 'Harlequin', earn: 'society' },
+    { id: 'lightning', name: 'Lightning', earn: 'hostile_win' },
   ],
   finish: [
     { id: 'matte', name: 'Matte' },
     { id: 'glossy', name: 'Glossy' },
     { id: 'glowing', name: 'Glowing edges', need: { keyword: 'glow' }, why: 'Needs a Glow part' },
+    { id: 'velvet', name: 'Velvet', earn: 'daily' },
+    { id: 'pearl', name: 'Pearl', earn: 'evos15' },
+    { id: 'sparkle', name: 'Sparkle', earn: 'lineages10' },
+    { id: 'metallic', name: 'Metallic', earn: 'renaissance' },
+  ],
+  // Looks for the body plans that are not four-limbed land or fish bodies (`bodies` = editor body kinds).
+  bell: [
+    { id: 'dome', name: 'Dome', bodies: ['radial'], only: 'sea' },
+    { id: 'tall', name: 'Tall bell', bodies: ['radial'], only: 'sea' },
+    { id: 'saucer', name: 'Saucer', bodies: ['radial'], only: 'sea' },
+    { id: 'frilled', name: 'Frilled', bodies: ['radial'], only: 'sea', earn: 'giants' },
+  ],
+  armStyle: [
+    { id: 'tapered', name: 'Tapered', bodies: ['radial'], only: 'land' },
+    { id: 'webbed', name: 'Webbed', bodies: ['radial'], only: 'land' },
+    { id: 'curled', name: 'Curled tips', bodies: ['radial'], only: 'land' },
+    { id: 'knobbly', name: 'Knobbly', bodies: ['radial'], only: 'land', earn: 'giants' },
+  ],
+  colony: [
+    { id: 'lumpy', name: 'Lumpy', bodies: ['colonial'] },
+    { id: 'bubbly', name: 'Bubbly', bodies: ['colonial'] },
+    { id: 'crystal', name: 'Crystal', bodies: ['colonial'] },
+    { id: 'stacked', name: 'Stacked', bodies: ['colonial'], earn: 'creature' },
+  ],
+  collar: [
+    { id: 'none', name: 'None', bodies: ['land', 'serpent'] },
+    { id: 'hood', name: 'Hood', bodies: ['land', 'serpent'] },
+    { id: 'frill', name: 'Frill', bodies: ['land', 'serpent'] },
+    { id: 'mane', name: 'Mane', bodies: ['land', 'serpent'], earn: 'tribe' },
+    { id: 'crown', name: 'Spiked crown', bodies: ['land', 'serpent'], earn: 'colonial' },
   ],
   headPos: [
     { id: 'neck', name: 'On the neck' },
@@ -769,6 +808,45 @@ G.SCULPT = [
 ];
 G.SCULPT_BY_ID = {}; G.SCULPT.forEach((x) => { G.SCULPT_BY_ID[x.id] = x; });
 G.COLOR_KEYS = ['hue', 'belly', 'accent', 'accent2']; // hue sliders, 0-359
+
+// ======================= THE CREATURE WARDROBE =======================
+// Looks earned by playing. Each earns once, for every lineage after. `test` reads your lasting progress.
+G.WARDROBE_EARN = {
+  creature: { text: 'Reach the Creature stage', test: (m) => (m.stats.creatures || 0) >= 1 },
+  giants: { text: 'Reach the Age of Giants', mark: true },
+  mind: { text: 'Reach the Spark of Mind', mark: true },
+  tribe: { text: 'Found a Tribe', mark: true },
+  society: { text: 'Reach the Society stage', mark: true },
+  renaissance: { text: 'Reach the Renaissance', mark: true },
+  colonial: { text: 'Reach the Colonial Age', mark: true },
+  hostile_win: { text: 'Win a lineage at Hostility 2 or higher', mark: true },
+  daily: { text: 'Finish a Daily Run', mark: true },
+  complicated: { text: 'Finish a lineage with 3 or more complications', mark: true },
+  evos15: { text: 'Discover 15 evolutions', test: (m) => (m.codex.evolutions || []).length >= 15 },
+  lineages10: { text: 'Play 10 lineages', test: (m) => m.stats.runs >= 10 },
+};
+// Colour sets: body, belly, pattern and second pattern colours in one tap. Most open by visiting a biome.
+G.PALETTES = [
+  { id: 'tide', name: 'Tide', h: [195, 185, 45, 20] },
+  { id: 'ember', name: 'Ember', h: [12, 35, 50, 0] },
+  { id: 'moss', name: 'Moss', h: [100, 70, 40, 140] },
+  { id: 'dusk', name: 'Dusk', h: [265, 290, 330, 40] },
+  { id: 'jungle', name: 'Jungle', h: [130, 60, 50, 290], biome: 'jungle' },
+  { id: 'desert', name: 'Desert sand', h: [35, 48, 15, 195], biome: 'desert' },
+  { id: 'tundra', name: 'Tundra', h: [205, 215, 185, 350], biome: 'tundra' },
+  { id: 'swamp', name: 'Swamp', h: [78, 55, 28, 115], biome: 'swamp' },
+  { id: 'shore', name: 'Shore', h: [40, 30, 190, 10], biome: 'shore' },
+  { id: 'reef', name: 'Coral reef', h: [350, 20, 170, 50], biome: 'warm' },
+  { id: 'kelp', name: 'Kelp forest', h: [88, 50, 30, 160], biome: 'kelp' },
+  { id: 'polar', name: 'Polar sea', h: [195, 210, 175, 230], biome: 'polar' },
+  { id: 'vents', name: 'Vent fire', h: [15, 45, 280, 330], biome: 'vents' },
+  { id: 'royal', name: 'Royal', h: [272, 285, 45, 350], earn: 'society' },
+  { id: 'gold', name: 'Gold leaf', h: [45, 40, 18, 0], earn: 'colonial' },
+];
+G.PALETTE = {}; G.PALETTES.forEach((x) => { G.PALETTE[x.id] = x; });
+G.SAVED_LOOKS_MAX = 12;
+// Look keys every body can share; the rest only carry over between bodies of the same kind.
+G.UNIVERSAL_LOOK_KEYS = ['hue', 'belly', 'accent', 'accent2', 'pattern', 'finish', 'patScale', 'patDensity', 'eyes'];
 G.EDITOR_COST = 2; // DNA to open the editor between milestones
 
 // Real time: seconds per turn at each speed.
@@ -883,10 +961,15 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.8';
+G.VERSION = '21.9';
 G.WHATS_NEW = {
-  title: 'Patch 21.8: Sound',
+  title: 'Patch 21.9: The Creature Wardrobe',
   items: [
+    'Eight new patterns (Speckles, Dapple, Chevrons, Scales, Eyespots, Marbled, Harlequin, Lightning) and four new finishes (Velvet, Pearl, Sparkle, Metallic).',
+    'Every body plan gets its own looks: jellyfish bells (dome, tall, saucer, frilled), starfish arms (webbed, curled, knobbly), colony styles (bubbly, crystal, stacked), and collars for land creatures and serpents (hood, frill, mane, spiked crown). Serpents now show every pattern.',
+    'Colour sets: four colours in one tap, from Tide to Coral Reef. Most open by visiting a biome.',
+    'Looks to earn: many new looks open by playing (reaching a stage, winning on Hostility 2, finishing a Daily Run and more), for every lineage after. The Wardrobe tab in the Creature Editor lists them all and how to earn each.',
+    'Saved looks: save a design in the Wardrobe tab, wear it again later, or mark it "For new lineages" so each new creature wears it from birth.',
     'Primordia has sound. Each place has its own ambience and soft music: bubbles in the first sea, swells and distant whale song in the ocean, wind and birds on land, a crackling fire for the Tribe, and bells once your people build towns.',
     'Effects mark the moments: a chime for an event (a deep drum when it is dangerous), notes for success and failure, a shimmer for mutations and discoveries, a fanfare for new stages and endings, and a falling tune for extinction.',
     'Options has a Sound switch and separate volumes for effects and for ambience and music. On an iPhone it follows the silent switch and plays alongside your own music. Sound starts after your first tap.',
@@ -1848,4 +1931,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.8';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.9';

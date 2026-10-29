@@ -529,7 +529,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 3. **First Steps: a guided first run** (Patch 21.3) ✅
 4. **Home-screen app** (Patch 21.4): installs to your phone, works offline, updates itself, and moves your save ✅
 5. **Complications in Options, and a daily run** (Patch 21.6), with automatic save backups ✅
-6. **Sound** (Patch 21.8) ✅, then **the Creature Wardrobe.**
+6. **Sound** (Patch 21.8) ✅, then **the Creature Wardrobe** (Patch 21.9) ✅
 
 ## Update 22: Empires (Empire stage, part 2)
 
@@ -555,7 +555,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 
 ---
 
-## Expansion: The Creature Wardrobe (after Update 23)
+## Expansion: The Creature Wardrobe ✅ (Patch 21.9)
 
 *More ways to make your creature your own, unlocked by playing.*
 

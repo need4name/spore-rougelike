@@ -62,6 +62,7 @@ window.G = window.G || {};
       fossils: [], history: [], tips: [], tipsOff: false, affinity: {}, stageStarts: [],
       options: { numbers: false, theme: 'tide', sound: true, sfxVol: 0.7, ambVol: 0.5 },
       guide: { on: true, done: [] },
+      wardrobe: { marks: [], biomes: [], saved: [], auto: null },
     };
   }
   // Odds in words; the exact numbers are an option (Options: Detailed numbers).
@@ -81,6 +82,18 @@ window.G = window.G || {};
     m.history = saved.history || [];
     m.seenVersion = saved.seenVersion;
     m.lastBackupAt = saved.lastBackupAt || null;
+    m.wardrobe = Object.assign({ marks: [], biomes: [], saved: [], auto: null }, saved.wardrobe || {});
+    // Saves from before the Wardrobe: give the looks for every stage already reached.
+    if (!saved.wardrobe) {
+      const steps = ['giants', 'mind', 'tribe', 'society', 'renaissance', 'colonial'];
+      let far = -1;
+      const reach = (i) => { far = Math.max(far, i); };
+      (saved.history || []).forEach((h) => { const r = h.reached || ''; reach(/^Colonial/.test(r) ? 5 : /^Renaissance/.test(r) ? 4 : /^Society/.test(r) ? 3 : /^Tribe/.test(r) ? 2 : /Spark of Mind/.test(r) ? 1 : /Age of Giants/.test(r) ? 0 : -1); });
+      (saved.stageStarts || []).forEach((x) => reach({ tribe: 2, society: 3, renaissance: 4, colonial: 5 }[x.stage] || -1));
+      const c = saved.codex || {};
+      if ((c.endings || []).length) reach(1); if ((c.tribeEndings || []).length) reach(3); if ((c.societyEndings || []).length) reach(4); if ((c.renaissanceEndings || []).length) reach(5);
+      m.wardrobe.marks = steps.slice(0, far + 1);
+    }
     // Players from before tips existed have already learned the basics.
     m.affinity = saved.affinity || {};
     m.tips = saved.tips || ((saved.stats && saved.stats.runs >= 3) ? ['welcome', 'event', 'draft', 'instinct', 'arch_drifter', 'arch_grazer'] : []);
@@ -465,6 +478,8 @@ window.G = window.G || {};
   G.lookOptionState = (run, opt) => {
     const n = opt.need;
     if (opt.only && run.habitat !== opt.only) return { ok: false, why: opt.why, hidden: true };
+    if (opt.bodies && run.stage !== 'cell' && !opt.bodies.includes(G.editorBody(run))) return { ok: false, hidden: true };
+    if (opt.earn && !G.wardrobeEarned(opt.earn)) return { ok: false, why: `Earn it: ${G.WARDROBE_EARN[opt.earn].text}`, earn: true };
     if (!n) return { ok: true };
     if (run.stage === 'cell') return { ok: false, why: opt.why };
     if (n.keyword && !(G.keywordCounts(run)[n.keyword] > 0)) return { ok: false, why: opt.why };
@@ -477,7 +492,7 @@ window.G = window.G || {};
   };
   // The look actually shown: choices that are no longer allowed fall back to the first option.
   G.effectiveLook = (run) => {
-    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four', head: 'round', fins: 'plain', headPos: 'neck', finish: 'matte' }, run.look || {});
+    const l = Object.assign({ pattern: 'plain', shape: 'round', neck: 'short', eyes: 'round', posture: 'four', head: 'round', fins: 'plain', headPos: 'neck', finish: 'matte', bell: 'dome', armStyle: 'tapered', colony: 'lumpy', collar: 'none' }, run.look || {});
     Object.keys(G.APPEARANCE).forEach((k) => {
       const opt = G.APPEARANCE[k].find((o) => o.id === l[k]);
       if (!opt || !G.lookOptionState(run, opt).ok) l[k] = G.APPEARANCE[k][0].id;
@@ -501,10 +516,73 @@ window.G = window.G || {};
     G.saveRun();
   };
 
+  // ---------- The Creature Wardrobe ----------
+  G.wardrobeEarned = (id) => { const r = G.WARDROBE_EARN[id]; const w = G.meta.wardrobe; return !!r && (r.test ? r.test(G.meta) : w.marks.includes(id)); };
+  G.biomeName = (id) => { for (const list of Object.values(G.BIOMES)) { const b = list.find((x) => x.id === id); if (b) return b.name; } return id; };
+  G.paletteState = (p) => {
+    if (p.biome && !G.meta.wardrobe.biomes.includes(p.biome)) return { ok: false, why: `Visit the ${G.biomeName(p.biome)}` };
+    if (p.earn && !G.wardrobeEarned(p.earn)) return { ok: false, why: G.WARDROBE_EARN[p.earn].text };
+    return { ok: true };
+  };
+  G.applyPalette = (id) => {
+    const run = G.run; const p = G.PALETTE[id];
+    if (!run || !p || !G.paletteState(p).ok) return;
+    run.look = run.look || {};
+    G.COLOR_KEYS.forEach((k, i) => { run.look[k] = p.h[i]; });
+    G.saveRun();
+  };
+  // Everything a lineage has done that earns looks: called at every milestone, new stage and ending.
+  // Returns the names of looks and colour sets it just opened, so the game can say so.
+  const wardrobeNames = () => {
+    const names = [];
+    Object.entries(G.APPEARANCE).forEach(([, list]) => list.forEach((o) => { if (o.earn && G.wardrobeEarned(o.earn)) names.push(o.name); }));
+    G.PALETTES.forEach((p) => { if ((p.biome || p.earn) && G.paletteState(p).ok) names.push(`${p.name} colours`); });
+    return names;
+  };
+  G.wardrobeMark = function (run, ending) {
+    if (!run) return [];
+    const w = G.meta.wardrobe; const before = new Set(wardrobeNames());
+    const mark = (id) => { if (!w.marks.includes(id)) w.marks.push(id); };
+    if (run.era >= 2) mark('giants');
+    if (run.mind) mark('mind');
+    const order = ['tribe', 'society', 'renaissance', 'colonial'];
+    const at = order.indexOf(run.stage);
+    order.slice(0, at + 1).forEach(mark);
+    if (ending) {
+      if (ending.victory && run.hostility >= 2) mark('hostile_win');
+      if (run.daily) mark('daily');
+      if ((run.complications || []).length >= 3) mark('complicated');
+    }
+    (run.seenBiomes || []).forEach((b) => { if (!w.biomes.includes(b)) w.biomes.push(b); });
+    return wardrobeNames().filter((n) => !before.has(n));
+  };
+  // Saved looks: keep a design and put it on later lineages.
+  G.saveCurrentLook = function (name) {
+    const run = G.run; const w = G.meta.wardrobe;
+    if (!run || run.stage === 'cell' || w.saved.length >= G.SAVED_LOOKS_MAX) return null;
+    const look = { ...G.effectiveLook(run), hue: G.bodyOf(run).hue };
+    const entry = { id: `look${Date.now().toString(36)}`, name: G.cleanName(name) || `${G.lineageName(run)} look`, kind: G.editorBody(run), habitat: run.habitat, look, at: Date.now() };
+    w.saved.unshift(entry); G.saveMeta();
+    return entry;
+  };
+  // Same kind of body: the whole look. Otherwise only what every body shares (colours, pattern, finish, eyes).
+  G.applySavedLook = function (id, target) {
+    const run = target || G.run; const e = G.meta.wardrobe.saved.find((x) => x.id === id);
+    if (!run || !e || run.stage === 'cell') return false;
+    const same = e.kind === G.editorBody(run) && e.habitat === run.habitat;
+    run.look = run.look || {};
+    Object.entries(e.look).forEach(([k, v]) => { if (same || G.UNIVERSAL_LOOK_KEYS.includes(k)) run.look[k] = v; });
+    G.saveRun();
+    return same ? 'all' : 'colours';
+  };
+  G.deleteSavedLook = (id) => { const w = G.meta.wardrobe; w.saved = w.saved.filter((x) => x.id !== id); if (w.auto === id) w.auto = null; G.saveMeta(); };
+  G.setAutoLook = (id) => { const w = G.meta.wardrobe; w.auto = w.auto === id ? null : id; G.saveMeta(); };
+  G.renameSavedLook = (id, name) => { const e = G.meta.wardrobe.saved.find((x) => x.id === id); const n = G.cleanName(name); if (e && n) { e.name = n; G.saveMeta(); } };
+
   // The highest a slider can go right now (some open later in the run).
   G.sculptMax = (run, sl) => (sl.cap ? Math.min(sl.max, sl.cap(run)) : sl.max);
   // The editor's dice: a random look for one tab (or everything), using only options you have unlocked.
-  G.EDITOR_TAB_KEYS = { body: { groups: ['shape'], sculpt: ['body'] }, limbs: { groups: ['fins'], sculpt: ['limbs'] }, head: { groups: ['head', 'headPos', 'eyes'], sculpt: ['head'] }, color: { groups: ['pattern', 'finish'], sculpt: ['color'], colors: true } };
+  G.EDITOR_TAB_KEYS = { body: { groups: ['shape', 'bell', 'colony'], sculpt: ['body'] }, limbs: { groups: ['fins', 'armStyle'], sculpt: ['limbs'] }, head: { groups: ['head', 'headPos', 'eyes', 'collar'], sculpt: ['head'] }, color: { groups: ['pattern', 'finish'], sculpt: ['color'], colors: true } };
   G.randomiseLook = function (tab) {
     const run = G.run;
     if (!run || run.stage === 'cell') return;
@@ -1081,6 +1159,7 @@ window.G = window.G || {};
     const m = G.meta;
     m.genes += genes;
     if (run.daily) recordDaily(run, victory, genes);
+    run.newLooks = G.wardrobeMark(run, { victory });
     setTimeout(G.backupMeta, 0);
     if (victory) {
       m.stats.wins += 1;
@@ -3805,7 +3884,10 @@ window.G = window.G || {};
     noteParts(run);
     run.evolved = { heritage, cellParts, carried, left };
     run.freeEdit = true;
+    // The Wardrobe: a saved look chosen for new lineages is put on as the creature is born.
+    const worn = G.meta.wardrobe.auto && G.applySavedLook(G.meta.wardrobe.auto, run);
     run.notices = [];
+    if (worn) { const e = G.meta.wardrobe.saved.find((x) => x.id === G.meta.wardrobe.auto); run.notices.push(`Your creature wears your saved look, ${e.name}${worn === 'all' ? '' : ' (its colours and pattern, as it is a different body)'}. Change it any time in the Look tab.`); }
     log(run, `Your lineage ${run.habitat === 'land' ? 'leaves the water for the land' : 'claims the open sea'}. It carries the ${G.TRAITS[heritage].name} trait.`);
     run.phase = 'evolved';
   }
@@ -3888,6 +3970,7 @@ window.G = window.G || {};
   // Save a fossil of the run as it is now. Called after each milestone and each new stage.
   G.fossilize = function (run) {
     const m = G.meta;
+    G.wardrobeMark(run).forEach((n) => run.notices.push(`New in the Creature Wardrobe: ${n}.`));
     const snap = JSON.parse(JSON.stringify(run));
     snap.log = snap.log.slice(0, 25); snap.notices = []; snap.lastTurn = null;
     snap.phase = 'map'; snap.event = null; snap.scene = null; snap.draft = null; snap.evolved = null;
@@ -3986,4 +4069,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.8';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.9';

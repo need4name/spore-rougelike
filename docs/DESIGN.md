@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.9: The Creature Wardrobe
+
+- **New looks** (`G.APPEARANCE`): 8 patterns and 4 finishes, plus groups for the body plans that had only sliders: `bell` (jellyfish), `armStyle` (starfish), `colony` (colonial) and `collar` (land and serpent; fish draw no separate head). Options carry `bodies` (editor body kinds) as well as `only` (habitat); `G.lookOptionState` hides options for other bodies. Finishes are now also drawn on radial and colonial bodies, and serpents map every pattern to cross-stripes, spots or a shading along the body.
+- **Earned looks:** an option or colour set with `earn` names a rule in `G.WARDROBE_EARN`. Rules are tested on lasting progress (`test`) or on marks in `meta.wardrobe.marks`, which `G.wardrobeMark` sets at every fossil (milestones, new stages) and every ending: Age of Giants, Spark of Mind, each later stage, a win at Hostility 2+, a Daily Run, 3+ complications. Old saves get the marks for every stage their history reached. New looks are announced in notices and on the title screen.
+- **Colour sets** (`G.PALETTES`) set all four colours at once. Biome sets open on visiting that biome in any lineage (`meta.wardrobe.biomes`).
+- **Saved looks** (`meta.wardrobe.saved`, up to 12): the whole effective look plus the body kind and habitat. Wearing one on the same kind of body copies everything; on another kind only `G.UNIVERSAL_LOOK_KEYS` (colours, pattern, finish, eyes). One saved look can be marked for new lineages (`meta.wardrobe.auto`) and is put on in `evolve` when a lineage becomes a creature. The editor's Wardrobe tab shows saved looks with thumbnails (this creature wearing each), and every look still to earn.
+
 ## Patch 21.8: Sound
 
 - **Everything is synthesised** in `js/audio.js` (Web Audio), so there are no sound files and it works offline. On iOS, `navigator.audioSession.type = 'ambient'` makes it mix with other audio and follow the silent switch. Nothing plays until the first tap (`unlock`), and the audio pauses while the page is hidden.

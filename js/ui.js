@@ -146,6 +146,7 @@ window.G = window.G || {};
       const el = put('#editor', editor(run));
       const c = el && el.querySelector('canvas.editor-canvas');
       if (c) G.playEditor(c);
+      drawLookThumbs();
       const nb = app.querySelector('.editor-body');
       if (nb && G.ui.keepEditorScroll) nb.scrollTop = scroll;
       G.ui.keepEditorScroll = false;
@@ -290,6 +291,7 @@ window.G = window.G || {};
         </div>
         ${G.storageFailed ? '<p class="save-warn">Your progress could not be saved on this device (its storage is full or blocked). Copy your save code in Options to keep it safe.</p>' : ''}
         ${G.restoredFromBackup ? '<p class="save-warn">Your save could not be read, so the game loaded its backup copy.</p>' : ''}
+        ${G.run && G.run.phase === 'end' && (G.run.newLooks || []).length ? `<p class="install-hint">✨ <b>New in the Creature Wardrobe:</b> ${esc(G.run.newLooks.join(', '))}. Find them in the Creature Editor.</p>` : ''}
         ${installHint()}
         ${dailyCard(live)}
         <div class="menu">
@@ -2067,7 +2069,8 @@ window.G = window.G || {};
   // A chip group for one appearance option list (locked options show why).
   function lookGroup(run, key, title) {
     const L = G.effectiveLook(run);
-    const list = G.APPEARANCE[key].filter((o) => !o.only || o.only === run.habitat);
+    const list = G.APPEARANCE[key].filter((o) => !G.lookOptionState(run, o).hidden);
+    if (!list.length) return '';
     const locked = list.filter((o) => !G.lookOptionState(run, o).ok);
     return `
       <div class="look-group"><h3>${title}</h3><div class="chips">${list.map((o) => {
@@ -2086,6 +2089,52 @@ window.G = window.G || {};
       <input id="sc-${sl.id}" type="range" min="${sl.min}" max="${max}" step="${sl.step}" value="${Math.min(v, max)}" data-look="${sl.id}">
       ${sl.ends ? `<div class="ends"><span>${esc(sl.ends[0])}</span><span>${esc(sl.ends[1])}</span></div>` : ''}
       ${max < sl.max ? `<p class="note">${esc(sl.capWhy)}</p>` : ''}</div>`;
+  }
+  // ---------- The Creature Wardrobe ----------
+  // Colour sets: four colours in one tap. Locked ones say where to find them.
+  function paletteGroup(run) {
+    const sets = G.PALETTES.map((p) => ({ p, st: G.paletteState(p) }));
+    const locked = sets.filter((x) => !x.st.ok);
+    return `<div class="look-group"><h3>Colour sets</h3><div class="palettes">${sets.map(({ p, st }) => `<button class="palette ${st.ok ? '' : 'locked'}" ${st.ok ? `data-act="palette" data-arg="${p.id}"` : 'disabled'} title="${esc(st.ok ? p.name : st.why)}"><span class="pal-dots">${p.h.map((h, i) => `<i style="--h:${h};--l:${[50, 72, 45, 58][i]}%"></i>`).join('')}</span>${esc(p.name)}${st.ok ? '' : ' 🔒'}</button>`).join('')}</div>
+      ${locked.length ? `<p class="note">${esc(locked.map((x) => `${x.p.name}: ${x.st.why}`).join(' · '))}</p>` : ''}</div>`;
+  }
+  // The Wardrobe tab: saved looks, and every look still to earn.
+  function wardrobePanel(run) {
+    const w = G.meta.wardrobe; const kind = G.editorBody(run);
+    const full = w.saved.length >= G.SAVED_LOOKS_MAX;
+    const saved = w.saved.map((e) => {
+      const same = e.kind === kind && e.habitat === run.habitat;
+      const del = G.ui.confirmLookDel === e.id;
+      return `<li class="saved-look ${w.auto === e.id ? 'auto' : ''}">
+        <canvas class="portrait" data-lookthumb="${e.id}"></canvas>
+        <div><strong>${esc(e.name)}</strong><span class="note">${same ? 'Fits this body' : 'Another body: colours and pattern only'}${w.auto === e.id ? ' · Worn by new lineages' : ''}</span>
+          <div class="row tight wrap"><button class="btn small primary" data-act="look-apply" data-arg="${e.id}">Wear it</button><button class="btn small ${w.auto === e.id ? '' : 'ghost'}" data-act="look-auto" data-arg="${e.id}" aria-pressed="${w.auto === e.id}">${w.auto === e.id ? '✓ New lineages' : 'For new lineages'}</button>${del ? `<button class="btn small danger" data-act="look-del-yes" data-arg="${e.id}">Delete</button><button class="btn small ghost" data-act="look-del-no">Keep</button>` : `<button class="btn small ghost" data-act="look-del" data-arg="${e.id}">Delete</button>`}</div></div>
+      </li>`;
+    }).join('');
+    const toEarn = [];
+    Object.entries(G.APPEARANCE).forEach(([key, list]) => list.forEach((o) => { if (o.earn) toEarn.push({ name: o.name, what: { pattern: 'pattern', finish: 'finish', bell: 'bell', armStyle: 'arms', colony: 'colony', collar: 'collar' }[key] || key, earn: o.earn }); }));
+    G.PALETTES.forEach((p) => { if (p.earn || p.biome) toEarn.push({ name: p.name, what: 'colour set', earn: p.earn, biome: p.biome, p }); });
+    const got = (x) => (x.p ? G.paletteState(x.p).ok : G.wardrobeEarned(x.earn));
+    const how = (x) => (x.biome ? `Visit the ${G.biomeName(x.biome)}` : G.WARDROBE_EARN[x.earn].text);
+    const have = toEarn.filter(got).length;
+    return `<div class="look-group"><h3>Saved looks</h3>
+        <p class="note">Keep this look to wear again on later lineages. A look marked "For new lineages" is put on as soon as a lineage becomes a creature.</p>
+        <button class="btn small primary" ${full ? 'disabled' : 'data-act="look-save"'}>${full ? `Full (${G.SAVED_LOOKS_MAX} saved)` : 'Save this look'}</button>
+        ${saved ? `<ul class="saved-looks">${saved}</ul>` : '<p class="note">No saved looks yet.</p>'}
+      </div>
+      <div class="look-group"><h3>Looks to earn <span class="count">${have}/${toEarn.length}</span></h3>
+        <ul class="earn-list">${toEarn.map((x) => `<li class="${got(x) ? 'got' : ''}"><b>${got(x) ? '✓' : '🔒'} ${esc(x.name)}</b> <span class="muted">${esc(x.what)}</span>${got(x) ? '' : ` · ${esc(how(x))}`}</li>`).join('')}</ul>
+      </div>`;
+  }
+  // Saved-look thumbnails: this creature wearing each saved look.
+  function drawLookThumbs() {
+    if (!G.run) return;
+    app.querySelectorAll('canvas[data-lookthumb]').forEach((c) => {
+      const e = G.meta.wardrobe.saved.find((x) => x.id === c.dataset.lookthumb); if (!e) return;
+      const body = G.bodyOf(G.run); const same = e.kind === G.editorBody(G.run) && e.habitat === G.run.habitat;
+      const look = { ...body.look }; Object.entries(e.look).forEach(([k, v]) => { if (same || G.UNIVERSAL_LOOK_KEYS.includes(k)) look[k] = v; });
+      G.drawPortrait(c, { ...body, look, hue: look.hue != null ? look.hue : body.hue });
+    });
   }
   function hueSlider(run, key, title, def) {
     const v = run.look && run.look[key] != null ? run.look[key] : def;
@@ -2111,17 +2160,18 @@ window.G = window.G || {};
       .map((sl) => sculptSlider(run, { ...sl, name: (sl.labels && (sl.labels[labelKey] || sl.labels[kind])) || sl.name, ends: (sl.endsBy && sl.endsBy[kind]) || sl.ends })).join('');
     const hue = G.bodyOf(run).hue;
     const panels = {
-      body: () => `${kind === 'land' || kind === 'sea' ? lookGroup(run, 'shape', 'Body shape') : ''}${sliders('body')}${kind === 'colonial' ? sliders('limbs') : ''}`,
-      limbs: () => `${sliders('limbs')}${kind === 'sea' ? lookGroup(run, 'fins', 'Fins') : ''}`,
-      head: () => `${lookGroup(run, 'head', 'Head shape')}${kind === 'land' ? lookGroup(run, 'headPos', 'Head position') : ''}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
-      color: () => `${hueSlider(run, 'hue', 'Body color', hue)}${hueSlider(run, 'belly', 'Belly color', hue)}${hueSlider(run, 'accent', 'Pattern color', (hue + 40) % 360)}${hueSlider(run, 'accent2', 'Second pattern color', (hue + 70) % 360)}${lookGroup(run, 'pattern', 'Pattern')}${sliders('color')}${lookGroup(run, 'finish', 'Finish')}`,
+      body: () => `${kind === 'land' || kind === 'sea' ? lookGroup(run, 'shape', 'Body shape') : ''}${lookGroup(run, 'bell', 'Bell shape')}${lookGroup(run, 'colony', 'Colony')}${sliders('body')}${kind === 'colonial' ? sliders('limbs') : ''}`,
+      limbs: () => `${lookGroup(run, 'armStyle', 'Arm style')}${sliders('limbs')}${kind === 'sea' ? lookGroup(run, 'fins', 'Fins') : ''}`,
+      head: () => `${lookGroup(run, 'head', 'Head shape')}${kind === 'land' ? lookGroup(run, 'headPos', 'Head position') : ''}${lookGroup(run, 'collar', 'Collar')}${sliders('head')}${lookGroup(run, 'eyes', 'Eye style')}`,
+      wardrobe: () => wardrobePanel(run),
+      color: () => `${paletteGroup(run)}${hueSlider(run, 'hue', 'Body color', hue)}${hueSlider(run, 'belly', 'Belly color', hue)}${hueSlider(run, 'accent', 'Pattern color', (hue + 40) % 360)}${hueSlider(run, 'accent2', 'Second pattern color', (hue + 70) % 360)}${lookGroup(run, 'pattern', 'Pattern')}${sliders('color')}${lookGroup(run, 'finish', 'Finish')}`,
     };
     const TABS = {
-      land: [['body', 'Body'], ['limbs', 'Limbs'], ['head', 'Head'], ['color', 'Colors']],
-      sea: [['body', 'Body'], ['limbs', 'Fins'], ['head', 'Head'], ['color', 'Colors']],
-      serpent: [['body', 'Body'], ['head', 'Head'], ['color', 'Colors']],
-      radial: [['body', sea ? 'Bell' : 'Disc'], ['limbs', sea ? 'Tentacles' : 'Arms'], ['color', 'Colors']],
-      colonial: [['body', 'Body'], ['color', 'Colors']],
+      land: [['body', 'Body'], ['limbs', 'Limbs'], ['head', 'Head'], ['color', 'Colors'], ['wardrobe', 'Wardrobe']],
+      sea: [['body', 'Body'], ['limbs', 'Fins'], ['head', 'Head'], ['color', 'Colors'], ['wardrobe', 'Wardrobe']],
+      serpent: [['body', 'Body'], ['head', 'Head'], ['color', 'Colors'], ['wardrobe', 'Wardrobe']],
+      radial: [['body', sea ? 'Bell' : 'Disc'], ['limbs', sea ? 'Tentacles' : 'Arms'], ['color', 'Colors'], ['wardrobe', 'Wardrobe']],
+      colonial: [['body', 'Body'], ['color', 'Colors'], ['wardrobe', 'Wardrobe']],
     };
     const tabs = TABS[kind];
     const tab = tabs.some(([id]) => id === G.ui.editorTab) ? G.ui.editorTab : 'body';
@@ -2129,7 +2179,7 @@ window.G = window.G || {};
       <header class="editor-head"><h2>Creature Editor</h2><button class="btn small" data-act="editor-random" data-arg="all" aria-label="Randomise everything">🎲 All</button><button class="btn small primary" data-act="editor-done">Done</button></header>
       <div class="editor-preview"><canvas class="editor-canvas"></canvas></div>
       <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-act="editor-tab" data-arg="${id}">${label}</button>`).join('')}</div>
-      <div class="editor-body"><button class="btn small ghost dice" data-act="editor-random" data-arg="${tab}">🎲 Randomise ${esc(tabs.find(([id]) => id === tab)[1].toLowerCase())}</button>${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
+      <div class="editor-body">${tab === 'wardrobe' ? '' : `<button class="btn small ghost dice" data-act="editor-random" data-arg="${tab}">🎲 Randomise ${esc(tabs.find(([id]) => id === tab)[1].toLowerCase())}</button>`}${panels[tab]()}<p class="note">Looks never change your stats. Some options open as your creature grows.</p></div>
       <div class="editor-foot"><button class="btn primary wide" data-act="editor-done">Done</button></div>
     </div>`;
   }
@@ -2579,6 +2629,13 @@ window.G = window.G || {};
       case 'editor-open': if (G.startEditing()) { G.ui.editor = true; G.ui.editorTab = 'body'; G.ui.sheet = null; } parts = ['top', 'sheet', 'editor']; break;
       case 'editor-done': G.ui.editor = false; parts = ['top', 'editor', 'sheet']; break;
       case 'editor-tab': G.ui.editorTab = arg; parts = ['editor']; break;
+      case 'palette': G.applyPalette(arg); G.ui.keepEditorScroll = true; parts = ['top', 'editor']; break;
+      case 'look-save': G.saveCurrentLook(); G.ui.keepEditorScroll = true; parts = ['editor']; break;
+      case 'look-apply': G.applySavedLook(arg); G.ui.keepEditorScroll = true; parts = ['top', 'editor']; break;
+      case 'look-auto': G.setAutoLook(arg); G.ui.keepEditorScroll = true; parts = ['editor']; break;
+      case 'look-del': G.ui.confirmLookDel = arg; G.ui.keepEditorScroll = true; parts = ['editor']; break;
+      case 'look-del-no': G.ui.confirmLookDel = null; G.ui.keepEditorScroll = true; parts = ['editor']; break;
+      case 'look-del-yes': G.deleteSavedLook(arg); G.ui.confirmLookDel = null; G.ui.keepEditorScroll = true; parts = ['editor']; break;
       case 'instinct': G.setInstinct(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'zone': G.setZone(arg); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'steal': G.stealFromHost(); G.ui.sheet = null; G.ui.speciesView = null; parts = ['top', 'hud', 'modal', 'sheet']; break;
@@ -2709,4 +2766,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.8';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.9';

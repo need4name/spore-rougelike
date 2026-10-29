@@ -16,23 +16,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Grandstander:wght@700&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=21.8">
+  <link rel="stylesheet" href="css/style.css?v=21.9">
   <style>html, body { height: 100%; } body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }</style>
 </head>
 <body>
   <div id="app"></div>
-  <script src="js/data/parts.js?v=21.8"></script>
-  <script src="js/data/world.js?v=21.8"></script>
-  <script src="js/data/events.js?v=21.8"></script>
-  <script src="js/game.js?v=21.8"></script>
-  <script src="js/render.js?v=21.8"></script>
-  <script src="js/audio.js?v=21.8"></script>
-  <script src="js/ui.js?v=21.8"></script>
+  <script src="js/data/parts.js?v=21.9"></script>
+  <script src="js/data/world.js?v=21.9"></script>
+  <script src="js/data/events.js?v=21.9"></script>
+  <script src="js/game.js?v=21.9"></script>
+  <script src="js/render.js?v=21.9"></script>
+  <script src="js/audio.js?v=21.9"></script>
+  <script src="js/ui.js?v=21.9"></script>
   <script>
     // Phones can keep old copies of some files after an update. If the files don't all come from
     // the same release, reload once; if that doesn't fix it, say so instead of running a broken mix.
     (function () {
-      var want = '21.8'; var f = window.PRIMORDIA_FILES || {};
+      var want = '21.9'; var f = window.PRIMORDIA_FILES || {};
       var stale = ['parts', 'world', 'events', 'game', 'render', 'audio', 'ui'].filter(function (n) { return f[n] !== want; });
       var key = 'primordiaReload';
       if (!stale.length) { try { sessionStorage.removeItem(key); } catch (e) {} return; }

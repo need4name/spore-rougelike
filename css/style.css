@@ -803,3 +803,18 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .vol-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .vol-row label { flex: 0 0 9.5em; font-size: 0.9rem; color: var(--muted); }
 .vol-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+
+/* The Creature Wardrobe (Patch 21.9) */
+.palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.palette { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; font-size: 0.8rem; text-align: left; cursor: pointer; }
+.palette.locked { opacity: 0.5; cursor: default; }
+.pal-dots { display: flex; gap: 3px; }
+.pal-dots i { width: 14px; height: 14px; border-radius: 50%; background: hsl(var(--h), 55%, var(--l)); box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+.saved-looks { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+.saved-look { display: flex; gap: 10px; align-items: center; background: var(--panel); border-radius: var(--radius); padding: 8px; }
+.saved-look.auto { outline: 2px solid var(--accent); }
+.saved-look canvas.portrait { width: 64px; height: 64px; flex: none; border-radius: 10px; }
+.saved-look > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.earn-list { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; font-size: 0.85rem; }
+.earn-list li { opacity: 0.75; }
+.earn-list li.got { opacity: 1; }

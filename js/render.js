@@ -106,6 +106,15 @@ window.G = window.G || {};
       case 'countershade': { const g = ctx.createLinearGradient(0, -ry, 0, ry); g.addColorStop(0, hsl(a1, 45, 30, 0.75)); g.addColorStop(0.45 / sc, hsl(a1, 45, 30, 0.3)); g.addColorStop(Math.min(1, 0.55 / sc + 0.1), 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(-rx, -ry, rx * 2, ry * 2); break; }
       case 'gradient': { const g = ctx.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, hsl(a1, 60, 50, 0.75)); g.addColorStop(1, hsl(a2, 60, 55, 0.75)); ctx.fillStyle = g; ctx.fillRect(-rx, -ry, rx * 2, ry * 2); break; }
       case 'iridescent': { const k = n(6); for (let i = 0; i < k; i++) { const x = -rx + ((i + ((t * 0.3) % 1)) / k) * rx * 2; ctx.fillStyle = hsl((a1 + i * 50 + t * 40) % 360, 80, 65, 0.3); ctx.fillRect(x, -ry, rx * 2 / k * sc, ry * 2); } break; }
+      // The Creature Wardrobe's patterns.
+      case 'speckles': for (let i = 0; i < n(30); i++) dot((prand(i + 101) * 2 - 1) * rx * 0.92, (prand(i + 151) * 2 - 1) * ry * 0.85, S * (0.005 + prand(i + 7) * 0.006) * sc, i % 2 ? col2 : col); break;
+      case 'dapple': for (let i = 0; i < n(9); i++) { ctx.beginPath(); ctx.ellipse((prand(i + 61) * 2 - 1) * rx * 0.8, (prand(i + 81) * 2 - 1) * ry * 0.65, S * 0.045 * sc * (0.6 + prand(i) * 0.6), S * 0.03 * sc * (0.6 + prand(i + 1) * 0.6), prand(i + 3) * 3, 0, Math.PI * 2); ctx.fillStyle = hsl(i % 2 ? a2 : a1, 35, 78, 0.35); ctx.fill(); } break;
+      case 'chevrons': { const k = n(5); ctx.lineWidth = S * 0.02 * sc; ctx.lineJoin = 'round'; for (let i = 0; i < k; i++) { const x = -rx * 0.85 + ((i + 0.5) / k) * rx * 1.7; ctx.beginPath(); ctx.moveTo(x - rx * 0.14, -ry); ctx.lineTo(x + rx * 0.08, 0); ctx.lineTo(x - rx * 0.14, ry); ctx.strokeStyle = i % 2 ? col2 : col; ctx.stroke(); } break; }
+      case 'scales': { const st = S * 0.034 * sc; for (let y = -ry, row = 0; y < ry; y += st * 0.75, row++) for (let x = -rx; x < rx; x += st) { ctx.beginPath(); ctx.arc(x + (row % 2) * st / 2, y, st * 0.55, 0, Math.PI); ctx.fillStyle = hsl(row % 3 ? a1 : a2, 45, 45, 0.25); ctx.fill(); ctx.strokeStyle = hsl(a1, 40, 28, 0.6); ctx.lineWidth = 1; ctx.stroke(); } break; }
+      case 'eyespots': for (let i = 0; i < n(3); i++) { const x = -rx * 0.55 + i * rx * 0.55 / Math.max(1, n(3) - 1) * 2; const y = (i % 2 ? 0.15 : -0.2) * ry; const r = S * 0.048 * sc; dot(x, y, r, col2); dot(x, y, r * 0.68, hsl(a1, 55, 22, 0.9)); dot(x, y, r * 0.42, hsl(a2, 70, 60, 0.9)); dot(x - r * 0.2, y - r * 0.25, r * 0.14, 'rgba(255,255,255,0.85)'); } break;
+      case 'marble': ctx.lineCap = 'round'; for (let i = 0; i < n(6); i++) { const y = (prand(i + 13) * 2 - 1) * ry * 0.8; ctx.beginPath(); ctx.moveTo(-rx, y); ctx.bezierCurveTo(-rx * 0.3, y - ry * (prand(i + 3) - 0.5), rx * 0.3, y + ry * (prand(i + 5) - 0.5), rx, y + ry * 0.3 * (prand(i + 9) - 0.5)); ctx.strokeStyle = i % 2 ? hsl(a2, 40, 78, 0.5) : hsl(a1, 45, 32, 0.45); ctx.lineWidth = S * (0.006 + prand(i) * 0.012) * sc; ctx.stroke(); } break;
+      case 'harlequin': { const d = S * 0.06 * sc; for (let y = -ry - d, row = 0; y < ry + d; y += d, row++) for (let x = -rx - d, c = 0; x < rx + d; x += d, c++) { if ((row + c) % 2) continue; ctx.beginPath(); ctx.moveTo(x, y - d / 2); ctx.lineTo(x + d / 2, y); ctx.lineTo(x, y + d / 2); ctx.lineTo(x - d / 2, y); ctx.closePath(); ctx.fillStyle = row % 2 ? col : col2; ctx.fill(); } break; }
+      case 'lightning': glow(hsl(a2, 85, 65), 6, () => { ctx.lineJoin = 'miter'; for (let i = 0; i < n(3); i++) { let x = -rx * 0.6 + i * rx * 0.6; let y = -ry; ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (k % 2 ? -1 : 1) * rx * 0.12 * sc; y += ry * 0.42; ctx.lineTo(x, y); } ctx.strokeStyle = hsl(a2, 85, 68, 0.9); ctx.lineWidth = S * 0.012 * sc; ctx.stroke(); } }); break;
       default: break;
     }
   }
@@ -113,6 +122,11 @@ window.G = window.G || {};
   function finish(L, x, y, rx, ry) {
     if (L.finish === 'glossy') { ctx.beginPath(); ctx.ellipse(x - rx * 0.2, y - ry * 0.5, rx * 0.45, ry * 0.18, -0.15, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.fill(); }
     if (L.finish === 'glowing') glow(hsl(L.accent != null ? L.accent : 175, 85, 65), 14, () => { ctx.beginPath(); ctx.ellipse(x, y, rx * 1.01, ry * 1.01, 0, 0, Math.PI * 2); ctx.strokeStyle = hsl(L.accent != null ? L.accent : 175, 85, 70, 0.8); ctx.lineWidth = 2.5; ctx.stroke(); });
+    // The Creature Wardrobe's finishes (drawn inside the clipped body).
+    if (L.finish === 'velvet') { const g = ctx.createRadialGradient(x, y - ry * 0.2, Math.min(rx, ry) * 0.3, x, y, Math.max(rx, ry) * 1.05); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,0,20,0.38)'); ctx.fillStyle = g; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2); }
+    if (L.finish === 'pearl') { const g = ctx.createLinearGradient(x - rx, y - ry, x + rx, y + ry); g.addColorStop(0, 'rgba(255,220,240,0.28)'); g.addColorStop(0.5, 'rgba(255,255,255,0.12)'); g.addColorStop(1, 'rgba(200,230,255,0.28)'); ctx.fillStyle = g; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2); ctx.beginPath(); ctx.ellipse(x - rx * 0.25, y - ry * 0.45, rx * 0.35, ry * 0.14, -0.2, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(); }
+    if (L.finish === 'metallic') { const g = ctx.createLinearGradient(x, y - ry, x, y + ry); g.addColorStop(0, 'rgba(255,255,255,0.05)'); g.addColorStop(0.28, 'rgba(255,255,255,0.5)'); g.addColorStop(0.4, 'rgba(255,255,255,0.05)'); g.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = g; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2); }
+    if (L.finish === 'sparkle') { const now = performance.now() / 1000; for (let i = 0; i < 7; i++) { const a = (Math.sin(now * 2.5 + i * 1.9) + 1) / 2; if (a < 0.4) continue; const sx = x + (prand(i + 201) * 2 - 1) * rx * 0.8; const sy = y + (prand(i + 221) * 2 - 1) * ry * 0.7; const r = Math.min(rx, ry) * 0.09 * a; ctx.beginPath(); ctx.moveTo(sx, sy - r); ctx.lineTo(sx + r * 0.25, sy - r * 0.25); ctx.lineTo(sx + r, sy); ctx.lineTo(sx + r * 0.25, sy + r * 0.25); ctx.lineTo(sx, sy + r); ctx.lineTo(sx - r * 0.25, sy + r * 0.25); ctx.lineTo(sx - r, sy); ctx.lineTo(sx - r * 0.25, sy - r * 0.25); ctx.closePath(); ctx.fillStyle = `rgba(255,255,255,${0.9 * a})`; ctx.fill(); } }
   }
   const bellyCol = (L, hue) => (L.belly != null ? hsl(L.belly, 45, 72) : null);
 
@@ -618,6 +632,14 @@ window.G = window.G || {};
   function drawHead(p, hx, hy, hr, hue, body, dark, t, S, L) {
     L = L || {};
     const H = p.__H; const E = p.__E;
+    // Collar (Wardrobe): a hood, a frill, a mane or a crown of spikes, behind the head.
+    if (L.collar && L.collar !== 'none') {
+      const ac = hsl(L.accent != null ? L.accent : hue + 40, 55, 52); const ac2 = hsl(L.accent2 != null ? L.accent2 : hue + 70, 55, 62);
+      if (L.collar === 'hood') { ctx.beginPath(); ctx.ellipse(hx - hr * 0.35, hy - hr * 0.05, hr * 1.25, hr * 1.7, 0, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); ctx.beginPath(); ctx.ellipse(hx - hr * 0.35, hy, hr * 0.95, hr * 1.35, 0, 0, Math.PI * 2); ctx.fillStyle = ac; ctx.fill(); }
+      if (L.collar === 'frill') for (let k = 0; k < 9; k++) { const a = Math.PI * 0.55 + (k / 8) * Math.PI * 0.95; tri(hx - hr * 0.2 + Math.cos(a - 0.17) * hr * 0.8, hy + Math.sin(a - 0.17) * hr * 0.8, hx - hr * 0.2 + Math.cos(a) * hr * 1.9, hy + Math.sin(a) * hr * 1.9, hx - hr * 0.2 + Math.cos(a + 0.17) * hr * 0.8, hy + Math.sin(a + 0.17) * hr * 0.8, k % 2 ? ac : ac2); }
+      if (L.collar === 'mane') for (let k = 0; k < 14; k++) { const a = Math.PI * 0.5 + (k / 13) * Math.PI * 1.05; const r = hr * (1.25 + prand(k + 401) * 0.4); ctx.beginPath(); ctx.ellipse(hx - hr * 0.25 + Math.cos(a) * r * 0.75, hy + Math.sin(a) * r * 0.75, hr * 0.38, hr * 0.2, a, 0, Math.PI * 2); ctx.fillStyle = k % 2 ? dark : hsl(L.accent != null ? L.accent : hue + 20, 40, 35); ctx.fill(); }
+      if (L.collar === 'crown') for (let k = 0; k < 5; k++) { const a = -Math.PI * 0.85 + k * Math.PI * 0.17; tri(hx + Math.cos(a - 0.12) * hr * 0.85, hy + Math.sin(a - 0.12) * hr * 0.85, hx + Math.cos(a) * hr * (1.9 + (k % 2) * 0.35), hy + Math.sin(a) * hr * (1.9 + (k % 2) * 0.35), hx + Math.cos(a + 0.12) * hr * 0.85, hy + Math.sin(a + 0.12) * hr * 0.85, k % 2 ? BONE : ac2); }
+    }
     if (H.has('great_ears')) [-0.5, -0.1].forEach((dx) => tri(hx + dx * hr - 6, hy - hr * 0.6, hx + dx * hr - 14, hy - hr * 2, hx + dx * hr + 8, hy - hr * 0.7, dark));
     if (L.head === 'snout') { ctx.beginPath(); ctx.ellipse(hx + hr * 0.7, hy + hr * 0.15, hr * 0.95, hr * 0.5, 0.1, 0, Math.PI * 2); ctx.fillStyle = body; ctx.fill(); }
     if (L.head === 'big') dot(hx - hr * 0.15, hy - hr * 0.45, hr * 0.95, body);
@@ -870,11 +892,14 @@ window.G = window.G || {};
       // Jellyfish: a pulsing bell with trailing tentacles.
       const pulse = 1 + Math.sin(t * 3) * 0.06;
       const by = cy - S * 0.08;
+      // Bell shape from the Wardrobe: dome, tall bell, saucer or frilled.
+      const BW = { tall: 1.1, saucer: 1.75 }[L.bell] || 1.4; const BH = { tall: 1.55, saucer: 0.7 }[L.bell] || 1.1;
       for (let i = 0; i < n * 2; i++) { const x = cx - R * 1.1 + (i / (n * 2 - 1)) * R * 2.2; wavy(x, by + R * 0.3, armLen * (1.1 + (i % 3) * 0.25), Math.PI / 2, S * 0.025, t, i % 2 ? dark : (accent || light), S * 0.012, i); }
-      ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.closePath();
+      ctx.beginPath(); ctx.ellipse(cx, by, R * BW * pulse, R * BH / pulse, 0, Math.PI, 0); ctx.closePath();
       const g = ctx.createRadialGradient(cx, by - R * 0.6, R * 0.2, cx, by, R * 1.5); g.addColorStop(0, light); g.addColorStop(1, hsl(hue, 55, 50, 0.85));
       ctx.fillStyle = G.CUTOUT ? hsl(hue, 55, 58) : g; ctx.fill();
-      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.4 * pulse, R * 1.1 / pulse, 0, Math.PI, 0); ctx.clip(); ctx.translate(cx, by - R * 0.5); pattern(L, R * 1.4, R, S, hue, t); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * BW * pulse, R * BH / pulse, 0, Math.PI, 0); ctx.clip(); ctx.translate(cx, by - R * 0.5); pattern(L, R * BW, R * BH, S, hue, t); finish(L, 0, R * 0.2, R * BW, R * BH); ctx.restore();
+      if (L.bell === 'frilled') for (let k = 0; k <= 12; k++) { const fx = cx - R * BW * pulse + (k / 12) * R * BW * pulse * 2; dot(fx, by + R * 0.04, R * 0.16, k % 2 ? light : hsl(L.accent != null ? L.accent : hue + 40, 55, 60)); }
       if (H.has('back_spines') || E.back) for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * (Math.PI / 7); tri(cx + Math.cos(a) * R * 1.35 - 4, by + Math.sin(a) * R * 1.05, cx + Math.cos(a) * R * 1.75, by + Math.sin(a) * R * 1.45, cx + Math.cos(a) * R * 1.35 + 4, by + Math.sin(a) * R * 1.05, accent || BONE); }
       if (H.has('biolume_skin') || H.has('glow_eyes') || accent) glow(accent || GLOW, 12, () => { for (let i = 0; i < 6; i++) dot(cx - R + i * R * 0.4, by - R * 0.15, S * 0.008, accent || GLOW); });
       const eyes = G.eyesFrom([...H]) + (E.senses && G.eyesFrom([...H]) ? 2 : 0);
@@ -889,6 +914,8 @@ window.G = window.G || {};
     const ccy = ground - R * 0.6;
     ctx.beginPath(); ctx.ellipse(cx, ground, R * 2.4, R * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     const arms = Array.from({ length: n }, (_, i) => spin + (i / n) * Math.PI * 2).sort((a1, a2) => Math.sin(a1) - Math.sin(a2));
+    // Webbed arms (Wardrobe): a skin stretched between neighbouring arms, behind them.
+    if (L.armStyle === 'webbed') { ctx.beginPath(); for (let i = 0; i <= n; i++) { const a = spin + (i / n) * Math.PI * 2; const r = armLen * 0.62; const x = cx + Math.cos(a) * r; const y = ccy + Math.sin(a) * r * tilt + R * 0.3; if (i) ctx.quadraticCurveTo(cx + Math.cos(a - Math.PI / n) * r * 0.6, ccy + Math.sin(a - Math.PI / n) * r * 0.6 * tilt + R * 0.3, x, y); else ctx.moveTo(x, y); } ctx.fillStyle = hsl(hue, 45, 55, 0.55); ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.stroke(); }
     arms.forEach((a, i) => {
       const curl = Math.sin(t * 2 + i) * 0.08;
       const ex = cx + Math.cos(a + curl) * armLen; const ey = ccy + Math.sin(a + curl) * armLen * tilt + R * 0.3;
@@ -898,6 +925,8 @@ window.G = window.G || {};
       ctx.quadraticCurveTo((cx + ex) / 2 - nx * 0.7, (ccy + ey) / 2 - ny * 0.7 - R * 0.15, cx - nx, ccy - ny); ctx.closePath();
       ctx.fillStyle = Math.sin(a) < 0 ? hsl(hue, 45, 45) : body; ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.stroke();
       for (let k = 1; k <= 3; k++) dot(cx + (ex - cx) * (0.3 + k * 0.17), ccy + (ey - ccy) * (0.3 + k * 0.17), wd * 0.18, light);
+      if (L.armStyle === 'knobbly') for (let k = 1; k <= 5; k++) dot(cx + (ex - cx) * (0.15 + k * 0.15) + nx * 0.4, ccy + (ey - ccy) * (0.15 + k * 0.15) + ny * 0.4, wd * 0.24, hsl(L.accent != null ? L.accent : hue + 30, 50, 62));
+      if (L.armStyle === 'curled') { ctx.beginPath(); ctx.arc(ex, ey - wd * 0.3, wd * 0.45, a, a + Math.PI * 1.5); ctx.strokeStyle = body; ctx.lineWidth = wd * 0.5; ctx.lineCap = 'round'; ctx.stroke(); }
       if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let k = 1; k <= 3; k++) { const x = cx + (ex - cx) * k / 4; const y = ccy + (ey - ccy) * k / 4; tri(x - 3, y, x, y - R * 0.35, x + 3, y, H.has('venom_quills') ? VENOM : (accent || BONE)); }
       if (H.has('bony_plates_f') || H.has('scales') || H.has('carapace')) for (let k = 1; k <= 2; k++) dot(cx + (ex - cx) * k / 3, ccy + (ey - ccy) * k / 3 - 2, R * 0.12, SHELL);
       if (p.hands) for (let k = -1; k <= 1; k++) line(ex, ey, ex + Math.cos(a + k * 0.5) * R * 0.3, ey + Math.sin(a + k * 0.5) * R * 0.3 * tilt, BONE, 2);
@@ -906,7 +935,7 @@ window.G = window.G || {};
     ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2);
     const g = ctx.createRadialGradient(cx - R * 0.3, ccy - R * 0.3, 1, cx, ccy, R * 1.2); g.addColorStop(0, light); g.addColorStop(1, body);
     ctx.fillStyle = G.CUTOUT ? body : g; ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, ccy); pattern(L, R, R * 0.75, S, hue, t); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ccy, R, R * 0.75, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, ccy); pattern(L, R, R * 0.75, S, hue, t); finish(L, 0, 0, R, R * 0.75); ctx.restore();
     if (E.skin || H.has('biolume_skin')) glow(accent || GLOW, 12, () => { ctx.beginPath(); ctx.ellipse(cx, ccy, R * 1.05, R * 0.8, 0, 0, Math.PI * 2); ctx.strokeStyle = accent || GLOW; ctx.lineWidth = 2; ctx.stroke(); });
     const eyes = Math.min(8, G.eyesFrom([...H]) + (E.senses && G.eyesFrom([...H]) ? 3 : 0));
     for (let i = 0; i < eyes; i++) { const a = Math.PI * 1.1 + (i / Math.max(1, eyes - 1)) * Math.PI * 0.8; const ex = cx + Math.cos(a) * R * 0.55; const ey = ccy + Math.sin(a) * R * 0.4; const er = R * 0.14 * (L.eyes === 'huge' ? 1.5 : 1); dot(ex, ey, er, '#fff'); dot(ex + 1, ey, er * 0.5, '#1c1414'); eyeStyle(L, ex, ey, er, body, dark); }
@@ -933,11 +962,18 @@ window.G = window.G || {};
       ctx.strokeStyle = dark; ctx.lineWidth = R * 0.34 * (L.legLen || 1); ctx.lineCap = 'round'; ctx.stroke();
       dot(ex, ey, R * 0.22 * (L.legLen || 1), dark);
     }
-    const lumps = [[0, 0, 1], [-0.65, 0.15, 0.6], [0.6, 0.2, 0.62], [-0.25, -0.55, 0.55], [0.35, -0.45, 0.5], [0.85, -0.2, 0.38], [-0.85, -0.25, 0.4]];
+    // Colony style (Wardrobe): lumpy, bubbly, crystal or stacked.
+    const lumps = L.colony === 'stacked' ? [[0, 0.25, 0.9], [-0.7, 0.3, 0.5], [0.7, 0.3, 0.5], [0, -0.5, 0.7], [0, -1.1, 0.5], [0.05, -1.55, 0.32]]
+      : [[0, 0, 1], [-0.65, 0.15, 0.6], [0.6, 0.2, 0.62], [-0.25, -0.55, 0.55], [0.35, -0.45, 0.5], [0.85, -0.2, 0.38], [-0.85, -0.25, 0.4]];
     ctx.save(); ctx.translate(cx, by); ctx.scale(sx, sy); ctx.translate(-cx, -by);
-    lumps.forEach(([dx, dy, r], i) => { const wob = 1 + Math.sin(t * 2 + i * 1.7) * 0.05; dot(cx + dx * R, by + dy * R, r * R * wob, i % 2 ? body : light); });
+    lumps.forEach(([dx, dy, r], i) => {
+      const wob = 1 + Math.sin(t * 2 + i * 1.7) * 0.05; const x = cx + dx * R; const y = by + dy * R;
+      if (L.colony === 'crystal') { ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + i * 0.4; ctx.lineTo(x + Math.cos(a) * r * R * wob, y + Math.sin(a) * r * R * wob * 1.1); } ctx.closePath(); ctx.fillStyle = i % 2 ? body : light; ctx.fill(); ctx.strokeStyle = hsl(hue, 45, 80, 0.7); ctx.lineWidth = 1.2; ctx.stroke(); }
+      else dot(x, y, r * R * wob, i % 2 ? body : light);
+    });
+    if (L.colony === 'bubbly') for (let i = 0; i < 16; i++) { const x = cx + (prand(i + 301) * 2 - 1) * R * 1.05; const y = by + (prand(i + 331) * 2 - 1) * R * 0.75; const r = R * (0.08 + prand(i + 351) * 0.12) * (1 + Math.sin(t * 3 + i) * 0.08); dot(x, y, r, hsl(hue, 50, 74, 0.85)); dot(x - r * 0.3, y - r * 0.3, r * 0.3, 'rgba(255,255,255,0.6)'); }
     ctx.restore();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.2 * sx, R * 0.9 * sy, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, by); pattern(L, R * 1.2 * sx, R * 0.9 * sy, S, hue, t); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, by, R * 1.2 * sx, R * 0.9 * sy, 0, 0, Math.PI * 2); ctx.clip(); ctx.translate(cx, by); pattern(L, R * 1.2 * sx, R * 0.9 * sy, S, hue, t); finish(L, 0, 0, R * 1.2 * sx, R * 0.9 * sy); ctx.restore();
     if (H.has('moss_garden') || H.has('lichen_hide') || H.has('kelp_garden')) for (let i = 0; i < 6; i++) dot(cx - R * sx + i * R * 0.4 * sx, by - R * 0.7 * sy + (i % 2) * 6, S * 0.02, PLANT);
     if (H.has('back_spines') || H.has('venom_quills') || E.back) for (let i = 0; i < 6; i++) { const x = cx - R * 0.8 * sx + i * R * 0.32 * sx; tri(x - 4, by - R * 0.6 * sy, x, by - R * 0.6 * sy - R * 0.45, x + 4, by - R * 0.6 * sy, H.has('venom_quills') ? VENOM : (accent || BONE)); }
     if (E.skin || accent) glow(accent || GLOW, 10, () => { for (let i = 0; i < 8; i++) dot(cx + (-R + (i * 37 % 20) / 10 * R) * sx, by + (-R * 0.4 + ((i * 53) % 10) / 10 * R * 0.8) * sy, S * 0.008, accent || GLOW); });
@@ -948,6 +984,10 @@ window.G = window.G || {};
     FACE = { x: cx + R * 0.3 * sx, y: by - R * 0.35 * sy, r: R * 0.11, mx: cx + R * 0.35 * sx, my: by + R * 0.25 * sy, top: by - R * sy, skin: body, s: S * 0.5, noEyes: !eyes };
   }
 
+  // How each pattern shows along a serpent's body: as cross-stripes, as spots, or as a shading along its length.
+  const SERPENT_STRIPE = ['stripes', 'bands', 'tiger', 'chevrons', 'lightning', 'harlequin'];
+  const SERPENT_SPOT = ['spots', 'rosettes', 'eyespots', 'speckles', 'dapple', 'glowspots', 'rings', 'patches', 'marble'];
+  const SERPENT_SHADE = ['gradient', 'countershade', 'iridescent'];
   // No legs: a snake on land, an eel at sea.
   function drawSerpent(b, cx, cy, S, t) {
     const { p, accent, L, H, E } = look(b);
@@ -960,9 +1000,14 @@ window.G = window.G || {};
     if (!sea) { ctx.beginPath(); ctx.ellipse(cx, ground, len * 0.55, S * 0.025, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill(); }
     for (let i = 0; i < pts.length; i++) {
       const u = i / (pts.length - 1); const w = thick * (0.35 + 0.65 * Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.5));
-      dot(pts[i][0], pts[i][1], w, i % 2 ? body : hsl(hue, 52, 58));
-      if (L.pattern === 'stripes' && i % 3 === 0) line(pts[i][0], pts[i][1] - w, pts[i][0], pts[i][1] + w, hsl(L.accent != null ? L.accent : hue + 40, 55, 40), 3);
-      if ((L.pattern === 'spots' || H.has('warning_skin')) && i % 4 === 2) dot(pts[i][0], pts[i][1] - w * 0.3, w * 0.35, H.has('warning_skin') ? '#f2c14e' : hsl(L.accent != null ? L.accent : hue + 40, 55, 40));
+      const ac = L.accent != null ? L.accent : hue + 40; const ac2 = L.accent2 != null ? L.accent2 : ac + 30;
+      // Shading patterns blend the body colour toward the pattern colour along its length.
+      const shade = SERPENT_SHADE.includes(L.pattern) ? (L.pattern === 'iridescent' ? hsl((hue + u * 200 + t * 40) % 360, 60, 58) : L.pattern === 'countershade' ? hsl(hue, 45, 48 + (i % 2) * 6) : hsl(hue + (ac - hue) * u, 52, 56)) : null;
+      dot(pts[i][0], pts[i][1], w, shade || (i % 2 ? body : hsl(hue, 52, 58)));
+      if (SERPENT_STRIPE.includes(L.pattern) && i % 3 === 0) { if (L.pattern === 'chevrons') { ctx.beginPath(); ctx.moveTo(pts[i][0] - w * 0.5, pts[i][1] - w); ctx.lineTo(pts[i][0] + w * 0.3, pts[i][1]); ctx.lineTo(pts[i][0] - w * 0.5, pts[i][1] + w); ctx.strokeStyle = hsl(ac, 55, 40); ctx.lineWidth = 3; ctx.stroke(); } else line(pts[i][0], pts[i][1] - w, pts[i][0], pts[i][1] + w, hsl((i / 3) % 2 ? ac2 : ac, 55, L.pattern === 'lightning' ? 65 : 40), L.pattern === 'bands' || L.pattern === 'harlequin' ? 5 : 3); }
+      if ((SERPENT_SPOT.includes(L.pattern) || H.has('warning_skin')) && i % (L.pattern === 'speckles' ? 2 : 4) === 2) { const r = w * (L.pattern === 'speckles' ? 0.18 : L.pattern === 'eyespots' ? 0.5 : 0.35); dot(pts[i][0], pts[i][1] - w * 0.3, r, H.has('warning_skin') ? '#f2c14e' : hsl((i / 4) % 2 ? ac2 : ac, 55, L.pattern === 'dapple' ? 72 : 40)); if (L.pattern === 'eyespots' || L.pattern === 'rings') dot(pts[i][0], pts[i][1] - w * 0.3, r * 0.5, hsl(ac2, 60, 20)); }
+      if (L.pattern === 'scales' && i % 2 === 0) { ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], w * 0.65, 0, Math.PI); ctx.strokeStyle = hsl(ac, 40, 32, 0.7); ctx.lineWidth = 1.2; ctx.stroke(); }
+      if ((L.finish === 'glossy' || L.finish === 'pearl' || L.finish === 'metallic') && i % 2 === 0) dot(pts[i][0] - w * 0.2, pts[i][1] - w * 0.55, w * 0.22, `rgba(255,255,255,${L.finish === 'metallic' ? 0.55 : 0.32})`);
       if ((H.has('back_spines') || H.has('venom_quills') || E.back) && i % 3 === 1 && u > 0.15 && u < 0.9) tri(pts[i][0] - 4, pts[i][1] - w * 0.8, pts[i][0], pts[i][1] - w * 1.9, pts[i][0] + 4, pts[i][1] - w * 0.8, H.has('venom_quills') ? VENOM : (accent || BONE));
       if ((H.has('scales') || H.has('swift_scales')) && i % 2 === 0) { ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], w * 0.6, 0, Math.PI); ctx.strokeStyle = hsl(hue, 40, 40, 0.6); ctx.lineWidth = 1.2; ctx.stroke(); }
       if (H.has('mottled_skin') && i % 3 === 1) dot(pts[i][0] + 2, pts[i][1] - w * 0.2, w * 0.45, i % 2 ? hsl(hue + 30, 30, 32, 0.6) : hsl(90, 25, 38, 0.55));
@@ -2555,4 +2600,4 @@ window.G = window.G || {};
   G.stopScene = function () { if (sceneFrame) cancelAnimationFrame(sceneFrame); sceneFrame = null; };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).render = '21.8';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).render = '21.9';
