@@ -91,6 +91,13 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.12: Characters and the Council
+
+- **Councillors are people** (Society, Renaissance, Colonial Age): `pers` (one of `G.PERSONALITIES`, assigned from the name for older saves) sets how much loyalty they gain when granted and lose when refused, and a small drift each generation. `memory` keeps the last four things you did to them, shown in the Council tab.
+- **Requests** (`G.REQUESTS`, 11): every 7–12 generations a councillor who is not plotting asks for something fitting their role, more often something their personality likes. `pay` requests (granary, feast, walls, temple, gifts, a personal favour) can be granted, haggled for half (a Charm check; failure counts as refusing) or refused. `goal` requests (fill the stores, drill the army, punish your rival, a new idea, grow the realm) can be promised, with a deadline, or refused. Promises are checked each generation (`councilTurn`): kept means loyalty +15, a reward and 10 Strain off; broken means loyalty −15 and +8 Strain. A councillor at −60 loyalty quits and is replaced.
+- **Strain** (`run.strain`, 0–100) on your ruler: +10 per refusal, +8 per broken promise or resignation, +6 for granting a request against your Disposition. It eases by 1 every 3 generations. At 40, −1 Charm and Cunning. At `G.STRAIN_BREAK` (70) comes `ruler_breakdown`: your ruler gains Cruel or Lazy, or you try a Charm check to lean on the council (fail: Fearful).
+- **Tested** with bot campaigns: about one request every 10 generations, all 11 kinds, promises kept and broken, councillors quitting, and Strain reaching 55 for a careless player. A breakdown and a resignation were checked directly on a captured Society game.
+
 ## Patch 21.11: Rivals
 
 - **One Rival per lineage** (`run.rival`): born at the start of the Creature stage from the species most against you (a rival or predator), or earlier when a species becomes your nemesis. If a past rival is waiting (`meta.rivals`, kept when a rival of level 2+ outlives a lineage), it returns 60% of the time with its name, level − 1 and two of its adaptations.

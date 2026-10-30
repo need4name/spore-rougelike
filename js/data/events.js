@@ -3661,5 +3661,29 @@ G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
     G.EVENT[`dec_${d.id}`] = { ...d.event, id: `dec_${d.id}`, decision: d.id, stage: d.stage, prop: 'social', tags: ['decision'] };
   });
 }());
+// ======================= COUNCIL REQUESTS AND THE RULER'S STRAIN =======================
+// Each request in G.REQUESTS becomes an event (req_<id>): grant, bargain or refuse; or promise, or refuse.
+(function () {
+  const word = (c) => (c.food ? `${c.food} Food` : c.special ? `${c.special} of your resource` : c.dna ? `${c.dna} of your progress` : 'nothing');
+  const half = (c) => { const h = {}; Object.entries(c).forEach(([k, v]) => { h[k] = Math.ceil(v / 2); }); return h; };
+  G.REQUESTS.forEach((r) => {
+    const options = r.kind === 'pay' ? [
+      { label: 'Grant it', hint: `Costs ${word(r.cost)}`, req: r.cost, result: { text: '{asker} bows. It will be done.', reqGrant: true, anim: 'social' } },
+      { label: 'Haggle', hint: `Try for half (${word(half(r.cost))})`, req: half(r.cost), check: { stat: 'cha', diff: 5 }, success: { text: 'You meet halfway. {asker} is satisfied, mostly.', reqGrant: 'half', anim: 'social' }, fail: { text: '{asker} is insulted by the haggling.', reqRefuse: true } },
+      { label: 'Refuse', result: { text: '{asker} says nothing. They will remember.', reqRefuse: true } },
+    ] : [
+      { label: 'Promise it', hint: r.label, result: { text: '{asker} will hold you to it.', reqAccept: true, anim: 'social' } },
+      { label: 'Refuse', result: { text: '{asker} says nothing. They will remember.', reqRefuse: true } },
+    ];
+    G.EVENT[`req_${r.id}`] = { id: `req_${r.id}`, title: r.title, text: r.text, options, request: r.id, stage: ['society', 'renaissance', 'colonial'], prop: 'social', tags: ['social'] };
+  });
+  G.EVENT.ruler_breakdown = { id: 'ruler_breakdown', title: 'The Weight of the Crown', stage: ['society', 'renaissance', 'colonial'], prop: 'social', tags: ['social'],
+    text: 'Refusals, broken promises and quarrels: it has all become too much for your ruler. Something gives.',
+    options: [
+      { label: 'Lash out', hint: 'Your ruler grows cruel', result: { text: 'Your ruler takes it out on everyone around them.', rulerTrait: 'cruel', strainSet: 20, loyalty: -10, anim: 'attack' } },
+      { label: 'Withdraw from it all', hint: 'Your ruler grows idle', result: { text: 'Your ruler stops listening, and finds some peace.', rulerTrait: 'lazy', strainSet: 15, anim: 'rest' } },
+      { label: 'Lean on the council', check: { stat: 'cha', diff: 5 }, success: { text: 'The council rallies round. The worst passes.', strainSet: 10, loyalty: 10, anim: 'social' }, fail: { text: 'The council sees only weakness.', rulerTrait: 'fearful', strainSet: 30, loyalty: -5 } },
+    ] };
+}());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.11';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.12';

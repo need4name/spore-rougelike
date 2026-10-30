@@ -836,3 +836,8 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .rival-card.ended { background: var(--panel); border-color: var(--line); }
 .rival-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .rival-card .pill { font-size: 0.75rem; padding: 1px 8px; border-radius: 99px; background: var(--bad); color: #2b0d08; }
+
+/* Characters and the Council (Patch 21.12) */
+.strain-bar { display: block; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 30%, transparent); overflow: hidden; margin-top: 4px; }
+.strain-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--good, #8fd16a), #f2b544 50%, var(--bad)); }
+.callout .memory { font-size: 0.8rem; color: var(--muted); font-style: italic; }

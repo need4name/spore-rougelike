@@ -582,7 +582,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - **Agents** join or refuse depending on your traits and gifts. **Secrets** you uncover can be kept, used as leverage, or traded.
 - Others scheme against you too: you get warnings, not certainties.
 
-### 3. Characters and the Council Room ("people with opinions")
+### 3. Characters and the Council Room ("people with opinions") ✅ (Patch 21.12, for the Society stage on; Tribe-stage characters still to come)
 - From the Tribe stage on, leaders, keepers and heirs are **people with traits, memories and opinions of you**. Ask too much of them and they refuse, leave or plot.
 - **Requests:** council members come to you wanting things (a war, a temple, a marriage). Grant them, refuse them, or bargain.
 - **Temperament and stress:** your lineage's temperament (from the Mind stage) makes some choices cost **Strain** when you act against it. Too much Strain brings breakdowns that can become new traits.

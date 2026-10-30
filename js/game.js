@@ -901,7 +901,8 @@ window.G = window.G || {};
   function sub(text, run, speciesIdx) {
     const s = speciesIdx != null && speciesIdx >= 0 ? run.species[speciesIdx] : null;
     const words = G.wordsFor(run);
-    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others').replace(/\{(\w+)\}/g, (m, k) => (words[k] != null ? words[k] : m));
+    const rq = run.request || run.lastAsker;
+    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others').replace(/\{asker\}/g, rq ? rq.name : 'a councillor').replace(/\{askerRole\}/g, rq ? G.COUNCIL_ROLES[rq.role].name : 'Your').replace(/\{(\w+)\}/g, (m, k) => (words[k] != null ? words[k] : m));
   }
   G.sub = sub;
   // Words that change with your body, so shared events read right on land and at sea.
@@ -1549,6 +1550,9 @@ window.G = window.G || {};
     if (eff.heirTrait && run.heir) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !run.heir.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) { run.heir.traits.push(pick(good)); lines.push({ t: `Your heir, ${run.heir.name}, grows into the role`, good: true }); } }
     if (eff.newHeir && run.stage === 'colonial') { run.heir = newHeir(run); lines.push({ t: `${run.heir.name} is the new heir` }); }
     // Lasting changes to a society, from what it has lived through.
+    if (eff.reqGrant || eff.reqRefuse || eff.reqAccept) lines.push(...answerRequest(run, eff));
+    if (eff.rulerTrait && run.leader && !run.leader.traits.includes(eff.rulerTrait)) { run.leader.traits.push(eff.rulerTrait); lines.push({ t: `Your ruler is now ${G.LEADER_TRAITS[eff.rulerTrait].name}: ${G.describeMods(G.LEADER_TRAITS[eff.rulerTrait].mods)}` }); }
+    if (eff.strainSet != null) { run.strain = eff.strainSet; lines.push({ t: `Strain ${eff.strainSet}`, good: true }); }
     if (eff.rivalEnd && G.rivalActive(run)) lines.push(...G.endRival(run, eff.rivalEnd));
     if (eff.rivalGrow && G.rivalActive(run)) { const a = G.rivalGrow(run, true); if (a) lines.push({ t: `The ${run.rival.name} adapt: ${a.name}`, bad: true }); }
     // A lasting effect from a decision: its modifiers hold for the rest of this stage (or for good, with lasting: true).
@@ -1722,6 +1726,84 @@ window.G = window.G || {};
     if (hz && G.biomeMatters(run)) w *= (G.biome(run).hazards || []).includes(hz) ? 3 : 0.35;
     if (hz && G.mindRule(run, 'hazard_sense')) w *= 0.6;
     return w;
+  }
+
+  // ---------- Characters and the Council ----------
+  // Councillors are people: a personality, a memory of how you treated them, and requests of their own.
+  // Your ruler carries the Strain of refusals and broken promises; too much, and they break.
+  G.personality = (c) => { if (!c.pers) { const keys = Object.keys(G.PERSONALITIES); let h = 0; for (const ch of c.name || '') h = (h * 31 + ch.charCodeAt(0)) | 0; c.pers = keys[Math.abs(h) % keys.length]; } return G.PERSONALITIES[c.pers]; };
+  G.treeCount = (run) => (run.traditions || []).length + (run.reason || []).length + (run.crown || []).length;
+  const remember = (c, text, v) => { c.memory = [{ turn: G.run ? G.run.turn : 0, text, v }].concat(c.memory || []).slice(0, 4); };
+  const councillorNamed = (run, name) => (run.council || []).find((c) => c.name === name) || null;
+  const addStrain = (run, n, why, lines) => { if (!run.leader) return; run.strain = clamp((run.strain || 0) + n, 0, 100); if (lines && n > 0) lines.push({ t: `+${n} Strain on your ruler (${why})`, bad: true }); };
+  G.makeRequest = function (run) {
+    const pool = (run.council || []).map((c, i) => ({ c, i })).filter(({ c, i }) => c.loyalty > -30 && run.plot !== i);
+    if (!pool.length) return false;
+    const { c, i } = pick(pool); const pers = G.personality(c) && c.pers;
+    const recent = run.recentRequests || [];
+    const reqs = G.REQUESTS.filter((r) => r.roles.includes(c.role) && !recent.includes(r.id) && (!r.when || r.when(run)));
+    if (!reqs.length) return false;
+    const r = weightedPick(reqs, (x) => (x.likes.includes(pers) ? 3 : 1));
+    run.request = { id: r.id, who: i, name: c.name, role: c.role };
+    run.recentRequests = [r.id].concat(recent).slice(0, 4);
+    setEvent(run, G.EVENT[`req_${r.id}`], -1);
+    return true;
+  };
+  function answerRequest(run, eff) {
+    const lines = []; const rq = run.request; const r = rq && G.REQUEST[rq.id];
+    if (!r) return lines;
+    const c = councillorNamed(run, rq.name); const P = c ? G.personality(c) : G.PERSONALITIES.steadfast;
+    const loyal = (v, text) => { if (!c) return; c.loyalty = clamp(c.loyalty + v, -100, 100); remember(c, text, v); lines.push({ t: `${c.name} ${v >= 0 ? 'is pleased' : 'is angered'} (loyalty ${v >= 0 ? '+' : '−'}${Math.abs(v)})`, good: v > 0, bad: v < 0 }); };
+    if (eff.reqGrant) {
+      const half = eff.reqGrant === 'half';
+      const k = (n) => (half ? Math.ceil(n / 2) : n);
+      const cost = r.cost || {};
+      if (cost.food) G.spendFood(run, k(cost.food));
+      if (cost.special) run.special = Math.max(0, (run.special || 0) - k(cost.special));
+      if (cost.dna) run.dna = Math.max(0, run.dna - k(cost.dna));
+      lines.push(...applyEffects(run, r.effect || {}));
+      loyal(half ? P.granted - 4 : P.granted, half ? `You granted ${r.title.toLowerCase()}, after haggling` : `You granted ${r.title.toLowerCase()}`);
+      const disp = G.disposition(run);
+      if (r.lean && disp && r.lean !== disp) addStrain(run, 6, `it went against your ${G.LEAN_NAMES[disp].toLowerCase()} nature`, lines);
+    } else if (eff.reqAccept) {
+      (run.goals = run.goals || []).push({ id: r.id, who: rq.name, role: rq.role, start: r.start ? r.start(run) : {}, until: run.turn + r.turns });
+      loyal(4, `You promised: ${r.title.toLowerCase()}`);
+      lines.push({ t: `Promise: ${r.label}, within ${r.turns} ${G.STAGES[run.stage].turnName.toLowerCase()}s`, good: true });
+    } else if (eff.reqRefuse) {
+      loyal(P.refused, `You refused ${r.title.toLowerCase()}`);
+      addStrain(run, 10, 'a refused councillor', lines);
+    }
+    run.lastAsker = rq; run.request = null;
+    return lines;
+  }
+  // Each generation: Strain eases, promises are kept or broken, and the most bitter councillors quit.
+  function councilTurn(run, lines) {
+    if (run.leader && run.turn % 3 === 0) run.strain = Math.max(0, (run.strain || 0) - 1);
+    (run.council || []).forEach((c) => { const P = G.personality(c); if (P.drift) c.loyalty = clamp(c.loyalty + P.drift, -100, 100); });
+    (run.goals || []).slice().forEach((g) => {
+      const r = G.REQUEST[g.id]; const c = councillorNamed(run, g.who);
+      let done = false; try { done = r.test(run, g.start || {}); } catch (e) { done = false; }
+      if (done) {
+        run.goals = run.goals.filter((x) => x !== g);
+        run.notices.push(`Promise kept: ${r.label}. ${g.who} is delighted.`);
+        applyEffects(run, r.reward || {}).forEach((l) => lines.push(l));
+        if (c) { c.loyalty = clamp(c.loyalty + 15, -100, 100); remember(c, `You kept your promise: ${r.title.toLowerCase()}`, 15); }
+        run.strain = Math.max(0, (run.strain || 0) - 10);
+      } else if (run.turn > g.until) {
+        run.goals = run.goals.filter((x) => x !== g);
+        run.notices.push(`Promise broken: ${r.label}. ${g.who} will not forget.`);
+        if (c) { c.loyalty = clamp(c.loyalty - 15, -100, 100); remember(c, `You broke your promise: ${r.title.toLowerCase()}`, -15); }
+        addStrain(run, 8, 'a broken promise', lines);
+      }
+    });
+    (run.council || []).forEach((c, i) => {
+      if (c.loyalty <= -60 && run.plot !== i) {
+        const fresh = newCouncillor(run, c.role); run.council[i] = fresh;
+        run.notices.push(`${G.COUNCIL_ROLES[c.role].name} ${c.name} has quit the council in disgust. ${fresh.name} (${G.personality(fresh).name.toLowerCase()}) takes their place.`);
+        log(run, `${c.name} quit the council.`);
+        addStrain(run, 8, 'a councillor quit', lines);
+      }
+    });
   }
 
   // ---------- Rivals ----------
@@ -1899,6 +1981,7 @@ window.G = window.G || {};
     else if (req.food && run.food < req.food) reason = `Needs ${req.food} Food`;
     else if (req.budding && !['radial', 'colonial'].includes(G.symmetry(run))) reason = 'Only radial or no-symmetry bodies can bud';
     else if (req.path && !G.pathState(run, req.path).ok) reason = G.pathState(run, req.path).reason;
+    else if (req.dna && run.dna < req.dna) reason = `Needs ${req.dna} ${G.dnaWord(run)}`;
     else if (req.special && (run.special || 0) < req.special) reason = `Needs ${req.special} ${G.kind(run) ? G.kind(run).resource : ''}`;
     else if (req.band && !run.species.some((x) => x.band && !x.extinct)) reason = 'Needs a rival band nearby';
     else if (req.cand != null && !(run.candidates && run.candidates[req.cand])) reason = 'A fourth candidate needs Wise Choosing (Ancestral Wisdom)';
@@ -3234,7 +3317,7 @@ window.G = window.G || {};
   }
   function newCouncillor(run, role) {
     const l = newLeader(run);
-    return { name: l.name, traits: l.traits.slice(0, 1), role, loyalty: 10 + Math.floor(rand() * 30) + 15 * G.boonLevel('h_council') };
+    return { name: l.name, traits: l.traits.slice(0, 1), role, loyalty: 10 + Math.floor(rand() * 30) + 15 * G.boonLevel('h_council'), pers: pick(Object.keys(G.PERSONALITIES)), memory: [] };
   }
   // Everything the Society stage adds: your kind of society, your traditions, your council and your founding myth.
   function societyMods(run) {
@@ -3245,6 +3328,7 @@ window.G = window.G || {};
     (run.traditions || []).forEach((id) => { if (G.TRADITION[id]) list.push(tag(G.TRADITION[id].mods, G.TRADITION[id].name)); });
     (run.discoveries || []).forEach((id) => { const d = G.DISCOVERY[id]; if (d && d.inherit) list.push(tag(d.inherit, `Inheritance: ${G.loreName(d, run)}`)); });
     if (run.stage === 'society') G.HERITAGE.forEach((h) => { const lvl = G.boonLevel(h.id); if (h.mods && lvl) { const m = {}; Object.entries(h.mods).forEach(([k, v]) => { m[k] = v * lvl; }); list.push(tag(m, `Heritage: ${h.name}`)); } });
+    if ((run.strain || 0) >= 40) list.push(tag({ cha: -1, cun: -1 }, 'A strained ruler'));
     // A councillor who has turned against the ruler gives nothing.
     (run.council || []).forEach((c) => { if (c.loyalty > -30) { list.push(tag(G.COUNCIL_ROLES[c.role].mods, `Council: ${G.COUNCIL_ROLES[c.role].name}`)); c.traits.forEach((t) => list.push(tag(G.LEADER_TRAITS[t].mods, `Council: ${c.name}`))); } });
     // Allies share their food.
@@ -3255,6 +3339,7 @@ window.G = window.G || {};
   G.influencePerTurn = (run) => Math.max(1, Math.floor((run.settlements || []).reduce((t, x) => t + x.size, 0) / 6) + G.mod(run, 'influencePerTurn') + G.mod(run, 'dnaPerTurn') + Math.trunc(G.mod(run, 'ideasPerTurn') / 2) + (run.stage === 'colonial' ? Math.floor(G.colonySize(run) / 2) : 0) + (run.instinct === 'explore' ? 1 + Math.ceil(G.mod(run, 'exploreBonus') / 2) : 0));
   // One generation of society: the council's loyalty shifts, and grudges may become plots.
   function societyTurn(run, lines) {
+    councilTurn(run, lines);
     if ((run.council || []).length && run.council.every((c) => c.loyalty >= 40)) G.addSocDeed(run, 'sd_golden_age');
     if (run.species.some((x) => x.band && !x.extinct && x.opinion >= 60)) G.addSocDeed(run, 'sd_ally');
     const ruler = run.leader;
@@ -3847,6 +3932,11 @@ window.G = window.G || {};
     // In a society, the council chooses from among themselves, or an heir.
     if (G.civ(run) && run.needLeader) { run.candidates = run.council.map((c) => ({ ...c, since: run.turn, life: 14 + Math.floor(rand() * 12) })).concat([newLeader(run)]); run.needLeader = false; setEvent(run, G.EVENT.soc_succession); return; }
     if (G.civ(run) && run.plot != null && run.council[run.plot]) { setEvent(run, G.EVENT.council_plot); return; }
+    if (G.civ(run) && allowEvent && run.leader && (run.strain || 0) >= G.STRAIN_BREAK) { setEvent(run, G.EVENT.ruler_breakdown, -1); return; }
+    if (G.civ(run) && allowEvent && !run.request && (run.council || []).length) {
+      if (run.nextRequestAt == null) run.nextRequestAt = run.turn + 4;
+      else if (run.turn >= run.nextRequestAt) { run.nextRequestAt = run.turn + 7 + Math.floor(rand() * 6); if (G.makeRequest(run)) return; }
+    }
     // Lineages that reached the Spark before Paths existed choose one now.
     if (run.stage === 'creature' && run.mind && !run.path) { setEvent(run, G.EVENT.path_choice); return; }
     if (needsFascination(run)) { run.phase = 'mind'; return; }
@@ -4223,4 +4313,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.11';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.12';

@@ -980,10 +980,13 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.11';
+G.VERSION = '21.12';
 G.WHATS_NEW = {
-  title: 'Patch 21.11: Rivals',
+  title: 'Patch 21.12: Characters and the Council',
   items: [
+    'Your councillors (Society, Renaissance and Colonial Age) are people now: each has a personality (Proud, Pious, Greedy, Bold, Cautious, Steadfast or a Schemer) and remembers how you treated them. The Council tab shows it all.',
+    'Requests: every few generations a councillor asks for something. Grant it, haggle for half, or refuse; or promise to achieve something within a deadline (fill the stores, drill the army, humble your rival, take up a new idea, found a new settlement). Keep a promise and they are delighted; break one and they will not forget. A councillor who falls to −60 loyalty quits.',
+    'Your ruler carries Strain: refused requests, broken promises, councillors quitting and acting against your Disposition all add to it. At 40 your ruler is strained (−1 Charm and Cunning); at 70 they break, and you choose how: lash out (cruel), withdraw (idle), or lean on the council.',
     'Every lineage now meets a Rival: one named species that sets itself against you at the start of the Creature stage (or earlier, if a species comes to hate you). It is marked ⚔️ on the map and shown at the top of the World tab.',
     'It grows a level at each of your milestones and adapts to how you treat it: fight it and it grows a thick hide or bigger weapons, outrun it and it gets faster, outwit it and it grows wary, befriend it and it learns winning ways, leave it alone and it multiplies. Its checks use its own stats, so those adaptations matter.',
     'It follows you from stage to stage: the beast becomes a rival band, then a neighbour people, then a nation. It raids you, challenges you, spies on you, lures your young away, and sometimes offers a truce (which you can betray).',
@@ -1791,6 +1794,60 @@ G.COUNCIL_ROLES = {
   marshal: { name: 'Marshal', mods: { str: 1, tou: 1 }, desc: 'Leads the defence.' },
   keeper: { name: 'Keeper', mods: { influencePerTurn: 1 }, desc: 'Keeps the stories and the special resource.' },
 };
+// ======================= CHARACTERS AND THE COUNCIL =======================
+// Every councillor has a personality: it changes how much they mind being refused or pleased, and what they ask for.
+//   refused / granted  loyalty change when you refuse or grant their requests;  drift: extra loyalty each generation
+G.PERSONALITIES = {
+  proud: { name: 'Proud', refused: -18, granted: 12, drift: 0, desc: 'Never forgets being refused.' },
+  pious: { name: 'Pious', refused: -10, granted: 15, drift: 0, desc: 'Wants temples and rites.' },
+  greedy: { name: 'Greedy', refused: -12, granted: 18, drift: -1, desc: 'Can always be bought, never for long.' },
+  bold: { name: 'Bold', refused: -12, granted: 12, drift: 0, desc: 'Wants action, and war.' },
+  cautious: { name: 'Cautious', refused: -8, granted: 10, drift: 0, desc: 'Wants walls and full stores.' },
+  steadfast: { name: 'Steadfast', refused: -6, granted: 10, drift: 1, desc: 'Loyal through thick and thin.' },
+  schemer: { name: 'Schemer', refused: -14, granted: 8, drift: -1, desc: 'Smiles, and keeps a list.' },
+};
+// What councillors ask for. `pay` requests ask for something now (grant, bargain for half, or refuse).
+// `goal` requests ask you to achieve something within `turns` (promise it, or refuse); a broken promise costs loyalty
+// and Strain. `lean` is the Disposition a request fits: granting one that goes against yours strains your ruler.
+//   roles / likes  which councillors and personalities ask it;  when(run) whether it can be asked now
+G.REQUESTS = [
+  { id: 'granary', roles: ['steward'], likes: ['cautious', 'greedy'], kind: 'pay', cost: { food: 6 }, lean: 'guard',
+    title: 'A Granary', text: '{askerRole} {asker} wants a great granary, so no winter catches your people hungry.',
+    effect: { boon: { name: 'The granary', mods: { foodPerTurn: 1 } } } },
+  { id: 'feast', roles: ['steward'], likes: ['greedy', 'proud'], kind: 'pay', cost: { food: 8 },
+    title: 'A Feast', text: '{askerRole} {asker} wants a feast in your ruler\'s honour. (And in their own.)',
+    effect: { loyalty: 6, popMaxPct: 0.04 } },
+  { id: 'full_stores', roles: ['steward'], likes: ['cautious', 'steadfast'], kind: 'goal', turns: 10,
+    title: 'Fill the Stores', text: '{askerRole} {asker} asks you to fill the stores to 20 Food within 10 generations.',
+    label: 'Have 20 Food', test: (run) => run.food >= 20, reward: { dna: 6 } },
+  { id: 'walls', roles: ['marshal'], likes: ['cautious', 'steadfast'], kind: 'pay', cost: { special: 8 }, lean: 'guard',
+    title: 'Walls', text: '{askerRole} {asker} wants walls around your greatest settlement.',
+    effect: { boon: { name: 'The walls', mods: { damageReduce: 1 } } } },
+  { id: 'drill', roles: ['marshal'], likes: ['bold', 'proud'], kind: 'goal', turns: 14, lean: 'war',
+    title: 'Drill the Army', text: '{askerRole} {asker} wants your people stronger: one more Strength within 14 generations.',
+    label: 'Raise Strength by 1', start: (run) => ({ str: G.stat(run, 'str') }), test: (run, st) => G.stat(run, 'str') > st.str, reward: { boon: { name: 'A drilled army', mods: { str: 1 } } } },
+  { id: 'punish_rival', roles: ['marshal'], likes: ['bold', 'proud', 'schemer'], kind: 'goal', turns: 12, lean: 'war', when: (run) => !!G.rivalSpecies(run),
+    title: 'Punish Our Rival', text: '{askerRole} {asker} wants the old rival humbled. Make them like you even less (or end them) within 12 generations.',
+    label: 'Your rival\'s opinion 20 lower, or the rivalry ended', start: (run) => ({ op: G.rivalSpecies(run).opinion }), test: (run, st) => !G.rivalActive(run) || (G.rivalSpecies(run) && G.rivalSpecies(run).opinion <= st.op - 20), reward: { dna: 8 } },
+  { id: 'temple', roles: ['keeper'], likes: ['pious'], kind: 'pay', cost: { special: 10 }, lean: 'peace',
+    title: 'A Temple', text: '{askerRole} {asker} wants a temple, so your people remember who they are.',
+    effect: { boon: { name: 'The temple', mods: { cha: 1 } } } },
+  { id: 'new_idea', roles: ['keeper'], likes: ['pious', 'steadfast', 'schemer'], kind: 'goal', turns: 10,
+    title: 'Something New', text: '{askerRole} {asker} wants your people to take up a new idea of your tree within 10 generations.',
+    label: 'Take up a new law, invention or crown idea', start: (run) => ({ n: G.treeCount(run) }), test: (run, st) => G.treeCount(run) > st.n, reward: { special: 6 } },
+  { id: 'gifts', roles: ['keeper', 'steward'], likes: ['pious', 'steadfast'], kind: 'pay', cost: { food: 6 }, lean: 'peace', when: (run) => run.species.some((x) => x.band && !x.extinct),
+    title: 'Gifts for the Neighbours', text: '{askerRole} {asker} wants to send gifts to the neighbours.',
+    effect: { neighbourOpinion: 12 } },
+  { id: 'expand', roles: ['steward', 'marshal'], likes: ['bold', 'greedy'], kind: 'goal', turns: 15, when: (run) => run.stage === 'colonial' || (run.settlements || []).length < 8,
+    title: 'Grow the Realm', text: '{askerRole} {asker} wants the realm larger: a new settlement (or colony) within 15 generations.',
+    label: 'Found a new settlement or colony', start: (run) => ({ n: (run.settlements || []).length + (run.colonies || []).length }), test: (run, st) => (run.settlements || []).length + (run.colonies || []).length > st.n, reward: { dna: 10 } },
+  { id: 'a_gift', roles: ['steward', 'marshal', 'keeper'], likes: ['greedy', 'schemer'], kind: 'pay', cost: { dna: 6 },
+    title: 'A Personal Favour', text: '{askerRole} {asker} hints that a gift, for them alone, would be well remembered.',
+    effect: {} },
+];
+G.REQUEST = {}; G.REQUESTS.forEach((r) => { G.REQUEST[r.id] = r; });
+G.STRAIN_BREAK = 70; // your ruler breaks down at this much Strain
+
 // Traditions and Laws: your culture tree. Drafted 1 of 3, like discoveries. Some come in pairs that exclude each other.
 // tier 1 is open at once; tier 2 needs 2 traditions, tier 3 needs 4.
 G.TRADITIONS = [
@@ -1959,4 +2016,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.11';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.12';
