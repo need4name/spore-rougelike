@@ -577,7 +577,7 @@ Every stage after the cell has **its own tree**, built from that stage's decisio
 - It **follows you between stages**: the predator becomes the rival band, then the rival city, then the rival empire, keeping its grudges.
 - You choose how it ends: **wipe it out, make peace, absorb it, or let it go.** A rival that survives becomes a rival in your next lineage (the Fossil Record remembers).
 
-### 2. Schemes ("plans that take time and can go wrong")
+### 2. Schemes ("plans that take time and can go wrong") ✅ (Patch 21.13)
 - Multi-turn plans with a **hidden progress bar and a chance of being found out**: in the Creature stage, steal a nest or herd a rival into a trap; in the Tribe stage, sway another band's leader; in the Society stage, plots, spies and coups.
 - **Agents** join or refuse depending on your traits and gifts. **Secrets** you uncover can be kept, used as leverage, or traded.
 - Others scheme against you too: you get warnings, not certainties.

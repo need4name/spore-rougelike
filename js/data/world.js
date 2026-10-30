@@ -980,10 +980,14 @@ G.ROLES = {
 };
 
 // The "What's new" note on the title screen. Update it with every release.
-G.VERSION = '21.12';
+G.VERSION = '21.13';
 G.WHATS_NEW = {
-  title: 'Patch 21.12: Characters and the Council',
+  title: 'Patch 21.13: Schemes',
   items: [
+    'Schemes (top of the Decisions tab, from the Creature stage on): plans that take several turns. Raid a species\' nests, lure your rival into a trap, win someone over in secret, sway another people\'s leader, plant a spy ring, undermine a neighbour, win a councillor\'s heart, or expose a plotter.',
+    'Pick a target and go carefully or boldly. A bar shows how far it has got, and the risk of being found out shows in words. Recruit agents (they may say no) to go faster and more safely. If you are found out, deny it, drop it, or press on in the open.',
+    'Spies can bring back secrets: blackmail with them, or tell the world, using the new "Use a secret" decision.',
+    'Others scheme against you too, in secret: theft, sabotage, poisoned wells and slander. A cunning lineage hears the whispers in time to stop them. Council plots now take about 6 generations to come to a head, so you have time to expose them.',
     'Your councillors (Society, Renaissance and Colonial Age) are people now: each has a personality (Proud, Pious, Greedy, Bold, Cautious, Steadfast or a Schemer) and remembers how you treated them. The Council tab shows it all.',
     'Requests: every few generations a councillor asks for something. Grant it, haggle for half, or refuse; or promise to achieve something within a deadline (fill the stores, drill the army, humble your rival, take up a new idea, found a new settlement). Keep a promise and they are delighted; break one and they will not forget. A councillor who falls to −60 loyalty quits.',
     'Your ruler carries Strain: refused requests, broken promises, councillors quitting and acting against your Disposition all add to it. At 40 your ruler is strained (−1 Charm and Cunning); at 70 they break, and you choose how: lash out (cruel), withdraw (idle), or lean on the council.',
@@ -2016,4 +2020,4 @@ G.ACTIVITIES.push(
   { id: 'raid', name: 'Raid', target: 'species', stage: 'society', turns: 1, desc: 'Raid a neighbour people for food and Influence. Strength decides it, and they will not forget.' },
 );
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.12';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).world = '21.13';

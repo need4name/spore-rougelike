@@ -841,3 +841,8 @@ details.rulers ol { margin: 6px 0 0 18px; padding: 0; }
 .strain-bar { display: block; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 30%, transparent); overflow: hidden; margin-top: 4px; }
 .strain-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--good, #8fd16a), #f2b544 50%, var(--bad)); }
 .callout .memory { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+
+/* Schemes (Patch 21.13) */
+.schemes { margin-bottom: 14px; }
+.scheme-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius); background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.scheme-bar span { background: var(--accent) !important; }

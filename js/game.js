@@ -902,7 +902,7 @@ window.G = window.G || {};
     const s = speciesIdx != null && speciesIdx >= 0 ? run.species[speciesIdx] : null;
     const words = G.wordsFor(run);
     const rq = run.request || run.lastAsker;
-    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others').replace(/\{asker\}/g, rq ? rq.name : 'a councillor').replace(/\{askerRole\}/g, rq ? G.COUNCIL_ROLES[rq.role].name : 'Your').replace(/\{(\w+)\}/g, (m, k) => (words[k] != null ? words[k] : m));
+    return String(text || '').replace(/\{them\}/g, s ? s.name : 'others').replace(/\{asker\}/g, rq ? rq.name : 'a councillor').replace(/\{askerRole\}/g, rq ? G.COUNCIL_ROLES[rq.role].name : 'Your').replace(/\{schemer\}/g, run.schemeBy ? run.schemeBy.by : 'someone').replace(/\{target\}/g, run.scheme ? run.scheme.target : 'them').replace(/\{(\w+)\}/g, (m, k) => (words[k] != null ? words[k] : m));
   }
   G.sub = sub;
   // Words that change with your body, so shared events read right on land and at sea.
@@ -1550,6 +1550,8 @@ window.G = window.G || {};
     if (eff.heirTrait && run.heir) { const good = Object.keys(G.LEADER_TRAITS).filter((t) => !run.heir.traits.includes(t) && Object.values(G.LEADER_TRAITS[t].mods).every((v) => v >= 0)); if (good.length) { run.heir.traits.push(pick(good)); lines.push({ t: `Your heir, ${run.heir.name}, grows into the role`, good: true }); } }
     if (eff.newHeir && run.stage === 'colonial') { run.heir = newHeir(run); lines.push({ t: `${run.heir.name} is the new heir` }); }
     // Lasting changes to a society, from what it has lived through.
+    if (eff.schemeEnd || eff.schemeOn || eff.targetOpinion || eff.secretGain || eff.targetWeaken || eff.plotFoiled || eff.useSecret) lines.push(...schemeEffects(run, eff));
+    if (eff.dnaLoss) { const n = Math.min(run.dna, eff.dnaLoss); run.dna -= n; if (n) lines.push({ t: `−${n} ${G.dnaWord(run)}`, bad: true }); }
     if (eff.reqGrant || eff.reqRefuse || eff.reqAccept) lines.push(...answerRequest(run, eff));
     if (eff.rulerTrait && run.leader && !run.leader.traits.includes(eff.rulerTrait)) { run.leader.traits.push(eff.rulerTrait); lines.push({ t: `Your ruler is now ${G.LEADER_TRAITS[eff.rulerTrait].name}: ${G.describeMods(G.LEADER_TRAITS[eff.rulerTrait].mods)}` }); }
     if (eff.strainSet != null) { run.strain = eff.strainSet; lines.push({ t: `Strain ${eff.strainSet}`, good: true }); }
@@ -1682,6 +1684,7 @@ window.G = window.G || {};
       if (role === 'target') return run.activity && run.activity.target === s.name;
       if (role === 'nemesis') return !!s.nemesis;
       if (role === 'rival_main') return !!s.rival && G.rivalActive(G.run);
+      if (role === 'secret_target') return !!(G.run.secrets || []).length && s.name === G.run.secrets[0].about;
       if (role === 'sworn') return !!s.sworn || s.opinion >= 90;
       if (role === 'migrant') return !!s.migrant;
       if (role === 'band') return !!s.band;
@@ -1726,6 +1729,101 @@ window.G = window.G || {};
     if (hz && G.biomeMatters(run)) w *= (G.biome(run).hazards || []).includes(hz) ? 3 : 0.35;
     if (hz && G.mindRule(run, 'hazard_sense')) w *= 0.6;
     return w;
+  }
+
+  // ---------- Schemes ----------
+  // Plans that take several turns. Progress shows; the risk of being found out does too, in words.
+  // Agents speed a scheme up and make it safer. Others scheme against you as well, in secret.
+  G.schemeTargets = function (run, sc) {
+    const alive = run.species.filter((x) => !x.extinct && !x.tamed);
+    if (sc.target === 'rival') return alive.filter((x) => x.rival && G.rivalActive(run)).map((x) => x.name);
+    if (sc.target === 'species') return alive.filter((x) => !x.band && !x.rival).map((x) => x.name);
+    if (sc.target === 'people') return alive.filter((x) => x.band).map((x) => x.name);
+    if (sc.target === 'councillor') return (run.council || []).map((c) => c.name);
+    if (sc.target === 'plotter') return run.plot != null && run.council && run.council[run.plot] ? [run.council[run.plot].name] : [];
+    return [];
+  };
+  const targetCunning = (run, name) => { const s = run.species.find((x) => x.name === name && !x.extinct); if (s) return G.speciesStat(s, 'cun'); const c = (run.council || []).find((x) => x.name === name); return c ? 3 + (c.traits.includes('clever') ? 2 : 0) + (c.pers === 'schemer' ? 2 : 0) : 3; };
+  G.schemeState = function (run, sc) {
+    const st = { visible: sc.stage.includes(run.stage), ok: false, needs: [], targets: [] };
+    if (!st.visible) return st;
+    st.targets = G.schemeTargets(run, sc);
+    st.needs = (sc.needs || []).map((n) => { let ok = false; try { ok = !!n.test(run); } catch (e) { ok = false; } return { label: n.label, ok }; });
+    if (!st.targets.length) st.needs.push({ label: sc.noTarget || 'Someone to scheme against', ok: false });
+    const c = sc.cost || {}; if (c.dna && run.dna < c.dna) st.needs.push({ label: `Can pay ${c.dna} ${G.dnaWord(run)}`, ok: false }); if (c.food && run.food < c.food) st.needs.push({ label: `Can pay ${c.food} Food`, ok: false });
+    if (run.scheme) st.needs.push({ label: 'No other scheme under way', ok: false });
+    st.ok = st.needs.every((n) => n.ok) && run.phase === 'map';
+    return st;
+  };
+  // Risk per turn of being found out, as a share: bolder plans and cleverer targets are riskier, agents make it safer.
+  G.schemeRisk = (run) => { const s = run.scheme; if (!s) return 0; const sc = G.SCHEME[s.id]; return clamp((sc.risk || 4) + (s.bold ? 4 : 0) - s.agents * 1.5 + (targetCunning(run, s.target) - G.stat(run, 'cun')) * 0.8, 1, 25) / 100; };
+  G.schemeSpeed = (run) => { const s = run.scheme; if (!s) return 0; const sc = G.SCHEME[s.id]; return Math.round(((sc.speed || 8) + G.stat(run, sc.power) / 2 + s.agents * 3) * (s.bold ? 1.6 : 1)); };
+  G.riskWord = (p) => (p < 0.04 ? 'Low' : p < 0.09 ? 'Some' : p < 0.15 ? 'High' : 'Very high');
+  G.startScheme = function (id, target, bold) {
+    const run = G.run; const sc = G.SCHEME[id];
+    if (!run || !sc || !G.schemeState(run, sc).ok || !G.schemeTargets(run, sc).includes(target)) return false;
+    const c = sc.cost || {}; if (c.dna) run.dna -= c.dna; if (c.food) G.spendFood(run, c.food);
+    run.scheme = { id, target, bold: !!bold, progress: 0, agents: 0, since: run.turn };
+    log(run, `Scheme begun: ${sc.name} (${target}).`);
+    save(); return true;
+  };
+  // An agent: costs a little and may refuse (Charm), but speeds the plan and keeps it quieter.
+  G.recruitAgent = function () {
+    const run = G.run; const s = run && run.scheme; if (!s || s.agents >= 3 || run.phase !== 'map') return null;
+    const cost = 2 + s.agents * 2; if (run.dna < cost) return null;
+    run.dna -= cost;
+    const yes = rand() < clamp(0.45 + G.stat(run, 'cha') * 0.06, 0.2, 0.95);
+    if (yes) s.agents += 1;
+    run.notices.push(yes ? `A new agent joins your scheme (${s.agents} now).` : 'The one you approached wants nothing to do with it.');
+    save(); return yes;
+  };
+  G.abandonScheme = function () { const run = G.run; if (!run || !run.scheme) return; log(run, `Scheme abandoned: ${G.SCHEME[run.scheme.id].name}.`); run.scheme = null; save(); };
+  const targetIndex = (run, name) => run.species.findIndex((x) => x.name === name && !x.extinct);
+  // Each turn: your scheme advances (or is found out), and enemies plot against you.
+  G.schemeTurn = function (run) {
+    if (run.phase !== 'map' || run.stage === 'cell') return false;
+    const s = run.scheme;
+    if (s) {
+      if (!G.schemeTargets(run, G.SCHEME[s.id]).includes(s.target)) { run.notices.push(`Your scheme against ${s.target} falls apart: they are gone.`); run.scheme = null; }
+      else if (rand() < G.schemeRisk(run)) { run.schemeFound = true; setEvent(run, G.EVENT.scheme_found, targetIndex(run, s.target)); return true; }
+      else {
+        s.progress = Math.min(100, s.progress + G.schemeSpeed(run));
+        if (s.progress >= 100) { setEvent(run, G.EVENT[`scheme_${s.id}`], targetIndex(run, s.target)); return true; }
+      }
+    }
+    // Enemies scheme too: something that hates you, or a councillor who has turned.
+    const e = run.enemyScheme;
+    if (!e && run.turn >= (run.nextEnemyScheme || 12)) {
+      run.nextEnemyScheme = run.turn + 12 + Math.floor(rand() * 10);
+      const foes = run.species.filter((x) => !x.extinct && x.opinion <= -40).map((x) => x.name).concat((run.council || []).filter((c) => c.loyalty <= -15).map((c) => c.name));
+      if (foes.length && rand() < 0.6) run.enemyScheme = { by: pick(foes), kind: pick(Object.keys(G.ENEMY_SCHEMES)), progress: 0 };
+    } else if (e) {
+      const alive = run.species.some((x) => x.name === e.by && !x.extinct) || (run.council || []).some((c) => c.name === e.by);
+      if (!alive) run.enemyScheme = null;
+      else {
+        e.progress += 12;
+        if (e.progress >= 100) { run.enemyScheme = null; run.schemeBy = e; setEvent(run, G.EVENT[`plot_struck_${e.kind}`], targetIndex(run, e.by)); return true; }
+        if (rand() < clamp(0.06 + (G.stat(run, 'cun') - 4) * 0.02, 0.03, 0.3)) { run.schemeBy = e; setEvent(run, G.EVENT.plot_whispers, targetIndex(run, e.by)); return true; }
+      }
+    }
+    return false;
+  };
+  function schemeEffects(run, eff) {
+    const lines = []; const s = run.scheme; const evId = (run.event && run.event.id) || '';
+    // Whose effect is it: the secret's subject, the plotter against you, or the target of your scheme.
+    const name = eff.useSecret ? ((run.secrets || [])[0] || {}).about : /^plot_/.test(evId) ? (run.schemeBy && run.schemeBy.by) : (s && s.target);
+    const sp = run.species.find((x) => x.name === name && !x.extinct); const cl = (run.council || []).find((c) => c.name === name);
+    if (eff.targetOpinion) {
+      if (sp) { sp.opinion = clamp(sp.opinion + eff.targetOpinion, -100, 100); lines.push({ t: `The ${sp.name} ${eff.targetOpinion > 0 ? 'warm to you' : 'turn against you'} (${eff.targetOpinion > 0 ? '+' : '−'}${Math.abs(eff.targetOpinion)})`, good: eff.targetOpinion > 0, bad: eff.targetOpinion < 0 }); if (sp.rival && run.rival) run.rival[eff.targetOpinion < 0 ? 'fights' : 'friends'] += 1; }
+      if (cl) { cl.loyalty = clamp(cl.loyalty + eff.targetOpinion, -100, 100); lines.push({ t: `${cl.name}: loyalty ${eff.targetOpinion > 0 ? '+' : '−'}${Math.abs(eff.targetOpinion)}`, good: eff.targetOpinion > 0, bad: eff.targetOpinion < 0 }); }
+    }
+    if (eff.targetWeaken && sp) { sp.pop = Math.max(1, sp.pop * (1 - eff.targetWeaken)); lines.push({ t: `The ${sp.name} are weakened`, good: true }); }
+    if (eff.secretGain && name) { (run.secrets = run.secrets || []).unshift({ about: name, at: run.turn }); run.secrets = run.secrets.slice(0, 3); lines.push({ t: `You hold a secret about ${sp ? `the ${name}` : name}`, good: true }); }
+    if (eff.useSecret) run.secrets = (run.secrets || []).slice(1);
+    if (eff.plotFoiled) { run.enemyScheme = null; lines.push({ t: 'The plot is foiled', good: true }); }
+    if (eff.schemeEnd && s) { run.scheme = null; }
+    if (eff.schemeOn && s) { s.progress = Math.max(0, s.progress - (eff.schemeOn.setback || 0)); if (eff.schemeOn.bold) s.bold = true; }
+    return lines;
   }
 
   // ---------- Characters and the Council ----------
@@ -2132,6 +2230,7 @@ window.G = window.G || {};
     if (run.phase === 'end') return;
     worldTick(run);
     if (G.gimmick(run) === 'drifter' && run.turn >= (run.nextDrift || 0)) drift(run);
+    if (G.schemeTurn(run)) { save(); return; }
     nextStep(run, true);
     save();
   };
@@ -3347,7 +3446,7 @@ window.G = window.G || {};
       // Councillors grow more ambitious every generation, unless something holds them.
       const pull = -1 - (rand() < 0.5 ? 1 : 0) + (ruler && ruler.traits.includes('kind') ? 1 : 0) + (ruler && ruler.traits.includes('cruel') ? -1 : 0) + (G.hasFlag(run, 'loyal') ? 1 : 0);
       c.loyalty = clamp(c.loyalty + pull + Math.round((rand() - 0.5) * 6), -100, 100);
-      if (c.loyalty < -25 && run.plot == null && rand() < 0.3) { run.plot = i; run.notices.push(`${G.COUNCIL_ROLES[c.role].name} ${c.name} is plotting against your ruler.`); }
+      if (c.loyalty < -25 && run.plot == null && rand() < 0.3) { run.plot = i; run.plotAt = run.turn + 6; run.notices.push(`${G.COUNCIL_ROLES[c.role].name} ${c.name} is plotting against your ruler. The plot will come to a head in about 6 generations, unless you expose it first (Schemes, in the Decisions tab).`); }
     });
   }
   // Traditions on offer: 1 of 3 (or 4). Tiers open as you learn more; a chosen tradition locks out its opposite.
@@ -3931,7 +4030,8 @@ window.G = window.G || {};
     if (run.stage === 'tribe' && run.needLeader) { run.candidates = Array.from({ length: G.boonLevel('w_choosing') ? 4 : 3 }, () => newLeader(run)); run.needLeader = false; setEvent(run, G.EVENT.succession); return; }
     // In a society, the council chooses from among themselves, or an heir.
     if (G.civ(run) && run.needLeader) { run.candidates = run.council.map((c) => ({ ...c, since: run.turn, life: 14 + Math.floor(rand() * 12) })).concat([newLeader(run)]); run.needLeader = false; setEvent(run, G.EVENT.soc_succession); return; }
-    if (G.civ(run) && run.plot != null && run.council[run.plot]) { setEvent(run, G.EVENT.council_plot); return; }
+    // A plot ripens for a few generations (time to expose it) before it comes to a head.
+    if (G.civ(run) && run.plot != null && run.council[run.plot] && run.turn >= (run.plotAt || 0)) { setEvent(run, G.EVENT.council_plot); return; }
     if (G.civ(run) && allowEvent && run.leader && (run.strain || 0) >= G.STRAIN_BREAK) { setEvent(run, G.EVENT.ruler_breakdown, -1); return; }
     if (G.civ(run) && allowEvent && !run.request && (run.council || []).length) {
       if (run.nextRequestAt == null) run.nextRequestAt = run.turn + 4;
@@ -4313,4 +4413,4 @@ window.G = window.G || {};
   };
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.12';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).game = '21.13';

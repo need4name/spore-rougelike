@@ -3685,5 +3685,89 @@ G.EVENTS.forEach((e) => { G.EVENT[e.id] = e; });
       { label: 'Lean on the council', check: { stat: 'cha', diff: 5 }, success: { text: 'The council rallies round. The worst passes.', strainSet: 10, loyalty: 10, anim: 'social' }, fail: { text: 'The council sees only weakness.', rulerTrait: 'fearful', strainSet: 30, loyalty: -5 } },
     ] };
 }());
+// ======================= SCHEMES =======================
+// Your schemes (started from the Decisions tab). Each finishes with its own event (scheme_<id>) aimed at the target.
+//   target  'species' | 'rival' | 'people' (neighbour bands and nations) | 'councillor' | 'plotter'
+//   power   the stat that drives it;  speed and risk  progress per turn and the base chance (%) of being found out
+(function () {
+  const need = (label, test) => ({ label, test });
+  G.SCHEMES = [
+    { id: 'steal_nest', stage: ['creature'], icon: '🥚', name: 'Raid their nests', target: 'species', power: 'cun', speed: 12, risk: 5, cost: { food: 2 },
+      desc: 'Creep in, again and again, and take their young and their food.',
+      done: { title: 'The Nests of the {them}', text: 'Night after night your kind crept in. Now the {them} have far less, and you far more.', options: [
+        { label: 'Take the eggs and young', result: { text: 'A feast, and fewer of them.', food: 6, targetWeaken: 0.3, targetOpinion: -10, schemeEnd: true, anim: 'eat' } },
+        { label: 'Take only what they will not miss', result: { text: 'They never knew.', food: 4, schemeEnd: true, anim: 'eat' } },
+      ] } },
+    { id: 'trap_rival', stage: ['creature', 'tribe'], icon: '🪤', name: 'Lure your rival into a trap', target: 'rival', power: 'cun', speed: 9, risk: 6, cost: { dna: 3 }, noTarget: 'A rival',
+      desc: 'Weeks of false trails, all leading to one place.',
+      done: { title: 'The Trap', text: 'The {them} followed the trail you laid, right to where you wanted them.', options: [
+        { label: 'Spring it', check: { stat: 'str', diff: 4 }, success: { text: 'Half of them never came back.', targetWeaken: 0.5, targetOpinion: -15, dna: 5, schemeEnd: true, anim: 'attack' }, fail: { text: 'They break free, wiser and angrier.', rivalGrow: true, schemeEnd: true } },
+        { label: 'Let them see the trap, and fear you', result: { text: 'They know now what you could do.', targetOpinion: 15, schemeEnd: true } },
+      ] } },
+    { id: 'win_over', stage: ['creature', 'tribe', 'society', 'renaissance', 'colonial'], icon: '🎁', name: 'Win them over in secret', target: 'species', power: 'cha', speed: 9, risk: 3, cost: { food: 3 },
+      desc: 'Small gifts and kindnesses, until they trust you without knowing why.',
+      done: { title: 'Quiet Friends', text: 'Gift by gift, the {them} have come to trust you.', options: [
+        { label: 'Good', result: { text: 'A friendship built in the shadows.', targetOpinion: 35, schemeEnd: true, anim: 'social' } },
+      ] } },
+    { id: 'sway_leader', stage: ['tribe', 'society'], icon: '🗣️', name: 'Sway their leader', target: 'people', power: 'cha', speed: 8, risk: 5, cost: { dna: 4 },
+      desc: 'Win the ear of another people\'s leader, one quiet word at a time.',
+      done: { title: 'A Friend in Their Councils', text: 'The leader of the {them} listens to you now.', options: [
+        { label: 'Make them an ally', result: { text: 'They will stand with you.', targetOpinion: 40, schemeEnd: true, anim: 'social' } },
+        { label: 'Have them teach you what they know', result: { text: 'Their secrets become yours.', discovery: true, targetOpinion: 10, schemeEnd: true, anim: 'mutate' } },
+      ] } },
+    { id: 'spy_ring', stage: ['tribe', 'society', 'renaissance', 'colonial'], icon: '🕵️', name: 'Plant a spy ring', target: 'people', power: 'cun', speed: 8, risk: 6, cost: { dna: 6 },
+      desc: 'Eyes and ears among another people. What they learn can be used.',
+      done: { title: 'Your Spies Report', text: 'Your spies among the {them} have found something they would very much like kept quiet.', options: [
+        { label: 'Keep it for later', result: { text: 'A secret, held in reserve. Use it from the Decisions tab.', secretGain: true, dna: 3, schemeEnd: true } },
+        { label: 'Steal their best ideas', result: { text: 'Their knowledge is yours.', dna: 10, schemeEnd: true, anim: 'mutate' } },
+      ] } },
+    { id: 'undermine', stage: ['society', 'renaissance', 'colonial'], icon: '🔥', name: 'Undermine a neighbour', target: 'people', power: 'cun', speed: 7, risk: 8, cost: { dna: 10 },
+      desc: 'Stir up trouble inside another people until they are too busy to threaten you.',
+      done: { title: 'Trouble Among the {them}', text: 'Riots, feuds and fires: the {them} are tearing at each other.', options: [
+        { label: 'Let it burn', result: { text: 'They are much weakened.', targetWeaken: 0.4, schemeEnd: true, anim: 'attack' } },
+        { label: 'Offer to help them, at a price', result: { text: 'They pay for help with the fire you lit.', targetWeaken: 0.2, targetOpinion: 15, dna: 6, schemeEnd: true } },
+      ] } },
+    { id: 'win_councillor', stage: ['society', 'renaissance', 'colonial'], icon: '🤝', name: 'Win a councillor\'s heart', target: 'councillor', power: 'cha', speed: 10, risk: 3, cost: { dna: 5 },
+      desc: 'Favours, flattery and attention, until they would do anything for your ruler.',
+      done: { title: 'A Loyal Heart', text: '{target} has come round completely.', options: [
+        { label: 'Good', result: { text: 'They are your ruler\'s now.', targetOpinion: 40, schemeEnd: true, anim: 'social' } },
+      ] } },
+    { id: 'expose_plotter', stage: ['society', 'renaissance', 'colonial'], icon: '🔦', name: 'Expose the plotter', target: 'plotter', power: 'cun', speed: 14, risk: 8, cost: { dna: 4 }, noTarget: 'A councillor plotting against your ruler',
+      desc: 'Find proof of the plot against your ruler before it is too late.',
+      done: { title: 'The Proof', text: 'You have the letters, the names and the meeting places. {target} cannot deny it.', options: [
+        { label: 'Forgive them, publicly', result: { text: 'Mercy, and a debt they will never repay.', plotEnds: true, targetOpinion: 50, schemeEnd: true, anim: 'social' } },
+        { label: 'Hold it over them', result: { text: 'They will never plot again.', plotEnds: true, secretGain: true, schemeEnd: true } },
+      ] } },
+  ];
+  G.SCHEME = {};
+  G.SCHEMES.forEach((sc) => { G.SCHEME[sc.id] = sc; G.EVENT[`scheme_${sc.id}`] = { ...sc.done, id: `scheme_${sc.id}`, stage: sc.stage, prop: 'social', tags: ['social'] }; });
+  G.EVENT.scheme_found = { id: 'scheme_found', title: 'Found Out', stage: 'any', prop: 'social', tags: ['danger'],
+    text: 'Your scheme against {target} has been discovered.', options: [
+      { label: 'Deny everything', check: { stat: 'cha', diff: 5 }, success: { text: 'They half believe you. The scheme goes on, more slowly.', schemeOn: { setback: 25 } }, fail: { text: 'Nobody believes a word.', targetOpinion: -20, schemeEnd: true } },
+      { label: 'Drop it at once', result: { text: 'You end it before it gets worse.', targetOpinion: -10, schemeEnd: true } },
+      { label: 'Press on regardless', result: { text: 'Out in the open now, and faster for it.', targetOpinion: -25, schemeOn: { bold: true } } },
+    ] };
+  // Plots against you: they strike when they finish, unless you catch a whisper of them first.
+  G.ENEMY_SCHEMES = { theft: 'steal from your stores', sabotage: 'ruin your work', poison: 'poison your wells', slander: 'turn your neighbours against you' };
+  G.EVENT.plot_whispers = { id: 'plot_whispers', title: 'Whispers of a Plot', stage: 'any', prop: 'social', tags: ['danger'],
+    text: 'Something is wrong. Rumours say {schemer} is plotting against you.', options: [
+      { label: 'Investigate', check: { stat: 'cun', diff: 4 }, success: { text: 'You catch them in the act.', plotFoiled: true, dna: 3, targetOpinion: -10 }, fail: { text: 'You find nothing. Perhaps it was only rumours.' } },
+      { label: 'Double the guard', check: { stat: 'str', diff: 4 }, success: { text: 'Nobody gets past.', plotFoiled: true }, fail: { text: 'The guards find nothing.', food: -2 } },
+      { label: 'Ignore it', result: { text: 'Probably nothing.' } },
+    ] };
+  const struck = (kind, text, result) => { G.EVENT[`plot_struck_${kind}`] = { id: `plot_struck_${kind}`, title: 'The Plot Strikes', stage: 'any', prop: 'social', tags: ['danger'], text, options: [{ label: 'Curse them', result: { ...result, targetOpinion: -10 } }] }; };
+  struck('theft', 'Your stores are half empty. It was {schemer}, all along.', { text: 'They took what they could carry.', food: -8 });
+  struck('sabotage', 'Weeks of work, ruined overnight. It was {schemer}, all along.', { text: 'It will take time to rebuild.', dnaLoss: 6 });
+  struck('poison', 'Sickness sweeps through your people. The wells were poisoned, by {schemer}.', { text: 'Many fall ill.', popPct: -0.08 });
+  struck('slander', 'Your neighbours look at you differently now. {schemer} has been spreading lies.', { text: 'Trust is hard to win back.', neighbourOpinion: -12 });
+  // Using a secret (a decision, while you hold one).
+  G.DECISIONS.push({ id: 'use_secret', once: false, cooldown: 6, stage: ['tribe', 'society', 'renaissance', 'colonial'], icon: '🤫', name: 'Use a secret', show: (r) => (r.secrets || []).some((x) => r.species.some((s) => s.name === x.about && !s.extinct)),
+    desc: 'You know something they would rather you did not. Time to use it.',
+    event: { title: 'A Secret', species: 'secret_target', text: 'You hold a secret about the {them}.', options: [
+      { label: 'Blackmail them', check: { stat: 'cun', diff: 4 }, success: { text: 'They do as you say now.', targetOpinion: 30, dna: 4, useSecret: true }, fail: { text: 'They call your bluff.', targetOpinion: -15, useSecret: true } },
+      { label: 'Tell the whole world', result: { text: 'Everyone knows now. Everyone thinks a little less of them, and a little more of you.', targetOpinion: -25, neighbourOpinion: 8, dna: 6, useSecret: true } },
+    ] } });
+  const d = G.DECISIONS[G.DECISIONS.length - 1]; G.DECISION[d.id] = d; G.EVENT[`dec_${d.id}`] = { ...d.event, id: `dec_${d.id}`, decision: d.id, stage: d.stage, prop: 'social', tags: ['decision'] };
+}());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.12';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).events = '21.13';

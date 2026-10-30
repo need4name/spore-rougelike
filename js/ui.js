@@ -2049,6 +2049,34 @@ window.G = window.G || {};
   // ---------- Decisions ----------
   // Big moves you can make whenever you meet their conditions: what each needs (ticked when met), what it costs,
   // and a button to take it. Taking one opens its own event.
+  // ---------- Schemes ----------
+  // One scheme at a time: pick it, pick a target, go carefully or boldly; watch its progress and its risk.
+  function schemesSection(run) {
+    if (run.stage === 'cell') return '';
+    const s = run.scheme; const list = G.SCHEMES.map((sc) => ({ sc, st: G.schemeState(run, sc) })).filter((x) => x.st.visible);
+    if (!list.length && !s) return '';
+    const turnWord = G.STAGES[run.stage].turnName.toLowerCase();
+    const active = s ? (() => { const sc = G.SCHEME[s.id]; const risk = G.schemeRisk(run); const agentCost = 2 + s.agents * 2;
+      return `<div class="scheme-card"><div class="dec-head"><span class="dec-icon">${sc.icon}</span><strong>${esc(sc.name)}: ${esc(s.target)}</strong><span class="muted">${s.bold ? 'boldly' : 'carefully'}</span></div>
+        <span class="strain-bar scheme-bar"><span style="width:${s.progress}%"></span></span>
+        <span class="note">${s.progress}% done · about +${G.schemeSpeed(run)}% a ${turnWord} · risk of being found out each ${turnWord}: <b>${G.riskWord(risk)}</b>${G.showNumbers() ? ` (${Math.round(risk * 100)}%)` : ''} · ${s.agents} agent${s.agents === 1 ? '' : 's'}</span>
+        <div class="row tight wrap"><button class="btn small" ${s.agents < 3 && run.dna >= agentCost && run.phase === 'map' ? 'data-act="scheme-agent"' : 'disabled'}>Recruit an agent (${agentCost} ${esc(G.dnaWord(run))})</button><button class="btn small ghost" data-act="scheme-abandon">Abandon</button></div></div>`; })() : '';
+    const pickId = G.ui.schemePick;
+    const card = ({ sc, st }) => `<li class="decision ${st.ok ? 'ready' : ''}">
+        <div class="dec-head"><span class="dec-icon">${sc.icon}</span><strong>${esc(sc.name)}</strong></div>
+        <p class="note">${esc(sc.desc)} Driven by ${esc(G.STATS.find((x) => x.id === sc.power).name)}.</p>
+        ${st.needs.length ? `<ul class="dec-needs">${st.needs.map((n) => `<li class="${n.ok ? 'good-text' : 'bad-text'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul>` : ''}
+        ${pickId === sc.id && st.ok ? `<div class="chips">${st.targets.map((t) => `<button class="chip ${G.ui.schemeTarget === t ? 'on' : ''}" data-act="scheme-target" data-arg="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+          <div class="row tight wrap"><button class="btn small primary" ${G.ui.schemeTarget ? `data-act="scheme-start" data-arg="careful"` : 'disabled'}>Start carefully</button><button class="btn small" ${G.ui.schemeTarget ? `data-act="scheme-start" data-arg="bold"` : 'disabled'}>Start boldly (faster, riskier)</button></div>`
+          : `<div class="row tight wrap"><span class="note">${sc.cost ? `Costs ${esc(G.decisionCostText(run, sc.cost))}` : 'Free'}</span><button class="btn small ${st.ok ? 'primary' : ''}" ${st.ok ? `data-act="scheme-pick" data-arg="${sc.id}"` : 'disabled'}>Plan it</button></div>`}
+      </li>`;
+    const secrets = (run.secrets || []);
+    return `<section class="schemes"><h3>Schemes</h3>
+      <p class="note">Plans that take time. One at a time; agents make them faster and safer. If you are found out, you choose what happens next. Others scheme against you too: a clever lineage hears the whispers first.</p>
+      ${active}${s ? '' : `<ul class="decisions">${list.map(card).join('')}</ul>`}
+      ${secrets.length ? `<p class="note">🤫 Secrets you hold: ${secrets.map((x) => esc(x.about)).join(', ')}. Use them with the "Use a secret" decision.</p>` : ''}
+    </section>`;
+  }
   function decisionsTab(run) {
     const list = G.DECISIONS.map((d) => ({ d, st: G.decisionState(run, d) })).filter((x) => x.st.visible);
     list.sort((a, b) => (b.st.ok - a.st.ok));
@@ -2060,7 +2088,7 @@ window.G = window.G || {};
         <div class="row tight wrap">${d.cost && G.decisionCostText(run, d.cost) ? `<span class="note">Costs ${esc(G.decisionCostText(run, d.cost))}</span>` : '<span class="note">Free</span>'}
           ${st.why ? `<span class="note">${esc(st.why)}</span>` : `<button class="btn small ${st.ok ? 'primary' : ''}" ${st.ok && run.phase === 'map' ? `data-act="decide" data-arg="${d.id}"` : 'disabled'}>Decide</button>`}</div>
       </li>`;
-    return `<p class="note">Big moves you can make at any time, once you meet what they need. Each costs something now and opens a choice about how it goes.</p>
+    return `${schemesSection(run)}<p class="note">Big moves you can make at any time, once you meet what they need. Each costs something now and opens a choice about how it goes.</p>
       ${list.length ? `<ul class="decisions">${list.map(card).join('')}</ul>` : '<p class="empty">No decisions open right now. New ones appear as your lineage grows.</p>'}
       ${boons.length ? `<section><h3>Lasting effects of your decisions</h3><ul class="dec-boons">${boons.map((b) => `<li><b>${esc(b.name)}</b>: ${esc(G.describeMods(b.mods))}${b.stage === 'any' ? ' (for good)' : ''}</li>`).join('')}</ul></section>` : ''}`;
   }
@@ -2696,6 +2724,11 @@ window.G = window.G || {};
       case 'arms': G.setArms(Number(arg)); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
       case 'editor-random': G.randomiseLook(arg === 'all' ? null : arg); G.ui.keepEditorScroll = true; parts = ['top', 'editor']; break;
       case 'look': G.setLook(el.dataset.kind, arg); G.ui.keepScroll = true; G.ui.keepEditorScroll = true; parts = G.ui.editor ? ['top', 'editor'] : ['top', 'sheet']; break;
+      case 'scheme-pick': G.ui.schemePick = arg; G.ui.schemeTarget = null; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'scheme-target': G.ui.schemeTarget = arg; G.ui.keepScroll = true; parts = ['sheet']; break;
+      case 'scheme-start': G.startScheme(G.ui.schemePick, G.ui.schemeTarget, arg === 'bold'); G.ui.schemePick = null; G.ui.schemeTarget = null; G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'scheme-agent': G.recruitAgent(); G.ui.keepScroll = true; parts = ['top', 'sheet']; break;
+      case 'scheme-abandon': G.abandonScheme(); G.ui.keepScroll = true; parts = ['sheet']; break;
       case 'decide': if (G.takeDecision(arg)) { G.ui.sheet = null; parts = ['top', 'hud', 'modal', 'sheet']; } else parts = ['sheet']; break;
       case 'sheet': G.ui.sheet = arg; G.ui.confirmAbandon = false; G.ui.speciesView = null; parts = ['sheet']; break;
       case 'species': G.ui.speciesView = Number(arg); parts = ['sheet']; break;
@@ -2813,4 +2846,4 @@ window.G = window.G || {};
   render();
 }());
 // Build stamp: index.html checks that every file comes from the same release.
-(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.12';
+(window.PRIMORDIA_FILES = window.PRIMORDIA_FILES || {}).ui = '21.13';

@@ -91,6 +91,15 @@ Spore's arc from a single cell to a civilization, rebuilt for phones: no movemen
 - **Balance** (fully upgraded earlier stages): 29 of 34 Colonial Ages won without Charters, 32 of 34 with one level of each; losses to invasions and raids.
 - **UI:** Realm, Council, Crown, Book (Crown page with the dynasty), Reason, Law, Lore tabs; heir and colonies in the Realm tab; a ⛵ colonies chip (red when one is close to rebellion); gate prompt "Claim the Imperial Crown".
 
+## Patch 21.13: Schemes
+
+- **Your schemes** (`G.SCHEMES`, 8, from the Creature stage on, listed at the top of the Decisions tab): one at a time (`run.scheme`). Each has a target kind (a species, your rival, a neighbour people, a councillor, or the councillor plotting against your ruler), a driving stat, a speed and a base risk. Progress per turn is `speed + stat/2 + 3 per agent`, ×1.6 if bold. The chance per turn of being found out is `risk + 4 if bold − 1.5 per agent + 0.8 × (their Cunning − yours)`, kept within 1–25%, and is shown in words (Low, Some, High, Very high). Up to 3 agents, each costing more and joining on a Charm-weighted roll. At 100% the scheme's own event fires on the target (`scheme_<id>`); if found out, `scheme_found` lets you deny it (Charm), drop it, or press on boldly.
+- **New effects:** `targetOpinion` (the target species' opinion, or a councillor's loyalty), `targetWeaken`, `secretGain`, `useSecret`, `plotFoiled`, `schemeEnd`, `schemeOn`, `dnaLoss`.
+- **Secrets** (`run.secrets`, up to 3) from spy rings or exposed plotters are used by the "Use a secret" decision: blackmail (Cunning) or reveal.
+- **Enemy schemes** (`run.enemyScheme`): every 12–22 turns, something that hates you (opinion −40 or lower) or a disloyal councillor (−15 or lower) may start one of theft, sabotage, poison or slander. It gains 12% a turn. Each turn there is a chance (6% + 2% per Cunning above 4, kept within 3–30%) of `plot_whispers`, where you can investigate (Cunning) or double the guard (Strength) to foil it. If it is never caught, `plot_struck_<kind>` hits.
+- **Council plots now ripen** for 6 generations (`run.plotAt`) before `council_plot` fires, so they can be exposed.
+- **Tested** with bot campaigns: 7 of the 8 schemes started and finished, some were found out, enemy plots were caught by whispers or struck, and secrets were used. Exposing a plotter was tested directly on a captured Society game.
+
 ## Patch 21.12: Characters and the Council
 
 - **Councillors are people** (Society, Renaissance, Colonial Age): `pers` (one of `G.PERSONALITIES`, assigned from the name for older saves) sets how much loyalty they gain when granted and lose when refused, and a small drift each generation. `memory` keeps the last four things you did to them, shown in the Council tab.
